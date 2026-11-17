@@ -3570,7 +3570,7 @@ name = "openduct"
 version = "0.1.0"
 dependencies = [
  "async-opcua",
- "base64 0.22.1",
+ "base64 0.23.1",
  "bytes",
  "chrono",
  "clap",
@@ -3609,7 +3609,7 @@ name = "openduct-broker"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "base64 0.22.1",
+ "base64 0.23.1",
  "bytes",
  "chrono",
  "flate2",
@@ -3640,7 +3640,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "async-opcua",
- "base64 0.22.1",
+ "base64 0.23.1",
  "bytes",
  "chrono",
  "crc32c",
@@ -3689,7 +3689,7 @@ dependencies = [
 name = "openduct-flow"
 version = "0.1.0"
 dependencies = [
- "base64 0.22.1",
+ "base64 0.23.1",
  "bytes",
  "chrono",
  "chrono-tz 0.10.4",
@@ -3799,7 +3799,7 @@ dependencies = [
 name = "openduct-studio"
 version = "0.1.0"
 dependencies = [
- "base64 0.22.1",
+ "base64 0.23.1",
  "bytes",
  "http-body-util",
  "hyper",
