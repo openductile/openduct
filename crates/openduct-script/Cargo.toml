@@ -1,0 +1,66 @@
+[package]
+name = "openduct-script"
+description = "JavaScript and Python steps for OpenDuct's workflows: pure-Rust engines with no file, network or process access, each script in a process of its own with limits."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+readme.workspace = true
+keywords.workspace = true
+categories.workspace = true
+
+[lints]
+workspace = true
+
+[features]
+default = ["javascript", "python"]
+# The engines themselves, for the process a script runs in (and tests). Without them, only the side that starts
+# that process: what the studio needs. `openduct` runs JavaScript itself (`openduct __script`); Python runs in a
+# program of its own, `openduct-python`, so that only it links RustPython's integers (malachite, LGPL-3.0) and
+# `openduct` keeps to permissive licences.
+javascript = ["dep:boa_engine", "dep:rustix", "dep:landlock"]
+python = [
+    "dep:rustpython-vm",
+    "dep:rustpython-stdlib",
+    "dep:rustpython-pylib",
+    "dep:rustix",
+    "dep:ring",
+    "dep:ruff_python_ast",
+    "dep:ruff_python_parser",
+    "dep:ruff_python_trivia",
+    "dep:ruff_source_file",
+    "dep:ruff_text_size",
+    "dep:landlock",
+]
+
+[dependencies]
+serde_json = { version = "1.0.154", features = ["preserve_order"] }
+tokio = { version = "1.54.1", features = ["process", "io-util", "time", "macros", "rt"] }
+# JavaScript, the language alone: no Temporal (it reads time-zone files) or Intl.
+boa_engine = { version = "0.22.0", default-features = false, optional = true }
+# Python without host_env: no os, posix, socket, select, mmap, ctypes, signal or file objects are built in.
+rustpython-vm = { version = "0.6.0", default-features = false, features = ["compiler", "serde"], optional = true }
+rustpython-stdlib = { version = "0.6.0", default-features = false, features = ["compiler"], optional = true }
+rustpython-pylib = { version = "0.6.0", features = ["freeze-stdlib"], optional = true }
+rustix = { version = "1.1.6", default-features = false, features = ["std", "process"], optional = true }
+# The system's secure randomness, for Python's os.urandom (and so secrets and uuid4).
+ring = { version = "0.17.14", optional = true }
+# The Python parser as RustPython 0.6.0 was released with: 0.16.10 changed its types and breaks its compiler.
+ruff_python_ast = { package = "rustpython-ruff_python_ast", version = "=0.16.5", optional = true }
+ruff_python_parser = { package = "rustpython-ruff_python_parser", version = "=0.16.5", optional = true }
+ruff_python_trivia = { package = "rustpython-ruff_python_trivia", version = "=0.16.5", optional = true }
+ruff_source_file = { package = "rustpython-ruff_source_file", version = "=0.16.5", optional = true }
+ruff_text_size = { package = "rustpython-ruff_text_size", version = "=0.16.5", optional = true }
+
+[target.'cfg(target_os = "linux")'.dependencies]
+landlock = { version = "0.4.7", optional = true }
+
+# Python steps' program, installed beside `openduct`.
+[[bin]]
+name = "openduct-python"
+path = "src/bin/openduct-python.rs"
+required-features = ["python"]
+
+[dev-dependencies]
+tokio = { version = "1.54.1", features = ["process", "io-util", "time", "macros", "rt", "rt-multi-thread"] }

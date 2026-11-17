@@ -1,0 +1,11 @@
+description: A message posted to an incoming webhook
+action: send
+sign_in: slack_webhook
+credential: { url: "https://hooks.slack.com/services/T0/B0/x1" }
+input: { text: New order }
+exchanges:
+  - sent:
+      url: https://hooks.slack.com/services/T0/B0/x1
+      body: { text: New order }
+    answer: { body: ok }
+result: { sent: true, answer: ok }

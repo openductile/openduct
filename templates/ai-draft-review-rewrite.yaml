@@ -1,0 +1,37 @@
+name: Draft, review and rewrite with AI
+description: >-
+  Three AI steps, each working from the last: one drafts what was asked for ({"brief"}), one reviews the draft
+  against the brief, one rewrites it with the review in hand. The final text lands in the drafts topic.
+category: AI
+trigger:
+  webhook: {}
+# What a test runs on: an event as this trigger gives it.
+sample:
+  brief: 'Two lines for our shop''s front page about the new Canvas Tote: strong, roomy, made locally.'
+steps:
+  - name: draft
+    ai:
+      credential: model
+      system: You write clear, short copy for a small business. Answer with the text only.
+      prompt: "{{ value.brief }}"
+      max_tokens: 800
+  - name: review
+    ai:
+      credential: model
+      system: >-
+        You review a draft against its brief. List what is missing, wrong, too long or unclear - at most five points,
+        one line each. Answer with the points only.
+      prompt: "Brief: {{ value.brief }} Draft: {{ steps.draft.text }}"
+      max_tokens: 400
+  - name: final
+    ai:
+      credential: model
+      system: "Rewrite the draft so every point of this review is answered: {{ steps.review.text }}. Answer with the text only."
+      prompt: "The draft: {{ steps.draft.text }}"
+      max_tokens: 800
+  - name: keep
+    topic:
+      name: drafts
+      value:
+        brief: "{{ value.brief }}"
+        text: "{{ steps.final.text }}"

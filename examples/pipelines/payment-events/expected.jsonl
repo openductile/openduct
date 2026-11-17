@@ -1,0 +1,3 @@
+{"key":"ch_1","value":{"payment_id":"ch_1","event":"paid","amount":19.99,"currency":"USD","customer":"cus_9","reason":null,"at":"2025-11-15T09:46:40Z"}}
+{"key":"ch_1","value":{"payment_id":"ch_1","event":"refunded","amount":-5,"currency":"USD","customer":null,"reason":null,"at":"2025-11-15T09:51:40Z"}}
+{"key":"ch_2","value":{"payment_id":"ch_2","event":"failed","amount":42,"currency":"EUR","customer":"cus_3","reason":"card_declined","at":"2025-11-15T09:56:40Z"}}

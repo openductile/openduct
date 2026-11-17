@@ -1,0 +1,9 @@
+description: Page after page, as many as Typeform says there are
+action: list_forms
+credential: { token: tfp_1 }
+exchanges:
+  - sent: { query: { page_size: "200" } }
+    answer: { body: { total_items: 2, page_count: 2, items: [{ id: f1 }] } }
+  - sent: { query: { page_size: "200", page: "2" } }
+    answer: { body: { total_items: 2, page_count: 2, items: [{ id: f2 }] } }
+result: [{ id: f1 }, { id: f2 }]

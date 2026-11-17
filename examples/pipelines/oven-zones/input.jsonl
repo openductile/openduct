@@ -1,0 +1,4 @@
+{"name":"zone_1","node":"ns=3;s=Oven2.Zone1.Temperature","reading":179.62,"status":"Good","source_time":"2026-11-15T09:46:40.120Z","server_time":"2026-11-15T09:46:40.125Z"}
+{"name":"zone_2","node":"ns=3;s=Oven2.Zone2.Temperature","reading":186.04,"status":"Good","source_time":"2026-11-15T09:46:40.120Z","server_time":"2026-11-15T09:46:40.125Z"}
+{"name":"zone_3","node":"ns=3;s=Oven2.Zone3.Temperature","reading":0,"status":"BadSensorFailure","source_time":"2026-11-15T09:46:40.120Z","server_time":"2026-11-15T09:46:40.125Z"}
+{"name":"door_open","node":"ns=3;s=Oven2.Door.Open","reading":true,"status":"Good","source_time":"2026-11-15T09:47:02.500Z","server_time":"2026-11-15T09:47:02.503Z"}

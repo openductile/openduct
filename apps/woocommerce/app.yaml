@@ -1,0 +1,44 @@
+# Copyright 2026 Ductile AI, Inc
+# SPDX-License-Identifier: Apache-2.0
+app: woocommerce
+name: WooCommerce
+category: commerce
+description: Orders of a WooCommerce store, on your own site.
+docs: https://woocommerce.github.io/woocommerce-rest-api-docs/
+base_url_field: store_url
+sign_in:
+  - id: woocommerce
+    label: A REST API key
+    fields:
+      - { name: store_url, label: "The store's address, such as https://shop.example.com" }
+      - { name: consumer_key, label: "Consumer key (ck_...)" }
+      - { name: consumer_secret, label: "Consumer secret (cs_...)", secret: true }
+    basic: { username: "{{ credential.consumer_key }}", password: "{{ credential.consumer_secret }}" }
+error: value.message
+actions:
+  list_orders:
+    label: List orders
+    method: GET
+    path: /wp-json/wc/v3/orders
+    inputs:
+      - { name: status, label: "Which: pending, processing, on-hold, completed, cancelled, refunded or any" }
+      - { name: after, label: "Made since (ISO 8601, such as 2026-11-01T00:00:00)" }
+    query: { status: "{{ input.status }}", after: "{{ input.after }}", per_page: "100" }
+    items: value
+    # WooCommerce says nothing of a next page in its answer: a full page means there may be one.
+    next: "size(value) < 100 ? null : {'page': (page == null ? 1 : int(page.page)) + 1}"
+  get_order:
+    label: Look up an order
+    method: GET
+    path: "/wp-json/wc/v3/orders/{{ input.order_id }}"
+    inputs:
+      - { name: order_id, label: "The order's number", required: true }
+  set_order_status:
+    label: Change an order's status
+    write: true
+    method: PUT
+    path: "/wp-json/wc/v3/orders/{{ input.order_id }}"
+    inputs:
+      - { name: order_id, label: "The order's number", required: true }
+      - { name: status, label: "Its new status, such as completed", required: true }
+    send: { status: "{{ input.status }}" }

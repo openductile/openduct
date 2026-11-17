@@ -1,0 +1,13 @@
+action: list_records
+credential: { token: patA }
+input: { base_id: appX, table: Orders, formula: "{Status} = 'Open'" }
+exchanges:
+  - sent:
+      url: https://api.airtable.com/v0/appX/Orders
+      headers: { authorization: Bearer patA }
+      query: { filterByFormula: "{Status} = 'Open'", pageSize: "100" }
+    answer: { body: { records: [{ id: rec1, fields: { Name: A } }], offset: itrA } }
+  - sent:
+      query: { filterByFormula: "{Status} = 'Open'", pageSize: "100", offset: itrA }
+    answer: { body: { records: [{ id: rec2, fields: { Name: B } }] } }
+result: [{ id: rec1, fields: { Name: A } }, { id: rec2, fields: { Name: B } }]

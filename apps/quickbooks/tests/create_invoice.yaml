@@ -1,0 +1,12 @@
+action: create_invoice
+sign_in: quickbooks_sandbox
+credential: { access_token: eyJlb, realm_id: "4620816365" }
+input:
+  customer_id: "58"
+  lines: [{ Amount: 100.0, DetailType: SalesItemLineDetail, SalesItemLineDetail: { ItemRef: { value: "1" } } }]
+exchanges:
+  - sent:
+      url: https://sandbox-quickbooks.api.intuit.com/v3/company/4620816365/invoice
+      body: { CustomerRef: { value: "58" }, Line: [{ Amount: 100.0, DetailType: SalesItemLineDetail, SalesItemLineDetail: { ItemRef: { value: "1" } } }] }
+    answer: { body: { Invoice: { Id: "130", TotalAmt: 100.0, Balance: 100.0 } } }
+result: { Id: "130", TotalAmt: 100.0, Balance: 100.0 }

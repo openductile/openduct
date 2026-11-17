@@ -1,0 +1,4 @@
+{"op":"snapshot","table":"shop.inventory","before":null,"after":{"sku":"TEE-BLK-M","warehouse":"leeds","quantity":42,"reorder_at":10},"binlog":"binlog.000412:4511"}
+{"op":"update","table":"shop.inventory","before":{"sku":"TEE-BLK-M","warehouse":"leeds","quantity":42,"reorder_at":10},"after":{"sku":"TEE-BLK-M","warehouse":"leeds","quantity":8,"reorder_at":10},"binlog":"binlog.000412:9086","committed":"2026-11-15T09:46:40.000Z"}
+{"op":"insert","table":"shop.inventory","before":null,"after":{"sku":"MUG-WHT","warehouse":"bristol","quantity":120,"reorder_at":25},"binlog":"binlog.000412:9802","committed":"2026-11-15T09:47:02.000Z"}
+{"op":"delete","table":"shop.inventory","before":{"sku":"CAP-RED","warehouse":"leeds","quantity":0,"reorder_at":5},"after":null,"binlog":"binlog.000412:10377","committed":"2026-11-15T09:50:00.000Z"}

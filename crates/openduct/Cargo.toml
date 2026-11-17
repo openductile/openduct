@@ -1,0 +1,62 @@
+[package]
+name = "openduct"
+description = "OpenDuct, the open metal streaming broker: a Kafka-protocol event broker in one binary."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+readme.workspace = true
+keywords.workspace = true
+categories.workspace = true
+
+[lints]
+workspace = true
+
+[features]
+# Pipelines, connectors and the studio. Leave them out (--no-default-features) for a broker-only build for small
+# devices.
+default = ["pipelines", "studio"]
+pipelines = ["dep:openduct-pipeline", "dep:openduct-connect"]
+# `openduct start`: the broker with the studio beside it.
+studio = ["dep:openduct-studio", "dep:openduct-flow", "dep:openduct-expr", "dep:openduct-script"]
+
+[dependencies]
+bytes = "1.12.1"
+clap = { version = "4.6.7", features = ["derive", "env"] }
+kafka-protocol = { version = "0.18.0", default-features = false }
+openduct-broker = { version = "0.1.0", path = "../openduct-broker" }
+openduct-connect = { version = "0.1.0", path = "../openduct-connect", optional = true }
+openduct-pipeline = { version = "0.1.0", path = "../openduct-pipeline", optional = true }
+openduct-raft = { version = "0.1.0", path = "../openduct-raft" }
+openduct-storage = { version = "0.1.0", path = "../openduct-storage" }
+openduct-studio = { version = "0.1.0", path = "../openduct-studio", optional = true }
+openduct-flow = { version = "0.1.0", path = "../openduct-flow", optional = true }
+# JavaScript steps: the program runs each script as `openduct __script`. Python steps run in openduct-python.
+openduct-script = { version = "0.1.0", path = "../openduct-script", optional = true, default-features = false, features = ["javascript"] }
+openduct-expr = { version = "0.1.0", path = "../openduct-expr", optional = true }
+serde_json = { version = "1.0.154", features = ["preserve_order"] }
+tokio = { version = "1.54.1", features = ["rt-multi-thread", "macros", "signal", "net", "time", "io-std", "io-util"] }
+tracing = "0.1.44"
+tracing-subscriber = { version = "0.3.23", default-features = false, features = ["fmt", "env-filter", "ansi", "json", "std"] }
+
+[dev-dependencies]
+# A real OPC UA server for the opcua connector's tests, from the same commit as the client (see openduct-connect).
+async-opcua = { git = "https://github.com/freeopcua/async-opcua", rev = "cabe0c61c9fa92ea175c2cf1858e935be060027a", version = "0.19.0", default-features = false, features = ["server"] }
+base64 = "0.22.1"
+chrono = { version = "0.4.45", default-features = false, features = ["std", "clock"] }
+flate2 = "1.1.11"
+hmac = "0.13.0"
+rcgen = "0.14.10"
+ring = "0.17.14"
+rskafka = { version = "0.6.0", default-features = false, features = ["compression-gzip", "compression-snappy"] }
+rumqttc = { version = "0.25.1", default-features = false }
+rustls = { version = "0.23.46", default-features = false, features = ["ring", "std", "tls12"] }
+serde_json = "1.0.154"
+sha2 = "0.11.1"
+tempfile = "3.27.0"
+tokio-modbus = { version = "0.17.0", default-features = false, features = ["tcp-server"] }
+mongodb = { version = "3.10.1", default-features = false, features = ["compat-3-3-0", "bson-3", "rustls-tls", "dns-resolver"] }
+mysql_async = { version = "0.37.1", default-features = false, features = ["minimal-rust"] }
+tokio-postgres = { version = "0.7.18", default-features = false, features = ["runtime"] }
+tokio-rustls = { version = "0.26.6", default-features = false, features = ["tls12"] }

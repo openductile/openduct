@@ -1,0 +1,11 @@
+action: list_orders
+credential: { shop: acme, access_token: shpat_1 }
+input: { status: any }
+exchanges:
+  - sent:
+      method: GET
+      url: https://acme.myshopify.com/admin/api/2025-01/orders.json
+      headers: { x-shopify-access-token: shpat_1 }
+      query: { status: any, limit: "250" }
+    answer: { body: { orders: [{ id: 450789469, name: "#1001", total_price: "199.00" }] } }
+result: [{ id: 450789469, name: "#1001", total_price: "199.00" }]

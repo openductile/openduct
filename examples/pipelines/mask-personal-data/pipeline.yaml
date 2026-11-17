@@ -1,0 +1,17 @@
+# Customer records for analytics, with personal data hidden: initials instead of first names, masked e-mail
+# addresses and phone numbers, a hash of the e-mail address so records can still be matched, and nothing else.
+name: mask-personal-data
+from:
+  topic: customers
+let:
+  digits: regex.replace(phone, r'\D', '')
+map:
+  id:         id
+  name:       first_name.substring(0, 1) + '. ' + last_name
+  email:      regex.replace(email.trim().lowerAscii(), r'^(.).*@', r'\1***@')
+  email_hash: sha256(email.trim().lowerAscii())
+  phone:      "'***-***-' + digits.substring(digits.size() - 4)"
+  country:    country
+key: id
+to:
+  topic: customers-masked

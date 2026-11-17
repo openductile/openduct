@@ -1,0 +1,10 @@
+action: add_record
+credential: { token: patA }
+input: { base_id: appX, table: Orders, fields: { Name: A-100, Total: 120 } }
+exchanges:
+  - sent:
+      method: POST
+      url: https://api.airtable.com/v0/appX/Orders
+      body: { fields: { Name: A-100, Total: 120 }, typecast: true }
+    answer: { body: { id: rec9, fields: { Name: A-100, Total: 120 } } }
+result: { id: rec9, fields: { Name: A-100, Total: 120 } }

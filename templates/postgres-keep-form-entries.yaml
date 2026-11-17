@@ -1,0 +1,26 @@
+name: Keep form entries in Postgres
+description: >-
+  When a form is sent over a webhook ({"name", "email", "message"}), keep it as a row of your database's
+  form_entries table and e-mail your team. Make the table once: CREATE TABLE form_entries (id bigserial PRIMARY KEY,
+  name text, email text, message text, at timestamptz DEFAULT now()).
+category: Databases
+trigger:
+  webhook: {}
+# What a test runs on: an event as this trigger gives it.
+sample:
+  name: Ada Lovelace
+  email: ada@example.com
+  message: Do you make the tote in a larger size?
+steps:
+  - name: row
+    postgres:
+      credential: db
+      sql: INSERT INTO form_entries (name, email, message) VALUES ($1, $2, $3) RETURNING id
+      params: [value.name, value.email, value.message]
+  - name: tell
+    email:
+      credential: mail
+      to: team@example.com
+      reply_to: "{{ value.email }}"
+      subject: "Form entry {{ steps.row.rows[0].id }} from {{ value.name }}"
+      text: "{{ value.message }}"

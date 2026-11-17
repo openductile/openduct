@@ -1,0 +1,7 @@
+description: A token ntfy does not know
+action: send
+credential: { token: tk_wrong }
+input: { topic: shop-orders, message: Hi }
+exchanges:
+  - answer: { status: 401, body: { code: 40101, http: 401, error: unauthorized, link: "https://ntfy.sh/docs/publish/#authentication" } }
+error: "ntfy answered 401: unauthorized"

@@ -1,0 +1,26 @@
+# Copyright 2026 Ductile AI, Inc
+# SPDX-License-Identifier: Apache-2.0
+app: discord
+name: Discord
+category: messaging
+description: Post messages to a Discord channel through its webhook.
+docs: https://discord.com/developers/docs/resources/webhook#execute-webhook
+sign_in:
+  - id: discord_webhook
+    label: A Discord webhook
+    fields:
+      - { name: url, label: "The webhook's address", secret: true }
+    url_field: url
+default_action: send
+actions:
+  send:
+    label: Post a message
+    write: true
+    method: POST
+    inputs:
+      - { name: text, label: The message, required: true }
+      - { name: username, label: The name it is posted as }
+    send:
+      content: "{{ input.text }}"
+      username: "{{ input.username }}"
+    result: "{'sent': true, 'answer': value}"

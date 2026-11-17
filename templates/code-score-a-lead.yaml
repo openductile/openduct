@@ -1,0 +1,33 @@
+name: Score a lead with Python
+description: >-
+  When a lead comes in over a webhook ({"email", "company", "employees", "message"}), score it with your own rules in
+  Python; tell Slack about the leads worth a call today.
+category: Code
+trigger:
+  webhook: {}
+# What a test runs on: an event as this trigger gives it.
+sample:
+  email: sam@leebakery.example
+  company: Lee Bakery
+  employees: 25
+  message: Could you send a quote for 200 bags?
+steps:
+  - name: score
+    python: |
+      score = 0
+      email = (value.get("email") or "").lower()
+      if email and not email.endswith(("@gmail.com", "@yahoo.com", "@hotmail.com")):
+          score += 30
+      employees = int(value.get("employees") or 0)
+      score += 30 if employees >= 50 else 15 if employees >= 10 else 0
+      words = (value.get("message") or "").lower()
+      if any(w in words for w in ("price", "quote", "demo", "buy")):
+          score += 40
+      print("score", score)
+      result = {"score": score, "call_today": score >= 60}
+  - where: steps.score.call_today == true
+  - name: tell
+    slack:
+      credential: team
+      channel: "#sales"
+      text: "A lead worth a call today ({{ steps.score.score }}): {{ value.email }} at {{ value.company }}"

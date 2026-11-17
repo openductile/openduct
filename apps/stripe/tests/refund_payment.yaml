@@ -1,0 +1,9 @@
+action: refund_payment
+credential: { secret_key: sk_test_1 }
+input: { payment_intent: pi_1, amount: 500, reason: requested_by_customer }
+exchanges:
+  - sent:
+      url: https://api.stripe.com/v1/refunds
+      body: { payment_intent: pi_1, amount: "500", reason: requested_by_customer }
+    answer: { body: { id: re_1, object: refund, amount: 500, status: succeeded } }
+result: { id: re_1, object: refund, amount: 500, status: succeeded }

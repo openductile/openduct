@@ -1,0 +1,10 @@
+description: A message posted to a space's webhook
+action: send
+credential: { url: "https://chat.googleapis.com/v1/spaces/AAA/messages?key=k&token=t" }
+input: { text: Order A-1 }
+exchanges:
+  - sent:
+      url: https://chat.googleapis.com/v1/spaces/AAA/messages?key=k&token=t
+      body: { text: Order A-1 }
+    answer: { body: { name: spaces/AAA/messages/1 } }
+result: { sent: true, answer: { name: spaces/AAA/messages/1 } }

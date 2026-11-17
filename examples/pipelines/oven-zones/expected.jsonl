@@ -1,0 +1,3 @@
+{"key":null,"value":{"sensor":"zone_1","value":179.6,"in_band":true,"at":"2026-11-15T09:46:40.120Z"}}
+{"key":null,"value":{"sensor":"zone_2","value":186,"in_band":false,"at":"2026-11-15T09:46:40.120Z"}}
+{"key":null,"value":{"sensor":"door_open","value":true,"in_band":null,"at":"2026-11-15T09:47:02.500Z"}}

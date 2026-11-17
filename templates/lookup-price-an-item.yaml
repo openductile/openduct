@@ -1,0 +1,32 @@
+name: Price an item from your price list
+description: >-
+  Upload your price list as /prices.csv (sku,name,price). When an item comes in over a webhook ({"sku", "qty"}),
+  look its price up, work out the line's total, and keep it in the priced topic; an unknown sku goes to CatchErr.
+category: Lookups
+trigger:
+  webhook: {}
+# What a test runs on: an event as this trigger gives it.
+sample:
+  sku: TOTE
+  qty: 3
+steps:
+  - name: item
+    lookup:
+      file: /prices.csv
+      where:
+        sku: "{{ value.sku }}"
+  - name: known
+    if:
+      when: steps.item == null
+      then:
+        - stop: { error: "no price for sku {{ value.sku }}" }
+  - name: line
+    set:
+      sku: value.sku
+      name: steps.item.name
+      qty: double(value.qty)
+      total: round(double(value.qty) * double(steps.item.price), 2)
+  - name: keep
+    topic:
+      name: priced
+      value: "{{ steps.line }}"

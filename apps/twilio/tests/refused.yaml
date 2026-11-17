@@ -1,0 +1,6 @@
+action: send_sms
+credential: { account_sid: AC1, auth_token: t1 }
+input: { to: "+15551234567", from: "+15550000000", text: Hi }
+exchanges:
+  - answer: { status: 400, body: { code: 21606, message: "The From phone number +15550000000 is not a valid, SMS-capable inbound phone number or short code for your account.", status: 400 } }
+error: "Twilio answered 400: The From phone number +15550000000 is not a valid"

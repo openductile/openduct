@@ -1,0 +1,4 @@
+{"event":"order_paid","order_id":"A-1001","customer":{"id":"c-77"},"cents":4599,"currency":"eur","ts":1763200000}
+{"event":"order_created","order_id":"A-1002","customer":{"id":"c-78"},"cents":1250,"currency":"usd","ts":1763200030}
+{"event":"order_paid","order_id":"A-1002","customer":{"id":"c-78"},"cents":1250,"currency":"usd","ts":1763200090}
+{"event":"order_paid","order_id":"A-1003","customer":{"id":"c-12"},"cents":100000,"currency":"gbp","ts":1763200200}

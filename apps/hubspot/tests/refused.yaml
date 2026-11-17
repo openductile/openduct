@@ -1,0 +1,6 @@
+action: create_contact
+credential: { access_token: pat-na1-1 }
+input: { email: ann@example.com }
+exchanges:
+  - answer: { status: 409, body: { status: error, message: "Contact already exists. Existing ID: 512", category: CONFLICT } }
+error: "HubSpot answered 409: Contact already exists. Existing ID: 512"

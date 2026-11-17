@@ -1,0 +1,4 @@
+{"key":"1001","value":{"order":1001,"event":"existing","status":"paid","total":45.99,"at":null}}
+{"key":"1002","value":{"order":1002,"event":"placed","status":"new","total":12.5,"at":"2026-11-15T09:46:40.120Z"}}
+{"key":"1002","value":{"order":1002,"event":"changed","status":"paid","total":12.5,"at":"2026-11-15T09:47:02.481Z"}}
+{"key":"1001","value":{"order":1001,"event":"removed","status":null,"total":null,"at":"2026-11-15T09:50:00.007Z"}}

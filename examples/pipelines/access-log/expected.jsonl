@@ -1,0 +1,3 @@
+{"key":"198.51.100.23","value":{"client":"198.51.100.23","time":"2026-11-15T09:01:13Z","method":"POST","path":"/checkout","status":502,"bytes":0,"severity":"error"}}
+{"key":"192.0.2.44","value":{"client":"192.0.2.44","time":"2026-11-15T09:01:15Z","method":"GET","path":"/api/stock?sku=a","status":503,"bytes":19,"severity":"outage"}}
+{"key":"garbage","value":{"client":"garbage","time":null,"method":null,"path":null,"status":null,"bytes":null,"severity":"unreadable"}}

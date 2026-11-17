@@ -1,0 +1,34 @@
+name: De-duplicate contacts with JavaScript
+description: >-
+  When a list of contacts comes in over a webhook ({"contacts": [...]}), drop the repeats (the same e-mail address,
+  whatever its case), sort them by name, and keep the clean list in the contacts.clean topic.
+category: Code
+trigger:
+  webhook: {}
+# What a test runs on: an event as this trigger gives it.
+sample:
+  contacts:
+  - name: Sam Lee
+    email: sam@example.com
+  - name: Ada Lovelace
+    email: ADA@example.com
+  - name: Ada L.
+    email: ada@example.com
+steps:
+  - name: clean
+    javascript: |
+      const seen = new Set();
+      const contacts = [];
+      for (const c of value.contacts || []) {
+        const email = (c.email || "").trim().toLowerCase();
+        if (!email || seen.has(email)) continue;
+        seen.add(email);
+        contacts.push({ ...c, email });
+      }
+      contacts.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+      console.log(`${contacts.length} of ${(value.contacts || []).length} kept`);
+      return { contacts, dropped: (value.contacts || []).length - contacts.length };
+  - name: keep
+    topic:
+      name: contacts.clean
+      value: "{{ steps.clean }}"

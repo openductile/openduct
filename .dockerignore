@@ -1,0 +1,8 @@
+# Only what the build needs goes into the image's build context.
+target/
+**/target/
+.git/
+*.log
+openduct-data/
+ui/node_modules/
+ui/dist/

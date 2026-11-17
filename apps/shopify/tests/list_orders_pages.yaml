@@ -1,0 +1,13 @@
+description: The next page is in the Link header - asked as it is - and the last page has no next one
+action: list_orders
+credential: { shop: acme, access_token: shpat_1 }
+exchanges:
+  - sent: { url: https://acme.myshopify.com/admin/api/2025-01/orders.json, query: { limit: "250" } }
+    answer:
+      headers: { Link: '<https://acme.myshopify.com/admin/api/2025-01/orders.json?limit=250&page_info=eyJsYXN0X2lkIjo0>; rel="next"' }
+      body: { orders: [{ id: 1 }, { id: 2 }] }
+  - sent: { url: "https://acme.myshopify.com/admin/api/2025-01/orders.json?limit=250&page_info=eyJsYXN0X2lkIjo0", query: {} }
+    answer:
+      headers: { link: '<https://acme.myshopify.com/admin/api/2025-01/orders.json?limit=250&page_info=eyJmaXJzdF9pZCI6M30>; rel="previous"' }
+      body: { orders: [{ id: 3 }] }
+result: [{ id: 1 }, { id: 2 }, { id: 3 }]

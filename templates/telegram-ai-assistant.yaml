@@ -1,0 +1,32 @@
+name: A Telegram bot that answers with AI
+description: >-
+  Point your Telegram bot's webhook at this workflow's address, with the secret token made for it when you use this
+  template (Telegram sends it back): each message the bot gets is answered by a model, in the same chat.
+category: Messaging
+trigger:
+  # Left empty here: each workflow made from the template is given a token of its own.
+  webhook: { token: "" }
+# What a test runs on: an event as this trigger gives it.
+sample:
+  update_id: 100000001
+  message:
+    message_id: 7
+    chat:
+      id: 123456789
+      type: private
+    from:
+      first_name: Ada
+    text: Do you have the tote in green?
+steps:
+  - where: value.message != null && value.message.text != null
+  - name: answer
+    ai:
+      credential: model
+      system: You are a friendly assistant for a small shop. Answer in at most three sentences.
+      prompt: "{{ value.message.text }}"
+      max_tokens: 300
+  - name: reply
+    telegram:
+      credential: bot
+      chat_id: "{{ value.message.chat.id }}"
+      text: "{{ steps.answer.text }}"

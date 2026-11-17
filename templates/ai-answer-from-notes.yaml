@@ -1,0 +1,28 @@
+name: Answer from your notes
+description: >-
+  When a question comes in over a webhook ({"question": ...}), find the five notes nearest it by meaning (kept by
+  "Keep notes for AI answers") and have a model answer from those notes only, saying which it used.
+category: AI
+trigger:
+  webhook: {}
+# What a test runs on: an event as this trigger gives it.
+sample:
+  question: Do you ship to Canada, and how long does it take?
+steps:
+  - name: vector
+    embed:
+      credential: model
+      input: "{{ value.question }}"
+  - name: found
+    postgres:
+      credential: notes-db
+      sql: SELECT title, body FROM notes ORDER BY embedding <=> $1::vector LIMIT 5
+      params: [steps.vector.embedding]
+  - name: answer
+    ai:
+      credential: model
+      system: >-
+        Answer from these notes only, and name the notes you used. If they do not hold the answer, say so.
+        {{ steps.found.rows.map(n, n.title + ": " + n.body).join(" | ") }}
+      prompt: "{{ value.question }}"
+      max_tokens: 500

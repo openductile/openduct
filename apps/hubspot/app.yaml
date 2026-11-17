@@ -1,0 +1,66 @@
+# Copyright 2026 Ductile AI, Inc
+# SPDX-License-Identifier: Apache-2.0
+app: hubspot
+name: HubSpot
+category: crm
+description: Contacts and deals in HubSpot's CRM.
+docs: https://developers.hubspot.com/docs/api/crm/contacts
+hosts: [api.hubapi.com]
+base_url: https://api.hubapi.com
+sign_in:
+  - id: hubspot
+    label: "A private app's access token"
+    fields:
+      - { name: access_token, label: "The private app's access token (pat-...)", secret: true }
+    headers:
+      Authorization: "Bearer {{ credential.access_token }}"
+error: value.message
+actions:
+  create_contact:
+    label: Add a contact
+    write: true
+    method: POST
+    path: /crm/v3/objects/contacts
+    inputs:
+      - { name: email, label: Email, required: true }
+      - { name: firstname, label: First name }
+      - { name: lastname, label: Last name }
+      - { name: phone, label: Phone }
+      - { name: company, label: Company }
+    send:
+      properties:
+        email: "{{ input.email }}"
+        firstname: "{{ input.firstname }}"
+        lastname: "{{ input.lastname }}"
+        phone: "{{ input.phone }}"
+        company: "{{ input.company }}"
+  find_contact:
+    label: Find a contact by email
+    method: POST
+    path: /crm/v3/objects/contacts/search
+    inputs:
+      - { name: email, label: Email, required: true }
+    send:
+      filterGroups:
+        - filters: [{ propertyName: email, operator: EQ, value: "{{ input.email }}" }]
+      properties: [email, firstname, lastname, phone, company]
+    items: value.results
+  list_contacts:
+    label: List contacts
+    method: GET
+    path: /crm/v3/objects/contacts
+    query: { limit: "100" }
+    items: value.results
+    next: "value.paging == null ? null : {'after': value.paging.next.after}"
+  create_deal:
+    label: Add a deal
+    write: true
+    method: POST
+    path: /crm/v3/objects/deals
+    inputs:
+      - { name: dealname, label: "The deal's name", required: true }
+      - { name: amount, label: Amount }
+      - { name: dealstage, label: "Its stage (such as appointmentscheduled)" }
+      - { name: pipeline, label: "Its pipeline (default)" }
+    send:
+      properties: { dealname: "{{ input.dealname }}", amount: "{{ input.amount }}", dealstage: "{{ input.dealstage }}", pipeline: "{{ input.pipeline }}" }

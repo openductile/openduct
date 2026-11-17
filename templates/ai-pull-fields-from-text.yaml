@@ -1,0 +1,29 @@
+name: Pull fields out of free text with AI
+description: >-
+  When free text comes in over a webhook ({"text"}: an enquiry, an e-mail, a note), have a model pull out the fields a
+  CRM wants - name, e-mail, phone, company and what they ask for - and keep them as a lead in the leads topic.
+category: AI
+trigger:
+  webhook: {}
+# What a test runs on: an event as this trigger gives it.
+sample:
+  text: Hi, this is Sam Lee from Lee Bakery (sam@leebakery.example, 555-0142). Could you quote 200 tote bags with
+    our logo?
+steps:
+  - name: fields
+    ai:
+      credential: model
+      system: >-
+        Pull these fields out of the text and answer with JSON only:
+        {"name": string | null, "email": string | null, "phone": string | null, "company": string | null,
+        "request": "what they ask for, in one line"}. Leave out nothing the text gives; invent nothing.
+      prompt: "{{ value.text }}"
+      json: true
+      temperature: 0
+      max_tokens: 300
+  - where: steps.fields.json.email != null || steps.fields.json.phone != null
+  - name: keep
+    topic:
+      name: leads
+      key: "{{ steps.fields.json.email }}"
+      value: "{{ steps.fields.json }}"

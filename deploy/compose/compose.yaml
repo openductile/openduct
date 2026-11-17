@@ -1,0 +1,123 @@
+# Copyright 2026 Ductile AI, Inc
+# SPDX-License-Identifier: Apache-2.0
+#
+# OpenDuct on one machine, with the stores beside it (README.md):
+#
+#   cp .env.example .env      # then set every value in it
+#   docker compose up -d --build
+#
+# Then open http://localhost:5480. Everything listens on this machine only.
+#
+# Secrets go from .env into each container as files under /run/secrets (secrets: at the end), never into a
+# container's environment: no process listing, crash report or `docker inspect` shows them.
+
+name: openduct
+
+services:
+  openduct:
+    build:
+      context: ../..
+    image: ${OPENDUCT_IMAGE:-openduct:local}
+    restart: unless-stopped
+    environment:
+      # One node, as a cluster of one: that is what lets old records go to the S3 store (tiered storage). More
+      # nodes join with the same secret; see docs/deployment.md.
+      OPENDUCT_NODE_ID: "1"
+      OPENDUCT_BROKERS: "1=openduct:9093@localhost:9092"
+      OPENDUCT_REPLICATION_LISTEN: "0.0.0.0:9093"
+      OPENDUCT_REPLICATION_FACTOR: "1"
+      OPENDUCT_CLUSTER_SECRET_FILE: /run/secrets/cluster_secret
+      OPENDUCT_ADVERTISE: "localhost:9092"
+      # Plain Kafka and HTTP, on this machine only (the ports below). For other machines, see docs/security.md.
+      OPENDUCT_ALLOW_INSECURE: "true"
+      # Workflows may reach the stores beside it (the postgres step's database is on this private network).
+      OPENDUCT_ALLOW_PRIVATE_NETWORK: "true"
+      # Closed segments go to the S3 store; the disk keeps the recent ones.
+      OPENDUCT_TIER_S3_BUCKET: openduct
+      OPENDUCT_TIER_S3_ENDPOINT: http://s3:8333
+      OPENDUCT_TIER_S3_CREATE_BUCKET: "true"
+      OPENDUCT_TIER_S3_ACCESS_KEY_FILE: /run/secrets/s3_access_key
+      OPENDUCT_TIER_S3_SECRET_KEY_FILE: /run/secrets/s3_secret_key
+    secrets: [cluster_secret, s3_access_key, s3_secret_key]
+    ports:
+      - "127.0.0.1:5480:5480" # the studio, and webhooks
+      - "127.0.0.1:9092:9092" # Kafka clients
+    volumes:
+      - openduct-data:/data
+    depends_on:
+      s3:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+
+  # The S3 store: SeaweedFS (Apache-2.0). Its keys come from its secret files, written to its settings as it starts.
+  s3:
+    image: chrislusf/seaweedfs:4.51
+    restart: unless-stopped
+    secrets: [s3_access_key, s3_secret_key]
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - >-
+        umask 077 &&
+        printf '{"identities":[{"name":"openduct","credentials":[{"accessKey":"%s","secretKey":"%s"}],"actions":["Admin","Read","Write","List","Tagging"]}]}'
+        "$$(cat /run/secrets/s3_access_key)" "$$(cat /run/secrets/s3_secret_key)" > /tmp/s3.json &&
+        exec weed server -dir=/data -s3 -s3.port=8333 -s3.config=/tmp/s3.json
+    volumes:
+      - s3-data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z 127.0.0.1 8333"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+
+  # A database for workflows' postgres steps, with pgvector for answers from your own texts.
+  postgres:
+    image: pgvector/pgvector:0.8.6-pg18
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: openduct
+      POSTGRES_DB: openduct
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+    secrets: [postgres_password]
+    volumes:
+      - postgres-data:/var/lib/postgresql
+    # Run once, when the database is first made (written here, not read from a file: Docker on a Mac may not read
+    # files in protected folders such as Documents).
+    configs:
+      - source: openduct-postgres
+        target: /docker-entrypoint-initdb.d/openduct.sql
+        mode: 0444 # read by the database's own user, which runs it
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U openduct -d openduct"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+
+volumes:
+  openduct-data:
+  s3-data:
+  postgres-data:
+
+# Each from .env, given to the containers that need it as a file in /run/secrets.
+secrets:
+  cluster_secret:
+    environment: OPENDUCT_CLUSTER_SECRET
+  s3_access_key:
+    environment: S3_ACCESS_KEY
+  s3_secret_key:
+    environment: S3_SECRET_KEY
+  postgres_password:
+    environment: POSTGRES_PASSWORD
+
+configs:
+  # pgvector, and the notes table the AI templates use ("Keep notes for AI answers", "Answer from your notes"):
+  # change 1536 to your embedding model's dimensions. deploy/opentofu/local reads it from here too.
+  openduct-postgres:
+    content: |
+      CREATE EXTENSION IF NOT EXISTS vector;
+      CREATE TABLE IF NOT EXISTS notes (
+          id bigserial PRIMARY KEY,
+          title text,
+          body text,
+          embedding vector(1536)
+      );

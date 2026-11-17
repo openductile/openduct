@@ -1,0 +1,6 @@
+action: me
+credential: { token: eyJ1 }
+exchanges:
+  - sent: { method: GET, url: https://api.calendly.com/users/me, headers: { authorization: Bearer eyJ1 } }
+    answer: { body: { resource: { uri: "https://api.calendly.com/users/AAAA", name: Ann Lee } } }
+result: { uri: "https://api.calendly.com/users/AAAA", name: Ann Lee }

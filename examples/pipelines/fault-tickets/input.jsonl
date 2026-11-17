@@ -1,0 +1,5 @@
+{"machine":"press-07","line":"L2","state":"running","fault":null,"rpm":1180,"at":"2026-11-15T09:46:40Z"}
+{"machine":"press-07","line":"L2","state":"fault","fault":214,"rpm":0,"at":"2026-11-15T09:47:40Z"}
+{"machine":"press-11","line":"L3","state":"idle","fault":null,"rpm":0,"at":"2026-11-15T09:47:41Z"}
+{"machine":"press-07","line":"L2","state":"fault","fault":214,"rpm":0,"at":"2026-11-15T09:52:10Z"}
+{"machine":"press-11","line":"L3","state":"fault","fault":301,"rpm":0,"at":"2026-11-15T10:05:02Z"}

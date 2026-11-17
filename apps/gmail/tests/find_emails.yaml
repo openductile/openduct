@@ -1,0 +1,7 @@
+action: find_emails
+credential: { access_token: ya29.a0 }
+input: { q: "from:shop@example.com newer_than:7d" }
+exchanges:
+  - sent: { url: https://gmail.googleapis.com/gmail/v1/users/me/messages, query: { q: "from:shop@example.com newer_than:7d", maxResults: "100" } }
+    answer: { body: { messages: [{ id: m1, threadId: t1 }], resultSizeEstimate: 1 } }
+result: [{ id: m1, threadId: t1 }]

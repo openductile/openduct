@@ -1,0 +1,10 @@
+description: A message posted to a channel's webhook
+action: send
+credential: { url: "https://contoso.webhook.office.com/webhookb2/x" }
+input: { text: Daily figures are in }
+exchanges:
+  - sent:
+      url: https://contoso.webhook.office.com/webhookb2/x
+      body: { text: Daily figures are in }
+    answer: { body: 1 }
+result: { sent: true, answer: 1 }

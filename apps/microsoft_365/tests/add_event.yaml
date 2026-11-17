@@ -1,0 +1,9 @@
+action: add_event
+credential: { access_token: eyJ0 }
+input: { title: Fitting, start: "2026-11-20T10:00:00", end: "2026-11-20T11:00:00", time_zone: Eastern Standard Time }
+exchanges:
+  - sent:
+      url: https://graph.microsoft.com/v1.0/me/events
+      body: { subject: Fitting, start: { dateTime: "2026-11-20T10:00:00", timeZone: Eastern Standard Time }, end: { dateTime: "2026-11-20T11:00:00", timeZone: Eastern Standard Time } }
+    answer: { status: 201, body: { id: ev3, subject: Fitting } }
+result: { id: ev3, subject: Fitting }

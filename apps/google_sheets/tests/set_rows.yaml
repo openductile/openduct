@@ -1,0 +1,11 @@
+action: set_rows
+credential: { access_token: ya29.a0 }
+input: { spreadsheet_id: s1, range: "Orders!C2", rows: [[shipped]] }
+exchanges:
+  - sent:
+      method: PUT
+      url: "https://sheets.googleapis.com/v4/spreadsheets/s1/values/Orders!C2"
+      query: { valueInputOption: USER_ENTERED }
+      body: { values: [[shipped]] }
+    answer: { body: { updatedCells: 1 } }
+result: { updatedCells: 1 }

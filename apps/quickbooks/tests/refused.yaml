@@ -1,0 +1,6 @@
+action: add_customer
+credential: { access_token: eyJlb, realm_id: "9130357766900456" }
+input: { name: Ann Lee }
+exchanges:
+  - answer: { status: 400, body: { Fault: { Error: [{ Message: Duplicate Name Exists Error, Detail: "The name supplied already exists. : Another customer is already using this name.", code: "6240" }], type: ValidationFault } } }
+error: "QuickBooks Online answered 400: The name supplied already exists."

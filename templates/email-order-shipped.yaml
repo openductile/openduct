@@ -1,0 +1,29 @@
+name: E-mail when an order ships
+description: >-
+  When a shipped order comes in over a webhook ({"id", "name", "email", "tracking"}), e-mail the customer through your
+  own mail server (an smtp credential called mail), in text and HTML, with a copy to your team.
+category: E-commerce
+trigger:
+  webhook: {}
+# What a test runs on: an event as this trigger gives it.
+sample:
+  id: A-100
+  name: Ada
+  email: ada@example.com
+  tracking: 1Z999AA10123456784
+steps:
+  - where: value.email != null && value.email != ""
+  - name: tell
+    email:
+      credential: mail
+      to: "{{ value.email }}"
+      bcc: team@example.com
+      subject: "Your order {{ value.id }} is on its way"
+      text: |
+        Hello {{ value.name }},
+
+        Your order {{ value.id }} has shipped. Track it with {{ value.tracking }}.
+      html: >-
+        <p>Hello {{ value.name }},</p><p>Your order <b>{{ value.id }}</b> has shipped.
+        Track it with <code>{{ value.tracking }}</code>.</p>
+    retry: { attempts: 3, wait: 30s }

@@ -1,0 +1,12 @@
+action: add_row
+credential: { access_token: ya29.a0 }
+input: { spreadsheet_id: 1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms, sheet: Orders, values: [A-100, 120, paid] }
+exchanges:
+  - sent:
+      method: POST
+      url: "https://sheets.googleapis.com/v4/spreadsheets/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms/values/Orders:append"
+      query: { valueInputOption: USER_ENTERED }
+      headers: { authorization: Bearer ya29.a0 }
+      body: { values: [[A-100, 120, paid]] }
+    answer: { body: { spreadsheetId: 1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms, updates: { updatedRange: "Orders!A5:C5", updatedRows: 1 } } }
+result: { spreadsheetId: 1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms, updates: { updatedRange: "Orders!A5:C5", updatedRows: 1 } }

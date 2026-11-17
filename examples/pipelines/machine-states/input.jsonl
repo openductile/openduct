@@ -1,0 +1,4 @@
+{"machine":"press-07","line":"l2","rpm":1180.4,"fault_code":0,"ts":1763200000}
+{"machine":"press-08","line":"l2","rpm":0,"fault_code":0,"ts":1763200005}
+{"machine":"press-07","line":"l2","rpm":0,"fault_code":214,"ts":1763200060}
+{"machine":"press-11","line":"l3","rpm":960,"fault_code":0,"ts":1763200061}

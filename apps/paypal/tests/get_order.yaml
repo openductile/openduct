@@ -1,0 +1,11 @@
+description: An order looked up, through the sandbox
+action: get_order
+sign_in: paypal_sandbox
+credential: { client_id: cid, client_secret: cs, access_token: A21AA }
+input: { order_id: 5O190127TN364715T }
+exchanges:
+  - sent:
+      method: GET
+      url: https://api-m.sandbox.paypal.com/v2/checkout/orders/5O190127TN364715T
+    answer: { body: { id: 5O190127TN364715T, status: APPROVED } }
+result: { id: 5O190127TN364715T, status: APPROVED }

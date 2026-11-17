@@ -1,0 +1,134 @@
+# Copyright 2026 Ductile AI, Inc
+# SPDX-License-Identifier: Apache-2.0
+#
+# OpenDuct on Kubernetes: three nodes, each a broker with the studio beside it, together one OpenDuct (see README.md).
+# Before applying it, make the secret the nodes share:
+#
+#   kubectl create secret generic openduct-cluster --from-literal=secret="$(openssl rand -hex 32)"
+#   kubectl apply -f openduct.yaml
+#
+# Set the image, the studio's host name and the storage size below for your cluster.
+---
+# The nodes find each other, and Kafka clients find each node, by name: openduct-0.openduct, openduct-1.openduct ...
+apiVersion: v1
+kind: Service
+metadata:
+  name: openduct
+  labels: { app.kubernetes.io/name: openduct }
+spec:
+  clusterIP: None
+  # A cluster forms before its nodes are ready: they must reach each other first.
+  publishNotReadyAddresses: true
+  selector: { app.kubernetes.io/name: openduct }
+  ports:
+    - { name: kafka, port: 9092 }
+    - { name: replication, port: 9093 }
+    - { name: studio, port: 5480 }
+---
+# The studio (and webhooks), on any node: put an ingress with TLS in front of it.
+apiVersion: v1
+kind: Service
+metadata:
+  name: openduct-studio
+  labels: { app.kubernetes.io/name: openduct }
+spec:
+  selector: { app.kubernetes.io/name: openduct }
+  ports:
+    - { name: studio, port: 80, targetPort: 5480 }
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: openduct
+spec:
+  # Two of three keep every partition writable.
+  maxUnavailable: 1
+  selector:
+    matchLabels: { app.kubernetes.io/name: openduct }
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: openduct
+  labels: { app.kubernetes.io/name: openduct }
+spec:
+  serviceName: openduct
+  replicas: 3
+  # All three start together: one alone cannot elect a leader.
+  podManagementPolicy: Parallel
+  selector:
+    matchLabels: { app.kubernetes.io/name: openduct }
+  template:
+    metadata:
+      labels: { app.kubernetes.io/name: openduct }
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        fsGroup: 10001
+        seccompProfile: { type: RuntimeDefault }
+      terminationGracePeriodSeconds: 30
+      # The cluster secret as a file, read by the node's own group only: never in the container's environment.
+      volumes:
+        - name: cluster-secret
+          secret:
+            secretName: openduct-cluster
+            items: [{ key: secret, path: cluster-secret }]
+            defaultMode: 0440
+      containers:
+        - name: openduct
+          image: openduct:local # your registry's image
+          # Node openduct-N is broker N+1: every node lists every broker, itself included. To add a node, raise
+          # replicas and add its entry here (README.md). ($$ is how Kubernetes writes a $ the shell is to read.)
+          command: ["/bin/sh", "-c"]
+          args:
+            - >-
+              export OPENDUCT_NODE_ID=$$(( ${HOSTNAME##*-} + 1 ))
+              OPENDUCT_ADVERTISE="${HOSTNAME}.openduct:9092"
+              OPENDUCT_REPLICATION_LISTEN="0.0.0.0:9093" &&
+              exec openduct start
+          env:
+            - name: OPENDUCT_BROKERS
+              value: >-
+                1=openduct-0.openduct:9093@openduct-0.openduct:9092,2=openduct-1.openduct:9093@openduct-1.openduct:9092,3=openduct-2.openduct:9093@openduct-2.openduct:9092
+            - { name: OPENDUCT_CLUSTER_SECRET_FILE, value: /run/secrets/openduct/cluster-secret }
+            - { name: OPENDUCT_DATA_DIR, value: /data }
+            - { name: OPENDUCT_LISTEN, value: "0.0.0.0:9092" }
+            - { name: OPENDUCT_STUDIO_LISTEN, value: "0.0.0.0:5480" }
+            # The name people reach the studio by, and cookies marked Secure behind the ingress's TLS.
+            - { name: OPENDUCT_STUDIO_HOSTS, value: "flows.example.com" }
+            - { name: OPENDUCT_STUDIO_SECURE_COOKIES, value: "true" }
+            # Plain Kafka inside the cluster's network. For clients beyond it, turn on TLS and sign-in
+            # (docs/security.md) and drop this.
+            - { name: OPENDUCT_ALLOW_INSECURE, value: "true" }
+            - { name: OPENDUCT_LOG_FORMAT, value: json }
+          ports:
+            - { name: kafka, containerPort: 9092 }
+            - { name: replication, containerPort: 9093 }
+            - { name: studio, containerPort: 5480 }
+          readinessProbe:
+            exec: { command: ["openduct", "health", "--bootstrap", "127.0.0.1:9092"] }
+            periodSeconds: 10
+            timeoutSeconds: 3
+          livenessProbe:
+            tcpSocket: { port: studio }
+            initialDelaySeconds: 60
+            periodSeconds: 20
+          resources:
+            requests: { cpu: 500m, memory: 1Gi }
+            # Each JavaScript or Python step runs in a process of its own, of at most 1 GiB, beside the node.
+            limits: { memory: 4Gi }
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: [ALL] }
+          volumeMounts:
+            - { name: data, mountPath: /data }
+            - { name: cluster-secret, mountPath: /run/secrets/openduct, readOnly: true }
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: [ReadWriteOnce]
+        resources:
+          requests: { storage: 20Gi }

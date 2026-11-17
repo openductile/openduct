@@ -1,0 +1,7 @@
+action: read_rows
+credential: { access_token: ya29.a0 }
+input: { spreadsheet_id: s1, range: "Orders!A1:C3" }
+exchanges:
+  - sent: { method: GET, url: "https://sheets.googleapis.com/v4/spreadsheets/s1/values/Orders!A1:C3" }
+    answer: { body: { range: "Orders!A1:C3", majorDimension: ROWS, values: [[Order, Total], [A-100, "120"]] } }
+result: [[Order, Total], [A-100, "120"]]

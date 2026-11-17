@@ -1,0 +1,16 @@
+# Sensor readings in Fahrenheit, made into Celsius readings with an alert level. Disabled sensors are ignored, and a
+# missing temperature is reported as such rather than as "ok".
+name: sensor-alerts
+from:
+  topic: sensor-readings
+where: enabled != false
+map:
+  sensor:   sensor_id
+  site:     site.upperAscii()
+  temp_c:   round((temp_f - 32) * 5 / 9, 1)
+  humidity: round(humidity)
+  alert:    "temp_f == null ? 'no reading' : temp_f >= 104 ? 'critical' : temp_f >= 95 ? 'high' : 'ok'"
+  at:       timestamp(ts)
+key: sensor
+to:
+  topic: sensor-alerts

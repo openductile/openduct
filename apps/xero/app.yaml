@@ -1,0 +1,64 @@
+# Copyright 2026 Ductile AI, Inc
+# SPDX-License-Identifier: Apache-2.0
+app: xero
+name: Xero
+category: accounting
+description: Contacts and invoices in Xero.
+docs: https://developer.xero.com/documentation/api/accounting/invoices
+hosts: [api.xero.com]
+base_url: https://api.xero.com/api.xro/2.0
+sign_in:
+  - id: xero
+    label: Sign in with Xero
+    oauth2:
+      authorize: https://login.xero.com/identity/connect/authorize
+      token: https://identity.xero.com/connect/token
+      scopes: [offline_access, accounting.contacts, accounting.transactions]
+      client_auth: basic
+      # The organisation the person chose: the first Xero gives for this connection.
+      after_connect: { url: "https://api.xero.com/connections", keep: { tenant_id: "value[0].tenantId" } }
+    headers:
+      Authorization: "Bearer {{ credential.access_token }}"
+      Xero-Tenant-Id: "{{ credential.tenant_id }}"
+      Accept: application/json
+error: "value.Elements[0].ValidationErrors[0].Message == null ? (value.Detail == null ? value.Message : value.Detail) : value.Elements[0].ValidationErrors[0].Message"
+actions:
+  add_contact:
+    label: Add a contact
+    write: true
+    method: POST
+    path: /Contacts
+    inputs:
+      - { name: name, label: "Their name", required: true }
+      - { name: email, label: Email }
+    send:
+      Contacts: [{ Name: "{{ input.name }}", EmailAddress: "{{ input.email }}" }]
+    result: value.Contacts[0]
+  create_invoice:
+    label: Make an invoice
+    write: true
+    method: POST
+    path: /Invoices
+    inputs:
+      - { name: contact_id, label: "The contact's id", required: true }
+      - { name: lines, label: "Its lines, in Xero's form (as JSON)", required: true, kind: list }
+      - { name: due_date, label: "When it is due (such as 2026-12-01)" }
+      - { name: status, label: "DRAFT (the default) or AUTHORISED" }
+    send:
+      Invoices:
+        - Type: ACCREC
+          Contact: { ContactID: "{{ input.contact_id }}" }
+          LineItems: "{{ input.lines }}"
+          DueDate: "{{ input.due_date }}"
+          Status: "{{ input.status }}"
+    result: value.Invoices[0]
+  list_invoices:
+    label: List invoices
+    method: GET
+    path: /Invoices
+    inputs:
+      - { name: statuses, label: "Only these, such as AUTHORISED,PAID" }
+    query: { Statuses: "{{ input.statuses }}", page: "1" }
+    items: value.Invoices
+    # 100 a page: a full one means there may be another.
+    next: "size(value.Invoices) < 100 ? null : {'page': (page == null ? 1 : int(page.page)) + 1}"

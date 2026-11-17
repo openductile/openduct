@@ -1,0 +1,33 @@
+# Copyright 2026 Ductile AI, Inc
+# SPDX-License-Identifier: Apache-2.0
+app: telegram
+name: Telegram
+category: messaging
+description: Send messages through a Telegram bot.
+docs: https://core.telegram.org/bots/api#sendmessage
+hosts: [api.telegram.org]
+base_url: https://api.telegram.org
+base_url_field: base_url
+sign_in:
+  - id: telegram
+    label: A Telegram bot
+    fields:
+      - { name: bot_token, label: "The bot's token, from @BotFather", secret: true }
+      - { name: base_url, label: "Another address for the Bot API (a server of your own)", optional: true }
+default_action: send
+error: value.description
+actions:
+  send:
+    label: Send a message
+    write: true
+    method: POST
+    path: "/bot{{ credential.bot_token }}/sendMessage"
+    inputs:
+      - { name: chat_id, label: The chat, required: true, description: "Its id, or @channelname" }
+      - { name: text, label: The message, required: true }
+      - { name: parse_mode, label: How the text is marked up, description: "MarkdownV2 or HTML" }
+    send:
+      chat_id: "{{ input.chat_id }}"
+      text: "{{ input.text }}"
+      parse_mode: "{{ input.parse_mode }}"
+    result: "{'sent': true, 'message': value.result}"

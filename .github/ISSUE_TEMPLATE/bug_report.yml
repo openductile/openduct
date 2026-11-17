@@ -1,0 +1,43 @@
+name: Bug report
+description: Something does not work as documented.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: "Security problems go to the Security tab, never here (SECURITY.md)."
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected, and what happened instead.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: How to reproduce
+      description: The smallest steps, commands or client code that show it.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: OpenDuct version or commit
+    validations:
+      required: true
+  - type: input
+    id: client
+    attributes:
+      label: Kafka client and version
+      description: For example rskafka 0.6.
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Operating system and architecture, storage backend (memory or file), how it is deployed.
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: Relevant broker output (run with RUST_LOG=debug). Remove anything private.
+      render: text

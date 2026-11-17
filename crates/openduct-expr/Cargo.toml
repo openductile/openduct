@@ -1,0 +1,22 @@
+[package]
+name = "openduct-expr"
+description = "Expressions for OpenDuct's pipelines and connectors: CEL, the Common Expression Language, with limits that hold against hostile input."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+readme.workspace = true
+keywords.workspace = true
+categories.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+cel = "0.16.0"
+chrono = { version = "0.4.45", default-features = false, features = ["std", "clock"] }
+openduct-value = { version = "0.1.0", path = "../openduct-value" }
+regex = { version = "1.13.1", default-features = false, features = ["std", "unicode"] }
+rust_decimal = { version = "1.43.0", default-features = false, features = ["std"] }
+sha2 = "0.11.1"

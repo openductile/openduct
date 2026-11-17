@@ -1,0 +1,9 @@
+/target
+/data
+*.profraw
+.DS_Store
+/openduct-data
+/edge-log
+
+# Local settings with secrets (deploy/compose/.env.example is the template).
+deploy/compose/.env

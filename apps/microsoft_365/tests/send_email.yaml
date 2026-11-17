@@ -1,0 +1,12 @@
+description: Graph answers 202 with no body
+action: send_email
+credential: { access_token: eyJ0 }
+input: { to: ann@example.com, subject: Order A-100, text: It has shipped. }
+exchanges:
+  - sent:
+      method: POST
+      url: https://graph.microsoft.com/v1.0/me/sendMail
+      headers: { authorization: Bearer eyJ0 }
+      body: { message: { subject: Order A-100, body: { contentType: Text, content: It has shipped. }, toRecipients: [{ emailAddress: { address: ann@example.com } }] }, saveToSentItems: true }
+    answer: { status: 202 }
+result: { sent: true }

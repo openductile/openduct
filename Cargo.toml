@@ -1,0 +1,61 @@
+[workspace]
+resolver = "3"
+members = [
+    "crates/openduct-storage",
+    "crates/openduct-raft",
+    "crates/openduct-broker",
+    "crates/openduct",
+    "crates/openduct-value",
+    "crates/openduct-expr",
+    "crates/openduct-pipeline",
+    "crates/openduct-flow",
+    "crates/openduct-script",
+    "crates/openduct-studio",
+    "crates/openduct-connect",
+    "crates/openduct-hostile",
+    "examples/sensor-telemetry",
+    "examples/embedded-broker",
+    "xtask",
+]
+# kafka-protocol with one change (vendor/kafka-protocol/OPENDUCT-CHANGES.md): built, not linted or tested as ours.
+# fuzz/: its own workspace, for cargo-fuzz on nightly (fuzz/README.md).
+exclude = ["vendor/kafka-protocol", "fuzz"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+license = "Apache-2.0"
+authors = ["Ductile AI, Inc"]
+repository = "https://github.com/openductile/openduct"
+readme = "README.md"
+keywords = ["kafka", "streaming", "broker", "event-log", "iot"]
+categories = ["network-programming", "database-implementations"]
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+missing_debug_implementations = "warn"
+unreachable_pub = "warn"
+
+[workspace.lints.clippy]
+all = { level = "warn", priority = -1 }
+# Untrusted input must never panic the broker: no unwrap/expect/indexing panics outside tests.
+unwrap_used = "warn"
+expect_used = "warn"
+panic = "warn"
+indexing_slicing = "warn"
+dbg_macro = "warn"
+todo = "warn"
+unimplemented = "warn"
+
+# Passwords are hashed with 600,000 rounds of PBKDF2: in a debug build that takes seconds unless ring is optimised.
+[profile.dev.package.ring]
+opt-level = 3
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
+strip = "symbols"
+
+# A length on the wire never sizes an allocation larger than the bytes left: see vendor/kafka-protocol/OPENDUCT-CHANGES.md.
+[patch.crates-io]
+kafka-protocol = { path = "vendor/kafka-protocol" }

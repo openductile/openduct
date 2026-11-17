@@ -1,0 +1,16 @@
+description: A search is a POST that changes nothing; its next page goes in the body
+action: query_database
+credential: { token: ntn_1 }
+input: { database_id: d9824bdc, filter: { property: Status, status: { equals: Open } } }
+exchanges:
+  - sent:
+      method: POST
+      url: https://api.notion.com/v1/databases/d9824bdc/query
+      headers: { authorization: Bearer ntn_1, notion-version: "2022-06-28" }
+      body: { filter: { property: Status, status: { equals: Open } }, page_size: 100 }
+    answer: { body: { results: [{ id: p1 }], has_more: true, next_cursor: c2 } }
+  - sent:
+      body: { filter: { property: Status, status: { equals: Open } }, page_size: 100, start_cursor: c2 }
+      query: {}
+    answer: { body: { results: [{ id: p2 }], has_more: false, next_cursor: null } }
+result: [{ id: p1 }, { id: p2 }]

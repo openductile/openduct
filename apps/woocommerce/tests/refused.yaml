@@ -1,0 +1,6 @@
+action: get_order
+credential: { store_url: "https://shop.example.com", consumer_key: ck_1, consumer_secret: wrong }
+input: { order_id: "727" }
+exchanges:
+  - answer: { status: 401, body: { code: woocommerce_rest_cannot_view, message: "Sorry, you cannot view this resource.", data: { status: 401 } } }
+error: "WooCommerce answered 401: Sorry, you cannot view this resource."

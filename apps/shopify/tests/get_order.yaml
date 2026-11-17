@@ -1,0 +1,8 @@
+action: get_order
+credential: { shop: acme, access_token: shpat_1 }
+input: { order_id: "450789469" }
+exchanges:
+  - sent:
+      url: https://acme.myshopify.com/admin/api/2025-01/orders/450789469.json
+    answer: { body: { order: { id: 450789469, financial_status: paid } } }
+result: { id: 450789469, financial_status: paid }

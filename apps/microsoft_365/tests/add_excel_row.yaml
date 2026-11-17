@@ -1,0 +1,9 @@
+action: add_excel_row
+credential: { access_token: eyJ0 }
+input: { file_id: 01BYE5RZ, table: Orders, values: [A-100, 120] }
+exchanges:
+  - sent:
+      url: https://graph.microsoft.com/v1.0/me/drive/items/01BYE5RZ/workbook/tables/Orders/rows
+      body: { values: [[A-100, 120]] }
+    answer: { status: 201, body: { index: 4, values: [[A-100, 120]] } }
+result: { index: 4, values: [[A-100, 120]] }

@@ -1,0 +1,6 @@
+action: add_record
+credential: { token: patA }
+input: { base_id: appX, table: Orders, fields: { Nmae: A } }
+exchanges:
+  - answer: { status: 422, body: { error: { type: UNKNOWN_FIELD_NAME, message: "Unknown field name: \"Nmae\"" } } }
+error: "Airtable answered 422: Unknown field name: \"Nmae\""

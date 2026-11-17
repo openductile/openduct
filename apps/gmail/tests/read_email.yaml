@@ -1,0 +1,7 @@
+action: read_email
+credential: { access_token: ya29.a0 }
+input: { message_id: m1 }
+exchanges:
+  - sent: { url: https://gmail.googleapis.com/gmail/v1/users/me/messages/m1, query: { format: full } }
+    answer: { body: { id: m1, snippet: "Your order is ready" } }
+result: { id: m1, snippet: "Your order is ready" }

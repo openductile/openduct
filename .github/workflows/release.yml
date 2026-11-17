@@ -1,0 +1,103 @@
+# Copyright 2026 Ductile AI, Inc
+# SPDX-License-Identifier: Apache-2.0
+
+# A release, on a version tag (v1.2.3): the programs for Linux and macOS - openduct, with the studio's page built in,
+# and openduct-python beside it for Python steps - each packed with its SHA-256; and the container image for amd64
+# and arm64, built on each, under this repository's name in the GitHub container registry.
+
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  program:
+    name: The program for ${{ matrix.target }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { target: x86_64-unknown-linux-gnu, os: ubuntu-latest }
+          - { target: aarch64-unknown-linux-gnu, os: ubuntu-24.04-arm }
+          - { target: aarch64-apple-darwin, os: macos-latest }
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: The studio's page
+        working-directory: ui
+        run: npm ci --no-audit --no-fund && npm run build
+      - run: rustup show active-toolchain || rustup toolchain install
+      - run: cargo build --release --locked -p openduct
+      # Python steps' program, beside it: built on its own, so that openduct links none of it.
+      - run: cargo build --release --locked -p openduct-script --bin openduct-python
+      - name: Packed, with its checksum
+        run: |
+          name="openduct-${GITHUB_REF_NAME}-${{ matrix.target }}"
+          mkdir -p "$name/licenses"
+          cp target/release/openduct target/release/openduct-python LICENSE README.md "$name/"
+          cp -R licenses/openduct-python "$name/licenses/"
+          tar -czf "$name.tar.gz" "$name"
+          shasum -a 256 "$name.tar.gz" > "$name.tar.gz.sha256"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: program-${{ matrix.target }}
+          path: openduct-*.tar.gz*
+
+  image:
+    name: The image for ${{ matrix.arch }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { arch: amd64, os: ubuntu-latest }
+          - { arch: arm64, os: ubuntu-24.04-arm }
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Built and pushed
+        env:
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          image="ghcr.io/${GITHUB_REPOSITORY,,}"
+          echo "$TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+          docker build --build-arg JOBS=4 -t "$image:${GITHUB_REF_NAME}-${{ matrix.arch }}" .
+          docker push "$image:${GITHUB_REF_NAME}-${{ matrix.arch }}"
+
+  publish:
+    name: Published
+    needs: [program, image]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: One image for both architectures, as the version and as latest
+        env:
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          image="ghcr.io/${GITHUB_REPOSITORY,,}"
+          echo "$TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+          for tag in "$GITHUB_REF_NAME" latest; do
+            docker buildx imagetools create -t "$image:$tag" \
+              "$image:${GITHUB_REF_NAME}-amd64" "$image:${GITHUB_REF_NAME}-arm64"
+          done
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: program-*
+          merge-multiple: true
+          path: release
+      - name: The release, with the programs
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release create "$GITHUB_REF_NAME" release/* --title "$GITHUB_REF_NAME" --generate-notes --verify-tag

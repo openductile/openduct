@@ -1,0 +1,5 @@
+{"sensor_id":"s-1","site":"plant-a","temp_f":72.5,"humidity":41.6,"ts":1763200000,"enabled":true}
+{"sensor_id":"s-2","site":"plant-a","temp_f":98.6,"humidity":30.25,"ts":1763200060}
+{"sensor_id":"s-3","site":"plant-b","temp_f":105.8,"humidity":12,"ts":1763200120,"enabled":true}
+{"sensor_id":"s-4","site":"plant-b","temp_f":60,"humidity":50,"ts":1763200180,"enabled":false}
+{"sensor_id":"s-5","site":"plant-c","temp_f":null,"humidity":55.5,"ts":1763200240}

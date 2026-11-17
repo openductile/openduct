@@ -1,0 +1,9 @@
+action: list_answers
+credential: { token: tfp_1 }
+input: { form_id: abc123, since: "2026-11-01T00:00:00Z" }
+exchanges:
+  - sent:
+      url: https://api.typeform.com/forms/abc123/responses
+      query: { since: "2026-11-01T00:00:00Z", page_size: "1000" }
+    answer: { body: { total_items: 1, items: [{ response_id: r1, answers: [{ type: text, text: Great }] }] } }
+result: [{ response_id: r1, answers: [{ type: text, text: Great }] }]

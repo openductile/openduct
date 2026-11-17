@@ -1,0 +1,26 @@
+name: Write the prompt, then do the work
+description: >-
+  Two AI steps: the first writes a system prompt for the task that came in ({"task": ..., "input": ...}), the second
+  does the task with that prompt. One step's answer becomes the next one's instructions.
+category: AI
+trigger:
+  webhook: {}
+# What a test runs on: an event as this trigger gives it.
+sample:
+  task: Reply kindly to a customer whose parcel is late, and say what we will do.
+  input: My order A-100 was due on Monday and it still has not come.
+steps:
+  - name: writer
+    ai:
+      credential: model
+      system: >-
+        You write system prompts. Given a task, write the system prompt a careful assistant would need to do it
+        well: its role, the steps, the form of the answer. Answer with the prompt only.
+      prompt: "{{ value.task }}"
+      max_tokens: 600
+  - name: worker
+    ai:
+      credential: model
+      system: "{{ steps.writer.text }}"
+      prompt: "{{ value.input }}"
+      max_tokens: 1000

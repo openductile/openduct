@@ -1,0 +1,6 @@
+action: list_bases
+credential: { token: patA }
+exchanges:
+  - sent: { method: GET, url: https://api.airtable.com/v0/meta/bases }
+    answer: { body: { bases: [{ id: appX, name: Orders, permissionLevel: create }] } }
+result: [{ id: appX, name: Orders, permissionLevel: create }]

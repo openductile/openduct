@@ -1,0 +1,25 @@
+# The presses' states are on a topic (the machine-states example writes it). This opens a ServiceNow incident for
+# the maintenance team when a press is stopped by a fault, and changes that same incident when the fault is reported
+# again that day, so one fault is one incident however often the press repeats it.
+name: fault-tickets
+from:
+  topic: machine-states
+where: state == 'fault'
+map:
+  correlation_id:    "'%s-%s-%s'.format([machine, fault, at.substring(0, 10)])"
+  short_description: "'%s stopped by fault %s'.format([machine, fault])"
+  description:       "'%s on line %s stopped with fault code %s, last reported at %s.'.format([machine, line, fault, at])"
+  category:          "'hardware'"
+  urgency:           "'1'"
+  impact:            "'2'"
+key: correlation_id
+to:
+  servicenow:
+    instance: https://acme.service-now.com
+    username: secret:SN_USER
+    password: secret:SN_PASSWORD
+    table: incident
+    mode: upsert
+    match: correlation_id
+on_error:
+  topic: fault-tickets-refused

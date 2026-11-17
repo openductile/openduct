@@ -1,0 +1,30 @@
+name: Reshape an order with JavaScript
+description: >-
+  When an order comes in over a webhook, reshape it with your own JavaScript - totals, a slug, the lines a shop's
+  system wants - and write the result to the orders topic. console.log shows in the run.
+category: Code
+trigger:
+  webhook: {}
+# What a test runs on: an event as this trigger gives it.
+sample:
+  id: A-100
+  email: Ada@Example.com
+  lines:
+  - sku: TOTE
+    qty: '2'
+    price: '38.00'
+  - sku: CAP
+    qty: '1'
+    price: '24.00'
+steps:
+  - name: shaped
+    javascript: |
+      const lines = (value.lines || []).map((l) => ({ sku: l.sku, qty: Number(l.qty), total: Number(l.qty) * Number(l.price) }));
+      const total = lines.reduce((t, l) => t + l.total, 0);
+      console.log(`${lines.length} lines, ${total}`);
+      return { id: value.id, customer: (value.email || "").toLowerCase(), lines, total: Math.round(total * 100) / 100 };
+  - name: keep
+    topic:
+      name: orders
+      key: "{{ steps.shaped.id }}"
+      value: "{{ steps.shaped }}"

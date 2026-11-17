@@ -1,0 +1,16 @@
+OpenDuct
+Copyright 2026 Ductile AI, Inc
+
+This product includes software developed at Ductile AI, Inc (https://ductileai.com/).
+
+"OpenDuct" and the OpenDuct logo are trademarks of Ductile AI, Inc. The Apache License, Version 2.0 does not grant
+permission to use them (section 6 of the License).
+
+Apache Kafka and Kafka are trademarks of The Apache Software Foundation. OpenDuct implements the Kafka wire
+protocol and is not affiliated with or endorsed by The Apache Software Foundation.
+
+This product includes kafka-protocol (https://github.com/tychedelia/kafka-protocol-rs), under the MIT License or
+the Apache License, Version 2.0, changed as described in vendor/kafka-protocol/OPENDUCT-CHANGES.md.
+
+This product includes async-opcua (https://github.com/freeopcua/async-opcua), under the Mozilla Public License,
+Version 2.0, unchanged, at the commit named in crates/openduct-connect/Cargo.toml. Its source is available there.

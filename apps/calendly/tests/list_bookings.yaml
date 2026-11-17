@@ -1,0 +1,14 @@
+description: The next page is the address Calendly gives
+action: list_bookings
+credential: { token: eyJ1 }
+input: { user: "https://api.calendly.com/users/AAAA", status: active }
+exchanges:
+  - sent:
+      url: https://api.calendly.com/scheduled_events
+      query: { user: "https://api.calendly.com/users/AAAA", status: active, count: "100" }
+    answer: { body: { collection: [{ uri: "https://api.calendly.com/scheduled_events/E1" }], pagination: { next_page: "https://api.calendly.com/scheduled_events?page_token=p2" } } }
+  - sent:
+      url: https://api.calendly.com/scheduled_events?page_token=p2
+      query: {}
+    answer: { body: { collection: [{ uri: "https://api.calendly.com/scheduled_events/E2" }], pagination: { next_page: null } } }
+result: [{ uri: "https://api.calendly.com/scheduled_events/E1" }, { uri: "https://api.calendly.com/scheduled_events/E2" }]

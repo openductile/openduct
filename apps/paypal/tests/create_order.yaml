@@ -1,0 +1,12 @@
+description: An order of 25.00 USD
+action: create_order
+credential: { client_id: cid, client_secret: cs, access_token: A21AA }
+input: { amount: "25.00", currency: USD }
+exchanges:
+  - sent:
+      method: POST
+      url: https://api-m.paypal.com/v2/checkout/orders
+      headers: { authorization: Bearer A21AA }
+      body: { intent: CAPTURE, purchase_units: [{ amount: { currency_code: USD, value: "25.00" } }] }
+    answer: { status: 201, body: { id: 5O190127TN364715T, status: CREATED, links: [{ rel: approve, href: "https://www.paypal.com/checkoutnow?token=5O190127TN364715T" }] } }
+result: { id: 5O190127TN364715T, status: CREATED, links: [{ rel: approve, href: "https://www.paypal.com/checkoutnow?token=5O190127TN364715T" }] }

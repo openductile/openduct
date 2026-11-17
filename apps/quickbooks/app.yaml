@@ -1,0 +1,73 @@
+# Copyright 2026 Ductile AI, Inc
+# SPDX-License-Identifier: Apache-2.0
+app: quickbooks
+name: QuickBooks Online
+category: accounting
+description: Customers and invoices in QuickBooks Online.
+docs: https://developer.intuit.com/app/developer/qbo/docs/api/accounting/all-entities/invoice
+hosts: [quickbooks.api.intuit.com, sandbox-quickbooks.api.intuit.com]
+base_url: "https://quickbooks.api.intuit.com/v3/company/{{ credential.realm_id }}"
+sign_in:
+  - id: quickbooks
+    label: Sign in with Intuit (a live company)
+    oauth2:
+      authorize: https://appcenter.intuit.com/connect/oauth2
+      token: https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer
+      scopes: [com.intuit.quickbooks.accounting]
+      client_auth: basic
+      callback_fields: { realm_id: realmId }
+    headers:
+      Authorization: "Bearer {{ credential.access_token }}"
+      Accept: application/json
+    query: { minorversion: "75" }
+  - id: quickbooks_sandbox
+    label: Sign in with Intuit (a sandbox company, for testing)
+    base_url: "https://sandbox-quickbooks.api.intuit.com/v3/company/{{ credential.realm_id }}"
+    oauth2:
+      authorize: https://appcenter.intuit.com/connect/oauth2
+      token: https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer
+      scopes: [com.intuit.quickbooks.accounting]
+      client_auth: basic
+      callback_fields: { realm_id: realmId }
+    headers:
+      Authorization: "Bearer {{ credential.access_token }}"
+      Accept: application/json
+    query: { minorversion: "75" }
+error: "value.Fault.Error[0].Detail == null ? value.Fault.Error[0].Message : value.Fault.Error[0].Detail"
+actions:
+  add_customer:
+    label: Add a customer
+    write: true
+    method: POST
+    path: /customer
+    inputs:
+      - { name: name, label: "Their name, as shown", required: true }
+      - { name: email, label: Email }
+      - { name: phone, label: Phone }
+    send:
+      DisplayName: "{{ input.name }}"
+      PrimaryEmailAddr: { Address: "{{ input.email }}" }
+      PrimaryPhone: { FreeFormNumber: "{{ input.phone }}" }
+    result: value.Customer
+  create_invoice:
+    label: Make an invoice
+    write: true
+    method: POST
+    path: /invoice
+    inputs:
+      - { name: customer_id, label: "The customer's id", required: true }
+      - { name: lines, label: "Its lines, in QuickBooks' form (as JSON)", required: true, kind: list }
+      - { name: due_date, label: "When it is due (such as 2026-12-01)" }
+    send:
+      CustomerRef: { value: "{{ input.customer_id }}" }
+      Line: "{{ input.lines }}"
+      DueDate: "{{ input.due_date }}"
+    result: value.Invoice
+  find:
+    label: Find records (a QuickBooks query)
+    method: GET
+    path: /query
+    inputs:
+      - { name: query, label: "Such as select * from Invoice where Balance > '0'", required: true }
+    query: { query: "{{ input.query }}" }
+    result: value.QueryResponse

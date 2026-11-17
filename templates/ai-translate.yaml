@@ -1,0 +1,28 @@
+name: Translate messages with AI
+description: >-
+  When a message comes in over a webhook ({"text", "to"}: the text and the language to put it in), have a model
+  translate it, keeping names, numbers and formatting, and keep both in the translations topic.
+category: AI
+trigger:
+  webhook: {}
+# What a test runs on: an event as this trigger gives it.
+sample:
+  text: Your order has shipped and will arrive on Friday.
+  to: Spanish
+steps:
+  - name: translated
+    ai:
+      credential: model
+      system: >-
+        Translate the user's text into {{ value.to }}. Keep names, numbers, links and line breaks as they are.
+        Answer with the translation only.
+      prompt: "{{ value.text }}"
+      temperature: 0
+      max_tokens: 1000
+  - name: keep
+    topic:
+      name: translations
+      value:
+        original: "{{ value.text }}"
+        language: "{{ value.to }}"
+        translated: "{{ steps.translated.text }}"

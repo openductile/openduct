@@ -1,0 +1,4 @@
+{"key":"A-100","value":{"order_id":"A-100","customer_key":"b5fc85e55755f9e0d030a10ab4429b6b2944855f9a0d60077fe832becbc41d72","items":2,"total":24.5,"currency":"EUR","placed_at":"2026-11-14T22:30:00Z","status":"paid"}}
+{"key":"A-102","value":{"order_id":"A-102","customer_key":"b533d4547eaa5a0fa955965a1ca393ccd2ea013032a105726f232eb41bddc4fa","items":1,"total":59.97,"currency":"USD","placed_at":"2026-11-15T08:05:00Z","status":"open"}}
+{"key":"A-104","value":{"order_id":"A-104","customer_key":null,"items":0,"total":0,"currency":"USD","placed_at":null,"status":"paid"}}
+{"key":"A-102","value":{"order_id":"A-102","customer_key":"b533d4547eaa5a0fa955965a1ca393ccd2ea013032a105726f232eb41bddc4fa","items":1,"total":59.97,"currency":"USD","placed_at":"2026-11-15T08:05:00Z","status":"paid"}}

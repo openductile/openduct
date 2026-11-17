@@ -1,0 +1,28 @@
+name: Alert on big orders
+description: When an order comes in over a webhook, total its lines and post it to your team's Slack channel when it is over 500.
+category: E-commerce
+trigger:
+  webhook: {}
+# What a test runs on: an event as this trigger gives it.
+sample:
+  id: A-1042
+  customer: Lee Bakery
+  lines:
+  - sku: TOTE
+    qty: 10
+    price: 38
+  - sku: CAP
+    qty: 12
+    price: 24
+steps:
+  - name: order
+    set:
+      id: value.id
+      total: "round(value.lines.map(l, double(l.qty) * double(l.price)).sum(), 2)"
+  - where: steps.order.total > 500
+  - name: tell
+    slack:
+      credential: team
+      channel: "#orders"
+      text: "Big order {{ steps.order.id }} from {{ value.customer }}: {{ steps.order.total }}"
+    retry: { attempts: 3, wait: 5s }

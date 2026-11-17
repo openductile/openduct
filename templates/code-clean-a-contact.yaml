@@ -1,0 +1,30 @@
+name: Clean a contact with Python
+description: >-
+  When a contact comes in over a webhook, tidy it with Python - names in title case, a valid e-mail address or none,
+  phone digits only, the day it came in - and write it to the contacts topic. print shows in the run.
+category: Code
+trigger:
+  webhook: {}
+# What a test runs on: an event as this trigger gives it.
+sample:
+  name: ada LOVELACE
+  email: ' Ada@Example.com '
+  phone: +1 (555) 014-2000
+steps:
+  - name: clean
+    python: |
+      import re, datetime
+      email = (value.get("email") or "").strip().lower()
+      if not re.fullmatch(r"[^@\s]+@[^@\s]+\.[a-z]{2,}", email):
+          print("not an e-mail address:", email)
+          email = None
+      result = {
+          "name": " ".join(w.capitalize() for w in (value.get("name") or "").split()),
+          "email": email,
+          "phone": re.sub(r"\D", "", value.get("phone") or "") or None,
+          "day": datetime.date.today().isoformat(),
+      }
+  - name: keep
+    topic:
+      name: contacts
+      value: "{{ steps.clean }}"

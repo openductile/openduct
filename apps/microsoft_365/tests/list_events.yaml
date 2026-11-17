@@ -1,0 +1,12 @@
+description: The next page is the whole address Graph gives
+action: list_events
+credential: { access_token: eyJ0 }
+input: { from: "2026-11-20T00:00:00Z", to: "2026-11-27T00:00:00Z" }
+exchanges:
+  - sent:
+      url: https://graph.microsoft.com/v1.0/me/calendarView
+      query: { startDateTime: "2026-11-20T00:00:00Z", endDateTime: "2026-11-27T00:00:00Z", "$top": "100" }
+    answer: { body: { value: [{ id: ev1 }], "@odata.nextLink": "https://graph.microsoft.com/v1.0/me/calendarView?$skiptoken=s2" } }
+  - sent: { url: "https://graph.microsoft.com/v1.0/me/calendarView?$skiptoken=s2", query: {} }
+    answer: { body: { value: [{ id: ev2 }] } }
+result: [{ id: ev1 }, { id: ev2 }]

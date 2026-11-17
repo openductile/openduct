@@ -1,0 +1,53 @@
+# Copyright 2026 Ductile AI, Inc
+# SPDX-License-Identifier: Apache-2.0
+app: google_drive
+name: Google Drive
+category: files
+description: Files and folders in Google Drive, found, made and shared.
+docs: https://developers.google.com/drive/api/reference/rest/v3
+hosts: [www.googleapis.com]
+base_url: https://www.googleapis.com/drive/v3
+sign_in:
+  - id: google_drive
+    label: Sign in with Google
+    oauth2:
+      authorize: https://accounts.google.com/o/oauth2/v2/auth
+      token: https://oauth2.googleapis.com/token
+      scopes: [https://www.googleapis.com/auth/drive]
+      extra: { access_type: offline, prompt: consent }
+    headers:
+      Authorization: "Bearer {{ credential.access_token }}"
+error: value.error.message
+actions:
+  find_files:
+    label: Find files
+    method: GET
+    path: /files
+    inputs:
+      - { name: q, label: "Which, as Drive searches: such as name contains 'invoice' and trashed = false" }
+    query: { q: "{{ input.q }}", pageSize: "100", fields: "nextPageToken, files(id, name, mimeType, modifiedTime, webViewLink)" }
+    items: value.files
+    next: "value.nextPageToken == null ? null : {'pageToken': value.nextPageToken}"
+  make_folder:
+    label: Make a folder
+    write: true
+    method: POST
+    path: /files
+    inputs:
+      - { name: name, label: "The folder's name", required: true }
+      - { name: parent_id, label: "In which folder (its id; My Drive when empty)" }
+    send:
+      name: "{{ input.name }}"
+      mimeType: application/vnd.google-apps.folder
+      parents: "{{ input.parent_id == null ? null : [input.parent_id] }}"
+  share_file:
+    label: Share a file or folder
+    write: true
+    method: POST
+    path: "/files/{{ input.file_id }}/permissions"
+    inputs:
+      - { name: file_id, label: "The file's or folder's id", required: true }
+      - { name: email, label: "With whom: their email", required: true }
+      - { name: role, label: "reader, commenter or writer", required: true }
+    query: { sendNotificationEmail: "true" }
+    send: { type: user, emailAddress: "{{ input.email }}", role: "{{ input.role }}" }

@@ -1,0 +1,7 @@
+description: A key Stripe does not take
+action: create_customer
+credential: { secret_key: sk_test_wrong }
+input: { email: ann@example.com }
+exchanges:
+  - answer: { status: 401, body: { error: { type: invalid_request_error, message: "Invalid API Key provided: sk_test_*****rong" } } }
+error: "Stripe answered 401: Invalid API Key provided"

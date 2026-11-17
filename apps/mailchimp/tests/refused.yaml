@@ -1,0 +1,6 @@
+action: add_contact
+credential: { api_key: abc123-us21, data_center: us21 }
+input: { list_id: 57afe96172, email: ann@example.com, status: subscribed }
+exchanges:
+  - answer: { status: 400, body: { title: Member Exists, status: 400, detail: "ann@example.com is already a list member. Use PUT to insert or update list members." } }
+error: "Mailchimp answered 400: ann@example.com is already a list member."

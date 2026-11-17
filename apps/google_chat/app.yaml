@@ -1,0 +1,23 @@
+# Copyright 2026 Ductile AI, Inc
+# SPDX-License-Identifier: Apache-2.0
+app: google_chat
+name: Google Chat
+category: messaging
+description: Post messages to a Google Chat space through its webhook.
+docs: https://developers.google.com/workspace/chat/quickstart/webhooks
+sign_in:
+  - id: google_chat_webhook
+    label: A Google Chat webhook
+    fields:
+      - { name: url, label: "The webhook's address", secret: true }
+    url_field: url
+default_action: send
+actions:
+  send:
+    label: Post a message
+    write: true
+    method: POST
+    inputs:
+      - { name: text, label: The message, required: true }
+    send: { text: "{{ input.text }}" }
+    result: "{'sent': true, 'answer': value}"

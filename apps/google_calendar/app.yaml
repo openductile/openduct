@@ -1,0 +1,50 @@
+# Copyright 2026 Ductile AI, Inc
+# SPDX-License-Identifier: Apache-2.0
+app: google_calendar
+name: Google Calendar
+category: scheduling
+description: Events of a Google calendar, read and added.
+docs: https://developers.google.com/calendar/api/v3/reference/events
+hosts: [www.googleapis.com]
+base_url: https://www.googleapis.com/calendar/v3
+sign_in:
+  - id: google_calendar
+    label: Sign in with Google
+    oauth2:
+      authorize: https://accounts.google.com/o/oauth2/v2/auth
+      token: https://oauth2.googleapis.com/token
+      scopes: [https://www.googleapis.com/auth/calendar.events]
+      extra: { access_type: offline, prompt: consent }
+    headers:
+      Authorization: "Bearer {{ credential.access_token }}"
+error: value.error.message
+actions:
+  list_events:
+    label: List events
+    method: GET
+    path: "/calendars/{{ input.calendar_id }}/events"
+    inputs:
+      - { name: calendar_id, label: "Which calendar: primary for your own, or its id", required: true }
+      - { name: from, label: "From (such as 2026-11-20T00:00:00Z)" }
+      - { name: to, label: "Until (such as 2026-11-27T00:00:00Z)" }
+    query: { timeMin: "{{ input.from }}", timeMax: "{{ input.to }}", singleEvents: "true", orderBy: startTime, maxResults: "250" }
+    items: value.items
+    next: "value.nextPageToken == null ? null : {'pageToken': value.nextPageToken}"
+  add_event:
+    label: Add an event
+    write: true
+    method: POST
+    path: "/calendars/{{ input.calendar_id }}/events"
+    inputs:
+      - { name: calendar_id, label: "Which calendar: primary for your own, or its id", required: true }
+      - { name: title, label: Title, required: true }
+      - { name: start, label: "Starts (such as 2026-11-20T10:00:00-05:00)", required: true }
+      - { name: end, label: "Ends (such as 2026-11-20T11:00:00-05:00)", required: true }
+      - { name: description, label: What it is about }
+      - { name: attendees, label: "Who is asked: a list of emails (as JSON)", kind: list }
+    send:
+      summary: "{{ input.title }}"
+      description: "{{ input.description }}"
+      start: { dateTime: "{{ input.start }}" }
+      end: { dateTime: "{{ input.end }}" }
+      attendees: "{{ input.attendees == null ? null : input.attendees.map(e, {'email': e}) }}"

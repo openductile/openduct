@@ -1,0 +1,13 @@
+description: A notification with a title and a priority
+action: send
+credential: { token: tk_example }
+input: { topic: shop-orders, message: "Order A-100: 2 x Canvas Tote", title: New order, priority: 4 }
+exchanges:
+  - sent:
+      method: POST
+      url: https://ntfy.sh/
+      headers: { authorization: Bearer tk_example }
+      body: { topic: shop-orders, message: "Order A-100: 2 x Canvas Tote", title: New order, priority: 4 }
+    answer:
+      body: { id: hwQ2YpKdmg, time: 1794900000, expires: 1794943200, event: message, topic: shop-orders, title: New order, message: "Order A-100: 2 x Canvas Tote", priority: 4 }
+result: { id: hwQ2YpKdmg, time: 1794900000, expires: 1794943200, event: message, topic: shop-orders, title: New order, message: "Order A-100: 2 x Canvas Tote", priority: 4 }

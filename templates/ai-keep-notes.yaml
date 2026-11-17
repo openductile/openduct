@@ -1,0 +1,23 @@
+name: Keep notes for AI answers
+description: >-
+  When a note comes in over a webhook ({"title": ..., "body": ...}), turn its text into a vector and keep both in
+  Postgres with pgvector, for "Answer from your notes" to search. Make the table once:
+  CREATE EXTENSION IF NOT EXISTS vector; CREATE TABLE notes (id bigserial PRIMARY KEY, title text, body text,
+  embedding vector(1536)) - the number is your embedding model's dimensions.
+category: AI
+trigger:
+  webhook: {}
+# What a test runs on: an event as this trigger gives it.
+sample:
+  title: Shipping to Canada
+  body: We ship to Canada in 5 to 7 working days. Duties are paid by the customer on delivery.
+steps:
+  - name: vector
+    embed:
+      credential: model
+      input: "{{ value.body }}"
+  - name: keep
+    postgres:
+      credential: notes-db
+      sql: INSERT INTO notes (title, body, embedding) VALUES ($1, $2, $3::vector) RETURNING id
+      params: [value.title, value.body, steps.vector.embedding]

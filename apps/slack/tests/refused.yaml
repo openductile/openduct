@@ -1,0 +1,7 @@
+description: Slack answers 200 and says no
+action: send
+credential: { bot_token: xoxb-1 }
+input: { channel: "#nowhere", text: Hi }
+exchanges:
+  - answer: { body: { ok: false, error: channel_not_found } }
+error: "Slack refused it: channel_not_found"

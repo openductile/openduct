@@ -1,0 +1,11 @@
+action: add_contact
+credential: { access_token: eyJx, tenant_id: 45e4708e-d862-4111-ab3a-dd8cd03913e1 }
+input: { name: Ann Lee }
+exchanges:
+  - sent:
+      method: POST
+      url: https://api.xero.com/api.xro/2.0/Contacts
+      headers: { authorization: Bearer eyJx, xero-tenant-id: 45e4708e-d862-4111-ab3a-dd8cd03913e1 }
+      body: { Contacts: [{ Name: Ann Lee }] }
+    answer: { body: { Contacts: [{ ContactID: bd2270c3-8706-4c11-9cfb-000b551c3f51, Name: Ann Lee }] } }
+result: { ContactID: bd2270c3-8706-4c11-9cfb-000b551c3f51, Name: Ann Lee }

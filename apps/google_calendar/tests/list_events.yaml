@@ -1,0 +1,9 @@
+action: list_events
+credential: { access_token: ya29.a0 }
+input: { calendar_id: primary, from: "2026-11-20T00:00:00Z" }
+exchanges:
+  - sent:
+      url: https://www.googleapis.com/calendar/v3/calendars/primary/events
+      query: { timeMin: "2026-11-20T00:00:00Z", singleEvents: "true", orderBy: startTime, maxResults: "250" }
+    answer: { body: { items: [{ id: e1, summary: Fitting }] } }
+result: [{ id: e1, summary: Fitting }]

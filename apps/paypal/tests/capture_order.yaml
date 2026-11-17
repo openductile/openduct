@@ -1,0 +1,10 @@
+action: capture_order
+credential: { client_id: cid, client_secret: cs, access_token: A21AA }
+input: { order_id: 5O190127TN364715T }
+exchanges:
+  - sent:
+      method: POST
+      url: https://api-m.paypal.com/v2/checkout/orders/5O190127TN364715T/capture
+      body: {}
+    answer: { status: 201, body: { id: 5O190127TN364715T, status: COMPLETED } }
+result: { id: 5O190127TN364715T, status: COMPLETED }

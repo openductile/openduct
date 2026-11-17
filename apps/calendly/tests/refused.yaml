@@ -1,0 +1,5 @@
+action: me
+credential: { token: expired }
+exchanges:
+  - answer: { status: 401, body: { title: Unauthenticated, message: "The access token is invalid" } }
+error: "Calendly answered 401: The access token is invalid"

@@ -1,0 +1,10 @@
+description: The next page is the address Calendly gives
+action: list_invitees
+credential: { token: eyJ1 }
+input: { event: E1 }
+exchanges:
+  - sent: { url: https://api.calendly.com/scheduled_events/E1/invitees, query: { count: "100" } }
+    answer: { body: { collection: [{ email: a@example.com }], pagination: { next_page: "https://api.calendly.com/scheduled_events/E1/invitees?count=100&page_token=p2" } } }
+  - sent: { url: "https://api.calendly.com/scheduled_events/E1/invitees?count=100&page_token=p2", query: {} }
+    answer: { body: { collection: [{ email: b@example.com }], pagination: { next_page: null } } }
+result: [{ email: a@example.com }, { email: b@example.com }]

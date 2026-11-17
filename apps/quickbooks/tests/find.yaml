@@ -1,0 +1,10 @@
+action: find
+credential: { access_token: eyJlb, realm_id: "9130357766900456" }
+input: { query: "select * from Invoice where Balance > '0'" }
+exchanges:
+  - sent:
+      method: GET
+      url: https://quickbooks.api.intuit.com/v3/company/9130357766900456/query
+      query: { minorversion: "75", query: "select * from Invoice where Balance > '0'" }
+    answer: { body: { QueryResponse: { Invoice: [{ Id: "130", Balance: 100.0 }], startPosition: 1, maxResults: 1 } } }
+result: { Invoice: [{ Id: "130", Balance: 100.0 }], startPosition: 1, maxResults: 1 }

@@ -1,0 +1,6 @@
+action: send_email
+credential: { access_token: ya29.a0 }
+input: { to: not-an-address, subject: Hi, text: Hi }
+exchanges:
+  - answer: { status: 400, body: { error: { code: 400, message: "Invalid To header", status: INVALID_ARGUMENT } } }
+error: "Gmail answered 400: Invalid To header"

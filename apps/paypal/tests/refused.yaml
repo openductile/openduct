@@ -1,0 +1,13 @@
+description: An order not yet approved by the buyer - said in PayPal's details
+action: capture_order
+credential: { client_id: cid, client_secret: cs, access_token: A21AA }
+input: { order_id: 5O190127TN364715T }
+exchanges:
+  - answer:
+      status: 422
+      body:
+        name: UNPROCESSABLE_ENTITY
+        message: "The requested action could not be performed, semantically incorrect, or failed business validation."
+        details: [{ issue: ORDER_NOT_APPROVED, description: "Payer has not yet approved the Order for payment." }]
+        debug_id: 90957fca61718
+error: "PayPal answered 422: ORDER_NOT_APPROVED: Payer has not yet approved the Order for payment."

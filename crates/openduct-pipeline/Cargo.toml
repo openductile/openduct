@@ -1,0 +1,19 @@
+[package]
+name = "openduct-pipeline"
+description = "OpenDuct pipelines: read a topic, change each message with expressions, write another topic."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+readme.workspace = true
+keywords.workspace = true
+categories.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+chrono = { version = "0.4.45", default-features = false, features = ["std"] }
+openduct-expr = { version = "0.1.0", path = "../openduct-expr" }
+yaml-rust2 = "0.13.0"

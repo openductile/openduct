@@ -1,0 +1,14 @@
+# One message per order line, for systems that work line by line (stock, fulfilment, revenue per product).
+name: order-lines
+from:
+  topic: orders
+each: lines
+map:
+  order_id: id
+  line:     item.sku
+  qty:      item.qty
+  amount:   round(item.qty * item.price, 2)
+  currency: "currency == null ? 'USD' : currency.upperAscii()"
+key: string(order_id) + '/' + line
+to:
+  topic: order-lines

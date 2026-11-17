@@ -1,0 +1,10 @@
+action: answer_ticket
+credential: { subdomain: acme, email: help@acme.example, api_token: tok1 }
+input: { ticket_id: "35436", text: "It is on its way: tracking 1Z999", public: true, status: solved }
+exchanges:
+  - sent:
+      method: PUT
+      url: https://acme.zendesk.com/api/v2/tickets/35436.json
+      body: { ticket: { comment: { body: "It is on its way: tracking 1Z999", public: true }, status: solved } }
+    answer: { body: { ticket: { id: 35436, status: solved } } }
+result: { id: 35436, status: solved }

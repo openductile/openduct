@@ -1,0 +1,11 @@
+description: A message to a chat
+action: send
+credential: { bot_token: "123:abc" }
+input: { chat_id: "42", text: Hello }
+exchanges:
+  - sent:
+      method: POST
+      url: https://api.telegram.org/bot123:abc/sendMessage
+      body: { chat_id: "42", text: Hello }
+    answer: { body: { ok: true, result: { message_id: 7 } } }
+result: { sent: true, message: { message_id: 7 } }

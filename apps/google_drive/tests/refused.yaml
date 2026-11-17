@@ -1,0 +1,6 @@
+action: share_file
+credential: { access_token: ya29.a0 }
+input: { file_id: nothere, email: bob@example.com, role: reader }
+exchanges:
+  - answer: { status: 404, body: { error: { code: 404, message: "File not found: nothere.", errors: [{ reason: notFound }] } } }
+error: "Google Drive answered 404: File not found: nothere."

@@ -1,0 +1,21 @@
+# A shop's stock levels live in MySQL. This keeps a topic of every product's stock in each warehouse as it changes,
+# flags what is running low, and keys each by product and warehouse so a product's levels stay in order. It reads
+# MySQL's binary log as a replica does, so nothing is installed on the database.
+name: stock-levels
+from:
+  mysql_cdc:
+    url: mysql://db.shop.example:3306
+    username: secret:MYSQL_USER
+    password: secret:MYSQL_PASSWORD
+    tls: true
+    tables: [shop.inventory]
+where: op != 'delete'
+map:
+  sku:       after.sku
+  warehouse: after.warehouse
+  stock:     after.quantity
+  low:       after.quantity < after.reorder_at
+  at:        committed
+key: sku + '@' + warehouse
+to:
+  topic: stock-levels

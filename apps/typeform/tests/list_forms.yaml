@@ -1,0 +1,6 @@
+action: list_forms
+credential: { token: tfp_1 }
+exchanges:
+  - sent: { url: https://api.typeform.com/forms, headers: { authorization: Bearer tfp_1 }, query: { page_size: "200" } }
+    answer: { body: { total_items: 1, items: [{ id: abc123, title: Order feedback }] } }
+result: [{ id: abc123, title: Order feedback }]

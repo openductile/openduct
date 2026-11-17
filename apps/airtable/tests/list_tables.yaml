@@ -1,0 +1,7 @@
+action: list_tables
+credential: { token: patA }
+input: { base_id: appX }
+exchanges:
+  - sent: { url: https://api.airtable.com/v0/meta/bases/appX/tables }
+    answer: { body: { tables: [{ id: tbl1, name: Orders, primaryFieldId: fld1, fields: [{ id: fld1, name: Name, type: singleLineText }] }] } }
+result: [{ id: tbl1, name: Orders, primaryFieldId: fld1, fields: [{ id: fld1, name: Name, type: singleLineText }] }]

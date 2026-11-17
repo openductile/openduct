@@ -1,0 +1,11 @@
+action: create_customer
+credential: { access_token: EAAAl1 }
+input: { email: ann@example.com, given_name: Ann }
+exchanges:
+  - sent:
+      method: POST
+      url: https://connect.squareup.com/v2/customers
+      headers: { authorization: Bearer EAAAl1, square-version: "2025-01-23" }
+      body: { email_address: ann@example.com, given_name: Ann }
+    answer: { body: { customer: { id: JDKYHBWT1D4F8MFH63DBMEN8Y4, email_address: ann@example.com, given_name: Ann } } }
+result: { id: JDKYHBWT1D4F8MFH63DBMEN8Y4, email_address: ann@example.com, given_name: Ann }

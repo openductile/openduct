@@ -1,0 +1,4 @@
+{"voltage":231.42,"current":12.61,"power_w":2915.6,"energy_kwh":18234.25,"breaker_closed":true}
+{"voltage":229.8,"current":27.04,"power_w":6213.9,"energy_kwh":18234.41,"breaker_closed":true}
+{"voltage":228.1,"current":33.5,"power_w":7641.35,"energy_kwh":18234.6,"breaker_closed":true}
+{"voltage":0,"current":0,"power_w":0,"energy_kwh":18234.6,"breaker_closed":false}

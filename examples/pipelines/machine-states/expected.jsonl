@@ -1,0 +1,4 @@
+{"key":"press-07","value":{"machine":"press-07","line":"L2","state":"running","fault":null,"rpm":1180,"at":"2025-11-15T09:46:40Z"}}
+{"key":"press-08","value":{"machine":"press-08","line":"L2","state":"idle","fault":null,"rpm":0,"at":"2025-11-15T09:46:45Z"}}
+{"key":"press-07","value":{"machine":"press-07","line":"L2","state":"fault","fault":214,"rpm":0,"at":"2025-11-15T09:47:40Z"}}
+{"key":"press-11","value":{"machine":"press-11","line":"L3","state":"running","fault":null,"rpm":960,"at":"2025-11-15T09:47:41Z"}}

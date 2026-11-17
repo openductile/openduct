@@ -1,0 +1,21 @@
+name: Webhook to a topic
+description: Receive deliveries from any system on a webhook, tidy them, and keep each one in a topic for other workflows and apps to read.
+category: Basics
+trigger:
+  webhook: {}
+# What a test runs on: an event as this trigger gives it.
+sample:
+  id: A-100
+  email: ' Ada@Example.com '
+  total: 76
+steps:
+  - name: tidy
+    set:
+      id: value.id
+      email: "value.email == null ? null : value.email.trim().lowerAscii()"
+      received: trigger.at
+  - name: keep
+    topic:
+      name: deliveries
+      key: "{{ steps.tidy.id }}"
+      value: "{{ steps.tidy }}"

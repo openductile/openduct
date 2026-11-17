@@ -1,0 +1,12 @@
+action: find_files
+credential: { access_token: ya29.a0 }
+input: { q: "name contains 'invoice' and trashed = false" }
+exchanges:
+  - sent:
+      url: https://www.googleapis.com/drive/v3/files
+      query: { q: "name contains 'invoice' and trashed = false", pageSize: "100", fields: "nextPageToken, files(id, name, mimeType, modifiedTime, webViewLink)" }
+    answer: { body: { nextPageToken: t2, files: [{ id: f1, name: invoice-1.pdf }] } }
+  - sent:
+      query: { q: "name contains 'invoice' and trashed = false", pageSize: "100", fields: "nextPageToken, files(id, name, mimeType, modifiedTime, webViewLink)", pageToken: t2 }
+    answer: { body: { files: [{ id: f2, name: invoice-2.pdf }] } }
+result: [{ id: f1, name: invoice-1.pdf }, { id: f2, name: invoice-2.pdf }]

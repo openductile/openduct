@@ -1,0 +1,63 @@
+# Copyright 2026 Ductile AI, Inc
+# SPDX-License-Identifier: Apache-2.0
+app: shopify
+name: Shopify
+category: commerce
+description: Orders and customers of a Shopify store.
+docs: https://shopify.dev/docs/api/admin-rest
+hosts: ["*.myshopify.com"]
+base_url: "https://{{ credential.shop }}.myshopify.com/admin/api/2025-01"
+sign_in:
+  - id: shopify
+    label: "A custom app's Admin API access token"
+    fields:
+      - { name: shop, label: "The store's name, as in mystore.myshopify.com" }
+      - { name: access_token, label: "The Admin API access token (shpat_...)", secret: true }
+    headers:
+      X-Shopify-Access-Token: "{{ credential.access_token }}"
+  - id: shopify_app
+    label: "An app's client ID and secret (Shopify's Dev Dashboard)"
+    fields:
+      - { name: shop, label: "The store's name, as in mystore.myshopify.com" }
+      - { name: client_id, label: Client ID }
+      - { name: client_secret, label: Secret, secret: true }
+    # A token for a day at a time, asked of the store itself, for an app made by the store's own organisation.
+    oauth2:
+      grant: client_credentials
+      token: "https://{{ credential.shop }}.myshopify.com/admin/oauth/access_token"
+    headers:
+      X-Shopify-Access-Token: "{{ credential.access_token }}"
+# Shopify's errors are a text, or field by field: either is said as it came.
+error: value.errors
+actions:
+  list_orders:
+    label: List orders
+    method: GET
+    path: /orders.json
+    inputs:
+      - { name: status, label: "Which: open, closed, cancelled or any (open by default)" }
+      - { name: created_at_min, label: "Made since (such as 2026-11-01T00:00:00Z)" }
+    query: { status: "{{ input.status }}", created_at_min: "{{ input.created_at_min }}", limit: "250" }
+    items: value.orders
+    # Shopify gives the next page only in its Link header: an address that already says what is asked.
+    next: links.next
+  get_order:
+    label: Look up an order
+    method: GET
+    path: "/orders/{{ input.order_id }}.json"
+    inputs:
+      - { name: order_id, label: "The order's id", required: true }
+    result: value.order
+  create_customer:
+    label: Add a customer
+    write: true
+    method: POST
+    path: /customers.json
+    inputs:
+      - { name: email, label: Email, required: true }
+      - { name: first_name, label: First name }
+      - { name: last_name, label: Last name }
+      - { name: tags, label: "Tags, separated by commas" }
+    send:
+      customer: { email: "{{ input.email }}", first_name: "{{ input.first_name }}", last_name: "{{ input.last_name }}", tags: "{{ input.tags }}" }
+    result: value.customer

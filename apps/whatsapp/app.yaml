@@ -1,0 +1,36 @@
+# Copyright 2026 Ductile AI, Inc
+# SPDX-License-Identifier: Apache-2.0
+app: whatsapp
+name: WhatsApp Business
+category: messaging
+description: Send WhatsApp messages from a business number, through the Cloud API.
+docs: https://developers.facebook.com/docs/whatsapp/cloud-api/reference/messages
+hosts: [graph.facebook.com]
+base_url: https://graph.facebook.com
+base_url_field: base_url
+sign_in:
+  - id: whatsapp
+    label: WhatsApp Business (Cloud API)
+    fields:
+      - { name: access_token, label: "The access token", secret: true }
+      - { name: phone_number_id, label: "The business number's id" }
+      - { name: api_version, label: "The Graph API version, such as v21.0" }
+      - { name: base_url, label: "Another address for the Graph API", optional: true }
+    headers:
+      Authorization: "Bearer {{ credential.access_token }}"
+default_action: send
+actions:
+  send:
+    label: Send a message
+    write: true
+    method: POST
+    path: "/{{ credential.api_version }}/{{ credential.phone_number_id }}/messages"
+    inputs:
+      - { name: to, label: The number it goes to, required: true, description: "With its country code, digits only" }
+      - { name: text, label: The message, required: true }
+    send:
+      messaging_product: whatsapp
+      to: "{{ input.to }}"
+      type: text
+      text: { body: "{{ input.text }}" }
+    result: "{'sent': true, 'answer': value}"

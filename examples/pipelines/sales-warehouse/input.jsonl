@@ -1,0 +1,4 @@
+{"order_id":"A-100","customer":"Ada Lovelace","email":"ada@example.com","items":2,"total":24.5,"currency":"EUR","placed":"2026-11-14T22:30:00Z","status":"paid"}
+{"order_id":"A-102","customer":"Grace Hopper","email":"grace@example.com","items":1,"total":59.97,"currency":"USD","placed":"2026-11-15T08:05:00Z","status":"open"}
+{"order_id":"A-104","customer":"Katherine Johnson","email":null,"items":0,"total":0,"currency":"USD","placed":null,"status":"paid"}
+{"order_id":"A-102","customer":"Grace Hopper","email":"grace@example.com","items":1,"total":59.97,"currency":"USD","placed":"2026-11-15T08:05:00Z","status":"paid"}

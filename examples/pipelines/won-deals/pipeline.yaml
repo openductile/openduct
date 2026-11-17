@@ -1,0 +1,22 @@
+# The sales team works in Salesforce. This reads its opportunities as they change and keeps a topic of the deals
+# won - for invoicing, a dashboard, or a welcome mail - keyed by opportunity so each deal's changes stay in order.
+name: won-deals
+from:
+  salesforce:
+    login_url: https://acme.my.salesforce.com
+    client_id: secret:SF_CLIENT_ID
+    client_secret: secret:SF_CLIENT_SECRET
+    object: Opportunity
+    fields: [Id, Name, AccountId, Amount, StageName, CloseDate]
+    where: "StageName = 'Closed Won'"
+    every: 2m
+where: op == 'upsert'
+map:
+  deal:     after.Id
+  name:     after.Name
+  account:  after.AccountId
+  amount:   after.Amount
+  closed:   after.CloseDate
+key: deal
+to:
+  topic: won-deals

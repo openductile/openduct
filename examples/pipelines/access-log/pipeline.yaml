@@ -1,0 +1,20 @@
+# Web server access-log lines (plain text, the common "combined" format) made into fields, keeping only the
+# requests that failed on the server side - and any line that cannot be read, so nothing disappears unseen.
+name: access-log
+from:
+  topic: web-logs
+  format: text
+let:
+  status: double(regex.extract(value, r'" (\d{3}) '))
+where: status == null || status >= 500
+map:
+  client:   regex.extract(value, r'^\S+')
+  time:     timestamp(regex.extract(value, r'\[([^\]]+)\]'), '%d/%b/%Y:%H:%M:%S %z')
+  method:   regex.extract(value, r'"(\w+) ')
+  path:     regex.extract(value, r'"\w+ (\S+)')
+  status:   status
+  bytes:    double(regex.extract(value, r'" \d{3} (\d+)'))
+  severity: "status == null ? 'unreadable' : status >= 503 ? 'outage' : 'error'"
+key: client
+to:
+  topic: web-errors

@@ -1,0 +1,11 @@
+action: open_ticket
+credential: { subdomain: acme, email: help@acme.example, api_token: tok1 }
+input: { subject: Order late, text: "Order A-100 has not come", requester_email: ann@example.com }
+exchanges:
+  - sent:
+      method: POST
+      url: https://acme.zendesk.com/api/v2/tickets.json
+      headers: { authorization: "Basic aGVscEBhY21lLmV4YW1wbGUvdG9rZW46dG9rMQ==" }
+      body: { ticket: { subject: Order late, comment: { body: "Order A-100 has not come" }, requester: { email: ann@example.com } } }
+    answer: { status: 201, body: { ticket: { id: 35436, status: new } } }
+result: { id: 35436, status: new }

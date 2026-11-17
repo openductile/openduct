@@ -1,0 +1,13 @@
+description: Payments page after page, until no cursor
+action: list_payments
+sign_in: square_sandbox
+credential: { access_token: EAAAl1 }
+exchanges:
+  - sent:
+      url: https://connect.squareupsandbox.com/v2/payments
+      query: {}
+    answer: { body: { payments: [{ id: p1 }], cursor: c2 } }
+  - sent:
+      query: { cursor: c2 }
+    answer: { body: { payments: [{ id: p2 }] } }
+result: [{ id: p1 }, { id: p2 }]

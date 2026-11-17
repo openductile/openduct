@@ -1,0 +1,6 @@
+action: read_rows
+credential: { access_token: ya29.a0 }
+input: { spreadsheet_id: s1, range: Nowhere }
+exchanges:
+  - answer: { status: 400, body: { error: { code: 400, message: "Unable to parse range: Nowhere", status: INVALID_ARGUMENT } } }
+error: "Google Sheets answered 400: Unable to parse range: Nowhere"

@@ -1,0 +1,70 @@
+# Copyright 2026 Ductile AI, Inc
+# SPDX-License-Identifier: Apache-2.0
+app: microsoft_365
+name: Microsoft 365
+category: productivity
+description: Mail and calendar in Outlook, and rows of Excel tables, through Microsoft Graph.
+docs: https://learn.microsoft.com/graph/api/overview
+hosts: [graph.microsoft.com]
+base_url: https://graph.microsoft.com/v1.0
+sign_in:
+  - id: microsoft_365
+    label: Sign in with Microsoft
+    oauth2:
+      authorize: https://login.microsoftonline.com/common/oauth2/v2.0/authorize
+      token: https://login.microsoftonline.com/common/oauth2/v2.0/token
+      scopes: [offline_access, Mail.Send, Calendars.ReadWrite, Files.ReadWrite]
+    headers:
+      Authorization: "Bearer {{ credential.access_token }}"
+error: value.error.message
+actions:
+  send_email:
+    label: Send an email
+    write: true
+    method: POST
+    path: /me/sendMail
+    inputs:
+      - { name: to, label: "To: an email address", required: true }
+      - { name: subject, label: Subject, required: true }
+      - { name: text, label: The message, required: true }
+    send:
+      message:
+        subject: "{{ input.subject }}"
+        body: { contentType: Text, content: "{{ input.text }}" }
+        toRecipients: [{ emailAddress: { address: "{{ input.to }}" } }]
+      saveToSentItems: true
+    result: "{'sent': true}"
+  list_events:
+    label: List calendar events
+    method: GET
+    path: /me/calendarView
+    inputs:
+      - { name: from, label: "From (such as 2026-11-20T00:00:00Z)", required: true }
+      - { name: to, label: "Until (such as 2026-11-27T00:00:00Z)", required: true }
+    query: { startDateTime: "{{ input.from }}", endDateTime: "{{ input.to }}", "$top": "100" }
+    items: value.value
+    next: "value['@odata.nextLink']"
+  add_event:
+    label: Add a calendar event
+    write: true
+    method: POST
+    path: /me/events
+    inputs:
+      - { name: title, label: Title, required: true }
+      - { name: start, label: "Starts (such as 2026-11-20T10:00:00)", required: true }
+      - { name: end, label: "Ends (such as 2026-11-20T11:00:00)", required: true }
+      - { name: time_zone, label: "Its time zone (such as Eastern Standard Time, or UTC)", required: true }
+    send:
+      subject: "{{ input.title }}"
+      start: { dateTime: "{{ input.start }}", timeZone: "{{ input.time_zone }}" }
+      end: { dateTime: "{{ input.end }}", timeZone: "{{ input.time_zone }}" }
+  add_excel_row:
+    label: Add a row to an Excel table
+    write: true
+    method: POST
+    path: "/me/drive/items/{{ input.file_id }}/workbook/tables/{{ input.table }}/rows"
+    inputs:
+      - { name: file_id, label: "The workbook's id in OneDrive", required: true }
+      - { name: table, label: "The table's name, such as Table1", required: true }
+      - { name: values, label: "The row's values, in order (as JSON)", required: true, kind: list }
+    send: { values: "{{ [input.values] }}" }

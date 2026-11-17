@@ -1,0 +1,37 @@
+[package]
+name = "openduct-studio"
+description = "OpenDuct's studio: the workflow editor in the browser and the API behind it, served by `openduct start`."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+readme.workspace = true
+keywords.workspace = true
+categories.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+base64 = "0.22.1"
+bytes = "1.12.1"
+http-body-util = "0.1.5"
+hyper = { version = "1.12.0", features = ["server", "http1"] }
+hyper-util = { version = "0.1.21", features = ["tokio"] }
+kafka-protocol = { version = "0.18.0", default-features = false }
+openduct-broker = { version = "0.1.0", path = "../openduct-broker" }
+openduct-expr = { version = "0.1.0", path = "../openduct-expr" }
+openduct-flow = { version = "0.1.0", path = "../openduct-flow" }
+# Pipelines written in the studio: read, checked and tried here; run by the program (see `PipelineRunner`).
+openduct-pipeline = { version = "0.1.0", path = "../openduct-pipeline" }
+ring = "0.17.14"
+serde = { version = "1.0.229", features = ["derive"] }
+# Only the side that starts a script's process: the engines are the program's (openduct __script).
+openduct-script = { version = "0.1.0", path = "../openduct-script", default-features = false }
+serde_json = { version = "1.0.154", features = ["preserve_order"] }
+tokio = { version = "1.54.1", features = ["rt-multi-thread", "macros", "net", "time", "sync", "io-util"] }
+tracing = "0.1.44"
+
+[dev-dependencies]
+tempfile = "3.27.0"

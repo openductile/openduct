@@ -1,0 +1,49 @@
+# Copyright 2026 Ductile AI, Inc
+# SPDX-License-Identifier: Apache-2.0
+app: gmail
+name: Gmail
+category: email
+description: Mail sent from a Gmail or Google Workspace address, and mail found.
+docs: https://developers.google.com/gmail/api/reference/rest
+hosts: [gmail.googleapis.com]
+base_url: https://gmail.googleapis.com/gmail/v1
+sign_in:
+  - id: gmail
+    label: Sign in with Google
+    oauth2:
+      authorize: https://accounts.google.com/o/oauth2/v2/auth
+      token: https://oauth2.googleapis.com/token
+      scopes: [https://www.googleapis.com/auth/gmail.send, https://www.googleapis.com/auth/gmail.readonly]
+      extra: { access_type: offline, prompt: consent }
+    headers:
+      Authorization: "Bearer {{ credential.access_token }}"
+error: value.error.message
+actions:
+  send_email:
+    label: Send an email
+    write: true
+    method: POST
+    path: /users/me/messages/send
+    inputs:
+      - { name: to, label: "To (addresses, separated by commas)", required: true }
+      - { name: subject, label: Subject, required: true }
+      - { name: text, label: The message, required: true }
+    # The message as mail is written (RFC 5322), in Base64 for addresses (as Gmail takes it).
+    send:
+      raw: '{{ base64.encode(bytes("To: " + input.to + "\r\nSubject: " + input.subject + "\r\nContent-Type: text/plain; charset=UTF-8\r\n\r\n" + input.text)).replace("+", "-").replace("/", "_") }}'
+  find_emails:
+    label: Find emails
+    method: GET
+    path: /users/me/messages
+    inputs:
+      - { name: q, label: "Which, as Gmail searches: such as from:shop@example.com newer_than:7d" }
+    query: { q: "{{ input.q }}", maxResults: "100" }
+    items: "value.messages == null ? [] : value.messages"
+    next: "value.nextPageToken == null ? null : {'pageToken': value.nextPageToken}"
+  read_email:
+    label: Read an email
+    method: GET
+    path: "/users/me/messages/{{ input.message_id }}"
+    inputs:
+      - { name: message_id, label: "The email's id (from Find emails)", required: true }
+    query: { format: full }

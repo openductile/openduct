@@ -1,0 +1,25 @@
+# A panel's energy meter, read over Modbus TCP every 10 seconds: voltage, current and power as 32-bit floats in input
+# registers, the energy count, and whether the main breaker is closed. Power is written in kW with a load level, and
+# a reading is written only when something changed.
+name: energy-meter
+from:
+  modbus:
+    url: modbus://10.0.8.31:502
+    unit: 1
+    device: panel-main
+    every: 10s
+    changes_only: true
+    read:
+      voltage:        { table: input, address: 0,  type: f32 }
+      current:        { table: input, address: 6,  type: f32 }
+      power_w:        { table: input, address: 12, type: f32 }
+      energy_kwh:     { table: input, address: 342, type: u32, scale: 0.01 }
+      breaker_closed: { table: discrete, address: 0 }
+map:
+  volts:      round(voltage, 1)
+  amps:       round(current, 1)
+  kw:         round(power_w / 1000, 2)
+  energy_kwh: energy_kwh
+  load:       "!breaker_closed ? 'off' : current >= 32 ? 'over' : current >= 25 ? 'high' : 'normal'"
+to:
+  topic: panel-energy

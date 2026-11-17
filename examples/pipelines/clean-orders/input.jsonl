@@ -1,0 +1,5 @@
+{"id":"A-100","status":"new","paid":true,"currency":"eur","created_at":"2026-11-14 22:30:00","customer":{"name":" Ada Lovelace ","email":" Ada@Example.com "},"lines":[{"sku":"a","qty":2,"price":5},{"sku":"b","qty":0,"price":7},{"sku":"c","qty":4,"price":3.625}]}
+{"id":"A-101","status":"test","paid":false,"created_at":"2026-11-14 23:00:00","customer":{"name":"Test User","email":"qa@example.com"},"lines":[{"sku":"a","qty":1,"price":5}]}
+{"id":"A-102","status":"new","paid":false,"created_at":"2026-11-15 08:05:00","customer":{"name":"Grace Hopper  ","email":"grace@example.com"},"lines":[{"sku":"d","qty":3,"price":"19.99"}]}
+{"id":"A-103","status":"new","paid":true,"created_at":"2026-11-15 09:00:00","customer":{"name":"Alan Turing","email":"alan@example.com"},"lines":[{"sku":"e","qty":"two","price":4}]}
+{"id":"A-104","status":"new","paid":true,"customer":{"name":"Katherine Johnson"},"lines":[]}

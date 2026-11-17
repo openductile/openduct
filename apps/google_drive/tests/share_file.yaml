@@ -1,0 +1,10 @@
+action: share_file
+credential: { access_token: ya29.a0 }
+input: { file_id: fold1, email: bob@example.com, role: writer }
+exchanges:
+  - sent:
+      url: https://www.googleapis.com/drive/v3/files/fold1/permissions
+      query: { sendNotificationEmail: "true" }
+      body: { type: user, emailAddress: bob@example.com, role: writer }
+    answer: { body: { kind: drive#permission, id: "1234", type: user, role: writer } }
+result: { kind: drive#permission, id: "1234", type: user, role: writer }

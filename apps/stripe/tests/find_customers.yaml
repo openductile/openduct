@@ -1,0 +1,10 @@
+action: find_customers
+credential: { secret_key: sk_test_1 }
+input: { email: ann@example.com }
+exchanges:
+  - sent:
+      method: GET
+      url: https://api.stripe.com/v1/customers
+      query: { email: ann@example.com, limit: "100" }
+    answer: { body: { object: list, has_more: false, data: [{ id: cus_1, email: ann@example.com }] } }
+result: [{ id: cus_1, email: ann@example.com }]

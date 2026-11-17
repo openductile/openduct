@@ -1,0 +1,10 @@
+action: update_record
+credential: { token: patA }
+input: { base_id: appX, table: Orders, record_id: rec9, fields: { Status: Shipped } }
+exchanges:
+  - sent:
+      method: PATCH
+      url: https://api.airtable.com/v0/appX/Orders/rec9
+      body: { fields: { Status: Shipped }, typecast: true }
+    answer: { body: { id: rec9, fields: { Status: Shipped } } }
+result: { id: rec9, fields: { Status: Shipped } }

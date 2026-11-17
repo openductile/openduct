@@ -1,0 +1,10 @@
+description: A search is a POST, but it changes nothing
+action: find_contact
+credential: { access_token: pat-na1-1 }
+input: { email: ann@example.com }
+exchanges:
+  - sent:
+      url: https://api.hubapi.com/crm/v3/objects/contacts/search
+      body: { filterGroups: [{ filters: [{ propertyName: email, operator: EQ, value: ann@example.com }] }], properties: [email, firstname, lastname, phone, company] }
+    answer: { body: { total: 1, results: [{ id: "512", properties: { email: ann@example.com } }] } }
+result: [{ id: "512", properties: { email: ann@example.com } }]

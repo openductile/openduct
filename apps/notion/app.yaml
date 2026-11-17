@@ -1,0 +1,56 @@
+# Copyright 2026 Ductile AI, Inc
+# SPDX-License-Identifier: Apache-2.0
+app: notion
+name: Notion
+category: productivity
+description: Pages of a Notion database, read and added.
+docs: https://developers.notion.com/reference/intro
+hosts: [api.notion.com]
+base_url: https://api.notion.com/v1
+sign_in:
+  - id: notion
+    label: "An internal integration's secret"
+    fields:
+      - { name: token, label: "The integration's secret (ntn_...)", secret: true }
+    headers:
+      Authorization: "Bearer {{ credential.token }}"
+      Notion-Version: "2022-06-28"
+error: value.message
+actions:
+  search:
+    label: Find pages and databases
+    description: "By title: those the integration was given, each with the id the other actions ask for."
+    method: POST
+    path: /search
+    inputs:
+      - { name: query, label: "Words in the title (all when empty)" }
+      - { name: only, label: "page or database (both when empty)" }
+    send:
+      query: "{{ input.query }}"
+      filter: "{{ input.only == null ? null : {'property': 'object', 'value': input.only} }}"
+      page_size: 100
+    items: value.results
+    next: "value.has_more ? {'start_cursor': value.next_cursor} : null"
+    page_in: body
+  query_database:
+    label: Read a database's pages
+    method: POST
+    path: "/databases/{{ input.database_id }}/query"
+    inputs:
+      - { name: database_id, label: "The database's id", required: true }
+      - { name: filter, label: "Only pages this filter holds for (Notion's filter, as JSON)", kind: record }
+    send: { filter: "{{ input.filter }}", page_size: 100 }
+    items: value.results
+    next: "value.has_more ? {'start_cursor': value.next_cursor} : null"
+    page_in: body
+  add_page:
+    label: Add a page to a database
+    write: true
+    method: POST
+    path: /pages
+    inputs:
+      - { name: database_id, label: "The database's id", required: true }
+      - { name: properties, label: "Its properties (Notion's form, as JSON)", required: true, kind: record }
+    send:
+      parent: { database_id: "{{ input.database_id }}" }
+      properties: "{{ input.properties }}"

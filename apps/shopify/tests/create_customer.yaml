@@ -1,0 +1,10 @@
+action: create_customer
+credential: { shop: acme, access_token: shpat_1 }
+input: { email: ann@example.com, first_name: Ann }
+exchanges:
+  - sent:
+      method: POST
+      url: https://acme.myshopify.com/admin/api/2025-01/customers.json
+      body: { customer: { email: ann@example.com, first_name: Ann } }
+    answer: { status: 201, body: { customer: { id: 1073339471, email: ann@example.com } } }
+result: { id: 1073339471, email: ann@example.com }

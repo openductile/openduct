@@ -1,0 +1,19 @@
+# A shop's product catalogue lives in MongoDB. This keeps a topic with the latest of each product - ready for a
+# search index - from MongoDB's change streams: every product already there, then every one added, changed or
+# removed, keyed by product id so a product's versions stay in order.
+name: catalog-changes
+from:
+  mongodb_cdc:
+    url: mongodb+srv://shop.abcde.mongodb.net
+    username: secret:MONGO_USER
+    password: secret:MONGO_PASSWORD
+    collections: [shop.products]
+map:
+  id:       "op == 'delete' ? before._id : after._id"
+  name:     after.name
+  price:    after.price
+  in_stock: after.stock > 0
+  removed:  op == 'delete'
+key: id
+to:
+  topic: catalog

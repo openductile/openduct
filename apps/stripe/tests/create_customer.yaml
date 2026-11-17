@@ -1,0 +1,12 @@
+description: A customer made, the empty fields left out
+action: create_customer
+credential: { secret_key: sk_test_1 }
+input: { email: ann@example.com, name: Ann Lee }
+exchanges:
+  - sent:
+      method: POST
+      url: https://api.stripe.com/v1/customers
+      headers: { authorization: Bearer sk_test_1 }
+      body: { email: ann@example.com, name: Ann Lee }
+    answer: { body: { id: cus_NffrFeUfNV2Hib, object: customer, email: ann@example.com, name: Ann Lee } }
+result: { id: cus_NffrFeUfNV2Hib, object: customer, email: ann@example.com, name: Ann Lee }

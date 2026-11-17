@@ -1,0 +1,4 @@
+{"type":"charge.succeeded","data":{"id":"ch_1","amount_cents":1999,"currency":"usd","customer":"cus_9"},"created":1763200000}
+{"type":"refund.created","data":{"id":"re_7","charge":"ch_1","amount_cents":500,"currency":"usd"},"created":1763200300}
+{"type":"charge.failed","data":{"id":"ch_2","amount_cents":4200,"currency":"eur","customer":"cus_3","failure":"card_declined"},"created":1763200600}
+{"type":"customer.updated","data":{"id":"cus_9"},"created":1763200900}

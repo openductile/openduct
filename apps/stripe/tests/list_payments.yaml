@@ -1,0 +1,12 @@
+description: Two pages of payments, followed
+action: list_payments
+credential: { secret_key: sk_test_1 }
+exchanges:
+  - sent:
+      url: https://api.stripe.com/v1/payment_intents
+      query: { limit: "100" }
+    answer: { body: { object: list, has_more: true, data: [{ id: pi_1, amount: 2000 }, { id: pi_2, amount: 500 }] } }
+  - sent:
+      query: { limit: "100", starting_after: pi_2 }
+    answer: { body: { object: list, has_more: false, data: [{ id: pi_3, amount: 750 }] } }
+result: [{ id: pi_1, amount: 2000 }, { id: pi_2, amount: 500 }, { id: pi_3, amount: 750 }]

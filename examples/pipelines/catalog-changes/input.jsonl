@@ -1,0 +1,4 @@
+{"op":"snapshot","table":"shop.products","before":null,"after":{"_id":"6738a1f2c4e5d6a7b8c9d0e1","name":"Black tee","price":19.90,"stock":42}}
+{"op":"update","table":"shop.products","before":null,"after":{"_id":"6738a1f2c4e5d6a7b8c9d0e1","name":"Black tee","price":17.50,"stock":0},"changes":{"updated":{"price":17.50,"stock":0},"removed":[]},"committed":"2026-11-15T09:46:40.120Z"}
+{"op":"insert","table":"shop.products","before":null,"after":{"_id":"6738a1f2c4e5d6a7b8c9d0f2","name":"White mug","price":8.00,"stock":120},"committed":"2026-11-15T09:47:02.481Z"}
+{"op":"delete","table":"shop.products","before":{"_id":"6738a1f2c4e5d6a7b8c9d0e1"},"after":null,"committed":"2026-11-15T09:50:00.007Z"}

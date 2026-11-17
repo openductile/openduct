@@ -1,0 +1,52 @@
+# Copyright 2026 Ductile AI, Inc
+# SPDX-License-Identifier: Apache-2.0
+app: square
+name: Square
+category: payments
+description: Customers and payments in Square.
+docs: https://developer.squareup.com/reference/square
+hosts: [connect.squareup.com, connect.squareupsandbox.com]
+base_url: https://connect.squareup.com/v2
+sign_in:
+  - id: square
+    label: An access token
+    fields:
+      - { name: access_token, label: "The access token (production)", secret: true }
+    headers:
+      Authorization: "Bearer {{ credential.access_token }}"
+      Square-Version: "2025-01-23"
+  - id: square_sandbox
+    label: A sandbox access token (for testing)
+    base_url: https://connect.squareupsandbox.com/v2
+    fields:
+      - { name: access_token, label: "The sandbox access token", secret: true }
+    headers:
+      Authorization: "Bearer {{ credential.access_token }}"
+      Square-Version: "2025-01-23"
+error: value.errors[0].detail
+actions:
+  create_customer:
+    label: Add a customer
+    write: true
+    method: POST
+    path: /customers
+    inputs:
+      - { name: email, label: Email, required: true }
+      - { name: given_name, label: First name }
+      - { name: family_name, label: Last name }
+      - { name: phone, label: Phone }
+    send:
+      email_address: "{{ input.email }}"
+      given_name: "{{ input.given_name }}"
+      family_name: "{{ input.family_name }}"
+      phone_number: "{{ input.phone }}"
+    result: value.customer
+  list_payments:
+    label: List payments
+    method: GET
+    path: /payments
+    inputs:
+      - { name: begin_time, label: "From (RFC 3339, such as 2026-11-01T00:00:00Z)" }
+    query: { begin_time: "{{ input.begin_time }}" }
+    items: value.payments
+    next: "value.cursor == null ? null : {'cursor': value.cursor}"

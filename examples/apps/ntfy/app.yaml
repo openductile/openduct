@@ -1,0 +1,40 @@
+# Copyright 2026 Ductile AI, Inc
+# SPDX-License-Identifier: Apache-2.0
+# What ntfy is to OpenDuct: how it signs in, and what it can do. See docs/apps.md and docs/tutorials/build-an-app.md.
+app: ntfy
+name: ntfy
+category: messaging
+description: Push notifications to your phone or desktop, through ntfy.sh or your own ntfy server.
+docs: https://docs.ntfy.sh/publish/
+hosts: [ntfy.sh]
+base_url: https://ntfy.sh
+# A server of your own, given in the credential, takes the place of ntfy.sh.
+base_url_field: server
+sign_in:
+  - id: ntfy
+    label: An access token
+    fields:
+      - { name: token, label: "The access token (tk_...)", secret: true }
+      - { name: server, label: "Your own server, such as https://ntfy.example.com (ntfy.sh when empty)", optional: true }
+    headers:
+      Authorization: "Bearer {{ credential.token }}"
+error: value.error
+default_action: send
+actions:
+  send:
+    label: Send a notification
+    write: true
+    method: POST
+    path: /
+    inputs:
+      - { name: topic, label: "The topic: the name your phone subscribes to", required: true }
+      - { name: message, label: The message, required: true }
+      - { name: title, label: A title }
+      - { name: priority, label: "1 (least) to 5 (most urgent); 3 when empty", kind: number }
+      - { name: click, label: An address to open when it is tapped }
+    send:
+      topic: "{{ input.topic }}"
+      message: "{{ input.message }}"
+      title: "{{ input.title }}"
+      priority: "{{ input.priority == null ? null : int(input.priority) }}"
+      click: "{{ input.click }}"

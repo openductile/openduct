@@ -1,0 +1,6 @@
+action: create_customer
+credential: { access_token: wrong }
+input: { email: ann@example.com }
+exchanges:
+  - answer: { status: 401, body: { errors: [{ category: AUTHENTICATION_ERROR, code: UNAUTHORIZED, detail: "This request could not be authorized." }] } }
+error: "Square answered 401: This request could not be authorized."

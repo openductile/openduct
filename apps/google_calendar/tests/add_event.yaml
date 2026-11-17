@@ -1,0 +1,10 @@
+action: add_event
+credential: { access_token: ya29.a0 }
+input: { calendar_id: primary, title: Fitting, start: "2026-11-20T10:00:00-05:00", end: "2026-11-20T11:00:00-05:00", attendees: [ann@example.com] }
+exchanges:
+  - sent:
+      method: POST
+      url: https://www.googleapis.com/calendar/v3/calendars/primary/events
+      body: { summary: Fitting, start: { dateTime: "2026-11-20T10:00:00-05:00" }, end: { dateTime: "2026-11-20T11:00:00-05:00" }, attendees: [{ email: ann@example.com }] }
+    answer: { body: { id: e2, status: confirmed, htmlLink: "https://www.google.com/calendar/event?eid=e2" } }
+result: { id: e2, status: confirmed, htmlLink: "https://www.google.com/calendar/event?eid=e2" }

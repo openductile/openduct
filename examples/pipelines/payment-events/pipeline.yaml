@@ -1,0 +1,17 @@
+# A payment provider sends events of different shapes; this makes every charge and refund one kind of record, in
+# currency units rather than cents, with refunds as negative amounts.
+name: payment-events
+from:
+  topic: payments-raw
+where: type.startsWith('charge.') || type.startsWith('refund.')
+map:
+  payment_id: "has(data.charge) ? data.charge : data.id"
+  event:      "type == 'charge.succeeded' ? 'paid' : type == 'charge.failed' ? 'failed' : type == 'refund.created' ? 'refunded' : 'other'"
+  amount:     "(type == 'refund.created' ? -1 : 1) * data.amount_cents / 100"
+  currency:   data.currency.upperAscii()
+  customer:   data.customer
+  reason:     data.failure
+  at:         timestamp(created)
+key: payment_id
+to:
+  topic: payments

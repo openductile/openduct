@@ -1,0 +1,12 @@
+description: A text message from a business number
+action: send
+credential: { access_token: EAAG1, phone_number_id: "1234", api_version: v21.0 }
+input: { to: "15551234567", text: Your order is on its way }
+exchanges:
+  - sent:
+      method: POST
+      url: https://graph.facebook.com/v21.0/1234/messages
+      headers: { authorization: Bearer EAAG1 }
+      body: { messaging_product: whatsapp, to: "15551234567", type: text, text: { body: Your order is on its way } }
+    answer: { body: { messages: [{ id: wamid.1 }] } }
+result: { sent: true, answer: { messages: [{ id: wamid.1 }] } }

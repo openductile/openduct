@@ -1,0 +1,23 @@
+name: A daily report from Postgres, by e-mail
+description: >-
+  Every day, count yesterday's orders and their total in your database (an orders table with total and created_at)
+  and e-mail the figures to your team.
+category: Databases
+trigger:
+  schedule: { every: 1d }
+# What a test runs on: an event as this trigger gives it.
+sample:
+  scheduled_at: '2026-11-17T00:00:00Z'
+steps:
+  - name: figures
+    postgres:
+      credential: db
+      sql: >-
+        SELECT count(*) AS orders, coalesce(sum(total), 0) AS revenue FROM orders
+        WHERE created_at >= current_date - 1 AND created_at < current_date
+  - name: send
+    email:
+      credential: mail
+      to: team@example.com
+      subject: "Yesterday: {{ steps.figures.rows[0].orders }} orders"
+      text: "Orders: {{ steps.figures.rows[0].orders }}. Revenue: {{ steps.figures.rows[0].revenue }}."

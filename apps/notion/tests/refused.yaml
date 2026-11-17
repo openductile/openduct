@@ -1,0 +1,7 @@
+description: A database the integration was not given
+action: query_database
+credential: { token: ntn_1 }
+input: { database_id: d9824bdc }
+exchanges:
+  - answer: { status: 404, body: { object: error, status: 404, code: object_not_found, message: "Could not find database with ID: d9824bdc. Make sure the relevant pages and databases are shared with your integration." } }
+error: "Notion answered 404: Could not find database with ID: d9824bdc."

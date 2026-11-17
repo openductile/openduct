@@ -1,0 +1,14 @@
+description: Only databases; the next page's cursor goes in the body
+action: search
+credential: { token: ntn_1 }
+input: { query: Orders, only: database }
+exchanges:
+  - sent:
+      method: POST
+      url: https://api.notion.com/v1/search
+      body: { query: Orders, filter: { property: object, value: database }, page_size: 100 }
+    answer: { body: { results: [{ object: database, id: d1 }], has_more: true, next_cursor: c2 } }
+  - sent:
+      body: { query: Orders, filter: { property: object, value: database }, page_size: 100, start_cursor: c2 }
+    answer: { body: { results: [{ object: database, id: d2 }], has_more: false, next_cursor: null } }
+result: [{ object: database, id: d1 }, { object: database, id: d2 }]

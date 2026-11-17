@@ -1,0 +1,6 @@
+action: create_invoice
+credential: { access_token: eyJx, tenant_id: t1 }
+input: { contact_id: nobody, lines: [] }
+exchanges:
+  - answer: { status: 400, body: { ErrorNumber: 10, Type: ValidationException, Message: A validation exception occurred, Elements: [{ ValidationErrors: [{ Message: "Contact could not be found" }] }] } }
+error: "Xero answered 400: Contact could not be found"

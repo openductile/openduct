@@ -1,0 +1,8 @@
+action: list_audiences
+credential: { api_key: abc123-us21, data_center: us21 }
+exchanges:
+  - sent:
+      url: https://us21.api.mailchimp.com/3.0/lists
+      query: { count: "100", fields: "lists.id,lists.name,lists.stats.member_count" }
+    answer: { body: { lists: [{ id: 57afe96172, name: Customers }] } }
+result: [{ id: 57afe96172, name: Customers }]

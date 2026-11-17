@@ -1,0 +1,28 @@
+name: Check a website and alert Slack
+description: >-
+  Every five minutes, call an address (three tries); when it does not answer 200, post to your team's Slack channel
+  and send the run to CatchErr, so every outage shows in the history.
+category: Monitoring
+trigger:
+  schedule: { every: 5m }
+# What a test runs on: an event as this trigger gives it.
+sample:
+  scheduled_at: '2026-11-17T09:05:00Z'
+steps:
+  - name: call
+    http:
+      method: GET
+      # Your own site's address.
+      url: https://example.com/health
+    retry: { attempts: 3, wait: 10s }
+    on_error: continue
+  - name: check
+    if:
+      # Not answering at all (the call failed) is an outage too, not only an answer other than 200.
+      when: has(steps.call.error) || (has(steps.call.status) && steps.call.status != 200)
+      then:
+        - slack:
+            credential: team
+            channel: "#ops"
+            text: "https://example.com/health is not answering 200"
+        - stop: { error: "the site did not answer 200" }

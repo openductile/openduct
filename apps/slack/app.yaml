@@ -1,0 +1,42 @@
+# Copyright 2026 Ductile AI, Inc
+# SPDX-License-Identifier: Apache-2.0
+app: slack
+name: Slack
+category: messaging
+description: Post messages to Slack, with an app's bot token or a channel's incoming webhook.
+docs: https://api.slack.com/methods/chat.postMessage
+hosts: [slack.com]
+base_url: https://slack.com/api
+base_url_field: base_url
+sign_in:
+  - id: slack
+    label: "A Slack app's bot token"
+    fields:
+      - { name: bot_token, label: "The bot token (xoxb-...)", secret: true }
+      - { name: base_url, label: "Another address for Slack's API", optional: true }
+    headers:
+      Authorization: "Bearer {{ credential.bot_token }}"
+  - id: slack_webhook
+    label: A Slack incoming webhook
+    fields:
+      - { name: url, label: "The webhook's address", secret: true }
+    url_field: url
+default_action: send
+actions:
+  send:
+    label: Post a message
+    write: true
+    method: POST
+    path: /chat.postMessage
+    inputs:
+      - { name: text, label: The message, required: true }
+      - { name: channel, label: The channel, description: "Its id, or #name (with a bot token)" }
+    send:
+      channel: "{{ input.channel }}"
+      text: "{{ input.text }}"
+    # Slack answers 200 with ok: false when it refuses.
+    error: "value.ok == false ? value.error : null"
+    result: "{'sent': true, 'answer': value}"
+    by:
+      slack_webhook:
+        send: { text: "{{ input.text }}" }

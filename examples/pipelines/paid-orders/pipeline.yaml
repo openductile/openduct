@@ -1,0 +1,22 @@
+# A shop's order events arrive in another team's Kafka cluster, a hosted one that asks for SASL over TLS. This
+# reads them as a consumer group there, keeps the paid orders, turns amounts in cents into money, and keys each by
+# order so one order's events stay in order here too.
+name: paid-orders
+from:
+  kafka:
+    brokers: b-1.shop.example.com:9096, b-2.shop.example.com:9096
+    topics: [shop.orders]
+    tls: true
+    sasl: scram-sha-512
+    username: secret:KAFKA_USER
+    password: secret:KAFKA_PASSWORD
+where: event == 'order_paid'
+map:
+  order:    order_id
+  customer: customer.id
+  amount:   cents / 100
+  currency: currency.upperAscii()
+  paid_at:  timestamp(ts)
+key: order
+to:
+  topic: paid-orders

@@ -1,0 +1,11 @@
+action: send_sms
+credential: { account_sid: AC1, auth_token: t1 }
+input: { to: "+15551234567", from: "+15557654321", text: Your order has shipped }
+exchanges:
+  - sent:
+      method: POST
+      url: https://api.twilio.com/2010-04-01/Accounts/AC1/Messages.json
+      headers: { authorization: "Basic QUMxOnQx" }
+      body: { To: "+15551234567", From: "+15557654321", Body: Your order has shipped }
+    answer: { status: 201, body: { sid: SM1, status: queued } }
+result: { sid: SM1, status: queued }

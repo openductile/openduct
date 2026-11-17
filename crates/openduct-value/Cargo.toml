@@ -1,0 +1,20 @@
+[package]
+name = "openduct-value"
+description = "The values OpenDuct's pipelines and connectors carry: messages as named fields, exact decimals, text, lists and times, to and from JSON."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+readme.workspace = true
+keywords.workspace = true
+categories.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+chrono = { version = "0.4.45", default-features = false, features = ["std", "clock"] }
+indexmap = "2.14.2"
+rust_decimal = { version = "1.43.0", default-features = false, features = ["std"] }
+serde_json = { version = "1.0.154", features = ["preserve_order", "arbitrary_precision"] }

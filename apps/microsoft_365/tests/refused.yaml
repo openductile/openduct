@@ -1,0 +1,6 @@
+action: send_email
+credential: { access_token: expired }
+input: { to: ann@example.com, subject: Hi, text: Hi }
+exchanges:
+  - answer: { status: 401, body: { error: { code: InvalidAuthenticationToken, message: "Access token has expired or is not yet valid." } } }
+error: "Microsoft 365 answered 401: Access token has expired or is not yet valid."

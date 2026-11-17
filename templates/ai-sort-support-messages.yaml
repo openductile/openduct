@@ -1,0 +1,41 @@
+name: Sort support messages with AI
+description: >-
+  When a support message comes in over a webhook ({"from", "subject", "text"}), have a model sort it - billing, a bug,
+  a question or other, and how urgent - with a one-line summary; post the urgent ones to your team's Slack channel and
+  keep every one, sorted, in the support.sorted topic.
+category: AI
+trigger:
+  webhook: {}
+# What a test runs on: an event as this trigger gives it.
+sample:
+  from: jo@example.com
+  subject: Card declined again
+  text: 'I cannot pay this month''s invoice: my card keeps being declined and the service stops on Friday.'
+steps:
+  - name: sorted
+    ai:
+      credential: model
+      system: >-
+        You sort customer support messages. Answer with JSON only:
+        {"category": "billing" | "bug" | "question" | "other", "urgent": true | false, "summary": "one line"}.
+        A message is urgent when the customer cannot work, cannot pay, or is about to leave.
+      prompt: "From {{ value.from }}. Subject: {{ value.subject }}. {{ value.text }}"
+      json: true
+      max_tokens: 300
+  - name: tell
+    if:
+      when: steps.sorted.json.urgent == true
+      then:
+        - slack:
+            credential: team
+            channel: "#support"
+            text: "Urgent {{ steps.sorted.json.category }} from {{ value.from }}: {{ steps.sorted.json.summary }}"
+  - name: keep
+    topic:
+      name: support.sorted
+      value:
+        from: "{{ value.from }}"
+        subject: "{{ value.subject }}"
+        category: "{{ steps.sorted.json.category }}"
+        urgent: "{{ steps.sorted.json.urgent }}"
+        summary: "{{ steps.sorted.json.summary }}"

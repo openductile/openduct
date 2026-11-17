@@ -1,0 +1,65 @@
+# Copyright 2026 Ductile AI, Inc
+# SPDX-License-Identifier: Apache-2.0
+app: stripe
+name: Stripe
+category: payments
+description: Customers, payments and refunds in Stripe.
+docs: https://docs.stripe.com/api
+hosts: [api.stripe.com]
+base_url: https://api.stripe.com/v1
+sign_in:
+  - id: stripe
+    label: A secret key (or a restricted key)
+    fields:
+      - { name: secret_key, label: "The secret key (sk_live_... or rk_live_...)", secret: true }
+    headers:
+      Authorization: "Bearer {{ credential.secret_key }}"
+error: value.error.message
+actions:
+  create_customer:
+    label: Create a customer
+    write: true
+    method: POST
+    path: /customers
+    body: form
+    inputs:
+      - { name: email, label: Email, required: true }
+      - { name: name, label: Name }
+      - { name: phone, label: Phone }
+      - { name: description, label: A note about them }
+    send:
+      email: "{{ input.email }}"
+      name: "{{ input.name }}"
+      phone: "{{ input.phone }}"
+      description: "{{ input.description }}"
+  find_customers:
+    label: Find customers by email
+    method: GET
+    path: /customers
+    inputs:
+      - { name: email, label: Email, required: true }
+    query: { email: "{{ input.email }}", limit: "100" }
+    items: value.data
+  list_payments:
+    label: List payments
+    method: GET
+    path: /payment_intents
+    inputs:
+      - { name: customer, label: "Only this customer's (cus_...)" }
+    query: { limit: "100", customer: "{{ input.customer }}" }
+    items: value.data
+    next: "value.has_more ? {'starting_after': value.data[size(value.data) - 1].id} : null"
+  refund_payment:
+    label: Refund a payment
+    write: true
+    method: POST
+    path: /refunds
+    body: form
+    inputs:
+      - { name: payment_intent, label: "The payment (pi_...)", required: true }
+      - { name: amount, label: "How much, in cents (all of it when empty)", kind: number }
+      - { name: reason, label: "Why: duplicate, fraudulent or requested_by_customer" }
+    send:
+      payment_intent: "{{ input.payment_intent }}"
+      amount: "{{ input.amount }}"
+      reason: "{{ input.reason }}"

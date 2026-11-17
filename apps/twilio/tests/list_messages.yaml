@@ -1,0 +1,8 @@
+action: list_messages
+credential: { account_sid: AC1, auth_token: t1 }
+exchanges:
+  - sent: { query: { PageSize: "100" } }
+    answer: { body: { messages: [{ sid: SM1 }], next_page_uri: "/2010-04-01/Accounts/AC1/Messages.json?Page=1&PageToken=PA1" } }
+  - sent: { url: "https://api.twilio.com/2010-04-01/Accounts/AC1/Messages.json?Page=1&PageToken=PA1", query: {} }
+    answer: { body: { messages: [{ sid: SM2 }], next_page_uri: null } }
+result: [{ sid: SM1 }, { sid: SM2 }]

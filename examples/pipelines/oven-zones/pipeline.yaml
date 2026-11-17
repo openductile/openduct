@@ -1,0 +1,25 @@
+# A curing oven's PLC, read over OPC UA (signed and encrypted): the temperature of its three zones and whether its
+# door is open, as they change. Each zone's reading is written with whether it is within the recipe's band, 180 °C
+# give or take 5; a reading the PLC marks as not good (a failed sensor, say) is left out.
+name: oven-zones
+from:
+  opcua:
+    url: opc.tcp://10.0.6.40:4840
+    device: oven-2
+    username: secret:OVEN_USER
+    password: secret:OVEN_PASSWORD
+    every: 500ms
+    deadband: 0.5
+    read:
+      zone_1:    ns=3;s=Oven2.Zone1.Temperature
+      zone_2:    ns=3;s=Oven2.Zone2.Temperature
+      zone_3:    ns=3;s=Oven2.Zone3.Temperature
+      door_open: ns=3;s=Oven2.Door.Open
+where: status == 'Good'
+map:
+  sensor:  name
+  value:   "name == 'door_open' ? reading : round(reading, 1)"
+  in_band: "name == 'door_open' ? null : math.abs(reading - 180) <= 5"
+  at:      source_time
+to:
+  topic: oven-2

@@ -1,0 +1,8 @@
+action: list_tickets
+credential: { subdomain: acme, email: help@acme.example, api_token: tok1 }
+exchanges:
+  - sent: { url: https://acme.zendesk.com/api/v2/tickets.json, query: { per_page: "100" } }
+    answer: { body: { tickets: [{ id: 1 }], next_page: "https://acme.zendesk.com/api/v2/tickets.json?page=2&per_page=100" } }
+  - sent: { url: "https://acme.zendesk.com/api/v2/tickets.json?page=2&per_page=100", query: {} }
+    answer: { body: { tickets: [{ id: 2 }], next_page: null } }
+result: [{ id: 1 }, { id: 2 }]

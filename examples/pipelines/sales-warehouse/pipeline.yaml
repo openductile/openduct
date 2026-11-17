@@ -1,0 +1,28 @@
+# The shop's cleaned-up orders (the clean-orders example writes them) loaded into Snowflake for the sales reports.
+# One row per order, merged by order id, so an order that changes (paid later, say) changes its row. The warehouse
+# gets no personal data: a hash of the e-mail address stands in for the customer, so repeat customers still match.
+name: sales-warehouse
+from:
+  topic: orders-clean
+map:
+  order_id:     order_id
+  customer_key: "email == '' ? null : sha256(email)"
+  items:        items
+  total:        total
+  currency:     currency
+  placed_at:    placed
+  status:       status
+key: order_id
+to:
+  snowflake:
+    account: myorg-myaccount
+    user: LOADER
+    private_key: secret:SNOWFLAKE_PRIVATE_KEY
+    warehouse: LOADING
+    database: SHOP
+    schema: SALES
+    table: ORDERS
+    mode: merge
+    match: order_id
+on_error:
+  topic: sales-warehouse-refused

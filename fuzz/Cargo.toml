@@ -1,0 +1,93 @@
+# Copyright 2026 Ductile AI, Inc
+# SPDX-License-Identifier: Apache-2.0
+#
+# Fuzzing with cargo-fuzz (libFuzzer, nightly Rust): `cargo +nightly fuzz run <target>`. Its own workspace, so it is
+# never part of the build, the tests or the shipped binary. The targets are the functions of
+# crates/openduct-hostile, which the random tests there also drive. See README.md.
+
+[package]
+name = "openduct-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2024"
+license = "Apache-2.0"
+
+[package.metadata]
+cargo-fuzz = true
+
+[workspace]
+members = ["."]
+
+[dependencies]
+libfuzzer-sys = "0.4.13"
+openduct-hostile = { path = "../crates/openduct-hostile" }
+
+# The same kafka-protocol as the workspace builds (vendor/kafka-protocol/OPENDUCT-CHANGES.md).
+[patch.crates-io]
+kafka-protocol = { path = "../vendor/kafka-protocol" }
+
+[profile.release]
+debug = 1
+
+[[bin]]
+name = "kafka_request"
+path = "fuzz_targets/kafka_request.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "record_batches"
+path = "fuzz_targets/record_batches.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "segment"
+path = "fuzz_targets/segment.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "expression"
+path = "fuzz_targets/expression.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "pipeline"
+path = "fuzz_targets/pipeline.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "mqtt"
+path = "fuzz_targets/mqtt.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "postgres"
+path = "fuzz_targets/postgres.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "mysql"
+path = "fuzz_targets/mysql.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "broker"
+path = "fuzz_targets/broker.rs"
+test = false
+doc = false
+bench = false

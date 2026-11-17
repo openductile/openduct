@@ -1,0 +1,7 @@
+action: list_invitees
+credential: { token: eyJ1 }
+input: { event: E1 }
+exchanges:
+  - sent: { url: https://api.calendly.com/scheduled_events/E1/invitees }
+    answer: { body: { collection: [{ email: bob@example.com, name: Bob }] } }
+result: [{ email: bob@example.com, name: Bob }]

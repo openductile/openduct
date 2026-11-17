@@ -1,0 +1,11 @@
+action: list_orders
+credential: { store_url: "https://shop.example.com", consumer_key: ck_1, consumer_secret: cs_1 }
+input: { status: processing }
+exchanges:
+  - sent:
+      method: GET
+      url: https://shop.example.com/wp-json/wc/v3/orders
+      headers: { authorization: "Basic Y2tfMTpjc18x" }
+      query: { status: processing, per_page: "100" }
+    answer: { body: [{ id: 727, status: processing, total: "29.35" }] }
+result: [{ id: 727, status: processing, total: "29.35" }]

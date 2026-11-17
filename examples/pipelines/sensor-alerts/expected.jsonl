@@ -1,0 +1,4 @@
+{"key":"s-1","value":{"sensor":"s-1","site":"PLANT-A","temp_c":22.5,"humidity":42,"alert":"ok","at":"2025-11-15T09:46:40Z"}}
+{"key":"s-2","value":{"sensor":"s-2","site":"PLANT-A","temp_c":37,"humidity":30,"alert":"high","at":"2025-11-15T09:47:40Z"}}
+{"key":"s-3","value":{"sensor":"s-3","site":"PLANT-B","temp_c":41,"humidity":12,"alert":"critical","at":"2025-11-15T09:48:40Z"}}
+{"key":"s-5","value":{"sensor":"s-5","site":"PLANT-C","temp_c":null,"humidity":56,"alert":"no reading","at":"2025-11-15T09:50:40Z"}}

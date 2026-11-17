@@ -1,0 +1,16 @@
+[package]
+name = "embedded-broker"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[lints]
+workspace = true
+
+[dependencies]
+chrono = { version = "0.4.45", default-features = false, features = ["clock"] }
+openduct-broker = { version = "0.1.0", path = "../../crates/openduct-broker" }
+openduct-storage = { version = "0.1.0", path = "../../crates/openduct-storage" }
+rskafka = { version = "0.6.0", default-features = false }
+tokio = { version = "1.54.1", features = ["rt-multi-thread", "macros", "time"] }

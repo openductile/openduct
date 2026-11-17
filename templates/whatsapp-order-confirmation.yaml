@@ -1,0 +1,21 @@
+name: Confirm orders on WhatsApp
+description: >-
+  When an order comes in over a webhook ({"id", "name", "phone", "total"}), send the customer a WhatsApp message
+  confirming it, through your WhatsApp Business account.
+category: Messaging
+trigger:
+  webhook: {}
+# What a test runs on: an event as this trigger gives it.
+sample:
+  id: A-100
+  name: Ada
+  phone: '15550142000'
+  total: 76
+steps:
+  - where: value.phone != null && value.phone != ""
+  - name: confirm
+    whatsapp:
+      credential: business
+      to: "{{ value.phone }}"
+      text: "Thank you {{ value.name }}! Your order {{ value.id }} for {{ value.total }} is confirmed."
+    retry: { attempts: 3, wait: 30s }

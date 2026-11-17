@@ -1,0 +1,54 @@
+[package]
+name = "openduct-connect"
+description = "OpenDuct connectors: systems a pipeline reads from or writes to."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+readme.workspace = true
+keywords.workspace = true
+categories.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+anyhow = "1.0.104"
+# OPC UA, held at one commit of its repository until a release has what that commit fixes: the released 0.19.0 has
+# a known RSA timing weakness (RUSTSEC-2023-0071), an unmaintained YAML parser (RUSTSEC-2024-0449), and no check of a
+# message's declared size before it is buffered.
+async-opcua = { git = "https://github.com/freeopcua/async-opcua", rev = "cabe0c61c9fa92ea175c2cf1858e935be060027a", version = "0.19.0", default-features = false, features = ["client"] }
+base64 = "0.22.1"
+bytes = "1.12.1"
+chrono = { version = "0.4.45", default-features = false, features = ["std", "clock"] }
+flate2 = "1.1.11"
+futures-util = { version = "0.3.34", default-features = false, features = ["std"] }
+crc32fast = "1.5.5"
+hmac = "0.13.0"
+http-body-util = "0.1.5"
+hyper = { version = "1.12.0", features = ["server", "http1"] }
+hyper-util = { version = "0.1.21", features = ["tokio"] }
+indexmap = "2.14.2"
+kafka-protocol = { version = "0.18.0", default-features = false, features = ["client"] }
+md-5 = "0.11.0"
+mongodb = { version = "3.10.1", default-features = false, features = ["compat-3-3-0", "bson-3", "rustls-tls", "dns-resolver"] }
+num-bigint = { version = "0.4.8", default-features = false, features = ["std"] }
+openduct-broker = { version = "0.1.0", path = "../openduct-broker" }
+openduct-expr = { version = "0.1.0", path = "../openduct-expr" }
+openduct-pipeline = { version = "0.1.0", path = "../openduct-pipeline" }
+percent-encoding = "2.3.2"
+ring = "0.17.14"
+reqwest = { version = "0.13.5", default-features = false, features = ["rustls-no-provider", "http2"] }
+rust_decimal = { version = "1.43.0", default-features = false, features = ["std"] }
+rustls = { version = "0.23.46", default-features = false, features = ["ring", "std", "tls12"] }
+rustls-platform-verifier = "0.7.1"
+serde_json = { version = "1.0.154", features = ["preserve_order"] }
+sha1 = "0.11.0"
+sha2 = "0.11.1"
+tokio-rustls = { version = "0.26.6", default-features = false, features = ["tls12"] }
+tokio = { version = "1.54.1", features = ["rt-multi-thread", "macros", "net", "time", "sync", "io-util"] }
+tracing = "0.1.44"
+
+[dev-dependencies]
+crc32c = "0.6.9"

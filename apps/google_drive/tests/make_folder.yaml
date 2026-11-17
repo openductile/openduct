@@ -1,0 +1,11 @@
+description: A folder in My Drive (no parent given, none sent)
+action: make_folder
+credential: { access_token: ya29.a0 }
+input: { name: Invoices 2026 }
+exchanges:
+  - sent:
+      method: POST
+      url: https://www.googleapis.com/drive/v3/files
+      body: { name: Invoices 2026, mimeType: application/vnd.google-apps.folder }
+    answer: { body: { id: fold1, name: Invoices 2026, mimeType: application/vnd.google-apps.folder } }
+result: { id: fold1, name: Invoices 2026, mimeType: application/vnd.google-apps.folder }

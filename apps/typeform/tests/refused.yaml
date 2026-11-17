@@ -1,0 +1,6 @@
+action: list_answers
+credential: { token: tfp_1 }
+input: { form_id: nothere }
+exchanges:
+  - answer: { status: 404, body: { code: FORM_NOT_FOUND, description: "Non existing form with uid nothere" } }
+error: "Typeform answered 404: Non existing form with uid nothere"

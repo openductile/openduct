@@ -1,0 +1,11 @@
+action: create_contact
+credential: { access_token: pat-na1-1 }
+input: { email: ann@example.com, firstname: Ann }
+exchanges:
+  - sent:
+      method: POST
+      url: https://api.hubapi.com/crm/v3/objects/contacts
+      headers: { authorization: Bearer pat-na1-1 }
+      body: { properties: { email: ann@example.com, firstname: Ann } }
+    answer: { status: 201, body: { id: "512", properties: { email: ann@example.com, firstname: Ann } } }
+result: { id: "512", properties: { email: ann@example.com, firstname: Ann } }

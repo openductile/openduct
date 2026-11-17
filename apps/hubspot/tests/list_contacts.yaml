@@ -1,0 +1,8 @@
+action: list_contacts
+credential: { access_token: pat-na1-1 }
+exchanges:
+  - sent: { query: { limit: "100" } }
+    answer: { body: { results: [{ id: "1" }], paging: { next: { after: "2" } } } }
+  - sent: { query: { limit: "100", after: "2" } }
+    answer: { body: { results: [{ id: "2" }] } }
+result: [{ id: "1" }, { id: "2" }]

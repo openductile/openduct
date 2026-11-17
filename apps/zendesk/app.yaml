@@ -1,0 +1,72 @@
+# Copyright 2026 Ductile AI, Inc
+# SPDX-License-Identifier: Apache-2.0
+app: zendesk
+name: Zendesk
+category: support
+description: Support tickets in Zendesk, opened, answered and read.
+docs: https://developer.zendesk.com/api-reference/ticketing/tickets/tickets/
+hosts: ["*.zendesk.com"]
+base_url: "https://{{ credential.subdomain }}.zendesk.com/api/v2"
+sign_in:
+  - id: zendesk
+    label: An agent's email and an API token
+    fields:
+      - { name: subdomain, label: "The account's name, as in mycompany.zendesk.com" }
+      - { name: email, label: "An agent's email" }
+      - { name: api_token, label: The API token, secret: true }
+    basic: { username: "{{ credential.email }}/token", password: "{{ credential.api_token }}" }
+  - id: zendesk_client
+    label: "An OAuth client's identifier and secret"
+    fields:
+      - { name: subdomain, label: "The account's name, as in mycompany.zendesk.com" }
+      - { name: client_id, label: "The OAuth client's unique identifier" }
+      - { name: client_secret, label: Its secret, secret: true }
+    # The token acts as the admin who made the client.
+    oauth2:
+      grant: client_credentials
+      token: "https://{{ credential.subdomain }}.zendesk.com/oauth/tokens"
+      scopes: [read, write]
+    headers:
+      Authorization: "Bearer {{ credential.access_token }}"
+error: "value.description == null ? value.error : value.description"
+actions:
+  open_ticket:
+    label: Open a ticket
+    write: true
+    method: POST
+    path: /tickets.json
+    inputs:
+      - { name: subject, label: Subject, required: true }
+      - { name: text, label: What it is about, required: true }
+      - { name: requester_email, label: "Who it is for: their email" }
+      - { name: requester_name, label: Their name }
+      - { name: priority, label: "urgent, high, normal or low" }
+    send:
+      ticket:
+        subject: "{{ input.subject }}"
+        comment: { body: "{{ input.text }}" }
+        requester: { email: "{{ input.requester_email }}", name: "{{ input.requester_name }}" }
+        priority: "{{ input.priority }}"
+    result: value.ticket
+  answer_ticket:
+    label: Answer a ticket
+    write: true
+    method: PUT
+    path: "/tickets/{{ input.ticket_id }}.json"
+    inputs:
+      - { name: ticket_id, label: "The ticket's number", required: true }
+      - { name: text, label: The answer, required: true }
+      - { name: public, label: "Seen by the customer (true), or a note to agents (false)", kind: boolean }
+      - { name: status, label: "Its new status: open, pending, solved" }
+    send:
+      ticket:
+        comment: { body: "{{ input.text }}", public: "{{ input.public }}" }
+        status: "{{ input.status }}"
+    result: value.ticket
+  list_tickets:
+    label: List tickets
+    method: GET
+    path: /tickets.json
+    query: { per_page: "100" }
+    items: value.tickets
+    next: value.next_page

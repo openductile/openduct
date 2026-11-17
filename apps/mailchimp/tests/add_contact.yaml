@@ -1,0 +1,11 @@
+action: add_contact
+credential: { api_key: abc123-us21, data_center: us21 }
+input: { list_id: 57afe96172, email: ann@example.com, status: subscribed, first_name: Ann }
+exchanges:
+  - sent:
+      method: POST
+      url: https://us21.api.mailchimp.com/3.0/lists/57afe96172/members
+      headers: { authorization: "Basic b3BlbmR1Y3Q6YWJjMTIzLXVzMjE=" }
+      body: { email_address: ann@example.com, status: subscribed, merge_fields: { FNAME: Ann } }
+    answer: { body: { id: 852aaa9532cb36adfb5e9fef7a4206a9, email_address: ann@example.com, status: subscribed } }
+result: { id: 852aaa9532cb36adfb5e9fef7a4206a9, email_address: ann@example.com, status: subscribed }

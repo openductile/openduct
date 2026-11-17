@@ -1,0 +1,58 @@
+# Copyright 2026 Ductile AI, Inc
+# SPDX-License-Identifier: Apache-2.0
+app: paypal
+name: PayPal
+category: payments
+description: Orders to pay with PayPal, taken and looked up.
+docs: https://developer.paypal.com/docs/api/orders/v2/
+hosts: [api-m.paypal.com, api-m.sandbox.paypal.com]
+base_url: https://api-m.paypal.com
+sign_in:
+  - id: paypal
+    label: A live app's client ID and secret
+    fields:
+      - { name: client_id, label: Client ID }
+      - { name: client_secret, label: Secret, secret: true }
+    oauth2: { grant: client_credentials, token: "https://api-m.paypal.com/v1/oauth2/token", client_auth: basic }
+    headers:
+      Authorization: "Bearer {{ credential.access_token }}"
+  - id: paypal_sandbox
+    label: A sandbox app's client ID and secret (for testing)
+    base_url: https://api-m.sandbox.paypal.com
+    fields:
+      - { name: client_id, label: Client ID }
+      - { name: client_secret, label: Secret, secret: true }
+    oauth2: { grant: client_credentials, token: "https://api-m.sandbox.paypal.com/v1/oauth2/token", client_auth: basic }
+    headers:
+      Authorization: "Bearer {{ credential.access_token }}"
+# What is wrong is in its details (ORDER_NOT_APPROVED: ...); the message alone is PayPal's general one.
+error: "has(value.details) && size(value.details) > 0 ? value.details[0].issue + ': ' + value.details[0].description : value.message"
+actions:
+  create_order:
+    label: Create an order to pay
+    write: true
+    method: POST
+    path: /v2/checkout/orders
+    inputs:
+      - { name: amount, label: "The amount, such as 25.00", required: true }
+      - { name: currency, label: "The currency, such as USD", required: true }
+      - { name: reference, label: Your own reference for it }
+    send:
+      intent: CAPTURE
+      purchase_units:
+        - reference_id: "{{ input.reference }}"
+          amount: { currency_code: "{{ input.currency }}", value: "{{ input.amount }}" }
+  get_order:
+    label: Look up an order
+    method: GET
+    path: "/v2/checkout/orders/{{ input.order_id }}"
+    inputs:
+      - { name: order_id, label: The order id, required: true }
+  capture_order:
+    label: Take the payment of an approved order
+    write: true
+    method: POST
+    path: "/v2/checkout/orders/{{ input.order_id }}/capture"
+    inputs:
+      - { name: order_id, label: The order id, required: true }
+    send: {}

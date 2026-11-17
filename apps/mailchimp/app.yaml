@@ -1,0 +1,39 @@
+# Copyright 2026 Ductile AI, Inc
+# SPDX-License-Identifier: Apache-2.0
+app: mailchimp
+name: Mailchimp
+category: email
+description: Audiences and their contacts in Mailchimp.
+docs: https://mailchimp.com/developer/marketing/api/
+hosts: ["*.api.mailchimp.com"]
+base_url: "https://{{ credential.data_center }}.api.mailchimp.com/3.0"
+sign_in:
+  - id: mailchimp
+    label: An API key
+    fields:
+      - { name: api_key, label: "The API key", secret: true }
+      - { name: data_center, label: "Its data center: the part after the dash at its end, such as us21" }
+    basic: { username: openduct, password: "{{ credential.api_key }}" }
+error: value.detail
+actions:
+  add_contact:
+    label: Add a contact to an audience
+    write: true
+    method: POST
+    path: "/lists/{{ input.list_id }}/members"
+    inputs:
+      - { name: list_id, label: "The audience's id", required: true }
+      - { name: email, label: Email, required: true }
+      - { name: status, label: "subscribed, or pending to send a confirmation first", required: true }
+      - { name: first_name, label: First name }
+      - { name: last_name, label: Last name }
+    send:
+      email_address: "{{ input.email }}"
+      status: "{{ input.status }}"
+      merge_fields: { FNAME: "{{ input.first_name }}", LNAME: "{{ input.last_name }}" }
+  list_audiences:
+    label: List audiences
+    method: GET
+    path: /lists
+    query: { count: "100", fields: "lists.id,lists.name,lists.stats.member_count" }
+    items: value.lists

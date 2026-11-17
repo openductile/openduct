@@ -1,0 +1,11 @@
+action: create_invoice
+credential: { access_token: eyJx, tenant_id: t1 }
+input:
+  contact_id: bd2270c3
+  lines: [{ Description: Consulting, Quantity: 2, UnitAmount: 75, AccountCode: "200" }]
+exchanges:
+  - sent:
+      url: https://api.xero.com/api.xro/2.0/Invoices
+      body: { Invoices: [{ Type: ACCREC, Contact: { ContactID: bd2270c3 }, LineItems: [{ Description: Consulting, Quantity: 2, UnitAmount: 75, AccountCode: "200" }] }] }
+    answer: { body: { Invoices: [{ InvoiceID: inv-1, Status: DRAFT, Total: 150.0 }] } }
+result: { InvoiceID: inv-1, Status: DRAFT, Total: 150.0 }

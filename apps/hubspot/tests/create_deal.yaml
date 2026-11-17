@@ -1,0 +1,9 @@
+action: create_deal
+credential: { access_token: pat-na1-1 }
+input: { dealname: Spring order, amount: "1500" }
+exchanges:
+  - sent:
+      url: https://api.hubapi.com/crm/v3/objects/deals
+      body: { properties: { dealname: Spring order, amount: "1500" } }
+    answer: { status: 201, body: { id: "9001", properties: { dealname: Spring order } } }
+result: { id: "9001", properties: { dealname: Spring order } }

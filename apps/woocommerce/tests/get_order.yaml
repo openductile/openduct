@@ -1,0 +1,8 @@
+action: get_order
+credential: { store_url: "https://shop.example.com/", consumer_key: ck_1, consumer_secret: cs_1 }
+input: { order_id: "727" }
+exchanges:
+  - sent:
+      url: https://shop.example.com/wp-json/wc/v3/orders/727
+    answer: { body: { id: 727, status: processing } }
+result: { id: 727, status: processing }

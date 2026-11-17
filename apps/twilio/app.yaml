@@ -1,0 +1,39 @@
+# Copyright 2026 Ductile AI, Inc
+# SPDX-License-Identifier: Apache-2.0
+app: twilio
+name: Twilio
+category: messaging
+description: Text messages (SMS) sent and read through Twilio.
+docs: https://www.twilio.com/docs/messaging/api/message-resource
+hosts: [api.twilio.com]
+base_url: https://api.twilio.com/2010-04-01
+sign_in:
+  - id: twilio
+    label: "An account's SID and auth token"
+    fields:
+      - { name: account_sid, label: "Account SID (AC...)" }
+      - { name: auth_token, label: Auth token, secret: true }
+    basic: { username: "{{ credential.account_sid }}", password: "{{ credential.auth_token }}" }
+default_action: send_sms
+error: value.message
+actions:
+  send_sms:
+    label: Send a text message
+    write: true
+    method: POST
+    path: "/Accounts/{{ credential.account_sid }}/Messages.json"
+    body: form
+    inputs:
+      - { name: to, label: "To (such as +15551234567)", required: true }
+      - { name: from, label: "From: your Twilio number", required: true }
+      - { name: text, label: The message, required: true }
+    send: { To: "{{ input.to }}", From: "{{ input.from }}", Body: "{{ input.text }}" }
+  list_messages:
+    label: List messages
+    method: GET
+    path: "/Accounts/{{ credential.account_sid }}/Messages.json"
+    inputs:
+      - { name: to, label: Only those to this number }
+    query: { To: "{{ input.to }}", PageSize: "100" }
+    items: value.messages
+    next: "value.next_page_uri == null ? null : 'https://api.twilio.com' + value.next_page_uri"

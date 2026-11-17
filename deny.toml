@@ -1,0 +1,139 @@
+# Copyright 2026 Ductile AI, Inc
+# SPDX-License-Identifier: Apache-2.0
+#
+# `cargo deny check`: every dependency's licence, known security advisories, and where crates come from.
+
+[graph]
+all-features = true
+# The platforms OpenDuct is built for: a crate only another platform needs (Windows' clipboard, say) is not checked.
+targets = [
+    "x86_64-unknown-linux-gnu",
+    "aarch64-unknown-linux-gnu",
+    "x86_64-unknown-linux-musl",
+    "armv7-unknown-linux-gnueabihf",
+    "aarch64-apple-darwin",
+    "x86_64-apple-darwin",
+]
+
+[advisories]
+# Any advisory (vulnerability, unmaintained, unsound, yanked) fails the check until it is dealt with.
+yanked = "deny"
+ignore = [
+    # paste: unmaintained, and a macro that runs only while building - malachite's, in openduct-python alone. It
+    # holds no known flaw; it goes when malachite drops it.
+    { id = "RUSTSEC-2024-0436", reason = "a build-time macro of openduct-python's integers only; no known flaw" },
+]
+
+[licenses]
+# Only permissive licences compatible with Apache-2.0 distribution.
+allow = [
+    "Apache-2.0",
+    "Apache-2.0 WITH LLVM-exception",
+    "MIT",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "ISC",
+    "Unicode-3.0",
+    "Zlib",
+    "CC0-1.0",
+    # The data licence of the web's root certificate list (Mozilla's), which TLS verification bundles.
+    "CDLA-Permissive-2.0",
+]
+confidence-threshold = 0.9
+
+# OPC UA's library is MPL-2.0: copyleft by file, so its files stay MPL-2.0 (and public, as they are), and nothing of
+# OpenDuct's own falls under it. Allowed for these crates only.
+# Python steps' program, openduct-python, alone (licenses/openduct-python/NOTICE.md); openduct links none of these,
+# as CI checks. Python's integers: malachite, LGPL-3.0-only, linked unchanged and replaceable as the LGPL allows.
+[[licenses.exceptions]]
+crate = "malachite-base"
+allow = ["LGPL-3.0-only"]
+[[licenses.exceptions]]
+crate = "malachite-nz"
+allow = ["LGPL-3.0-only"]
+[[licenses.exceptions]]
+crate = "malachite-q"
+allow = ["LGPL-3.0-only"]
+[[licenses.exceptions]]
+crate = "malachite-bigint"
+allow = ["LGPL-3.0-only"]
+# The Python library's modules and documents, and the maths of Python's own: the PSF's licence, permissive.
+[[licenses.exceptions]]
+crate = "pymath"
+allow = ["PSF-2.0"]
+[[licenses.exceptions]]
+crate = "rustpython-pylib"
+allow = ["MIT", "Python-2.0.1"]
+[[licenses.exceptions]]
+crate = "rustpython-doc"
+allow = ["Python-2.0.1"]
+[[licenses.exceptions]]
+crate = "result-like"
+allow = ["BSD-2-Clause-Views"]
+[[licenses.exceptions]]
+crate = "result-like-derive"
+allow = ["BSD-2-Clause-Views"]
+[[licenses.exceptions]]
+crate = "unicode_names2"
+allow = ["Unicode-DFS-2016"]
+# The bz2 module: bzip2's own licence, BSD-style and permissive.
+[[licenses.exceptions]]
+crate = "libbz2-rs-sys"
+allow = ["bzip2-1.0.6"]
+# E-mail steps' quoted-printable encoding: the zero-clause BSD licence, permissive.
+[[licenses.exceptions]]
+crate = "quoted_printable"
+allow = ["0BSD"]
+# Those two publish no licence field; their licence files say what they are.
+[[licenses.clarify]]
+crate = "rustpython-pylib"
+expression = "MIT AND Python-2.0.1"
+license-files = [{ path = "Lib/PSF-LICENSE", hash = 0xe5f4697b }]
+[[licenses.clarify]]
+crate = "rustpython-doc"
+expression = "Python-2.0.1"
+license-files = [{ path = "LICENSE", hash = 0x89e6df3c }]
+[[licenses.exceptions]]
+crate = "async-opcua"
+allow = ["MPL-2.0"]
+[[licenses.exceptions]]
+crate = "async-opcua-client"
+allow = ["MPL-2.0"]
+[[licenses.exceptions]]
+crate = "async-opcua-core"
+allow = ["MPL-2.0"]
+[[licenses.exceptions]]
+crate = "async-opcua-crypto"
+allow = ["MPL-2.0"]
+[[licenses.exceptions]]
+crate = "async-opcua-macros"
+allow = ["MPL-2.0"]
+[[licenses.exceptions]]
+crate = "async-opcua-nodes"
+allow = ["MPL-2.0"]
+[[licenses.exceptions]]
+crate = "async-opcua-types"
+allow = ["MPL-2.0"]
+# The server, for the connector's tests only.
+[[licenses.exceptions]]
+crate = "async-opcua-server"
+allow = ["MPL-2.0"]
+[[licenses.exceptions]]
+crate = "async-opcua-core-namespace"
+allow = ["MPL-2.0"]
+
+[licenses.private]
+# The examples are not published; the workspace's own crates are Apache-2.0.
+ignore = true
+
+[bans]
+multiple-versions = "warn"
+wildcards = "deny"
+allow-wildcard-paths = true
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]
+# OPC UA's library, held at one commit (see the top Cargo.toml).
+allow-git = ["https://github.com/freeopcua/async-opcua"]

@@ -1,0 +1,36 @@
+# Copyright 2026 Ductile AI, Inc
+# SPDX-License-Identifier: Apache-2.0
+app: typeform
+name: Typeform
+category: forms
+description: Forms made in Typeform, and the answers people gave.
+docs: https://www.typeform.com/developers/responses/
+hosts: [api.typeform.com]
+base_url: https://api.typeform.com
+sign_in:
+  - id: typeform
+    label: A personal access token
+    fields:
+      - { name: token, label: The personal access token, secret: true }
+    headers:
+      Authorization: "Bearer {{ credential.token }}"
+error: value.description
+actions:
+  list_forms:
+    label: List forms
+    method: GET
+    path: /forms
+    query: { page_size: "200" }
+    items: value.items
+    next: "(page == null ? 1 : int(page.page)) < value.page_count ? {'page': (page == null ? 1 : int(page.page)) + 1} : null"
+  list_answers:
+    label: "A form's answers"
+    method: GET
+    path: "/forms/{{ input.form_id }}/responses"
+    inputs:
+      - { name: form_id, label: "The form's id (in its address)", required: true }
+      - { name: since, label: "Given since (such as 2026-11-01T00:00:00Z)" }
+    query: { since: "{{ input.since }}", page_size: "1000" }
+    items: value.items
+    # Newest first; the next page is those given before the last one here.
+    next: "size(value.items) < 1000 ? null : {'before': value.items[size(value.items) - 1].token}"

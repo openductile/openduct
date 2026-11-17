@@ -1,0 +1,7 @@
+description: Shopify's refusal of a customer already there, in its own words
+action: create_customer
+credential: { shop: acme, access_token: shpat_1 }
+input: { email: ann@example.com }
+exchanges:
+  - answer: { status: 422, body: { errors: { email: ["has already been taken"] } } }
+error: "Shopify answered 422: {\"email\":[\"has already been taken\"]}"

@@ -1,0 +1,21 @@
+# Tidy raw e-commerce orders: names and e-mail addresses cleaned up, lines totalled, dates read, test orders
+# dropped, and orders that cannot be read set aside with the reason.
+name: clean-orders
+from:
+  topic: orders
+  start: earliest
+where: status != 'test'
+map:
+  order_id: id
+  customer: customer.name.trim()
+  email:    customer.email.trim().lowerAscii()
+  items:    lines.filter(line, double(line.qty) > 0).size()
+  total:    round(lines.map(line, double(line.qty) * double(line.price)).sum(), 2)
+  currency: "currency == null ? 'USD' : currency.upperAscii()"
+  placed:   timestamp(created_at, '%Y-%m-%d %H:%M:%S')
+  status:   "paid ? 'paid' : 'open'"
+key: order_id
+to:
+  topic: orders-clean
+on_error:
+  topic: orders-rejected

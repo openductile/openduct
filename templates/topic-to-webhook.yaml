@@ -1,0 +1,19 @@
+name: Send a topic's records to a webhook
+description: >-
+  Read the orders topic from its start and send each record to an outside address as JSON, three tries each; a
+  record that cannot be sent goes to CatchErr with the reason, to send again once it is fixed.
+category: Streaming
+trigger:
+  topic: { name: orders, start: earliest }
+# What a test runs on: an event as this trigger gives it.
+sample:
+  id: A-100
+  total: 76
+  email: ada@example.com
+steps:
+  - name: send
+    http:
+      method: POST
+      url: https://example.com/hooks/orders
+      json: "{{ value }}"
+    retry: { attempts: 3, wait: 5s }

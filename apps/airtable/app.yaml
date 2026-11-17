@@ -1,0 +1,65 @@
+# Copyright 2026 Ductile AI, Inc
+# SPDX-License-Identifier: Apache-2.0
+app: airtable
+name: Airtable
+category: data
+description: Records of an Airtable base, read, added and changed.
+docs: https://airtable.com/developers/web/api/introduction
+hosts: [api.airtable.com]
+base_url: https://api.airtable.com/v0
+sign_in:
+  - id: airtable
+    label: A personal access token
+    fields:
+      - { name: token, label: "The personal access token (pat...)", secret: true }
+    headers:
+      Authorization: "Bearer {{ credential.token }}"
+error: value.error.message
+actions:
+  list_bases:
+    label: List bases
+    description: "The bases the token may reach, each with its id."
+    method: GET
+    path: /meta/bases
+    items: value.bases
+    next: "value.offset == null ? null : {'offset': value.offset}"
+  list_tables:
+    label: "A base's tables and their fields"
+    method: GET
+    path: "/meta/bases/{{ input.base_id }}/tables"
+    inputs:
+      - { name: base_id, label: "The base's id (app...)", required: true }
+    items: value.tables
+  list_records:
+    label: List records
+    method: GET
+    path: "/{{ input.base_id }}/{{ input.table }}"
+    inputs:
+      - { name: base_id, label: "The base's id (app...)", required: true }
+      - { name: table, label: "The table's name or id", required: true }
+      - { name: view, label: Only a view's records }
+      - { name: formula, label: "Only records this formula holds for, such as {Status} = 'Open'" }
+    query: { view: "{{ input.view }}", filterByFormula: "{{ input.formula }}", pageSize: "100" }
+    items: value.records
+    next: "value.offset == null ? null : {'offset': value.offset}"
+  add_record:
+    label: Add a record
+    write: true
+    method: POST
+    path: "/{{ input.base_id }}/{{ input.table }}"
+    inputs:
+      - { name: base_id, label: "The base's id (app...)", required: true }
+      - { name: table, label: "The table's name or id", required: true }
+      - { name: fields, label: "Its fields, by name", required: true, kind: record }
+    send: { fields: "{{ input.fields }}", typecast: true }
+  update_record:
+    label: Change a record
+    write: true
+    method: PATCH
+    path: "/{{ input.base_id }}/{{ input.table }}/{{ input.record_id }}"
+    inputs:
+      - { name: base_id, label: "The base's id (app...)", required: true }
+      - { name: table, label: "The table's name or id", required: true }
+      - { name: record_id, label: "The record's id (rec...)", required: true }
+      - { name: fields, label: "The fields to change, by name", required: true, kind: record }
+    send: { fields: "{{ input.fields }}", typecast: true }

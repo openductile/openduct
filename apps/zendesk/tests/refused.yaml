@@ -1,0 +1,7 @@
+description: A priority Zendesk does not have
+action: open_ticket
+credential: { subdomain: acme, email: help@acme.example, api_token: tok1 }
+input: { subject: Order late, text: "Order A-100 has not come", priority: soon }
+exchanges:
+  - answer: { status: 422, body: { error: RecordInvalid, description: "Record validation errors", details: { priority: [{ description: "Priority: is not valid" }] } } }
+error: "Zendesk answered 422: Record validation errors"

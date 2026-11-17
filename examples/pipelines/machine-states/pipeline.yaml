@@ -1,0 +1,19 @@
+# Presses on a factory floor publish their state to an MQTT broker as JSON. This reads every press, works out whether
+# it is running, idle or stopped by a fault, and keys each state by machine so one machine's states stay in order.
+name: machine-states
+from:
+  mqtt:
+    url: mqtts://mqtt.factory.example:8883
+    topics: [factory/+/press/+/state]
+    username: secret:MQTT_USER
+    password: secret:MQTT_PASSWORD
+map:
+  machine: machine
+  line:    line.upperAscii()
+  state:   "fault_code != 0 ? 'fault' : rpm > 0 ? 'running' : 'idle'"
+  fault:   "fault_code != 0 ? fault_code : null"
+  rpm:     round(rpm)
+  at:      timestamp(ts)
+key: machine
+to:
+  topic: machine-states

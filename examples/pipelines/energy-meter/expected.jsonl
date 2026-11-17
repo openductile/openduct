@@ -1,0 +1,4 @@
+{"key":null,"value":{"volts":231.4,"amps":12.6,"kw":2.92,"energy_kwh":18234.25,"load":"normal"}}
+{"key":null,"value":{"volts":229.8,"amps":27,"kw":6.21,"energy_kwh":18234.41,"load":"high"}}
+{"key":null,"value":{"volts":228.1,"amps":33.5,"kw":7.64,"energy_kwh":18234.6,"load":"over"}}
+{"key":null,"value":{"volts":0,"amps":0,"kw":0,"energy_kwh":18234.6,"load":"off"}}

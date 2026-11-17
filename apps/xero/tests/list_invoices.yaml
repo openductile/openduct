@@ -1,0 +1,7 @@
+action: list_invoices
+credential: { access_token: eyJx, tenant_id: t1 }
+input: { statuses: AUTHORISED }
+exchanges:
+  - sent: { method: GET, url: https://api.xero.com/api.xro/2.0/Invoices, query: { Statuses: AUTHORISED, page: "1" } }
+    answer: { body: { Invoices: [{ InvoiceID: inv-1, AmountDue: 150.0 }] } }
+result: [{ InvoiceID: inv-1, AmountDue: 150.0 }]

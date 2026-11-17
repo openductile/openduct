@@ -1,0 +1,3 @@
+{"key":"A-1001","value":{"order":"A-1001","customer":"c-77","amount":45.99,"currency":"EUR","paid_at":"2025-11-15T09:46:40Z"}}
+{"key":"A-1002","value":{"order":"A-1002","customer":"c-78","amount":12.5,"currency":"USD","paid_at":"2025-11-15T09:48:10Z"}}
+{"key":"A-1003","value":{"order":"A-1003","customer":"c-12","amount":1000,"currency":"GBP","paid_at":"2025-11-15T09:50:00Z"}}

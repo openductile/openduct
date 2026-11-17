@@ -1,0 +1,7 @@
+description: A refusal with no details says PayPal's message
+action: get_order
+credential: { client_id: cid, client_secret: cs, access_token: A21AA }
+input: { order_id: NOPE }
+exchanges:
+  - answer: { status: 404, body: { name: RESOURCE_NOT_FOUND, message: "The specified resource does not exist.", details: [] } }
+error: "PayPal answered 404: The specified resource does not exist."

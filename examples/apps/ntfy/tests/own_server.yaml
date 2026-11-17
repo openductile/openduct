@@ -1,0 +1,8 @@
+description: A server of your own takes the place of ntfy.sh
+action: send
+credential: { token: tk_example, server: "https://ntfy.example.com" }
+input: { topic: alerts, message: Oven 2 is too hot }
+exchanges:
+  - sent: { url: https://ntfy.example.com/, body: { topic: alerts, message: Oven 2 is too hot } }
+    answer: { body: { id: a1, event: message, topic: alerts, message: Oven 2 is too hot } }
+result: { id: a1, event: message, topic: alerts, message: Oven 2 is too hot }

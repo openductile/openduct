@@ -1,0 +1,35 @@
+name: A daily digest by e-mail, written by AI
+description: >-
+  Every day, read the last day's orders from your Shopify store, have a model write a short digest - what stood out,
+  what needs doing - and e-mail it to your team.
+category: AI
+trigger:
+  schedule: { every: 1d }
+# What a test runs on: an event as this trigger gives it.
+sample:
+  scheduled_at: '2026-11-17T00:00:00Z'
+steps:
+  - name: orders
+    shopify:
+      action: list_orders
+      credential: shop
+      status: any
+      created_at_min: "{{ string(timestamp(value.scheduled_at) - duration('24h')) }}"
+    retry: { attempts: 3, wait: 30s }
+  - name: digest
+    ai:
+      credential: model
+      system: >-
+        You write a team's daily digest: five short lines at most - what stood out, what needs doing today.
+        Plain words, no greeting.
+      # One short line an order - its number, total and payment - not the whole order: a busy day stays readable.
+      prompt: >-
+        The last day's orders, one a line (number, total, payment):
+        {{ type(steps.orders) == list ? steps.orders.map(o, o.name + ' ' + string(o.total_price) + ' ' + string(o.financial_status)).join('\n') : steps.orders }}
+      max_tokens: 400
+  - name: send
+    email:
+      credential: mail
+      to: team@example.com
+      subject: "Today's digest"
+      text: "{{ steps.digest.text }}"

@@ -1,0 +1,32 @@
+name: Convert amounts with your own rates
+description: >-
+  Upload your exchange rates as /rates.csv (currency,rate: how many of each currency one of yours buys). When an
+  amount comes in over a webhook ({"amount", "currency"}), convert it and keep both in the converted topic; a
+  currency not in your rates goes to CatchErr.
+category: Lookups
+trigger:
+  webhook: {}
+# What a test runs on: an event as this trigger gives it.
+sample:
+  amount: 120
+  currency: EUR
+steps:
+  - name: rate
+    lookup:
+      file: /rates.csv
+      where:
+        currency: "{{ value.currency }}"
+  - name: known
+    if:
+      when: steps.rate == null
+      then:
+        - stop: { error: "no rate for {{ value.currency }} in /rates.csv" }
+  - name: converted
+    set:
+      amount: double(value.amount)
+      currency: value.currency
+      in_yours: round(double(value.amount) / double(steps.rate.rate), 2)
+  - name: keep
+    topic:
+      name: converted
+      value: "{{ steps.converted }}"

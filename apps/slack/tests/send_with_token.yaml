@@ -1,0 +1,12 @@
+description: A message posted with a bot token
+action: send
+credential: { bot_token: xoxb-1 }
+input: { channel: "#orders", text: New order }
+exchanges:
+  - sent:
+      method: POST
+      url: https://slack.com/api/chat.postMessage
+      headers: { authorization: Bearer xoxb-1 }
+      body: { channel: "#orders", text: New order }
+    answer: { body: { ok: true, ts: "1700000000.1" } }
+result: { sent: true, answer: { ok: true, ts: "1700000000.1" } }

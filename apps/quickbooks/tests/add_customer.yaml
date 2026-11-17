@@ -1,0 +1,12 @@
+action: add_customer
+credential: { access_token: eyJlb, realm_id: "9130357766900456" }
+input: { name: Ann Lee, email: ann@example.com }
+exchanges:
+  - sent:
+      method: POST
+      url: https://quickbooks.api.intuit.com/v3/company/9130357766900456/customer
+      query: { minorversion: "75" }
+      headers: { authorization: Bearer eyJlb, accept: application/json }
+      body: { DisplayName: Ann Lee, PrimaryEmailAddr: { Address: ann@example.com } }
+    answer: { body: { Customer: { Id: "58", DisplayName: Ann Lee }, time: "2026-11-16T10:00:00.000-08:00" } }
+result: { Id: "58", DisplayName: Ann Lee }

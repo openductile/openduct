@@ -1,0 +1,21 @@
+# A shop's orders table in PostgreSQL, as a stream of what happens to each order: the orders already there, then
+# every one placed, changed or removed, keyed by order so each order's history stays in order. Nothing is installed
+# on the database: it uses PostgreSQL's own logical replication.
+name: order-changes
+from:
+  postgres_cdc:
+    url: postgres://db.shop.example:5432/shop
+    username: secret:PG_USER
+    password: secret:PG_PASSWORD
+    tls: true
+    tables: [public.orders]
+where: op != 'truncate'
+map:
+  order:  "op == 'delete' ? before.id : after.id"
+  event:  "op == 'snapshot' ? 'existing' : op == 'insert' ? 'placed' : op == 'delete' ? 'removed' : 'changed'"
+  status: after.status
+  total:  after.total
+  at:     committed
+key: order
+to:
+  topic: order-changes

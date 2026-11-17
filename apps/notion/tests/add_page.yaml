@@ -1,0 +1,9 @@
+action: add_page
+credential: { token: ntn_1 }
+input: { database_id: d9824bdc, properties: { Name: { title: [{ text: { content: Order A-100 } }] } } }
+exchanges:
+  - sent:
+      url: https://api.notion.com/v1/pages
+      body: { parent: { database_id: d9824bdc }, properties: { Name: { title: [{ text: { content: Order A-100 } }] } } }
+    answer: { body: { object: page, id: 59833787 } }
+result: { object: page, id: 59833787 }

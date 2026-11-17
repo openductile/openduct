@@ -1,0 +1,11 @@
+description: The message as mail is written, in Base64 for addresses
+action: send_email
+credential: { access_token: ya29.a0 }
+input: { to: ann@example.com, subject: Order A-100, text: It has shipped. }
+exchanges:
+  - sent:
+      method: POST
+      url: https://gmail.googleapis.com/gmail/v1/users/me/messages/send
+      body: { raw: VG86IGFubkBleGFtcGxlLmNvbQ0KU3ViamVjdDogT3JkZXIgQS0xMDANCkNvbnRlbnQtVHlwZTogdGV4dC9wbGFpbjsgY2hhcnNldD1VVEYtOA0KDQpJdCBoYXMgc2hpcHBlZC4= }
+    answer: { body: { id: 18c1, threadId: 18c1, labelIds: [SENT] } }
+result: { id: 18c1, threadId: 18c1, labelIds: [SENT] }

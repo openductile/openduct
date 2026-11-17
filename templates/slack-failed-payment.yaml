@@ -1,0 +1,28 @@
+name: Tell Slack when a payment fails
+description: >-
+  When Stripe reports a failed payment (point a Stripe webhook for payment_intent.payment_failed at this workflow's
+  address), post who, how much and why to your team's Slack channel, so someone can follow up the same day.
+category: Messaging
+trigger:
+  webhook: {}
+# What a test runs on: an event as this trigger gives it.
+sample:
+  type: payment_intent.payment_failed
+  data:
+    object:
+      id: pi_3example
+      amount: 7600
+      currency: usd
+      receipt_email: ada@example.com
+      last_payment_error:
+        message: Your card was declined.
+steps:
+  - where: value.type == "payment_intent.payment_failed"
+  - name: tell
+    slack:
+      credential: team
+      channel: "#payments"
+      text: >-
+        A payment of {{ value.data.object.amount / 100.0 }} {{ value.data.object.currency.upperAscii() }} from
+        {{ value.data.object.receipt_email }} failed: {{ value.data.object.last_payment_error.message }}
+    retry: { attempts: 3, wait: 10s }

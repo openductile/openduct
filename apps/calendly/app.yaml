@@ -1,0 +1,43 @@
+# Copyright 2026 Ductile AI, Inc
+# SPDX-License-Identifier: Apache-2.0
+app: calendly
+name: Calendly
+category: scheduling
+description: Bookings made through Calendly, and who booked them.
+docs: https://developer.calendly.com/api-docs
+hosts: [api.calendly.com]
+base_url: https://api.calendly.com
+sign_in:
+  - id: calendly
+    label: A personal access token
+    fields:
+      - { name: token, label: The personal access token, secret: true }
+    headers:
+      Authorization: "Bearer {{ credential.token }}"
+error: value.message
+actions:
+  me:
+    label: Who I am (my user's address, for the others)
+    method: GET
+    path: /users/me
+    result: value.resource
+  list_bookings:
+    label: List bookings
+    method: GET
+    path: /scheduled_events
+    inputs:
+      - { name: user, label: "Whose: a user's address, from Who I am", required: true }
+      - { name: status, label: "active or canceled" }
+      - { name: min_start_time, label: "Starting from (such as 2026-11-01T00:00:00Z)" }
+    query: { user: "{{ input.user }}", status: "{{ input.status }}", min_start_time: "{{ input.min_start_time }}", count: "100" }
+    items: value.collection
+    next: value.pagination.next_page
+  list_invitees:
+    label: Who booked a booking
+    method: GET
+    path: "/scheduled_events/{{ input.event }}/invitees"
+    inputs:
+      - { name: event, label: "The booking's id (the end of its address)", required: true }
+    query: { count: "100" }
+    items: value.collection
+    next: value.pagination.next_page

@@ -1,0 +1,3 @@
+{"op":"upsert","table":"Opportunity","before":null,"after":{"Id":"006Hp00001XyZaQIAV","Name":"Acme - 200 seats","AccountId":"001Hp00002AbCdEIAV","Amount":48000.0,"StageName":"Closed Won","CloseDate":"2026-11-14","SystemModstamp":"2026-11-15T09:46:40.000+0000","IsDeleted":false}}
+{"op":"upsert","table":"Opportunity","before":null,"after":{"Id":"006Hp00001XyZbRIAV","Name":"Globex - renewal","AccountId":"001Hp00002AbCdFIAV","Amount":12500.0,"StageName":"Closed Won","CloseDate":"2026-11-15","SystemModstamp":"2026-11-15T10:02:11.000+0000","IsDeleted":false}}
+{"op":"delete","table":"Opportunity","before":{"Id":"006Hp00001XyZcSIAV","Name":"Duplicate","StageName":"Closed Won","IsDeleted":true},"after":null}

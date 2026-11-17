@@ -1,0 +1,11 @@
+description: A message posted to a channel's webhook, under a name
+action: send
+credential: { url: "https://discord.com/api/webhooks/1/x" }
+input: { text: Shipped, username: Shop }
+exchanges:
+  - sent:
+      method: POST
+      url: https://discord.com/api/webhooks/1/x
+      body: { content: Shipped, username: Shop }
+    answer: { status: 204 }
+result: { sent: true, answer: null }
