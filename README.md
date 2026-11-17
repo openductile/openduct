@@ -75,12 +75,13 @@ and does not do yet, and [docs/protocol.md](docs/protocol.md) exactly what each 
 
 ## Quick start
 
-Build from source with [Rust](https://rustup.rs). `rustup` installs the pinned toolchain from
-`rust-toolchain.toml` by itself.
+Build from source with [Rust](https://rustup.rs) and [Node.js](https://nodejs.org) 22 (for the studio's page).
+`rustup` installs the pinned toolchain from `rust-toolchain.toml` by itself.
 
 ```sh
 git clone https://github.com/openductile/openduct
 cd openduct
+(cd ui && npm ci && npm run build)    # the studio's page, built into the program
 cargo build --release
 ./target/release/openduct serve --memory
 ```

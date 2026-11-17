@@ -20,7 +20,7 @@ terms and prices before deciding.
 | **MuleSoft Anypoint** | Enterprise integration and API management | MuleSoft's cloud or your own runtimes | Proprietary |
 | **Apache Kafka** | The event streaming platform the protocol comes from | Your machines, or many hosted offerings | Apache 2.0 |
 | **Confluent** | Kafka with a schema registry, connectors, stream processing and a cloud service | Confluent Cloud or your machines | Mix of Apache 2.0, Confluent Community License and proprietary |
-| **Redpanda** | A Kafka-compatible broker written in C++, one binary | Your machines or Redpanda's cloud | Business Source License for the core; enterprise licence for some features |
+| **Redpanda** | A Kafka-compatible broker written in C++, one binary | Your machines or Redpanda's cloud | From 26.3.1, binaries only under the Redpanda Community Edition License, free up to 50 cores per organization (earlier versions' source: Business Source License); enterprise licence for some features |
 | **NATS (JetStream)** | A small messaging server with persistence | Your machines, the edge, or a hosted service | Apache 2.0 |
 | **LangGraph / LangChain** | Libraries for building AI agents in code | Inside your program; a hosted platform from its makers | MIT (libraries) |
 | **Temporal** | Durable execution: workflows written as code that survive crashes | Your machines or Temporal Cloud | MIT |
