@@ -96,7 +96,7 @@ Asks a URL on a schedule and turns the answer into messages.
 | `headers` | none | Headers to send, for example `{ Authorization: secret:API_TOKEN }`. |
 | `every` | `60s` | How often to ask: `500ms`, `30s`, `5m`, `1h`, `1d`. |
 | `records` | the answer | An expression giving the list of records in the answer (the answer is `value`). Each record is one message. Without it, an answer that is a list gives one message per item, and anything else one message. |
-| `position` | none | An expression giving where to carry on from next time (the records are `records`, the answer `value`), such as `math.greatest(records.map(r, r.seq))`. It is saved once the messages are written. |
+| `position` | none | An expression giving where to carry on from next time (the records are `records`, the answer `value`), such as `math.greatest(records.map(r, r.seq))`. It is saved once the messages are written. A page with no records keeps the position where it was, when it is worked out from the records. |
 | `start` | empty | The position the first request uses. |
 | `next` | none | An expression giving the next page's URL, or null when there is none. Pages are followed within one poll, up to `max_pages`. |
 | `max_pages` | `100` | The most pages one poll follows. |

@@ -207,6 +207,12 @@ async fn an_http_source_reads_every_page_and_carries_on_from_its_position() {
         .unwrap();
         let running = Running::start(&a, &file);
         let got = wait_for_values(&a, "orders", 5);
+        // The next poll finds nothing new: an empty page keeps the position and the pipeline carries on.
+        let deadline = Instant::now() + Duration::from_secs(10);
+        while !asked.lock().unwrap().iter().any(|p| p == "/orders?since=5") && Instant::now() < deadline {
+            std::thread::sleep(Duration::from_millis(50));
+        }
+        std::thread::sleep(Duration::from_millis(200));
         let log = running.stop();
         assert!(log.contains("reading http GET http://"), "{log}");
         let mut ids: Vec<String> = got.clone();
