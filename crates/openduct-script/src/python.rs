@@ -11,7 +11,7 @@
 
 use rustpython_vm::builtins::PyBaseExceptionRef;
 use rustpython_vm::compiler::Mode;
-use rustpython_vm::{Interpreter, PyObjectRef, Settings, VirtualMachine, py_serde};
+use rustpython_vm::{AsObject, Interpreter, PyObjectRef, Settings, VirtualMachine, py_serde};
 use serde_json::Value as Json;
 
 use crate::{Answer, Failure, Script, kept_logs};
@@ -155,7 +155,14 @@ fn interpreter() -> Interpreter {
         .build()
 }
 
+/// A script that asked for more memory than its process may have (its limit is set in [`crate::Isolated`]).
+const OUT_OF_MEMORY: &str = "the script used more memory than a script may: it was stopped";
+
+/// What the person sees for a script's error: Python's own text, except running out of memory, which is said plainly.
 fn shown(vm: &VirtualMachine, error: &PyBaseExceptionRef) -> String {
+    if error.fast_isinstance(vm.ctx.exceptions.memory_error) {
+        return OUT_OF_MEMORY.to_owned();
+    }
     let mut text = String::new();
     if vm.write_exception(&mut text, error).is_err() || text.trim().is_empty() {
         return "the script failed".to_owned();

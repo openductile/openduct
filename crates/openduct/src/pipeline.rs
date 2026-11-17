@@ -92,6 +92,8 @@ pub(crate) async fn command(command: PipelineCommand) -> Result<(), String> {
             // What connectors report as they go (a connection lost and made again, messages a cluster removed
             // before they were read) reaches the log; RUST_LOG sets the detail.
             crate::serve::init_logging(crate::serve::LogFormat::Text, None);
+            // Listening for a stop from the first moment, before connecting.
+            let mut stop = std::pin::pin!(stopped());
             let pipeline = load(&file)?;
             let named = match &secrets_file {
                 Some(path) => crate::secrets_file::read(path)?,
@@ -102,7 +104,10 @@ pub(crate) async fn command(command: PipelineCommand) -> Result<(), String> {
             match &pipeline.source {
                 Some(c) => {
                     let source = Source::build(c, &pipeline.name, secrets)?;
-                    run_source(&pipeline, source, connect(&target).await?, stopped(), None).await
+                    let Some(client) = connect_unless_stopped(&target, stop.as_mut()).await? else {
+                        return Ok(());
+                    };
+                    run_source(&pipeline, source, client, stop, None).await
                 }
                 None => {
                     let sink = pipeline
@@ -110,7 +115,10 @@ pub(crate) async fn command(command: PipelineCommand) -> Result<(), String> {
                         .as_ref()
                         .map(|c| Sink::build(c, &pipeline.name, secrets))
                         .transpose()?;
-                    run_reader(&pipeline, sink, connect(&target).await?, stopped(), None).await
+                    let Some(client) = connect_unless_stopped(&target, stop.as_mut()).await? else {
+                        return Ok(());
+                    };
+                    run_reader(&pipeline, sink, client, stop, None).await
                 }
             }
         }
@@ -485,23 +493,31 @@ async fn run_reader<C: Broker>(
 ) -> Result<(), String> {
     let mut counts = Counts::inside(live);
     let name = pipeline.name.clone();
-    let from_partitions = partitions_of(&mut client, &pipeline.from_topic, "read").await?;
-    let to_partitions = match &sink {
-        None => partitions_of(&mut client, &pipeline.to_topic, "write to").await?,
-        Some(_) => 0,
+    tokio::pin!(stop);
+    // Setting up waits on the broker (its topics, joining the group): a stop asked for meanwhile ends it there.
+    let setup = async {
+        let from_partitions = partitions_of(&mut client, &pipeline.from_topic, "read").await?;
+        let to_partitions = match &sink {
+            None => partitions_of(&mut client, &pipeline.to_topic, "write to").await?,
+            Some(_) => 0,
+        };
+        let error_partitions = match &pipeline.error_topic {
+            Some(topic) => Some(partitions_of(&mut client, topic, "set messages aside in").await?),
+            None => None,
+        };
+        if let Some(s) = &sink {
+            counts.say(&format!("pipeline {name}: writing to {}", s.describe()));
+        }
+        let member = join(&mut client, pipeline, from_partitions, None, &counts).await?;
+        let next = starting_offsets(&mut client, pipeline, &member).await?;
+        Ok::<_, String>((from_partitions, to_partitions, error_partitions, member, next))
     };
-    let error_partitions = match &pipeline.error_topic {
-        Some(topic) => Some(partitions_of(&mut client, topic, "set messages aside in").await?),
-        None => None,
+    let (from_partitions, to_partitions, error_partitions, mut member, mut next) = tokio::select! {
+        ready = setup => ready?,
+        () = &mut stop => return Ok(()),
     };
-    if let Some(s) = &sink {
-        counts.say(&format!("pipeline {name}: writing to {}", s.describe()));
-    }
-    let mut member = join(&mut client, pipeline, from_partitions, None, &counts).await?;
-    let mut next = starting_offsets(&mut client, pipeline, &member).await?;
     let (mut last_beat, mut last_report) = (Instant::now(), Instant::now());
     let mut turn = 0i32;
-    tokio::pin!(stop);
     loop {
         let wanted: Vec<(i32, i64)> = next.iter().map(|(p, o)| (*p, *o)).collect();
         let fetched = if wanted.is_empty() {
@@ -714,16 +730,25 @@ async fn run_source<C: Broker>(
 ) -> Result<(), String> {
     let mut counts = Counts::inside(live);
     let name = pipeline.name.clone();
-    let to_partitions = partitions_of(&mut client, &pipeline.to_topic, "write to").await?;
-    let error_partitions = match &pipeline.error_topic {
-        Some(topic) => Some(partitions_of(&mut client, topic, "set messages aside in").await?),
-        None => None,
+    tokio::pin!(stop);
+    // Setting up waits on the broker and the source: a stop asked for meanwhile ends it there.
+    let setup = async {
+        let to_partitions = partitions_of(&mut client, &pipeline.to_topic, "write to").await?;
+        let error_partitions = match &pipeline.error_topic {
+            Some(topic) => Some(partitions_of(&mut client, topic, "set messages aside in").await?),
+            None => None,
+        };
+        let position = client
+            .saved_position(&pipeline.group, &pipeline.to_topic, 0)
+            .await
+            .map_err(|e| format!("pipeline {name}: cannot read its saved position: {e}"))?;
+        source.start().await?;
+        Ok::<_, String>((to_partitions, error_partitions, position))
     };
-    let mut position = client
-        .saved_position(&pipeline.group, &pipeline.to_topic, 0)
-        .await
-        .map_err(|e| format!("pipeline {name}: cannot read its saved position: {e}"))?;
-    source.start().await?;
+    let (to_partitions, error_partitions, mut position) = tokio::select! {
+        ready = setup => ready?,
+        () = &mut stop => return Ok(()),
+    };
     counts.say(&format!(
         "pipeline {name}: reading {}, writing {}",
         source.describe(),
@@ -732,7 +757,6 @@ async fn run_source<C: Broker>(
     let mut last_report = Instant::now();
     let mut turn = 0i32;
     let mut sequence = 0i64;
-    tokio::pin!(stop);
     loop {
         let batch = tokio::select! {
             batch = source.next(position.as_deref()) => batch.map_err(|e| format!("pipeline {name}: {e}"))?,
@@ -911,17 +935,41 @@ async fn write_all<C: Broker>(client: &mut C, writes: &[(String, i32, Outgoing)]
     Ok(())
 }
 
-/// Ctrl-C, or SIGTERM where there is one.
-async fn stopped() {
+/// The broker's client, or nothing when the pipeline is asked to stop while it is still connecting.
+async fn connect_unless_stopped(
+    target: &Target,
+    stop: std::pin::Pin<&mut impl Future<Output = ()>>,
+) -> Result<Option<Client>, String> {
+    tokio::select! {
+        client = connect(target) => client.map(Some),
+        () = stop => Ok(None),
+    }
+}
+
+/// Ctrl-C, or SIGTERM where there is one. The handlers are in place when this is called, not when its answer is
+/// first awaited: a pipeline asked to stop while it is still starting stops cleanly instead of being killed.
+fn stopped() -> impl Future<Output = ()> + Send + 'static {
     #[cfg(unix)]
     {
-        if let Ok(mut term) = tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate()) {
-            tokio::select! {
-                _ = tokio::signal::ctrl_c() => {}
-                _ = term.recv() => {}
+        use tokio::signal::unix::{SignalKind, signal};
+        let terminate = signal(SignalKind::terminate()).ok();
+        let interrupt = signal(SignalKind::interrupt()).ok();
+        async move {
+            match (terminate, interrupt) {
+                (Some(mut terminate), Some(mut interrupt)) => {
+                    tokio::select! {
+                        _ = terminate.recv() => {}
+                        _ = interrupt.recv() => {}
+                    }
+                }
+                _ => {
+                    let _ = tokio::signal::ctrl_c().await;
+                }
             }
-            return;
         }
     }
-    let _ = tokio::signal::ctrl_c().await;
+    #[cfg(not(unix))]
+    async {
+        let _ = tokio::signal::ctrl_c().await;
+    }
 }

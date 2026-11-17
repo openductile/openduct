@@ -30,7 +30,12 @@ OpenDuct listens on the network and stores data. Reports we especially want to h
 
 - crashes or hangs the broker from the network, or exhausts its memory, disk or connections without limit;
 - reads, changes or loses data without authorization, or acknowledges a write it has not stored;
+- signs someone in without the right password or certificate, or lets one workspace see another's workflows, runs,
+  files or credentials;
+- shows a credential's secret, in the studio, a log, a run's history or a preview;
+- lets a JavaScript or Python step reach past its limits: files, the network, memory, time or other processes;
 - escapes the data directory or otherwise touches files it should not.
 
-Today OpenDuct speaks plaintext only, with no authentication: run it on a trusted network. TLS and authentication
-are on the roadmap (`README.md`).
+A broker refuses to listen beyond the loopback address without TLS 1.3, sign-in and access rules, unless it is told
+in so many words to run insecurely (`OPENDUCT_ALLOW_INSECURE=true`, for a laptop only). How to run it securely:
+[docs/security.md](docs/security.md).

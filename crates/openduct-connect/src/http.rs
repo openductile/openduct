@@ -145,9 +145,13 @@ impl HttpSource {
             };
             if let Some(f) = &self.position {
                 let names = [("records".to_owned(), Value::list(records.clone()))];
-                let p = evaluate(f, &answer, &names, "position")?;
-                if !p.is_null() {
-                    carried = Some(p.to_text());
+                match evaluate(f, &answer, &names, "position") {
+                    Ok(p) if !p.is_null() => carried = Some(p.to_text()),
+                    Ok(_) => {}
+                    // A page with nothing new: a position worked out from its records cannot be had, so it stays
+                    // where it was. One read from the answer itself (a cursor) still moves it.
+                    Err(_) if records.is_empty() => {}
+                    Err(e) => return Err(e),
                 }
             }
             messages.extend(

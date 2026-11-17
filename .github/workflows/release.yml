@@ -4,6 +4,10 @@
 # A release, on a version tag (v1.2.3): the programs for Linux and macOS - openduct, with the studio's page built in,
 # and openduct-python beside it for Python steps - each packed with its SHA-256; and the container image for amd64
 # and arm64, built on each, under this repository's name in the GitHub container registry.
+#
+# Nothing is built until a maintainer approves the run (the `release` environment). Every package and the image get
+# a signed record of how they were built (build provenance) and signed bills of materials (SBOMs) for the programs and
+# the studio's page, both kept by GitHub (`gh attestation verify`, docs/security.md); the SBOMs are release files too.
 
 name: Release
 
@@ -18,8 +22,16 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
+  approved:
+    name: Approved by a maintainer
+    runs-on: ubuntu-latest
+    environment: release
+    steps:
+      - run: echo "Release $GITHUB_REF_NAME approved"
+
   program:
     name: The program for ${{ matrix.target }}
+    needs: approved
     strategy:
       fail-fast: false
       matrix:
@@ -52,6 +64,7 @@ jobs:
 
   image:
     name: The image for ${{ matrix.arch }}
+    needs: approved
     strategy:
       fail-fast: false
       matrix:
@@ -73,16 +86,44 @@ jobs:
           docker build --build-arg JOBS=4 -t "$image:${GITHUB_REF_NAME}-${{ matrix.arch }}" .
           docker push "$image:${GITHUB_REF_NAME}-${{ matrix.arch }}"
 
+  sbom:
+    name: The bills of materials
+    needs: approved
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: rustup show active-toolchain || rustup toolchain install
+      # Every crate in each program, for every platform it is released for (read from Cargo.lock, nothing built).
+      - name: The programs'
+        run: |
+          cargo install --locked --version 0.5.9 cargo-cyclonedx
+          cargo cyclonedx --format json --spec-version 1.5 --no-build-deps --describe binaries --target all
+          mkdir sbom
+          mv crates/openduct/openduct_bin.cdx.json "sbom/openduct-${GITHUB_REF_NAME}.sbom.cdx.json"
+          mv crates/openduct-script/openduct-python_bin.cdx.json "sbom/openduct-python-${GITHUB_REF_NAME}.sbom.cdx.json"
+      # The packages built into the studio's page (development tools left out).
+      - name: The studio page's
+        working-directory: ui
+        run: npm sbom --sbom-format cyclonedx --package-lock-only --omit dev > "../sbom/openduct-studio-page-${GITHUB_REF_NAME}.sbom.cdx.json"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: sbom
+          path: sbom/
+
   publish:
     name: Published
-    needs: [program, image]
+    needs: [program, image, sbom]
     runs-on: ubuntu-latest
     permissions:
       contents: write
       packages: write
+      id-token: write
+      attestations: write
+      artifact-metadata: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: One image for both architectures, as the version and as latest
+        id: image
         env:
           TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -92,12 +133,55 @@ jobs:
             docker buildx imagetools create -t "$image:$tag" \
               "$image:${GITHUB_REF_NAME}-amd64" "$image:${GITHUB_REF_NAME}-arm64"
           done
+          digest=$(docker buildx imagetools inspect "$image:$GITHUB_REF_NAME" --format '{{json .Manifest}}' | jq -r .digest)
+          echo "name=$image" >> "$GITHUB_OUTPUT"
+          echo "digest=$digest" >> "$GITHUB_OUTPUT"
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           pattern: program-*
           merge-multiple: true
           path: release
-      - name: The release, with the programs
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: sbom
+          path: release
+      # Signed records, kept by GitHub (and the image's beside it in the registry): how each was built, and what is in it.
+      - name: How the programs were built
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-path: release/*.tar.gz
+      - name: What is in the programs (openduct)
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-path: release/*.tar.gz
+          sbom-path: release/openduct-${{ github.ref_name }}.sbom.cdx.json
+      - name: What is in the programs (openduct-python)
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-path: release/*.tar.gz
+          sbom-path: release/openduct-python-${{ github.ref_name }}.sbom.cdx.json
+      - name: What is in the programs (the studio's page)
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-path: release/*.tar.gz
+          sbom-path: release/openduct-studio-page-${{ github.ref_name }}.sbom.cdx.json
+      - name: How the image was built
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-name: ${{ steps.image.outputs.name }}
+          subject-digest: ${{ steps.image.outputs.digest }}
+          push-to-registry: true
+      - name: What is in the image
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-name: ${{ steps.image.outputs.name }}
+          subject-digest: ${{ steps.image.outputs.digest }}
+          sbom-path: release/openduct-${{ github.ref_name }}.sbom.cdx.json
+          push-to-registry: true
+      # Releases cannot change once published (immutable releases): every file goes on a draft, then it is published.
+      - name: The release, with the programs and their bills of materials
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh release create "$GITHUB_REF_NAME" release/* --title "$GITHUB_REF_NAME" --generate-notes --verify-tag
+        run: |
+          gh release create "$GITHUB_REF_NAME" release/* --draft --title "$GITHUB_REF_NAME" --generate-notes --verify-tag
+          gh release edit "$GITHUB_REF_NAME" --draft=false

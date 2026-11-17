@@ -94,10 +94,15 @@ impl Running {
             .args(["-TERM", &self.child.id().to_string()])
             .status()
             .unwrap();
-        assert!(self.child.wait().unwrap().success(), "{:?}", self.seen);
+        let status = self.child.wait().unwrap();
         while let Ok(line) = self.log.recv_timeout(Duration::from_secs(2)) {
             self.seen.push(line);
         }
+        assert!(
+            status.success(),
+            "the pipeline stopped with {status}: {:?}",
+            self.seen
+        );
         self.seen.join("\n")
     }
 }
@@ -159,6 +164,29 @@ fn order_api(orders: Arc<Mutex<Vec<u32>>>, asked: Arc<Mutex<Vec<String>>>) -> St
     addr
 }
 
+/// Asked to stop while it is still connecting - to a broker that takes the connection and never answers - a pipeline
+/// stops at once, and cleanly, rather than being killed or waiting out its connection's timeout.
+#[test]
+fn a_pipeline_asked_to_stop_while_it_connects_stops_cleanly() {
+    let silent = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+    let addr = silent.local_addr().unwrap().to_string();
+    let dir = tempfile::tempdir().unwrap();
+    let file = dir.path().join("copy.yaml");
+    std::fs::write(&file, "name: copy\nfrom:\n  topic: a\nto:\n  topic: b\n").unwrap();
+    let running = Running::start(&addr, &file);
+    // Its connection arriving means it is running and waiting on the broker (a fixed sleep is not enough: a newly
+    // built program can take a while to start, as on a fresh CI machine).
+    let (connection, _) = silent.accept().unwrap();
+    let asked = Instant::now();
+    running.stop();
+    assert!(
+        asked.elapsed() < Duration::from_secs(5),
+        "it took {:?} to stop",
+        asked.elapsed()
+    );
+    drop(connection);
+}
+
 #[tokio::test(flavor = "multi_thread")]
 async fn an_http_source_reads_every_page_and_carries_on_from_its_position() {
     let (broker, addr) = broker().await;
@@ -179,6 +207,12 @@ async fn an_http_source_reads_every_page_and_carries_on_from_its_position() {
         .unwrap();
         let running = Running::start(&a, &file);
         let got = wait_for_values(&a, "orders", 5);
+        // The next poll finds nothing new: an empty page keeps the position and the pipeline carries on.
+        let deadline = Instant::now() + Duration::from_secs(10);
+        while !asked.lock().unwrap().iter().any(|p| p == "/orders?since=5") && Instant::now() < deadline {
+            std::thread::sleep(Duration::from_millis(50));
+        }
+        std::thread::sleep(Duration::from_millis(200));
         let log = running.stop();
         assert!(log.contains("reading http GET http://"), "{log}");
         let mut ids: Vec<String> = got.clone();

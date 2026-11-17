@@ -277,6 +277,15 @@ fn a_script_never_sees_the_programs_environment() {
     assert_eq!(python.result, json!([{}, null, "none"]));
 }
 
+#[test]
+fn python_running_out_of_memory_is_said_plainly() {
+    let failed = py("raise MemoryError()", json!({})).unwrap_err();
+    assert_eq!(
+        failed.error,
+        "the script used more memory than a script may: it was stopped"
+    );
+}
+
 #[cfg(target_os = "linux")]
 #[test]
 fn a_script_that_takes_too_much_memory_is_stopped() {
@@ -286,5 +295,8 @@ fn a_script_that_takes_too_much_memory_is_stopped() {
         json!({}),
     ))
     .unwrap_err();
-    assert!(stopped.error.contains("memory"), "{}", stopped.error);
+    assert_eq!(
+        stopped.error, "the script used more memory than a script may: it was stopped",
+        "Python's own MemoryError is said plainly"
+    );
 }

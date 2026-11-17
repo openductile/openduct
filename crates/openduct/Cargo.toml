@@ -43,7 +43,7 @@ tracing-subscriber = { version = "0.3.23", default-features = false, features = 
 [dev-dependencies]
 # A real OPC UA server for the opcua connector's tests, from the same commit as the client (see openduct-connect).
 async-opcua = { git = "https://github.com/freeopcua/async-opcua", rev = "cabe0c61c9fa92ea175c2cf1858e935be060027a", version = "0.19.0", default-features = false, features = ["server"] }
-base64 = "0.22.1"
+base64 = "0.23.1"
 chrono = { version = "0.4.45", default-features = false, features = ["std", "clock"] }
 flate2 = "1.1.11"
 hmac = "0.13.0"

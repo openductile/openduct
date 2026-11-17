@@ -404,6 +404,11 @@ fn optional_metadata(b: &mut Bytes, columns: &mut [Column]) -> Result<(), String
 /// One row image: a JSON value (or `None`, for a column the image leaves out) for each column.
 pub(super) fn row(table: &Table, present: &[bool], data: &mut Bytes) -> Result<Vec<Option<String>>, String> {
     let shown = present.iter().filter(|p| **p).count();
+    // Every row takes at least its null bitmap. One with no column in it would take nothing, and the event's rows
+    // would be read for ever (a broken or hostile stream): it is refused instead.
+    if shown == 0 {
+        return Err("a row with no columns in it".to_owned());
+    }
     let nulls = take_bitmap(data, shown)?;
     let mut out = Vec::with_capacity(table.columns.len());
     let mut nth = 0;
@@ -502,6 +507,10 @@ mod tests {
                 Some("null".to_owned())
             ]
         );
+        // A row with no column in it takes no bytes, so its event's rows would be read for ever: it is refused.
+        let mut rest = Bytes::from_static(&[1, 2, 3]);
+        assert!(row(&table, &[false, false, false], &mut rest).is_err());
+        assert_eq!(rest.len(), 3);
     }
 
     #[test]

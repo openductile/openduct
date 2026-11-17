@@ -80,10 +80,15 @@ impl Running {
             .args(["-TERM", &self.child.id().to_string()])
             .status()
             .unwrap();
-        assert!(self.child.wait().unwrap().success(), "{:?}", self.seen);
+        let status = self.child.wait().unwrap();
         while let Ok(line) = self.log.recv_timeout(Duration::from_secs(2)) {
             self.seen.push(line);
         }
+        assert!(
+            status.success(),
+            "the pipeline stopped with {status}: {:?}",
+            self.seen
+        );
         self.seen.join("\n")
     }
 

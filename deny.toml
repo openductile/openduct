@@ -22,6 +22,12 @@ ignore = [
     # paste: unmaintained, and a macro that runs only while building - malachite's, in openduct-python alone. It
     # holds no known flaw; it goes when malachite drops it.
     { id = "RUSTSEC-2024-0436", reason = "a build-time macro of openduct-python's integers only; no known flaw" },
+    # chrono, chrono-tz and chrono-tz-build: marked unmaintained in November 2026, with no fixed version and no known
+    # flaw. Dates come through them in CEL, Raft, OPC UA and Kafka clients as well as our own crates, so they cannot
+    # be dropped here alone; they go when those move to a maintained date library (jiff).
+    { id = "RUSTSEC-2026-0543", reason = "chrono: unmaintained, no known flaw; used across our dependencies" },
+    { id = "RUSTSEC-2026-0555", reason = "chrono-tz: unmaintained, no known flaw; the time zones CEL and its dependencies use" },
+    { id = "RUSTSEC-2026-0559", reason = "chrono-tz-build: unmaintained, build time only; chrono-tz's tables" },
 ]
 
 [licenses]
