@@ -33,7 +33,7 @@ indexmap = "2.14.2"
 kafka-protocol = { version = "0.18.0", default-features = false, features = ["client"] }
 md-5 = "0.11.0"
 mongodb = { version = "3.10.1", default-features = false, features = ["compat-3-3-0", "bson-3", "rustls-tls", "dns-resolver"] }
-num-bigint = { version = "0.4.8", default-features = false, features = ["std"] }
+num-bigint = { version = "0.5.1", default-features = false, features = ["std"] }
 openduct-broker = { version = "0.1.0", path = "../openduct-broker" }
 openduct-expr = { version = "0.1.0", path = "../openduct-expr" }
 openduct-pipeline = { version = "0.1.0", path = "../openduct-pipeline" }

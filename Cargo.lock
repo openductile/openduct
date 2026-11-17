@@ -3655,7 +3655,7 @@ dependencies = [
  "kafka-protocol",
  "md-5",
  "mongodb",
- "num-bigint 0.4.8",
+ "num-bigint 0.5.1",
  "openduct-broker",
  "openduct-expr",
  "openduct-pipeline",
