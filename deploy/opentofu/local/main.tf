@@ -24,7 +24,7 @@ locals {
   repository = abspath("${path.module}/../../..")
   # The database's first-run script, as deploy/compose has it.
   postgres_init = yamldecode(file("${local.repository}/deploy/compose/compose.yaml")).configs["openduct-postgres"].content
-  labels     = { "app.kubernetes.io/part-of" = "openduct" }
+  labels        = { "app.kubernetes.io/part-of" = "openduct" }
 }
 
 # Secrets, made once and kept in OpenTofu's state (keep the state private).

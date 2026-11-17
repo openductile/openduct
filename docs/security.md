@@ -101,3 +101,17 @@ A principal over its share is not refused: its answers are held back as long as 
 is allowed), so a loud tenant slows itself and no one else. `throttle_time_ms` stays 0 - some clients send a request
 again when an answer carries one. One address holds at most 1,000 connections at once.
 
+
+## Checking a release
+
+Every release's packages and image carry signed records, kept by GitHub: how each was built (from which commit, by
+which workflow) and what is in it (bills of materials for `openduct`, `openduct-python` and the studio's page). With
+the [GitHub CLI](https://cli.github.com):
+
+```sh
+gh attestation verify openduct-v0.1.0-x86_64-unknown-linux-gnu.tar.gz --repo openductile/openduct
+gh attestation verify oci://ghcr.io/openductile/openduct:v0.1.0 --repo openductile/openduct
+```
+
+A package that was changed after it was built, or built anywhere else, fails the check. The bills of materials are
+also release files (`*.sbom.cdx.json`, CycloneDX).
