@@ -37,7 +37,8 @@ with the tools that do. [comparison.md](comparison.md) sets it beside those tool
 |---|---|
 | A visual builder | A canvas in the browser: trigger, steps, branches, switches, loops ([studio](studio.md)) |
 | Triggers | Webhook (with an optional token, and an answer of the workflow's own), schedule, topic, by hand, another workflow's failure |
-| Steps | Set, filter, branch, switch, loop, list tools, group and summarise, merge, date and time, lookup files, HTTP, SQL on PostgreSQL (with pgvector), e-mail, code snippets, AI, embeddings, messengers, apps, write to a topic, respond to a webhook, run another workflow, wait, stop |
+| Steps | Set, filter, branch, switch, loop, list tools, group and summarise, merge, date and time, lookup files, HTTP, SQL on PostgreSQL (with pgvector), e-mail, JavaScript and Python code, AI, embeddings, messengers, apps, write to a topic, respond to a webhook, run another workflow, wait, stop |
+| JavaScript and Python | Built in (Boa and RustPython; no Node.js or CPython needed), each script in a sandboxed process with no files, network or credentials; the computing part of Python's standard library; no pip or npm packages ([README](../README.md#javascript-and-python-steps)) |
 | Trying | Test (sends nothing), Preview (reads for real, shows writes), each step's input and output side by side |
 | Reliability | Runs on the broker: each event runs at least once, in order per key, up to 50 at once; a crash repeats a run, never skips one |
 | Failures | Retries per step; CatchErr keeps failed records to run again; a workflow can start when another fails; alerts to a messenger |
@@ -62,6 +63,7 @@ with the tools that do. [comparison.md](comparison.md) sets it beside those tool
 | Secrets | Never in environment variables: the studio seals credentials; OpenDuct's own secrets come from files |
 | Private networks | Workflows and pipelines may not reach the machine's own network unless allowed |
 | Logs | stderr (text or JSON) and OpenTelemetry log files, shown in the studio's Logs page ([deployment](deployment.md#logs)) |
+| Metrics | For Prometheus at `/metrics` (`--metrics-listen`; a token beyond this machine): requests and their durations by Kafka API, bytes in and out, connections, sign-in failures, offsets, consumer group lag, leaderless partitions, workflow runs and AI tokens ([deployment](deployment.md#metrics)) |
 | Deployment | One binary, a container image, Docker Compose, Kubernetes, OpenTofu ([deployment](deployment.md)) |
 | Upgrades | One broker at a time ([upgrades](upgrades.md)) |
 | Hostile input | Every place OpenDuct reads bytes it did not write is mutated at random in every test run and fuzzed in CI ([test results](regression.md)) |
@@ -80,7 +82,6 @@ with the tools that do. [comparison.md](comparison.md) sets it beside those tool
 | Stream processing with windows, joins and state (pipelines change one message at a time) | Kafka Streams, Apache Flink, ksqlDB |
 | The newer consumer group protocol (KIP-848) and queue-style share groups (KIP-932) | Apache Kafka 4.x |
 | An HTTP API for producing and consuming | Confluent REST Proxy, Redpanda HTTP Proxy |
-| Metrics for Prometheus | Apache Kafka (through exporters), Redpanda, NATS |
 | Copying a cluster to another with its offsets (pipelines copy messages, not offsets) | MirrorMaker 2, Confluent Cluster Linking |
 | Tables of a topic in open formats (Iceberg) | Confluent Tableflow, Redpanda Iceberg topics |
 

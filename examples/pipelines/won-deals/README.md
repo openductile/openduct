@@ -17,7 +17,7 @@ Try the expressions on the sample, with no Salesforce org needed (each line is a
 openduct pipeline test pipeline.yaml --input input.jsonl     # prints what expected.jsonl holds
 ```
 
-To run it, make a connected app (or an external client app) with the client credentials flow and a run-as user
+To run it, make an External Client App with the client credentials flow and a run-as user
 who may read opportunities. Set `SF_CLIENT_ID` and `SF_CLIENT_SECRET`, put the org's My Domain in `login_url`,
 and create the topic:
 

@@ -145,6 +145,10 @@ struct Org {
     sign_ins: Vec<String>,
     queries: Vec<String>,
     port: u16,
+    /// The one refresh token that works now; each refresh replaces it (rotation), and an old one is refused.
+    refresh: String,
+    /// The refresh tokens asked with, in order.
+    refreshes: Vec<String>,
 }
 
 fn respond(stream: &mut std::net::TcpStream, status: &str, body: &str) {
@@ -253,16 +257,35 @@ fn salesforce(org: Arc<Mutex<Org>>) -> String {
                     "urn:ietf:params:oauth:grant-type:jwt-bearer" => {
                         jwt_ok(&form_value(&body, "assertion").unwrap_or_default(), &b)
                     }
+                    "refresh_token" => {
+                        let given = form_value(&body, "refresh_token").unwrap_or_default();
+                        org.refreshes.push(given.clone());
+                        if given.is_empty() || given != org.refresh {
+                            respond(
+                                &mut stream,
+                                "400 Bad Request",
+                                r#"{"error":"invalid_grant","error_description":"expired access/refresh token"}"#,
+                            );
+                            continue;
+                        }
+                        form_value(&body, "client_id").as_deref() == Some("test-client")
+                    }
                     _ => false,
                 };
                 if ok {
                     let token = format!("tok-{}", org.tokens.len() + 1);
                     org.tokens.push(token.clone());
+                    let rotated = if grant == "refresh_token" {
+                        org.refresh = format!("rt-{}", org.refreshes.len());
+                        format!(r#","refresh_token":"{}""#, org.refresh)
+                    } else {
+                        String::new()
+                    };
                     respond(
                         &mut stream,
                         "200 OK",
                         &format!(
-                            r#"{{"access_token":"{token}","instance_url":"{b}","token_type":"Bearer"}}"#
+                            r#"{{"access_token":"{token}","instance_url":"{b}","token_type":"Bearer"{rotated}}}"#
                         ),
                     );
                 } else {
@@ -545,6 +568,68 @@ async fn a_jwt_signs_in_and_a_wrong_secret_stops_with_the_reason() {
         let (ok, log) = Running::start(&h, &f, &[("SF_SECRET", wrong)]).ended();
         assert!(!ok && log.contains("Salesforce refused signing in: invalid client credentials"), "{log}");
         assert!(!log.contains(wrong), "the secret is never shown: {log}");
+    })
+    .await
+    .unwrap();
+    local.shutdown().await;
+}
+
+/// Salesforce rotates refresh tokens (it requires rotation of External Client Apps): each refresh answers the next
+/// one and the one used stops working. A running pipeline keeps the next one, so a session that ends signs in again;
+/// started again with the token it began with - used up - it stops and says why, showing no secret.
+#[tokio::test(flavor = "multi_thread")]
+async fn a_rotated_refresh_token_is_kept_while_running_and_a_used_one_is_explained() {
+    let org = Arc::new(Mutex::new(Org::default()));
+    {
+        let mut o = org.lock().unwrap();
+        o.refresh = "rt-0".into();
+        o.accounts.push((
+            "2026-11-15T09:00:00.000+0000".into(),
+            "001A00000000001AAA".into(),
+            "Acme".into(),
+            false,
+        ));
+    }
+    let url = salesforce(Arc::clone(&org));
+    let (local, here) = broker().await;
+    let (h, o) = (here.clone(), Arc::clone(&org));
+    tokio::task::spawn_blocking(move || {
+        openduct(&h, &["topic", "create", "rotated-accounts"]);
+        let dir = tempfile::tempdir().unwrap();
+        let f = file(
+            &dir,
+            "rotated",
+            &format!(
+                "name: rotated-in\nfrom:\n  salesforce:\n    login_url: {url}\n    client_id: test-client\n    refresh_token: secret:SF_REFRESH\n    object: Account\n    every: 5s\nto:\n  topic: rotated-accounts\n"
+            ),
+        );
+        let env = [("SF_REFRESH", "rt-0")];
+        let running = Running::start(&h, &f, &env);
+        wait_for(&h, "rotated-accounts", 1);
+        // The session ends while it runs; a second account is waiting.
+        {
+            let mut o = o.lock().unwrap();
+            o.accounts.push((
+                "2026-11-15T09:05:00.000+0000".into(),
+                "001A00000000002AAA".into(),
+                "Globex".into(),
+                false,
+            ));
+            o.expire = true;
+        }
+        let got = wait_for(&h, "rotated-accounts", 2);
+        let log = running.stop();
+        assert_eq!(got.len(), 2, "{log}");
+        assert_eq!(
+            o.lock().unwrap().refreshes,
+            ["rt-0", "rt-1"],
+            "the second sign-in asks with the token the first was given"
+        );
+
+        let (ok, log) = Running::start(&h, &f, &env).ended();
+        assert!(!ok && log.contains("Salesforce refused the refresh token"), "{log}");
+        assert!(log.contains("client credentials"), "it says what to use instead: {log}");
+        assert!(!log.contains("rt-0") && !log.contains("rt-2"), "no refresh token is shown: {log}");
     })
     .await
     .unwrap();

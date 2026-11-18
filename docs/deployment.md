@@ -202,6 +202,57 @@ pick it up, and keeps it on disk as OpenTelemetry log records: OTLP JSON Lines, 
   and text, and follows them as they come. In a cluster each node keeps and shows its own.
 - **How much**: `RUST_LOG` sets the level for both, as `RUST_LOG=info,openraft=warn`.
 
+## Metrics
+
+`--metrics-listen 127.0.0.1:9645` (`OPENDUCT_METRICS_LISTEN`) serves metrics for Prometheus at
+`http://127.0.0.1:9645/metrics`, in the text format any Prometheus-compatible scraper reads: Prometheus itself, the
+OpenTelemetry Collector's `prometheus` receiver, Grafana Agent, Datadog, the CloudWatch agent. It is off unless
+given.
+
+- **Beyond this machine** it needs a token: `--metrics-token-file <file>` (`OPENDUCT_METRICS_TOKEN_FILE`), a file
+  only its owner may read whose first line (16 characters or more) is the token. A scrape without
+  `Authorization: Bearer <token>` is answered `401`. The metrics name topics and groups, so OpenDuct refuses to serve
+  them beyond the loopback address without one (unless `OPENDUCT_ALLOW_INSECURE=true` was said on purpose). On its
+  own the token travels in clear: keep the port on a private network, or behind a TLS proxy.
+- **What is measured** (names follow Prometheus' conventions; where OpenTelemetry's messaging conventions name the same
+  thing, the meaning matches):
+
+| Metric | Type | What it says |
+|---|---|---|
+| `openduct_build_info{version,node_id}` | gauge | The running version |
+| `openduct_uptime_seconds` | gauge | Seconds since the broker started |
+| `openduct_connections` | gauge | Client connections open now |
+| `openduct_connections_accepted_total`, `openduct_connections_refused_total` | counter | Connections accepted; refused before any request (an address over its share, or kept out after failed sign-ins) |
+| `openduct_sign_in_failures_total` | counter | Failed SASL sign-ins |
+| `openduct_requests_total{api}`, `openduct_request_failures_total{api}` | counter | Requests by Kafka API; those that could not be answered |
+| `openduct_request_duration_seconds{api}` | histogram | From a request read to its answer ready: a Produce until its batches are on the device, a Fetch including its long poll |
+| `openduct_produced_bytes_total`, `openduct_fetched_bytes_total` | counter | Record batch bytes written and read |
+| `openduct_partition_log_end_offset{topic,partition}`, `openduct_partition_log_start_offset{topic,partition}` | gauge | The high watermark and the first offset kept, by partition this broker leads |
+| `openduct_consumer_group_lag{group,topic,partition}` | gauge | Messages a group has still to read, for the groups this broker coordinates |
+| `openduct_partitions_led` | gauge | Partitions this broker leads |
+| `openduct_partitions_without_leader` | gauge | Partitions with no leader now (none on a single broker): nothing can be written to them until one is chosen |
+| `openduct_workflow_runs_total{outcome}`, `openduct_workflow_run_duration_seconds` | counter, histogram | `openduct start` only: workflow runs by how they ended (`done`, `skipped`, `failed`) and how long they took |
+| `openduct_ai_calls_total`, `openduct_ai_tokens_total{kind}` | counter | `openduct start` only: AI calls answered and the tokens models reported (`prompt`, `completion`) |
+
+Workflow metrics are totals: no workspace, workflow or model is named, so they tell no workspace about another; a
+workflow's own figures are in the studio. In a cluster each broker reports the partitions it leads and the groups it
+coordinates, so summed across brokers each counts once.
+
+A Prometheus scrape of a broker beyond this machine:
+
+```yaml
+scrape_configs:
+  - job_name: openduct
+    authorization:
+      credentials_file: /etc/prometheus/openduct.token
+    static_configs:
+      - targets: ["broker-1:9645", "broker-2:9645", "broker-3:9645"]
+```
+
+Worth an alert: `openduct_partitions_without_leader > 0` for more than a minute; a group's
+`openduct_consumer_group_lag` growing for minutes; a jump in `openduct_sign_in_failures_total` or
+`openduct_connections_refused_total`; `openduct_workflow_runs_total{outcome="failed"}` rising.
+
 ## Health
 
 `openduct health --bootstrap <host:port>` asks the broker which Kafka APIs it supports and exits 0 when it answers.

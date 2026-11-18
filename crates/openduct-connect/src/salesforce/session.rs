@@ -4,6 +4,9 @@
 //! A session with Salesforce's REST API: an access token got with OAuth 2.0 (client credentials, a JWT signed with
 //! the integration's private key, or a refresh token), sent with every call, and got again once when Salesforce
 //! says the session has ended. Salesforce's errors become words; no message shows a secret.
+//!
+//! With refresh token rotation (which Salesforce turns on, and locks, for External Client Apps) every refresh answers
+//! a new refresh token and the one used stops working: the session keeps the new one for the rest of the run.
 
 use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -15,18 +18,18 @@ use crate::web;
 /// How the pipeline signs in.
 #[derive(Clone)]
 pub(super) enum Auth {
-    /// A connected app's own client id and secret (its "client credentials" flow).
+    /// An External Client App's own client id and secret (its "client credentials" flow).
     ClientCredentials {
         client_id: String,
         client_secret: String,
     },
-    /// A JWT signed with the connected app's private key, for a pre-authorised user.
+    /// A JWT signed with the app's private key, for a pre-authorised user.
     Jwt {
         client_id: String,
         username: String,
         key: Arc<ring::signature::RsaKeyPair>,
     },
-    /// A refresh token a person granted the connected app.
+    /// A refresh token a person granted the app; replaced by the next one whenever Salesforce rotates it.
     Refresh {
         client_id: String,
         client_secret: Option<String>,
@@ -164,10 +167,29 @@ impl Session {
         let status = answer.status();
         let body = web::body(answer, "Salesforce's sign-in").await?;
         if !status.is_success() {
-            return Err(format!("Salesforce refused signing in: {}", error_words(&body)));
+            let refused = error_words(&body);
+            let used_up = serde_json::from_slice::<serde_json::Value>(&body)
+                .ok()
+                .is_some_and(|v| v.get("error").and_then(|e| e.as_str()) == Some("invalid_grant"));
+            if matches!(self.auth, Auth::Refresh { .. }) && used_up {
+                return Err(format!(
+                    "Salesforce refused the refresh token ({refused}): it has expired, been revoked, or been used \
+                     already - with refresh token rotation each one works once, and the pipeline keeps the next only \
+                     while it runs. For a pipeline, sign in with client_id and client_secret (client credentials) or \
+                     a JWT, or give a new refresh token"
+                ));
+            }
+            return Err(format!("Salesforce refused signing in: {refused}"));
         }
         let v: serde_json::Value = serde_json::from_slice(&body)
             .map_err(|_| "Salesforce's sign-in answered with something else".to_owned())?;
+        // Rotation: the token just used no longer works; the next sign-in asks with the one given now.
+        if let (Auth::Refresh { refresh_token, .. }, Some(next)) =
+            (&mut self.auth, v.get("refresh_token").and_then(|t| t.as_str()))
+            && !next.is_empty()
+        {
+            next.clone_into(refresh_token);
+        }
         let access = v.get("access_token").and_then(|t| t.as_str());
         let instance = v.get("instance_url").and_then(|t| t.as_str());
         match (access, instance) {

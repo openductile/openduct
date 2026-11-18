@@ -58,6 +58,7 @@ pub(crate) async fn run(args: StartArgs) -> Result<(), String> {
         move |addr| {
             let _ = ready.send(addr);
         },
+        Some(openduct_flow::meters::prometheus),
     ));
     let listening = tokio::select! {
         addr = broker_ready => addr.ok(),

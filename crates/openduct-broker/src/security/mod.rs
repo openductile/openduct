@@ -91,6 +91,8 @@ pub struct Security {
     pub(crate) connections: Arc<quota::Connections>,
     decoy_key: Arc<[u8; 32]>,
     failures: Arc<Mutex<HashMap<IpAddr, (u32, Instant)>>>,
+    /// Failed sign-ins since the broker started, for its metrics.
+    failed_total: Arc<std::sync::atomic::AtomicU64>,
 }
 
 /// Sign-in failures from one address within this window ...
@@ -122,6 +124,7 @@ impl Security {
             connections: Arc::default(),
             decoy_key: Arc::new(key),
             failures: Arc::default(),
+            failed_total: Arc::default(),
         }
     }
 
@@ -190,7 +193,14 @@ impl Security {
             .is_some_and(|(n, since)| *n >= MAX_FAILURES && since.elapsed() < FAILURE_WINDOW)
     }
 
+    /// Failed sign-ins since the broker started.
+    pub(crate) fn sign_in_failures(&self) -> u64 {
+        self.failed_total.load(std::sync::atomic::Ordering::Relaxed)
+    }
+
     fn failed(&self, ip: IpAddr) {
+        self.failed_total
+            .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
         let mut f = self.failures.lock();
         if f.len() > 100_000 {
             f.retain(|_, (_, since)| since.elapsed() < FAILURE_WINDOW);

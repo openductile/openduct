@@ -34,6 +34,7 @@ pub mod app_files;
 pub mod apps;
 mod effects;
 mod email;
+pub mod meters;
 mod model;
 mod preview;
 mod run;

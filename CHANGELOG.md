@@ -8,6 +8,11 @@ All notable changes to OpenDuct are recorded here. The format follows
 
 ### Added
 
+- Metrics for Prometheus: `--metrics-listen` serves `/metrics` - requests and their durations by Kafka API, bytes
+  produced and fetched, connections (open, accepted, refused), sign-in failures, partition offsets, consumer group
+  lag, leaderless partitions, and under `openduct start` workflow runs by outcome and AI calls and tokens (totals,
+  naming no workspace). Off unless given; beyond the loopback address it needs `--metrics-token-file`. A small
+  responder of its own: the broker-only build gains no dependency.
 - Secrets are never read from the environment. A pipeline names them `secret:NAME` (or `secret:NAME.field`): in
   the studio its own workspace's credentials (checked as it is written; a missing one is named, a replaced one taken
   up without a restart), on the command line `pipeline run --secrets-file`, a file only its owner may read. `env:` is
@@ -166,3 +171,11 @@ All notable changes to OpenDuct are recorded here. The format follows
   - Code of Conduct;
   - security policy;
   - contribution guide.
+
+### Fixed
+
+- The Linux programs of a release ran only on glibc 2.39 or newer (Ubuntu 24.04 and later), because they were linked
+  against the build machine's own glibc; NVIDIA Jetson's JetPack 5 and 6, Ubuntu 20.04 and 22.04, Debian 12 and RHEL
+  9 could not start them. They are now built against glibc 2.28 (zig as the linker, through cargo-zigbuild), the
+  release fails if either program needs anything newer, and CI runs them, with a JavaScript and a Python step, on
+  Debian 10, Ubuntu 20.04 and Ubuntu 22.04, on x86-64 and ARM64.

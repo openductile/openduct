@@ -90,6 +90,14 @@ pub(crate) struct ServeArgs {
     /// How often expired data is removed, in seconds.
     #[arg(long, env = "OPENDUCT_RETENTION_CHECK_SECS", default_value_t = 60, value_parser = clap::value_parser!(u64).range(1..))]
     retention_check_secs: u64,
+    /// Serve metrics for Prometheus at http://<this address>/metrics, such as 127.0.0.1:9645. Off unless given.
+    /// Beyond the loopback address it needs --metrics-token-file (or OPENDUCT_ALLOW_INSECURE=true).
+    #[arg(long, env = "OPENDUCT_METRICS_LISTEN")]
+    metrics_listen: Option<SocketAddr>,
+    /// A file only its owner may read, holding the token Prometheus must send (Authorization: Bearer <token>; at
+    /// least 16 characters).
+    #[arg(long, env = "OPENDUCT_METRICS_TOKEN_FILE", requires = "metrics_listen")]
+    metrics_token_file: Option<PathBuf>,
     /// Log format: `text` for people, `json` for log collectors. Detail is set with RUST_LOG (default `info`).
     #[arg(long, env = "OPENDUCT_LOG_FORMAT", value_enum, default_value_t = LogFormat::Text)]
     pub(crate) log_format: LogFormat,
@@ -135,16 +143,23 @@ impl ServeArgs {
 
 pub(crate) async fn run(args: ServeArgs) -> Result<(), String> {
     init_logging(args.log_format, args.log_files());
-    run_until(args, stopped(), |_| {}).await
+    run_until(args, stopped(), |_| {}, None).await
 }
 
-/// Runs the broker until `stop` completes; `ready` is told the address it listens on, once it does.
+/// Runs the broker until `stop` completes; `ready` is told the address it listens on, once it does. `extra` adds
+/// metrics beside the broker's (the workflows', under `openduct start`).
 pub(crate) async fn run_until(
     args: ServeArgs,
     stop: impl Future<Output = ()>,
     ready: impl FnOnce(SocketAddr),
+    extra: Option<crate::metrics_http::Extra>,
 ) -> Result<(), String> {
     let config = broker_config(&args)?;
+    let metrics_token = args
+        .metrics_token_file
+        .as_deref()
+        .map(crate::metrics_http::read_token)
+        .transpose()?;
     let store_config = FileStoreConfig {
         segment_bytes: args.segment_mib * MIB,
         fsync: match args.fsync {
@@ -186,9 +201,25 @@ pub(crate) async fn run_until(
         Arc::new(store)
     };
     let broker = Broker::start(config, store).await.map_err(|e| e.to_string())?;
+    let metrics = match args.metrics_listen {
+        Some(listen) => Some(
+            crate::metrics_http::start(
+                listen,
+                metrics_token,
+                args.security.allow_insecure(),
+                broker.metrics(),
+                extra,
+            )
+            .await?,
+        ),
+        None => None,
+    };
     ready(broker.local_addr());
     stop.await;
     tracing::info!("stop requested");
+    if let Some(metrics) = metrics {
+        metrics.abort();
+    }
     broker.shutdown().await;
     if let Some(replica) = replica {
         replica.shutdown().await;

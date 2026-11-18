@@ -46,14 +46,24 @@ jobs:
         working-directory: ui
         run: npm ci --no-audit --no-fund && npm run build
       - run: rustup show active-toolchain || rustup toolchain install
-      - run: cargo build --release --locked -p openduct
+      # Linux: against glibc 2.28, so the programs run on older systems too - NVIDIA Jetson's JetPack 5 and 6 among
+      # them - and the build fails if either needs a newer glibc.
+      - if: runner.os == 'Linux'
+        uses: ./.github/actions/linux-programs
+        with:
+          target: ${{ matrix.target }}
+      - if: runner.os == 'macOS'
+        run: cargo build --release --locked -p openduct
       # Python steps' program, beside it: built on its own, so that openduct links none of it.
-      - run: cargo build --release --locked -p openduct-script --bin openduct-python
+      - if: runner.os == 'macOS'
+        run: cargo build --release --locked -p openduct-script --bin openduct-python
       - name: Packed, with its checksum
         run: |
           name="openduct-${GITHUB_REF_NAME}-${{ matrix.target }}"
+          out=target/release
+          if [ "$RUNNER_OS" = Linux ]; then out="target/${{ matrix.target }}/release"; fi
           mkdir -p "$name/licenses"
-          cp target/release/openduct target/release/openduct-python LICENSE README.md "$name/"
+          cp "$out/openduct" "$out/openduct-python" LICENSE README.md "$name/"
           cp -R licenses/openduct-python "$name/licenses/"
           tar -czf "$name.tar.gz" "$name"
           shasum -a 256 "$name.tar.gz" > "$name.tar.gz.sha256"

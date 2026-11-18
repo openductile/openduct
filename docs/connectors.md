@@ -539,8 +539,18 @@ Only one copy of a pipeline reading a change stream runs at a time. The
 ### salesforce
 
 The records of one Salesforce object (`Account`, `Opportunity`, a custom `Invoice__c`) as they are created,
-changed and deleted, through Salesforce's REST API with OAuth 2.0. Nothing is installed in Salesforce: a connected
-app (or an external client app) gives the pipeline its client id.
+changed and deleted, through Salesforce's REST API with OAuth 2.0. Nothing is installed in Salesforce: an External
+Client App in the org gives the pipeline its client id. (Connected apps still sign in, but Salesforce ends their
+support in Summer '27; a connected app's row in Setup > App Manager has a Migrate to External Client App action that
+keeps its key and secret.)
+
+For a pipeline, sign in as the app itself: the client credentials flow (`client_id`, `client_secret`) or the JWT
+bearer flow (`client_id`, `username`, `private_key`). Neither uses a refresh token, so Salesforce's refresh token
+rotation and proof-of-possession controls do not touch them. A `refresh_token` works too, but Salesforce rotates
+refresh tokens (it requires rotation of External Client Apps, and locks it on): each one works once. The pipeline
+keeps the next one while it runs, but it is not saved, so after a restart the token given is used up and the
+pipeline stops and says so; it then needs a new refresh token. Salesforce no longer allows the username-password
+flow (from 2027-02-20), and OpenDuct never used it.
 
 The pipeline asks with SOQL on a schedule (`every`), through `queryAll`, so records in the recycle bin are seen and
 deletions arrive. Records come in the order Salesforce last changed them (`SystemModstamp`, then `Id`), and the
@@ -560,10 +570,10 @@ The `salesforce-object` and `salesforce-op` headers say the same as `table` and 
 | Setting | Default | Meaning |
 |---|---|---|
 | `login_url` | required | Where to sign in: the org's My Domain (`https://acme.my.salesforce.com`), or `https://login.salesforce.com` (`https://test.salesforce.com` for a sandbox). |
-| `client_id` | required | The connected app's consumer key: `secret:SF_CLIENT_ID`. |
+| `client_id` | required | The External Client App's consumer key: `secret:SF_CLIENT_ID`. |
 | `client_secret` | none | The consumer secret, for the client credentials flow (the app runs as its run-as user). |
 | `private_key`, `username` | none | Instead of the secret: the app's private key (PEM) and the pre-authorised user, for the JWT bearer flow. |
-| `refresh_token` | none | Instead: a refresh token a person granted the app. |
+| `refresh_token` | none | Instead: a refresh token a person granted the app. Rotated by Salesforce, it lasts only the run (above). |
 | `object` | required | The object's API name: `Account`, `Invoice__c`. |
 | `fields` | every field | The fields to read: `[Id, Name, Industry]`. Every field leaves out files' contents (base64), which Salesforce gives one record at a time only. |
 | `where` | none | More of a SOQL `WHERE`: `"Industry = 'Banking'"`. |

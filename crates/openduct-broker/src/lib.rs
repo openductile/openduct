@@ -23,6 +23,7 @@ mod codes;
 mod config;
 mod groups;
 mod handlers;
+mod metrics;
 pub mod security;
 
 /// Doors for the hostile-input tests (`crates/openduct-hostile` and `fuzz/`), not an API.
@@ -37,6 +38,7 @@ pub mod hostile {
 mod server;
 
 pub use config::BrokerConfig;
+pub use metrics::BrokerMetrics;
 pub use server::{Broker, BrokerError};
 
 /// The Kafka APIs OpenDuct answers, with the oldest and newest version of each.
