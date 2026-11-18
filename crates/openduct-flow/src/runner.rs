@@ -542,6 +542,14 @@ impl Runner {
         let topics = Arc::clone(&self.topics);
         self.running.spawn(async move {
             let outcome = run(&workflow, &item.event, effects.as_ref()).await;
+            crate::meters::run(
+                match outcome.outcome {
+                    Outcome::Done => crate::meters::Ended::Done,
+                    Outcome::Skipped { .. } => crate::meters::Ended::Skipped,
+                    Outcome::Failed { .. } => crate::meters::Ended::Failed,
+                },
+                std::time::Duration::from_millis(outcome.ms),
+            );
             let id = format!("{}-{}", item.partition, item.offset);
             let kept = keep(
                 &shared,

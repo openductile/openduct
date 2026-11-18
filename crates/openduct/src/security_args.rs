@@ -72,6 +72,11 @@ pub(crate) struct SecurityArgs {
 }
 
 impl SecurityArgs {
+    /// Whether running beyond the loopback address without protection was said on purpose.
+    pub(crate) fn allow_insecure(&self) -> bool {
+        self.allow_insecure
+    }
+
     pub(crate) fn build(&self) -> Result<Security, String> {
         let mut s = Security::open();
         let client_certs = match self.tls_client_certs {

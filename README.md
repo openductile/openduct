@@ -63,6 +63,8 @@ it does not yet do everything Kafka does. Today it supports:
 - tiered storage: older segments kept in S3-compatible storage, and read back from it;
 - security: TLS 1.3, sign-in (SCRAM, OAuth bearer tokens, client certificates), access rules that deny by default,
   and quotas for each principal ([security](docs/security.md));
+- metrics for Prometheus at `/metrics`: requests by Kafka API, bytes, connections, offsets, consumer group lag,
+  leaderless partitions, workflow runs and AI tokens ([metrics](docs/deployment.md#metrics));
 - upgrades one broker at a time ([upgrades](docs/upgrades.md));
 - pipelines: read a topic, change each message with expressions, write another topic, with failed messages set
   aside and several copies sharing the work;

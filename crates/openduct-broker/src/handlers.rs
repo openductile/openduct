@@ -109,6 +109,8 @@ pub(crate) struct State {
     pub(crate) stopping: watch::Receiver<bool>,
     /// The broker-wide budget of request bytes (`max_request_memory`).
     pub(crate) request_memory: Arc<tokio::sync::Semaphore>,
+    /// What the broker measures, for `--metrics-listen`.
+    pub(crate) metrics: crate::metrics::Metrics,
 }
 
 fn s(text: impl Into<String>) -> StrBytes {

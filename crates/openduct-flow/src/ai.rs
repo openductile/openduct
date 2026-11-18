@@ -354,6 +354,7 @@ pub(crate) fn chat_answer(
     if text.is_empty() && finish == "stop" {
         return Err("the model gave no text".to_owned());
     }
+    crate::meters::ai_call(prompt_tokens, completion_tokens);
     let total = prompt_tokens.zip(completion_tokens).map(|(p, c)| p + c);
     #[allow(clippy::cast_precision_loss)] // tokens and milliseconds, far below 2^52
     let rate = completion_tokens

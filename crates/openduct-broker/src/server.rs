@@ -57,6 +57,7 @@ pub struct Broker {
     local_addr: SocketAddr,
     stop: watch::Sender<bool>,
     task: tokio::task::JoinHandle<()>,
+    state: Arc<State>,
 }
 
 impl Broker {
@@ -93,15 +94,24 @@ impl Broker {
             request_memory: Arc::new(Semaphore::new(
                 config.max_request_memory.min(Semaphore::MAX_PERMITS),
             )),
+            metrics: crate::metrics::Metrics::new(),
             config,
         });
-        let task = tokio::spawn(run(listener, state, stopped));
+        let task = tokio::spawn(run(listener, Arc::clone(&state), stopped));
         tracing::info!(%local_addr, "OpenDuct is listening");
         Ok(Self {
             local_addr,
             stop,
             task,
+            state,
         })
+    }
+
+    /// What the broker measures, for an endpoint that serves it (`openduct serve --metrics-listen`).
+    pub fn metrics(&self) -> crate::metrics::BrokerMetrics {
+        crate::metrics::BrokerMetrics {
+            state: Arc::clone(&self.state),
+        }
     }
 
     /// The address the broker listens on (with the real port when started on port 0).
@@ -171,17 +181,20 @@ async fn run(listener: TcpListener, state: Arc<State>, mut stopped: watch::Recei
                 {
                     // Failed to sign in too often lately, or holding its share of connections: not even a TLS
                     // handshake.
+                    state.metrics.connection_refused();
                     drop(socket);
                     continue;
                 }
                 let Ok(permit) = Arc::clone(&permits).acquire_owned().await else { break };
                 let state = Arc::clone(&state);
                 let stopped = stopped.clone();
+                state.metrics.connection_accepted();
                 connections.spawn(async move {
                     if let Err(e) = accept_connection(socket, peer, &state, stopped).await {
                         tracing::debug!(%peer, error = %e, "connection closed");
                     }
                     state.config.security.connections.close(peer.ip());
+                    state.metrics.connection_closed();
                     drop(permit);
                 });
             }
@@ -354,6 +367,7 @@ where
 /// Start a request: a produce request is written now and answered once it is on the device; any other is answered
 /// at once. Nothing but ApiVersions and the sign-in is served before the connection has signed in, and every request
 /// is held to the access rules.
+/// Starts a request (see [`begin`]), measuring it: its API, whether it was answered, and how long that took.
 async fn start<'a>(
     state: &'a State,
     frame: Bytes,
@@ -363,6 +377,26 @@ async fn start<'a>(
         .get(0..2)
         .and_then(|b| <[u8; 2]>::try_from(b).ok())
         .map_or(-1, i16::from_be_bytes);
+    let begun = std::time::Instant::now();
+    match begin(state, frame, session, key).await {
+        Ok(pending) => Ok(Box::pin(async move {
+            let answer = pending.await;
+            state.metrics.request(key, begun.elapsed(), answer.is_ok());
+            answer
+        })),
+        Err(e) => {
+            state.metrics.request(key, begun.elapsed(), false);
+            Err(e)
+        }
+    }
+}
+
+async fn begin<'a>(
+    state: &'a State,
+    frame: Bytes,
+    session: &mut Session,
+    key: i16,
+) -> Result<Pending<'a>, ConnectionError> {
     if key == ApiKey::SaslHandshake as i16 || key == ApiKey::SaslAuthenticate as i16 {
         let answer = sign_in(state, frame, session);
         return Ok(Box::pin(async move { answer }));
@@ -393,7 +427,9 @@ async fn start<'a>(
     };
     let mut req: ProduceRequest = decode(&mut frame, version)?;
     let denied = authz.produce(&mut req);
-    let held = throttle(state, &principal, Kind::Produce, produced_bytes(&req));
+    let bytes = produced_bytes(&req);
+    state.metrics.produced(bytes);
+    let held = throttle(state, &principal, Kind::Produce, bytes);
     let started = handlers::produce_begin(state, &req, version).await;
     Ok(Box::pin(async move {
         match handlers::produce_finish(state, started).await {
@@ -690,7 +726,9 @@ async fn handle(
             let denied = authz.fetch(&mut req);
             let mut res = handlers::fetch(state, &req, version).await;
             Authorize::fetched(&mut res, denied);
-            let held = throttle(state, authz.principal, Kind::Fetch, fetched_bytes(&res));
+            let bytes = fetched_bytes(&res);
+            state.metrics.fetched(bytes);
+            let held = throttle(state, authz.principal, Kind::Fetch, bytes);
             tokio::time::sleep(held).await;
             encode_reply(key, version, correlation_id, &res)
         }

@@ -29,6 +29,7 @@ mod cluster;
 mod cluster_cmd;
 mod codec;
 mod messages;
+mod metrics_http;
 mod otel_log;
 #[cfg(feature = "pipelines")]
 mod pipeline;

@@ -62,6 +62,7 @@ with the tools that do. [comparison.md](comparison.md) sets it beside those tool
 | Secrets | Never in environment variables: the studio seals credentials; OpenDuct's own secrets come from files |
 | Private networks | Workflows and pipelines may not reach the machine's own network unless allowed |
 | Logs | stderr (text or JSON) and OpenTelemetry log files, shown in the studio's Logs page ([deployment](deployment.md#logs)) |
+| Metrics | For Prometheus at `/metrics` (`--metrics-listen`; a token beyond this machine): requests and their durations by Kafka API, bytes in and out, connections, sign-in failures, offsets, consumer group lag, leaderless partitions, workflow runs and AI tokens ([deployment](deployment.md#metrics)) |
 | Deployment | One binary, a container image, Docker Compose, Kubernetes, OpenTofu ([deployment](deployment.md)) |
 | Upgrades | One broker at a time ([upgrades](upgrades.md)) |
 | Hostile input | Every place OpenDuct reads bytes it did not write is mutated at random in every test run and fuzzed in CI ([test results](regression.md)) |
@@ -80,7 +81,6 @@ with the tools that do. [comparison.md](comparison.md) sets it beside those tool
 | Stream processing with windows, joins and state (pipelines change one message at a time) | Kafka Streams, Apache Flink, ksqlDB |
 | The newer consumer group protocol (KIP-848) and queue-style share groups (KIP-932) | Apache Kafka 4.x |
 | An HTTP API for producing and consuming | Confluent REST Proxy, Redpanda HTTP Proxy |
-| Metrics for Prometheus | Apache Kafka (through exporters), Redpanda, NATS |
 | Copying a cluster to another with its offsets (pipelines copy messages, not offsets) | MirrorMaker 2, Confluent Cluster Linking |
 | Tables of a topic in open formats (Iceberg) | Confluent Tableflow, Redpanda Iceberg topics |
 
