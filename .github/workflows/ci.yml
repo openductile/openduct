@@ -69,6 +69,55 @@ jobs:
           key: ${{ matrix.target }}
       - run: cargo check --locked --release --target ${{ matrix.target }} -p openduct
 
+  # The released Linux programs, built as the release builds them (against glibc 2.28), and run on the oldest
+  # systems they promise: Debian 10 (glibc 2.28), and Ubuntu 20.04 and 22.04, which NVIDIA Jetson's JetPack 5 and 6
+  # are built on - a JavaScript and a Python step included, in their own processes.
+  older-linux:
+    name: Runs on older Linux (${{ matrix.target }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { target: x86_64-unknown-linux-gnu, os: ubuntu-latest }
+          - { target: aarch64-unknown-linux-gnu, os: ubuntu-24.04-arm }
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: rustup show active-toolchain || rustup toolchain install
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+        with:
+          key: older-linux-${{ matrix.target }}
+      - uses: ./.github/actions/linux-programs
+        with:
+          target: ${{ matrix.target }}
+      - name: Debian 10, Ubuntu 20.04 and Ubuntu 22.04
+        env:
+          PROGRAMS: target/${{ matrix.target }}/release
+        run: |
+          set -euo pipefail
+          cat > "$RUNNER_TEMP/scripts.yaml" <<'EOF'
+          name: scripts
+          steps:
+            - name: js
+              javascript: "return { n: value.n * 2 };"
+            - name: py
+              python: "result = {\"n\": steps[\"js\"][\"n\"] + 1}"
+          EOF
+          echo '{"n": 20}' > "$RUNNER_TEMP/in.jsonl"
+          for image in \
+            debian:10@sha256:58ce6f1271ae1c8a2006ff7d3e54e9874d839f573d8009c20154ad0f2fb0a225 \
+            ubuntu:20.04@sha256:8feb4d8ca5354def3d8fce243717141ce31e2c428701f6682bd2fafe15388214 \
+            ubuntu:22.04@sha256:9abcaffc92a5279fff3a6a41635c0800ea33e528425fb389658806476e7defde; do
+            echo "::group::${image%@*}"
+            docker run --rm -v "$PWD/$PROGRAMS:/programs:ro" -v "$RUNNER_TEMP:/work:ro" "$image" sh -c \
+              'ldd --version | head -1 && /programs/openduct --version &&
+               /programs/openduct workflow test /work/scripts.yaml --input /work/in.jsonl' | tee "$RUNNER_TEMP/out.json"
+            echo "::endgroup::"
+            # Each check on its own line: under `set -e` a failing first half of `a && b` would not stop the loop.
+            grep -q '"status":"done"' "$RUNNER_TEMP/out.json" || { echo "::error::${image%@*}: the run did not finish"; exit 1; }
+            grep -q '"n":41' "$RUNNER_TEMP/out.json" || { echo "::error::${image%@*}: the steps gave the wrong answer"; exit 1; }
+          done
+
   # The studio's page: its types, its tests, its build (built into the program from ui/dist).
   studio-page:
     name: The studio's page

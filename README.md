@@ -83,8 +83,9 @@ and does not do yet, and [docs/protocol.md](docs/protocol.md) exactly what each 
 
 Each [release](https://github.com/openductile/openduct/releases) has the program for Linux (x86-64 and ARM64) and for
 macOS on Apple silicon, with the studio's page built in and `openduct-python` beside it (what Python steps run in).
-The Linux programs need glibc 2.39 or newer: Ubuntu 24.04, Debian 13, Fedora 40 or later. On an older system, build
-from source (below).
+The Linux programs need glibc 2.28 or newer: Ubuntu 20.04, Debian 10, RHEL 8, NVIDIA Jetson (JetPack 5 and 6) or
+later. v0.1.0's are the exception: they need glibc 2.39 (Ubuntu 24.04 or later), so on an older system build v0.1.0
+from source (below), or take a later release.
 
 ```sh
 V=v0.1.0
@@ -191,8 +192,9 @@ openduct workflow test lead.yaml    # runs it on its sample, step by step, sendi
   as the step's logs, beside its input and output in the studio.
 - **Limits:** 10 seconds unless the step sets `timeout` (up to 60 s); 256 KiB of code; a 4 MiB answer; 1 GiB of
   memory; 64 KiB of logs.
-- **A sandbox:** each script runs in a process of its own, with no environment, no files and no network; on Linux the
-  process also gives up all file and network access (Landlock) before the script starts. JavaScript is the language
+- **A sandbox:** each script runs in a process of its own, with no environment, no files and no network. On Linux the
+  process also gives up, before the script starts, file access (Landlock, from Linux 5.13) and TCP connections (from
+  Linux 6.7); an older kernel, as on JetPack 5, keeps the rest of the sandbox. JavaScript is the language
   alone: no `fetch`, timers, `require` or files. Python has the computing part of its standard library (`json`, `re`,
   `datetime`, `math`, `decimal`, `statistics`, `collections`, `itertools`, `hashlib`, `base64`, `csv` and more) and
   none of the modules that open a socket or start a process. A script cannot reach OpenDuct's data, keys or

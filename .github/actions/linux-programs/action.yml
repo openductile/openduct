@@ -1,0 +1,62 @@
+name: The Linux programs, for older systems too
+description: >-
+  Builds openduct and openduct-python for a Linux target against an older glibc (2.28 unless told otherwise), with
+  zig as the C compiler and linker through cargo-zigbuild, so they run on systems back to Ubuntu 20.04, Debian 10
+  and RHEL 8 - NVIDIA Jetson's JetPack 5 and 6 among them - and fails if either needs a newer glibc. A runner's own
+  toolchain would link against the runner's glibc (2.39 on Ubuntu 24.04), and the programs would not start on
+  anything older.
+inputs:
+  target:
+    description: The Rust target, as x86_64-unknown-linux-gnu or aarch64-unknown-linux-gnu.
+    required: true
+  glibc:
+    description: The oldest glibc the programs run on.
+    default: '2.28'
+runs:
+  using: composite
+  steps:
+    # Zig 0.17.0 is the release cargo-zigbuild 0.24.0's own CI is tested with. The checksums are ziglang.org's
+    # (download/index.json), so a changed download stops the build.
+    - name: Zig 0.17.0
+      shell: bash
+      run: |
+        set -euo pipefail
+        case "$(uname -m)" in
+          x86_64) arch=x86_64 sum=1cbe9df9f27e6b78d14ccbca43b6703a404ef79ef1c463de901d7f088d4e2026 ;;
+          aarch64) arch=aarch64 sum=9e8d11661d4ae3bd57702a3832781e23ad151dde5798e16a5ccd503f65234ff8 ;;
+          *) echo "::error::no zig for $(uname -m)"; exit 1 ;;
+        esac
+        name="zig-$arch-linux-0.17.0"
+        curl -fsSL --proto '=https' --retry 3 -o "$RUNNER_TEMP/$name.tar.xz" "https://ziglang.org/download/0.17.0/$name.tar.xz"
+        echo "$sum  $RUNNER_TEMP/$name.tar.xz" | sha256sum -c -
+        tar -xJf "$RUNNER_TEMP/$name.tar.xz" -C "$RUNNER_TEMP"
+        echo "$RUNNER_TEMP/$name" >> "$GITHUB_PATH"
+    - name: cargo-zigbuild 0.24.0
+      shell: bash
+      run: cargo install --locked --version 0.24.0 cargo-zigbuild
+    - name: openduct and openduct-python, against glibc ${{ inputs.glibc }}
+      shell: bash
+      env:
+        TARGET: ${{ inputs.target }}
+        GLIBC: ${{ inputs.glibc }}
+      run: |
+        set -euo pipefail
+        cargo zigbuild --release --locked --target "$TARGET.$GLIBC" -p openduct
+        # Python steps' program, built on its own, so that openduct links none of it.
+        cargo zigbuild --release --locked --target "$TARGET.$GLIBC" -p openduct-script --bin openduct-python
+    - name: Neither needs a glibc newer than ${{ inputs.glibc }}
+      shell: bash
+      env:
+        TARGET: ${{ inputs.target }}
+        GLIBC: ${{ inputs.glibc }}
+      run: |
+        set -euo pipefail
+        for program in openduct openduct-python; do
+          file="target/$TARGET/release/$program"
+          newest=$(objdump -T "$file" | grep -o 'GLIBC_[0-9.]*' | sed 's/GLIBC_//' | sort -V | tail -1)
+          echo "$program: glibc $newest at most"
+          if [ "$(printf '%s\n%s\n' "$newest" "$GLIBC" | sort -V | tail -1)" != "$GLIBC" ]; then
+            echo "::error::$program needs glibc $newest, newer than $GLIBC"
+            exit 1
+          fi
+        done
