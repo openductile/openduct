@@ -37,7 +37,8 @@ with the tools that do. [comparison.md](comparison.md) sets it beside those tool
 |---|---|
 | A visual builder | A canvas in the browser: trigger, steps, branches, switches, loops ([studio](studio.md)) |
 | Triggers | Webhook (with an optional token, and an answer of the workflow's own), schedule, topic, by hand, another workflow's failure |
-| Steps | Set, filter, branch, switch, loop, list tools, group and summarise, merge, date and time, lookup files, HTTP, SQL on PostgreSQL (with pgvector), e-mail, code snippets, AI, embeddings, messengers, apps, write to a topic, respond to a webhook, run another workflow, wait, stop |
+| Steps | Set, filter, branch, switch, loop, list tools, group and summarise, merge, date and time, lookup files, HTTP, SQL on PostgreSQL (with pgvector), e-mail, JavaScript and Python code, AI, embeddings, messengers, apps, write to a topic, respond to a webhook, run another workflow, wait, stop |
+| JavaScript and Python | Built in (Boa and RustPython; no Node.js or CPython needed), each script in a sandboxed process with no files, network or credentials; the computing part of Python's standard library; no pip or npm packages ([README](../README.md#javascript-and-python-steps)) |
 | Trying | Test (sends nothing), Preview (reads for real, shows writes), each step's input and output side by side |
 | Reliability | Runs on the broker: each event runs at least once, in order per key, up to 50 at once; a crash repeats a run, never skips one |
 | Failures | Retries per step; CatchErr keeps failed records to run again; a workflow can start when another fails; alerts to a messenger |

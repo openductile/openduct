@@ -69,7 +69,9 @@ it does not yet do everything Kafka does. Today it supports:
 - pipelines: read a topic, change each message with expressions, write another topic, with failed messages set
   aside and several copies sharing the work;
 - the studio: workflows, workspaces and their members, credentials sealed and never shown back, run history,
-  failed runs kept to run again, versions, templates and 26 apps.
+  failed runs kept to run again, versions, templates and 26 apps;
+- JavaScript and Python steps in workflows, built in and run in a sandbox
+  ([JavaScript and Python steps](#javascript-and-python-steps)).
 
 **Not yet:** transactions, log compaction, changing settings other than a topic's retention, a schema registry,
 app triggers, AI agents and single sign-on. [docs/capabilities.md](docs/capabilities.md) lists what OpenDuct does
@@ -77,7 +79,29 @@ and does not do yet, and [docs/protocol.md](docs/protocol.md) exactly what each 
 
 ## Quick start
 
-Build from source with [Rust](https://rustup.rs) and [Node.js](https://nodejs.org) 22 (for the studio's page).
+### Download
+
+Each [release](https://github.com/openductile/openduct/releases) has the program for Linux (x86-64 and ARM64) and for
+macOS on Apple silicon, with the studio's page built in and `openduct-python` beside it (what Python steps run in).
+The Linux programs need glibc 2.39 or newer: Ubuntu 24.04, Debian 13, Fedora 40 or later. On an older system, build
+from source (below).
+
+```sh
+V=v0.1.0
+T=x86_64-unknown-linux-gnu    # or aarch64-unknown-linux-gnu, aarch64-apple-darwin
+curl -fsSLO https://github.com/openductile/openduct/releases/download/$V/openduct-$V-$T.tar.gz
+curl -fsSLO https://github.com/openductile/openduct/releases/download/$V/openduct-$V-$T.tar.gz.sha256
+shasum -a 256 -c openduct-$V-$T.tar.gz.sha256    # or: sha256sum -c
+tar xzf openduct-$V-$T.tar.gz
+./openduct-$V-$T/openduct serve --memory
+```
+
+Every release is built by this repository's CI and carries signed provenance and bills of materials:
+[checking a release](docs/security.md#checking-a-release) shows how to verify one.
+
+### Build from source
+
+Build with [Rust](https://rustup.rs) and [Node.js](https://nodejs.org) 22 (for the studio's page).
 `rustup` installs the pinned toolchain from `rust-toolchain.toml` by itself.
 
 ```sh
@@ -127,6 +151,59 @@ let record = Record {
 let offsets = sensors.produce(vec![record], Compression::NoCompression).await?;
 let (records, _high_watermark) = sensors.fetch_records(offsets[0], 1..1_000_000, 1_000).await?;
 ```
+
+## JavaScript and Python steps
+
+A workflow step can be a few lines of JavaScript or Python, for what [expressions](docs/expressions.md) do not
+reach: scoring rules, a loop over a list, reshaping a payload. Both languages are built in, with nothing to install:
+JavaScript runs on [Boa](https://boajs.dev) inside `openduct`, and Python on [RustPython](https://rustpython.github.io)
+in `openduct-python`, which ships beside it. Neither needs Node.js or CPython on the machine.
+
+```yaml
+name: Score a lead
+trigger:
+  webhook: {}
+sample:                     # what `workflow test` runs on
+  email: Sam@LeeBakery.example
+  employees: 25
+  message: Could you send a quote for 200 bags?
+steps:
+  - name: score
+    python: |
+      score = 30 if value.get("employees", 0) >= 10 else 0
+      if "quote" in (value.get("message") or "").lower():
+          score += 40
+      print("score", score)
+      result = {"score": score, "call_today": score >= 60}
+  - name: shape
+    javascript:
+      code: |
+        return { email: value.email.toLowerCase(), ...steps.score };
+      timeout: 5s
+```
+
+```sh
+openduct workflow test lead.yaml    # runs it on its sample, step by step, sending nothing
+```
+
+- **What a step is given:** `value` (the event), `steps` (each earlier step's result, by name), `trigger`, and in a
+  loop `item` and `index`. JavaScript `return`s its answer; Python sets `result`. `console.log` and `print` are kept
+  as the step's logs, beside its input and output in the studio.
+- **Limits:** 10 seconds unless the step sets `timeout` (up to 60 s); 256 KiB of code; a 4 MiB answer; 1 GiB of
+  memory; 64 KiB of logs.
+- **A sandbox:** each script runs in a process of its own, with no environment, no files and no network; on Linux the
+  process also gives up all file and network access (Landlock) before the script starts. JavaScript is the language
+  alone: no `fetch`, timers, `require` or files. Python has the computing part of its standard library (`json`, `re`,
+  `datetime`, `math`, `decimal`, `statistics`, `collections`, `itertools`, `hashlib`, `base64`, `csv` and more) and
+  none of the modules that open a socket or start a process. A script cannot reach OpenDuct's data, keys or
+  credentials: it computes an answer from what it is given.
+- **Not inside a step:** packages from pip or npm (NumPy, pandas, a model of your own). For those, run your own
+  Python or Node.js service with any Kafka client: it reads a topic and writes its results to another, and
+  OpenDuct carries both as Kafka would ([connecting](docs/guide/connecting.md)).
+- **Pipelines** (topic to topic, at the broker's speed) use [CEL expressions](docs/expressions.md) only.
+
+Two [templates](templates) start from code: `code-score-a-lead.yaml` (Python) and `code-dedupe-contacts.yaml`
+(JavaScript).
 
 ## Documentation
 
