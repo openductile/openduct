@@ -27,6 +27,7 @@ pub(crate) const TOPIC_ALREADY_EXISTS: i16 = 36;
 pub(crate) const INVALID_PARTITIONS: i16 = 37;
 pub(crate) const INVALID_REPLICA_ASSIGNMENT: i16 = 39;
 pub(crate) const INVALID_CONFIG: i16 = 40;
+pub(crate) const MESSAGE_TOO_LARGE: i16 = 10;
 pub(crate) const INVALID_REQUEST: i16 = 42;
 pub(crate) const UNSUPPORTED_FOR_MESSAGE_FORMAT: i16 = 43;
 pub(crate) const OUT_OF_ORDER_SEQUENCE_NUMBER: i16 = 45;
@@ -64,6 +65,9 @@ pub(crate) fn of_store_error(error: &StoreError) -> i16 {
         StoreError::NotLeader { .. } => NOT_LEADER_OR_FOLLOWER,
         StoreError::Unavailable(_) => LEADER_NOT_AVAILABLE,
         StoreError::InvalidReplicas(_) => INVALID_REPLICA_ASSIGNMENT,
+        StoreError::BatchTooLarge { .. } => MESSAGE_TOO_LARGE,
+        StoreError::KeylessRecord(_) => INVALID_RECORD,
+        StoreError::Unsupported(_) => INVALID_CONFIG,
         StoreError::Locked(_) | StoreError::Corrupt(_) | StoreError::Io(_) => KAFKA_STORAGE_ERROR,
     }
 }

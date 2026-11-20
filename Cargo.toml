@@ -4,6 +4,7 @@ members = [
     "crates/openduct-storage",
     "crates/openduct-raft",
     "crates/openduct-broker",
+    "crates/openduct-registry",
     "crates/openduct",
     "crates/openduct-value",
     "crates/openduct-expr",
@@ -22,7 +23,7 @@ members = [
 exclude = ["vendor/kafka-protocol", "fuzz"]
 
 [workspace.package]
-version = "0.1.1"
+version = "0.1.2"
 edition = "2024"
 license = "Apache-2.0"
 authors = ["Ductile AI, Inc"]

@@ -917,7 +917,8 @@ describe("the canvas", () => {
     await screen.findByText("Starts when");
     fireEvent.click(screen.getByText("Test"));
     expect(await screen.findByText(/It failed at tell/)).toBeTruthy();
-    expect(container.querySelectorAll(".flow-node.status-done").length).toBe(2);
+    // The flow's nodes are marked a render after the message: wait for them as for it.
+    await waitFor(() => expect(container.querySelectorAll(".flow-node.status-done").length).toBe(2));
     expect(container.querySelectorAll(".flow-node.status-failed").length).toBe(1);
     expect(container.querySelectorAll(".flow-node.status-unreached").length).toBeGreaterThan(0);
 

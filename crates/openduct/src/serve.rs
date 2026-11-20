@@ -98,6 +98,81 @@ pub(crate) struct ServeArgs {
     /// least 16 characters).
     #[arg(long, env = "OPENDUCT_METRICS_TOKEN_FILE", requires = "metrics_listen")]
     metrics_token_file: Option<PathBuf>,
+    /// Serve the schema registry (Confluent's REST API: Avro, JSON Schema, Protobuf) at http://<this address>, such as 127.0.0.1:8081.
+    /// Off unless given. Its schemas are kept in the topic _schemas, so every broker of a cluster given this
+    /// serves the same registry. Beyond the loopback address it needs --registry-token-file (or
+    /// OPENDUCT_ALLOW_INSECURE=true).
+    #[arg(long, env = "OPENDUCT_REGISTRY_LISTEN")]
+    registry_listen: Option<SocketAddr>,
+    /// A file only its owner may read, holding a token whose holder may do everything in the registry: sent as
+    /// Authorization: Bearer <token>, or as the password of basic sign-in (basic.auth.user.info=<any
+    /// name>:<token>). At least 16 characters. Where the broker has users (--credentials-file, or tokens), a
+    /// registry client may also sign in as one of them and is held to the access rules for `subject` resources.
+    #[arg(long, env = "OPENDUCT_REGISTRY_TOKEN_FILE", requires = "registry_listen")]
+    registry_token_file: Option<PathBuf>,
+    /// The schema registry's TLS certificate chain (PEM): with it the registry serves HTTPS (TLS 1.3). Without it,
+    /// the broker's own --tls-cert and --tls-key are used when those are given.
+    #[arg(long, env = "OPENDUCT_REGISTRY_TLS_CERT", requires_all = ["registry_listen", "registry_tls_key"])]
+    registry_tls_cert: Option<PathBuf>,
+    /// The private key of --registry-tls-cert (PEM).
+    #[arg(long, env = "OPENDUCT_REGISTRY_TLS_KEY", requires = "registry_tls_cert")]
+    registry_tls_key: Option<PathBuf>,
+    /// With --registry-tls-cert: the authority whose certificates identify the registry's clients (PEM). A client
+    /// that presents one is the principal it names, held to the access rules; one that presents none signs in
+    /// another way. (Serving with the broker's certificate, the registry takes client certificates as the broker
+    /// does: --tls-client-ca and --tls-client-certs.)
+    #[arg(long, env = "OPENDUCT_REGISTRY_TLS_CLIENT_CA", requires = "registry_tls_cert")]
+    registry_tls_client_ca: Option<PathBuf>,
+    /// The registry keeps its schemas in a topic, which it reaches as a client of this broker. When the broker's
+    /// port speaks TLS: the authority (PEM) that signed the broker's certificate.
+    #[arg(long, env = "OPENDUCT_REGISTRY_BROKER_TLS_CA", requires = "registry_listen")]
+    registry_broker_tls_ca: Option<PathBuf>,
+    /// The name the broker's certificate carries, when it is not the address the broker listens on.
+    #[arg(
+        long,
+        env = "OPENDUCT_REGISTRY_BROKER_TLS_SERVER_NAME",
+        requires = "registry_broker_tls_ca"
+    )]
+    registry_broker_tls_server_name: Option<String>,
+    /// A certificate (PEM) the registry presents to the broker as its identity; with
+    /// --registry-broker-tls-key.
+    #[arg(long, env = "OPENDUCT_REGISTRY_BROKER_TLS_CERT", requires_all = ["registry_broker_tls_key", "registry_broker_tls_ca"])]
+    registry_broker_tls_cert: Option<PathBuf>,
+    #[arg(
+        long,
+        env = "OPENDUCT_REGISTRY_BROKER_TLS_KEY",
+        requires = "registry_broker_tls_cert"
+    )]
+    registry_broker_tls_key: Option<PathBuf>,
+    /// How the registry signs in to the broker: scram-sha-512, scram-sha-256, plain or oauthbearer. Its principal
+    /// needs to create, describe, configure, read and write the topic _schemas.
+    #[arg(
+        long,
+        env = "OPENDUCT_REGISTRY_BROKER_SASL_MECHANISM",
+        requires = "registry_listen"
+    )]
+    registry_broker_sasl_mechanism: Option<String>,
+    /// The name the registry signs in as (SCRAM, PLAIN).
+    #[arg(
+        long,
+        env = "OPENDUCT_REGISTRY_BROKER_USER",
+        requires = "registry_broker_sasl_mechanism"
+    )]
+    registry_broker_user: Option<String>,
+    /// A file holding that name's password, which only its owner may read.
+    #[arg(
+        long,
+        env = "OPENDUCT_REGISTRY_BROKER_PASSWORD_FILE",
+        requires = "registry_broker_sasl_mechanism"
+    )]
+    registry_broker_password_file: Option<PathBuf>,
+    /// A file holding the OAUTHBEARER token the registry signs in with.
+    #[arg(
+        long,
+        env = "OPENDUCT_REGISTRY_BROKER_TOKEN_FILE",
+        requires = "registry_broker_sasl_mechanism"
+    )]
+    registry_broker_token_file: Option<PathBuf>,
     /// Log format: `text` for people, `json` for log collectors. Detail is set with RUST_LOG (default `info`).
     #[arg(long, env = "OPENDUCT_LOG_FORMAT", value_enum, default_value_t = LogFormat::Text)]
     pub(crate) log_format: LogFormat,
@@ -141,6 +216,121 @@ impl ServeArgs {
     }
 }
 
+/// Starts the schema registry beside the broker at `broker`. What is wrong with how it was asked for (no token
+/// beyond this machine) is said at once; reading its topic waits for the broker - in a cluster, for the cluster
+/// to form - so that goes on in the task, and the registry answers once it has read to the topic's end.
+async fn registry(
+    listen: SocketAddr,
+    sign_in: openduct_registry::http::SignIn,
+    allow_insecure: bool,
+    tls: Option<openduct_broker::security::ClientTls>,
+    to_broker: openduct_broker::client::ClientSecurity,
+    broker: SocketAddr,
+) -> Result<tokio::task::JoinHandle<()>, String> {
+    let asks = sign_in.token.is_some()
+        || sign_in.certificates
+        || sign_in
+            .users
+            .as_ref()
+            .is_some_and(openduct_broker::security::Security::can_sign_in);
+    if !listen.ip().is_loopback() && !asks && !allow_insecure {
+        return Err(format!(
+            "the schema registry on {listen} would let anyone who reaches it change your schemas: give \
+             --registry-token-file, or the broker a way to sign in (--credentials-file, or tokens), or listen on \
+             127.0.0.1"
+        ));
+    }
+    let shared = Arc::new(openduct_broker::client::Shared::new(
+        &broker.to_string(),
+        std::time::Duration::from_secs(10),
+        &to_broker,
+    ));
+    Ok(tokio::spawn(async move {
+        let service = loop {
+            match openduct_registry::service::Service::start(Arc::clone(&shared)).await {
+                Ok(service) => break service,
+                Err(why) => {
+                    tracing::warn!("the schema registry is not up yet: {why}");
+                    tokio::time::sleep(std::time::Duration::from_secs(2)).await;
+                }
+            }
+        };
+        let tls = tls.map(|tls| tls.acceptor());
+        match openduct_registry::http::start(listen, sign_in, allow_insecure, tls, service).await {
+            Ok((_, serving)) => {
+                let _ = serving.await;
+            }
+            Err(why) => tracing::error!("{why}"),
+        }
+    }))
+}
+
+/// What the schema registry needs beside its address, read from the flags before anything is started: the
+/// certificate it serves with (its own, else the broker's), and how it reaches the broker as a client. Refused
+/// here, with the flag to give, when the broker asks its clients for TLS or sign-in and the registry was not told
+/// how.
+fn registry_security(
+    args: &ServeArgs,
+    broker: &openduct_broker::security::Security,
+) -> Result<
+    (
+        Option<openduct_broker::security::ClientTls>,
+        openduct_broker::client::ClientSecurity,
+    ),
+    String,
+> {
+    use openduct_broker::security::{ClientCerts, ClientTls};
+    // A certificate of its own, with its own authority for clients' certificates; else the broker's port's TLS
+    // as it is - its certificate, and client certificates as the broker takes them.
+    let tls = match args
+        .registry_tls_cert
+        .as_deref()
+        .zip(args.registry_tls_key.as_deref())
+    {
+        Some((cert, key)) => {
+            let client_ca = args.registry_tls_client_ca.as_deref();
+            let mode = if client_ca.is_some() {
+                ClientCerts::Optional
+            } else {
+                ClientCerts::None
+            };
+            Some(
+                ClientTls::from_pem_files(cert, key, client_ca, mode)
+                    .map_err(|e| format!("the schema registry's certificate: {e}"))?,
+            )
+        }
+        None => broker.tls.clone(),
+    };
+    let to_broker = crate::admin::client_security(&crate::admin::ClientAuth {
+        flag: "--registry-broker-",
+        tls_ca: args.registry_broker_tls_ca.as_deref(),
+        tls_cert: args.registry_broker_tls_cert.as_deref(),
+        tls_key: args.registry_broker_tls_key.as_deref(),
+        tls_server_name: args.registry_broker_tls_server_name.as_deref(),
+        sasl_mechanism: args.registry_broker_sasl_mechanism.as_deref(),
+        user: args.registry_broker_user.as_deref(),
+        password_file: args.registry_broker_password_file.as_deref(),
+        token_file: args.registry_broker_token_file.as_deref(),
+    })?;
+    if broker.tls.is_some() && to_broker.tls.is_none() {
+        return Err(
+            "the broker's port speaks TLS, and the schema registry reaches it as a client: give \
+             --registry-broker-tls-ca, the authority that signed the broker's certificate"
+                .to_owned(),
+        );
+    }
+    let signs_in = to_broker.sign_in.is_some() || args.registry_broker_tls_cert.is_some();
+    if broker.require_authentication && !signs_in {
+        return Err(
+            "the broker asks its clients to sign in, and the schema registry reaches it as one: give \
+             --registry-broker-sasl-mechanism with a user and password file (or a token file), or a client \
+             certificate with --registry-broker-tls-cert"
+                .to_owned(),
+        );
+    }
+    Ok((tls, to_broker))
+}
+
 pub(crate) async fn run(args: ServeArgs) -> Result<(), String> {
     init_logging(args.log_format, args.log_files());
     run_until(args, stopped(), |_| {}, None).await
@@ -155,10 +345,26 @@ pub(crate) async fn run_until(
     extra: Option<crate::metrics_http::Extra>,
 ) -> Result<(), String> {
     let config = broker_config(&args)?;
+    // Read before anything is started, so what is missing is said at once.
+    let (registry_tls, registry_to_broker) = match args.registry_listen {
+        Some(_) => registry_security(&args, &config.security)?,
+        None => (None, openduct_broker::client::ClientSecurity::default()),
+    };
+    // The broker's users and rules are the registry's too, where the broker has a way to sign in.
+    let registry_certificates = registry_tls
+        .as_ref()
+        .is_some_and(|tls| tls.client_certs() != openduct_broker::security::ClientCerts::None);
+    let registry_users =
+        (config.security.can_sign_in() || registry_certificates).then(|| config.security.clone());
     let metrics_token = args
         .metrics_token_file
         .as_deref()
         .map(crate::metrics_http::read_token)
+        .transpose()?;
+    let registry_token = args
+        .registry_token_file
+        .as_deref()
+        .map(|path| crate::metrics_http::read_token_of("registry", path))
         .transpose()?;
     let store_config = FileStoreConfig {
         segment_bytes: args.segment_mib * MIB,
@@ -214,11 +420,32 @@ pub(crate) async fn run_until(
         ),
         None => None,
     };
+    let registry = match args.registry_listen {
+        Some(listen) => Some(
+            registry(
+                listen,
+                openduct_registry::http::SignIn {
+                    token: registry_token,
+                    users: registry_users,
+                    certificates: registry_certificates,
+                },
+                args.security.allow_insecure(),
+                registry_tls,
+                registry_to_broker,
+                broker.local_addr(),
+            )
+            .await?,
+        ),
+        None => None,
+    };
     ready(broker.local_addr());
     stop.await;
     tracing::info!("stop requested");
     if let Some(metrics) = metrics {
         metrics.abort();
+    }
+    if let Some(registry) = registry {
+        registry.abort();
     }
     broker.shutdown().await;
     if let Some(replica) = replica {

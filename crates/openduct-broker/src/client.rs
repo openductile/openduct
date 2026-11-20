@@ -247,17 +247,32 @@ impl Client {
         partitions: i32,
         retention_ms: Option<i64>,
     ) -> Result<(), ClientError> {
+        self.create_topic_with(name, partitions, retention_ms, &[]).await
+    }
+
+    /// As [`Client::create_topic`], with the topic's other settings by Kafka's names (`cleanup.policy`, ...).
+    pub async fn create_topic_with(
+        &mut self,
+        name: &str,
+        partitions: i32,
+        retention_ms: Option<i64>,
+        settings: &[(&str, &str)],
+    ) -> Result<(), ClientError> {
         let mut topic = CreatableTopic::default()
             .with_name(TopicName(StrBytes::from_string(name.to_owned())))
             .with_num_partitions(partitions)
             .with_replication_factor(-1);
-        if let Some(ms) = retention_ms {
-            topic.configs = vec![
+        let retention = retention_ms.map(|ms| ms.to_string());
+        topic.configs = retention
+            .iter()
+            .map(|ms| ("retention.ms", ms.as_str()))
+            .chain(settings.iter().copied())
+            .map(|(name, value)| {
                 CreatableTopicConfig::default()
-                    .with_name(StrBytes::from_static_str("retention.ms"))
-                    .with_value(Some(StrBytes::from_string(ms.to_string()))),
-            ];
-        }
+                    .with_name(StrBytes::from_string(name.to_owned()))
+                    .with_value(Some(StrBytes::from_string(value.to_owned())))
+            })
+            .collect();
         let request = CreateTopicsRequest::default()
             .with_topics(vec![topic])
             .with_timeout_ms(30_000);

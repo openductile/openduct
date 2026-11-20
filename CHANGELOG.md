@@ -6,6 +6,37 @@ All notable changes to OpenDuct are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.1.2] - 2026-11-20
+
+### Added
+
+- Transactions: a producer with a `transactional.id` writes to several partitions and commits a consumer group's
+  offsets together or not at all (exactly-once), on one broker and in a cluster, with `read_committed` consumers,
+  timeouts, fencing, and Kafka 4's second transaction protocol. ListTransactions, DescribeTransactions,
+  DescribeProducers and WriteTxnMarkers for operators ([protocol](docs/protocol.md#transactions)).
+- Log compaction: `cleanup.policy=compact` (or `compact,delete`) keeps the newest record of each key at its offset,
+  tombstones delete it, compressed batches included; `delete.retention.ms`, `min.compaction.lag.ms`, and `segment.ms`
+  closing segments by time. On one broker or in a cluster ([protocol](docs/protocol.md#log-compaction)).
+- A topic's settings changed while it runs (AlterConfigs, IncrementalAlterConfigs): `retention.bytes`,
+  `max.message.bytes`, `message.timestamp.type=LogAppendTime`, `min.insync.replicas`
+  ([protocol](docs/protocol.md#other-topic-settings)).
+- A schema registry built in (`--registry-listen`): Confluent's REST API for Avro, JSON Schema and Protobuf -
+  subjects, versions, ids, the seven compatibility levels, references between subjects, soft and permanent deletes -
+  kept in a compacted topic and served by every broker of a cluster, over HTTPS and held to access rules
+  ([schema registry](docs/registry.md)).
+
+### Changed
+
+- A cluster upgraded from 0.1.1 gains topic settings, compaction and transactions once every broker runs 0.1.2
+  (feature levels 2, 3 and 4, [upgrades](docs/upgrades.md)); until then they answer `INVALID_CONFIG`.
+
+### Fixed
+
+- A scheduled workflow could run twice for one time when the node reading the schedule was lost. Each time is now
+  claimed before it runs, so it runs at most once, across a node's loss too; a run cut short by that loss is not run
+  again ([deployment](docs/deployment.md)).
+- The email step's SMTP client is lettre 0.11.24: three advisories.
+
 ## [0.1.1] - 2026-11-18
 
 ### Added

@@ -2828,9 +2828,9 @@ checksum = "20870f649af7073d53e38067b2a84312175d56ea15217e1b15bc83506ec50afb"
 
 [[package]]
 name = "lettre"
-version = "0.11.23"
+version = "0.11.24"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f2c646bd5cc763b1087b15493e29a64be6147ba8f19342004fa52048ee596eae"
+checksum = "f294f3d7cdb313e578acef7d7727d4e8d897e0fcd0d6d58c19959cec95073f19"
 dependencies = [
  "async-trait",
  "base64 0.23.1",
@@ -3567,7 +3567,7 @@ checksum = "cfe21416a02c693fb9f980befcb230ecc70b0b3d1cc4abf88b9675c4c1457f0c"
 
 [[package]]
 name = "openduct"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "async-opcua",
  "base64 0.23.1",
@@ -3585,6 +3585,7 @@ dependencies = [
  "openduct-flow",
  "openduct-pipeline",
  "openduct-raft",
+ "openduct-registry",
  "openduct-script",
  "openduct-storage",
  "openduct-studio",
@@ -3606,7 +3607,7 @@ dependencies = [
 
 [[package]]
 name = "openduct-broker"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "anyhow",
  "base64 0.23.1",
@@ -3618,6 +3619,7 @@ dependencies = [
  "openduct-storage",
  "parking_lot 0.13.0",
  "rcgen",
+ "regex",
  "ring",
  "rskafka",
  "rustls",
@@ -3636,7 +3638,7 @@ dependencies = [
 
 [[package]]
 name = "openduct-connect"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "anyhow",
  "async-opcua",
@@ -3675,7 +3677,7 @@ dependencies = [
 
 [[package]]
 name = "openduct-expr"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "cel",
  "chrono",
@@ -3687,7 +3689,7 @@ dependencies = [
 
 [[package]]
 name = "openduct-flow"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "base64 0.23.1",
  "bytes",
@@ -3698,6 +3700,7 @@ dependencies = [
  "openduct-broker",
  "openduct-connect",
  "openduct-expr",
+ "openduct-storage",
  "reqwest",
  "ring",
  "rust_decimal",
@@ -3711,7 +3714,7 @@ dependencies = [
 
 [[package]]
 name = "openduct-hostile"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "bytes",
  "kafka-protocol",
@@ -3719,6 +3722,7 @@ dependencies = [
  "openduct-connect",
  "openduct-expr",
  "openduct-pipeline",
+ "openduct-registry",
  "openduct-storage",
  "tempfile",
  "tokio",
@@ -3726,7 +3730,7 @@ dependencies = [
 
 [[package]]
 name = "openduct-pipeline"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "chrono",
  "openduct-expr",
@@ -3735,7 +3739,7 @@ dependencies = [
 
 [[package]]
 name = "openduct-raft"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "bytes",
  "chrono",
@@ -3761,8 +3765,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "openduct-registry"
+version = "0.1.2"
+dependencies = [
+ "bytes",
+ "kafka-protocol",
+ "openduct-broker",
+ "openduct-storage",
+ "rcgen",
+ "rustls",
+ "serde_json",
+ "tokio",
+ "tokio-rustls",
+ "tracing",
+]
+
+[[package]]
 name = "openduct-script"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "boa_engine",
  "landlock",
@@ -3782,13 +3802,17 @@ dependencies = [
 
 [[package]]
 name = "openduct-storage"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "bytes",
  "crc32c",
+ "flate2",
+ "lz4_flex",
  "parking_lot 0.13.0",
+ "ruzstd",
  "serde",
  "serde_json",
+ "snap",
  "tempfile",
  "thiserror 2.0.21",
  "tracing",
@@ -3797,7 +3821,7 @@ dependencies = [
 
 [[package]]
 name = "openduct-studio"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "base64 0.23.1",
  "bytes",
@@ -3820,7 +3844,7 @@ dependencies = [
 
 [[package]]
 name = "openduct-value"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "chrono",
  "indexmap",

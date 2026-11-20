@@ -29,6 +29,7 @@ openduct-broker = { version = "0.1.0", path = "../openduct-broker" }
 openduct-connect = { version = "0.1.0", path = "../openduct-connect", optional = true }
 openduct-pipeline = { version = "0.1.0", path = "../openduct-pipeline", optional = true }
 openduct-raft = { version = "0.1.0", path = "../openduct-raft" }
+openduct-registry = { version = "0.1.0", path = "../openduct-registry" }
 openduct-storage = { version = "0.1.0", path = "../openduct-storage" }
 openduct-studio = { version = "0.1.0", path = "../openduct-studio", optional = true }
 openduct-flow = { version = "0.1.0", path = "../openduct-flow", optional = true }

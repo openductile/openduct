@@ -31,27 +31,32 @@ pub(crate) type Extra = fn() -> String;
 
 /// The token Prometheus sends, from `path`: the file's first line, which only its owner may read.
 pub(crate) fn read_token(path: &Path) -> Result<Arc<str>, String> {
+    read_token_of("metrics", path)
+}
+
+/// A token from `path`: the file's first line, which only its owner may read. `what` names whose it is.
+pub(crate) fn read_token_of(what: &str, path: &Path) -> Result<Arc<str>, String> {
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;
         let mode = std::fs::metadata(path)
-            .map_err(|e| format!("cannot read the metrics token file {}: {e}", path.display()))?
+            .map_err(|e| format!("cannot read the {what} token file {}: {e}", path.display()))?
             .permissions()
             .mode();
         if mode & 0o077 != 0 {
             return Err(format!(
-                "the metrics token file {} can be read by others: make it yours alone (chmod 600 {})",
+                "the {what} token file {} can be read by others: make it yours alone (chmod 600 {})",
                 path.display(),
                 path.display()
             ));
         }
     }
     let text = std::fs::read_to_string(path)
-        .map_err(|e| format!("cannot read the metrics token file {}: {e}", path.display()))?;
+        .map_err(|e| format!("cannot read the {what} token file {}: {e}", path.display()))?;
     let token = text.lines().next().unwrap_or_default().trim();
     if token.len() < 16 {
         return Err(format!(
-            "the metrics token in {} is shorter than 16 characters",
+            "the {what} token in {} is shorter than 16 characters",
             path.display()
         ));
     }

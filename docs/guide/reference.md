@@ -107,6 +107,22 @@ Each of these protects the broker from a client that sends too much, too slowly 
 | `--log-format` | `OPENDUCT_LOG_FORMAT` | `text` | `text` for people, `json` for log collectors. |
 | | `RUST_LOG` | `info` | How much to log: `error`, `warn`, `info`, `debug` or `trace`. |
 
+### Schema registry
+
+Off unless `--registry-listen` is given. [The schema registry](../registry.md) has who may do what and how its
+clients sign in.
+
+| Flag | Environment | Default | Meaning |
+|---|---|---|---|
+| `--registry-listen` | `OPENDUCT_REGISTRY_LISTEN` | off | Serve the registry (Confluent's REST API) at this address, such as `127.0.0.1:8081`. Its schemas are kept in the topic `_schemas`, so every broker given this serves the same registry. |
+| `--registry-token-file` | `OPENDUCT_REGISTRY_TOKEN_FILE` | - | A token (16 characters or more) that may do everything in the registry. Needed to listen beyond the loopback address. |
+| `--registry-tls-cert`, `--registry-tls-key` | `OPENDUCT_REGISTRY_TLS_CERT`, `OPENDUCT_REGISTRY_TLS_KEY` | the broker's | HTTPS (TLS 1.3) with a certificate of its own; without them the broker's `--tls-cert` and `--tls-key` are used when given. |
+| `--registry-tls-client-ca` | `OPENDUCT_REGISTRY_TLS_CLIENT_CA` | - | The authority whose certificates identify the registry's clients. |
+| `--registry-broker-tls-ca`, `--registry-broker-tls-server-name` | `OPENDUCT_REGISTRY_BROKER_TLS_CA`, `..._SERVER_NAME` | - | How the registry reaches its own broker when that broker's port speaks TLS. |
+| `--registry-broker-tls-cert`, `--registry-broker-tls-key` | `OPENDUCT_REGISTRY_BROKER_TLS_CERT`, `..._KEY` | - | A certificate the registry presents to the broker as its identity. |
+| `--registry-broker-sasl-mechanism` | `OPENDUCT_REGISTRY_BROKER_SASL_MECHANISM` | - | `scram-sha-512`, `scram-sha-256`, `plain` or `oauthbearer`: how the registry signs in to the broker. |
+| `--registry-broker-user`, `--registry-broker-password-file`, `--registry-broker-token-file` | `OPENDUCT_REGISTRY_BROKER_...` | - | The name and password, or the token, it signs in with. |
+
 ## openduct topic create
 
 ```sh

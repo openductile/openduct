@@ -95,6 +95,7 @@ impl Broker {
                 config.max_request_memory.min(Semaphore::MAX_PERMITS),
             )),
             metrics: crate::metrics::Metrics::new(),
+            transactions: handlers::transactions::Transactions::default(),
             config,
         });
         let task = tokio::spawn(run(listener, Arc::clone(&state), stopped));
@@ -206,12 +207,32 @@ async fn run(listener: TcpListener, state: Arc<State>, mut stopped: watch::Recei
     background.shutdown().await;
 }
 
+/// Kafka's answers to a principal the access rules do not let use a transactional id, or a group.
+const TRANSACTIONAL_ID_DENIED: i16 = 53;
+const CLUSTER_DENIED: i16 = 31;
+const GROUP_DENIED: i16 = 30;
+
 async fn coordinator_clock(state: Arc<State>, mut stopped: watch::Receiver<bool>) {
     let mut every = tokio::time::interval(std::time::Duration::from_millis(100));
+    let mut ticks = 0u32;
+    // Transactions no coordinator will end are looked for a few times within the time one may stay open.
+    let hanging_every = u32::try_from(state.config.hanging_transaction_after.as_millis() / 400)
+        .unwrap_or(u32::MAX)
+        .clamp(10, 300);
     loop {
         tokio::select! {
             _ = stopped.changed() => return,
-            _ = every.tick() => state.groups.tick(),
+            _ = every.tick() => {
+                state.groups.tick();
+                // Once a second: transactions left open past their timeout.
+                ticks = ticks.wrapping_add(1);
+                if ticks.is_multiple_of(10) {
+                    handlers::transactions::expire(&state).await;
+                }
+                if ticks.is_multiple_of(hanging_every) {
+                    handlers::transactions::abort_hanging(&state).await;
+                }
+            }
         }
     }
 }
@@ -232,6 +253,14 @@ async fn retention(state: Arc<State>, mut stopped: watch::Receiver<bool>) {
                     Ok(Ok(removed)) => tracing::info!(removed, "retention removed old batches"),
                     Ok(Err(e)) => tracing::error!(error = %e, "retention failed"),
                     Err(e) => tracing::error!(error = %e, "retention task failed"),
+                }
+                // Then compaction, on the topics that ask for it.
+                let store = Arc::clone(&state.store);
+                match tokio::task::spawn_blocking(move || store.compact(now)).await {
+                    Ok(Ok(0)) => {}
+                    Ok(Ok(removed)) => tracing::info!(removed, "compaction removed replaced records"),
+                    Ok(Err(e)) => tracing::error!(error = %e, "compaction failed"),
+                    Err(e) => tracing::error!(error = %e, "compaction task failed"),
                 }
             }
         }
@@ -645,7 +674,7 @@ async fn handle(
                 key,
                 version,
                 correlation_id,
-                &handlers::api_versions(&req, version),
+                &handlers::api_versions(&req, version, state.store.transactions_ready()),
             )
         }
         ApiKey::Metadata => {
@@ -764,6 +793,16 @@ async fn handle(
             .await;
             encode_reply(key, version, correlation_id, &res)
         }
+        // The older whole-replacement form of the same: AlterConfigs on the topic, or on the cluster.
+        ApiKey::AlterConfigs => {
+            let req: kafka_protocol::messages::AlterConfigsRequest = decode(body, version)?;
+            let res = handlers::alter_configs(state, &req, |topic| match topic {
+                Some(t) => authz.may(crate::security::Resource::Topic, t, Operation::AlterConfigs),
+                None => authz.cluster(Operation::AlterConfigs),
+            })
+            .await;
+            encode_reply(key, version, correlation_id, &res)
+        }
         // Delete on the topic.
         ApiKey::DeleteRecords => {
             let req: kafka_protocol::messages::DeleteRecordsRequest = decode(body, version)?;
@@ -788,8 +827,106 @@ async fn handle(
             };
             encode_reply(key, version, correlation_id, &res)
         }
+        // A transaction's requests: Write on the transactional id.
+        ApiKey::AddPartitionsToTxn => {
+            let req: kafka_protocol::messages::AddPartitionsToTxnRequest = decode(body, version)?;
+            // A producer adds to its own transaction; only a broker asks about another's.
+            let denied = |id: &str, verify_only: bool| {
+                if verify_only {
+                    (!authz.cluster(Operation::ClusterAction)).then_some(CLUSTER_DENIED)
+                } else {
+                    (!authz.may(crate::security::Resource::TransactionalId, id, Operation::Write))
+                        .then_some(TRANSACTIONAL_ID_DENIED)
+                }
+            };
+            let res = handlers::transactions::add_partitions(state, &req, version, &denied).await;
+            encode_reply(key, version, correlation_id, &res)
+        }
+        ApiKey::AddOffsetsToTxn => {
+            let req: kafka_protocol::messages::AddOffsetsToTxnRequest = decode(body, version)?;
+            let denied = (!authz.may(
+                crate::security::Resource::TransactionalId,
+                req.transactional_id.0.as_str(),
+                Operation::Write,
+            ))
+            .then_some(TRANSACTIONAL_ID_DENIED);
+            let res = handlers::transactions::add_offsets(state, &req, denied).await;
+            encode_reply(key, version, correlation_id, &res)
+        }
+        // And Read on the group whose offsets it commits.
+        ApiKey::TxnOffsetCommit => {
+            let req: kafka_protocol::messages::TxnOffsetCommitRequest = decode(body, version)?;
+            let denied = if !authz.may(
+                crate::security::Resource::TransactionalId,
+                req.transactional_id.0.as_str(),
+                Operation::Write,
+            ) {
+                Some(TRANSACTIONAL_ID_DENIED)
+            } else if !authz.may(
+                crate::security::Resource::Group,
+                req.group_id.0.as_str(),
+                Operation::Read,
+            ) {
+                Some(GROUP_DENIED)
+            } else {
+                None
+            };
+            let res = handlers::transactions::offset_commit(state, &req, denied).await;
+            encode_reply(key, version, correlation_id, &res)
+        }
+        ApiKey::EndTxn => {
+            let req: kafka_protocol::messages::EndTxnRequest = decode(body, version)?;
+            let denied = (!authz.may(
+                crate::security::Resource::TransactionalId,
+                req.transactional_id.0.as_str(),
+                Operation::Write,
+            ))
+            .then_some(TRANSACTIONAL_ID_DENIED);
+            let res = handlers::transactions::end(state, &req, version, denied).await;
+            encode_reply(key, version, correlation_id, &res)
+        }
+        ApiKey::WriteTxnMarkers => {
+            let req: kafka_protocol::messages::WriteTxnMarkersRequest = decode(body, version)?;
+            let allowed = authz.cluster(Operation::ClusterAction) || authz.cluster(Operation::Alter);
+            let res = handlers::transactions::write_markers(state, &req, allowed).await;
+            encode_reply(key, version, correlation_id, &res)
+        }
+        ApiKey::ListTransactions => {
+            let req: kafka_protocol::messages::ListTransactionsRequest = decode(body, version)?;
+            let may = |id: &str| {
+                authz.may(
+                    crate::security::Resource::TransactionalId,
+                    id,
+                    Operation::Describe,
+                )
+            };
+            let res = handlers::transactions::list(state, &req, &may).await;
+            encode_reply(key, version, correlation_id, &res)
+        }
+        ApiKey::DescribeTransactions => {
+            let req: kafka_protocol::messages::DescribeTransactionsRequest = decode(body, version)?;
+            let may = |id: &str| {
+                authz.may(
+                    crate::security::Resource::TransactionalId,
+                    id,
+                    Operation::Describe,
+                )
+            };
+            let res = handlers::transactions::describe(state, &req, &may).await;
+            encode_reply(key, version, correlation_id, &res)
+        }
+        ApiKey::DescribeProducers => {
+            let req: kafka_protocol::messages::DescribeProducersRequest = decode(body, version)?;
+            let may = |topic: &str| authz.may(crate::security::Resource::Topic, topic, Operation::Read);
+            let res = handlers::transactions::describe_producers(state, &req, &may).await;
+            encode_reply(key, version, correlation_id, &res)
+        }
         ApiKey::FindCoordinator => {
             let req: FindCoordinatorRequest = decode(body, version)?;
+            // A transactional id's coordinator leads the coordinator's topic: there must be one to lead.
+            if req.key_type == 1 {
+                let _ = handlers::transactions::ensure_topic(state).await;
+            }
             let mut res = handlers::find_coordinator(state, &req, version);
             authz.coordinators_found(&req, &mut res, version);
             encode_reply(key, version, correlation_id, &res)
@@ -797,8 +934,7 @@ async fn handle(
         // Groups live on the leader of a shared store: another broker sends the client looking for it.
         ApiKey::JoinGroup => {
             let req: JoinGroupRequest = decode(body, version)?;
-            let refused = (!authz.group(req.group_id.0.as_str(), Operation::Read))
-                .then_some(crate::security::GROUP_AUTHORIZATION_FAILED);
+            let refused = (!authz.group(req.group_id.0.as_str(), Operation::Read)).then_some(GROUP_DENIED);
             let res = match refused.or_else(|| handlers::not_coordinator(state, req.group_id.0.as_str())) {
                 Some(code) => handlers::join_refused(code, version),
                 None => handlers::join_group(state, &req, version, &client_id, authz.host).await,
@@ -839,8 +975,7 @@ async fn handle(
         }
         ApiKey::SyncGroup => {
             let req: SyncGroupRequest = decode(body, version)?;
-            let refused = (!authz.group(req.group_id.0.as_str(), Operation::Read))
-                .then_some(crate::security::GROUP_AUTHORIZATION_FAILED);
+            let refused = (!authz.group(req.group_id.0.as_str(), Operation::Read)).then_some(GROUP_DENIED);
             let res = match refused.or_else(|| handlers::not_coordinator(state, req.group_id.0.as_str())) {
                 Some(code) => handlers::sync_refused(code),
                 None => handlers::sync_group(state, &req, version).await,
@@ -849,8 +984,7 @@ async fn handle(
         }
         ApiKey::Heartbeat => {
             let req: HeartbeatRequest = decode(body, version)?;
-            let refused = (!authz.group(req.group_id.0.as_str(), Operation::Read))
-                .then_some(crate::security::GROUP_AUTHORIZATION_FAILED);
+            let refused = (!authz.group(req.group_id.0.as_str(), Operation::Read)).then_some(GROUP_DENIED);
             let res = match refused.or_else(|| handlers::not_coordinator(state, req.group_id.0.as_str())) {
                 Some(code) => handlers::heartbeat_refused(code),
                 None => handlers::heartbeat(state, &req),
@@ -859,8 +993,7 @@ async fn handle(
         }
         ApiKey::LeaveGroup => {
             let req: LeaveGroupRequest = decode(body, version)?;
-            let refused = (!authz.group(req.group_id.0.as_str(), Operation::Read))
-                .then_some(crate::security::GROUP_AUTHORIZATION_FAILED);
+            let refused = (!authz.group(req.group_id.0.as_str(), Operation::Read)).then_some(GROUP_DENIED);
             let res = match refused.or_else(|| handlers::not_coordinator(state, req.group_id.0.as_str())) {
                 Some(code) => handlers::leave_refused(code),
                 None => handlers::leave_group(state, &req, version),

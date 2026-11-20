@@ -14,7 +14,7 @@ use bytes::Bytes;
 
 use super::commit::Commits;
 use super::{FRAME_HEADER, FileStoreConfig, FsyncPolicy, MAX_BATCH_BYTES, sync_dir};
-use crate::batch::{BatchHeader, HEADER_LEN, check_supported, parse_header, stored_form};
+use crate::batch::{BatchHeader, HEADER_LEN, marker_of, parse_header, stored_form};
 use crate::error::StoreError;
 use crate::partition::{Admission, Location, PartitionIndex};
 use crate::store::{Appended, PartitionOffsets, Pending, ReadResult};
@@ -24,6 +24,8 @@ pub(super) struct Segment {
     pub(super) path: PathBuf,
     pub(super) size: u64,
     pub(super) max_timestamp: i64,
+    /// The timestamp of its first batch: what `segment.ms` counts from.
+    pub(super) first_timestamp: Option<i64>,
 }
 
 #[derive(Debug)]
@@ -43,6 +45,9 @@ pub(super) struct FilePartition {
     pub(super) readers: HashMap<i64, File>,
     /// What is on the device, and one flush for every append waiting (group commit).
     pub(super) commits: Arc<Commits>,
+    /// `segment.ms`, where this partition's owner applies it on every append (a single broker's store does; a
+    /// cluster's partition is told to roll by its leader instead, so every copy rolls at the same batch).
+    pub(super) roll_ms: Option<i64>,
 }
 
 pub(super) fn segment_name(base: i64) -> String {
@@ -207,11 +212,12 @@ impl FilePartition {
             let mut reader = std::io::BufReader::new(file);
             let mut position = 0u64;
             let mut max_timestamp = i64::MIN;
+            let mut first_timestamp = None;
             loop {
                 match read_frame(&mut reader, file_len.saturating_sub(position)) {
                     Frame::End => break,
                     Frame::Ok { batch, len } => {
-                        let header = parse_header(&batch).map_err(|e| {
+                        let header = crate::batch::parse_stored_header(&batch).map_err(|e| {
                             StoreError::Corrupt(format!("{} at byte {position}: {e}", path.display()))
                         })?;
                         if header.base_offset != index.next_offset {
@@ -223,6 +229,7 @@ impl FilePartition {
                             )));
                         }
                         max_timestamp = max_timestamp.max(header.max_timestamp);
+                        first_timestamp.get_or_insert(header.max_timestamp);
                         index.record(
                             &header,
                             header.base_offset,
@@ -232,6 +239,7 @@ impl FilePartition {
                                 position,
                             },
                         );
+                        index.note_transaction(&header, header.base_offset, marker_of(&batch));
                         position += len;
                     }
                     Frame::Damaged { torn, why } => {
@@ -262,6 +270,7 @@ impl FilePartition {
                     path,
                     size: position,
                     max_timestamp,
+                    first_timestamp,
                 },
             );
         }
@@ -278,6 +287,8 @@ impl FilePartition {
             index.next_offset,
             active.as_ref().map(|a| Arc::clone(&a.file)),
         ));
+        // What compaction did here before (file/cleaner.rs).
+        index.cleaning = super::cleaner::load(&dir);
         Ok(Self {
             dir,
             index,
@@ -285,17 +296,48 @@ impl FilePartition {
             active,
             readers: HashMap::new(),
             commits,
+            roll_ms: None,
         })
     }
 
-    pub(super) fn roll_if_needed(&mut self, config: &FileStoreConfig) -> Result<(), StoreError> {
+    /// Whether the segment being written to already spans `segment_ms` for a batch of this timestamp: it has
+    /// records, and the first of them is that much older.
+    pub(super) fn roll_due(&self, segment_ms: i64, timestamp: i64) -> bool {
+        self.active
+            .as_ref()
+            .filter(|a| a.size > 0)
+            .and_then(|a| self.segments.get(&a.base))
+            .and_then(|seg| seg.first_timestamp)
+            .is_some_and(|first| timestamp.saturating_sub(first) >= segment_ms)
+    }
+
+    /// Closes the segment being written to and starts the next, unless it is empty (or there is none yet).
+    pub(super) fn roll(&mut self) -> Result<(), StoreError> {
+        if self.active.as_ref().is_some_and(|a| a.size > 0) {
+            self.start_segment()?;
+        }
+        Ok(())
+    }
+
+    /// Starts a segment when there is none, the current one is full, or (`roll_ms`) it spans too long for a
+    /// batch of this timestamp.
+    pub(super) fn roll_if_needed(
+        &mut self,
+        config: &FileStoreConfig,
+        timestamp: i64,
+    ) -> Result<(), StoreError> {
         let full = self
             .active
             .as_ref()
             .is_some_and(|a| a.size >= config.segment_bytes);
-        if self.active.is_some() && !full {
+        let spans = self.roll_ms.is_some_and(|ms| self.roll_due(ms, timestamp));
+        if self.active.is_some() && !full && !spans {
             return Ok(());
         }
+        self.start_segment()
+    }
+
+    fn start_segment(&mut self) -> Result<(), StoreError> {
         let base = self.index.next_offset;
         let path = self.dir.join(segment_name(base));
         let file = Arc::new(OpenOptions::new().create_new(true).append(true).open(&path)?);
@@ -308,6 +350,7 @@ impl FilePartition {
                 path,
                 size: 0,
                 max_timestamp: i64::MIN,
+                first_timestamp: None,
             },
         );
         self.active = Some(ActiveSegment { base, file, size: 0 });
@@ -323,13 +366,15 @@ impl FilePartition {
     ) -> Result<(Appended, Option<u64>), StoreError> {
         self.commits.check()?;
         let header = parse_header(batch)?;
-        check_supported(&header)?;
         if batch.len() > MAX_BATCH_BYTES {
             return Err(StoreError::Batch(crate::batch::BatchError::InvalidLength(
                 i64::try_from(batch.len()).unwrap_or(i64::MAX),
             )));
         }
-        if let Admission::Duplicate(base_offset) = self.index.admit(&header)? {
+        // A marker is its coordinator's: not a batch of the producer's sequence, and never a retry.
+        if !header.is_control()
+            && let Admission::Duplicate(base_offset) = self.index.admit(&header)?
+        {
             // A retry of a batch that may still be on its way to the device: answered once it is there.
             let ticket = (config.fsync == FsyncPolicy::Always).then(|| self.commits.current());
             return Ok((
@@ -341,7 +386,7 @@ impl FilePartition {
                 ticket,
             ));
         }
-        self.roll_if_needed(config)?;
+        self.roll_if_needed(config, header.max_timestamp)?;
         let base_offset = self.index.next_offset;
         let stored = stored_form(batch, base_offset, leader_epoch);
         let header = BatchHeader {
@@ -370,6 +415,7 @@ impl FilePartition {
         if let Some(seg) = self.segments.get_mut(&segment_base) {
             seg.size = active.size;
             seg.max_timestamp = seg.max_timestamp.max(header.max_timestamp);
+            seg.first_timestamp.get_or_insert(header.max_timestamp);
         }
         self.index.record(
             &header,
@@ -380,6 +426,8 @@ impl FilePartition {
                 position,
             },
         );
+        self.index
+            .note_transaction(&header, base_offset, marker_of(&stored));
         let next = self.index.next_offset;
         let ticket = match config.fsync {
             FsyncPolicy::Always => Some(self.commits.wrote(next)),
@@ -464,14 +512,17 @@ impl FilePartition {
             offsets: PartitionOffsets {
                 log_start: self.index.log_start,
                 high_watermark: durable,
+                last_stable: self.index.last_stable(durable),
             },
         })
     }
 
     pub(super) fn offsets(&self) -> PartitionOffsets {
+        let durable = self.commits.durable_next();
         PartitionOffsets {
             log_start: self.index.log_start,
-            high_watermark: self.commits.durable_next(),
+            high_watermark: durable,
+            last_stable: self.index.last_stable(durable),
         }
     }
 
@@ -538,14 +589,36 @@ impl FilePartition {
 
     pub(super) fn enforce_retention(&mut self, cutoff: i64) -> Result<usize, StoreError> {
         let active = self.active.as_ref().map(|a| a.base);
-        let mut removed = 0usize;
         let expired: Vec<i64> = self
             .segments
             .iter()
             .take_while(|(base, seg)| Some(**base) != active && seg.max_timestamp < cutoff)
             .map(|(base, _)| *base)
             .collect();
-        for base in expired {
+        self.remove_segments(expired)
+    }
+
+    /// `retention.bytes`: the oldest closed segments go while what is left would still hold at least `keep`
+    /// bytes - Kafka's rule. The segment being written to is never removed, so a partition can sit above its
+    /// limit by up to one segment. How many batches went.
+    pub(super) fn enforce_size(&mut self, keep: u64) -> Result<usize, StoreError> {
+        let active = self.active.as_ref().map(|a| a.base);
+        let mut total: u64 = self.segments.values().map(|s| s.size).sum();
+        let mut oversize = Vec::new();
+        for (base, seg) in &self.segments {
+            if Some(*base) == active || total.saturating_sub(seg.size) < keep {
+                break;
+            }
+            total -= seg.size;
+            oversize.push(*base);
+        }
+        self.remove_segments(oversize)
+    }
+
+    /// Removes these segments (the oldest ones, in order) and moves the log's start past them.
+    fn remove_segments(&mut self, bases: Vec<i64>) -> Result<usize, StoreError> {
+        let mut removed = 0usize;
+        for base in bases {
             if let Some(seg) = self.segments.remove(&base) {
                 self.readers.remove(&base);
                 fs::remove_file(&seg.path)?;

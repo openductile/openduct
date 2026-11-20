@@ -271,10 +271,21 @@ impl Routed {
         partitions: i32,
         retention_ms: Option<i64>,
     ) -> Result<(), ClientError> {
+        self.create_topic_with(name, partitions, retention_ms, &[]).await
+    }
+
+    /// As [`Routed::create_topic`], with the topic's other settings by Kafka's names (`cleanup.policy`, ...).
+    pub async fn create_topic_with(
+        &mut self,
+        name: &str,
+        partitions: i32,
+        retention_ms: Option<i64>,
+        settings: &[(&str, &str)],
+    ) -> Result<(), ClientError> {
         let made = self
             .first()
             .await?
-            .create_topic(name, partitions, retention_ms)
+            .create_topic_with(name, partitions, retention_ms, settings)
             .await;
         match made {
             Err(ClientError::Refused { code: 41, .. }) => {
@@ -284,7 +295,7 @@ impl Routed {
                     .ok_or_else(|| refused(41, "the cluster has no controller yet".to_owned()))?;
                 self.to(controller)
                     .await?
-                    .create_topic(name, partitions, retention_ms)
+                    .create_topic_with(name, partitions, retention_ms, settings)
                     .await
             }
             other => other,

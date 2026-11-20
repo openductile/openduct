@@ -36,6 +36,17 @@ impl std::fmt::Debug for ClientTls {
 }
 
 impl ClientTls {
+    /// What accepts a TLS connection with this certificate: for another listener of the same program (the schema
+    /// registry's) that serves with it.
+    pub fn acceptor(&self) -> tokio_rustls::TlsAcceptor {
+        self.acceptor.clone()
+    }
+
+    /// Whether clients may, or must, present a certificate.
+    pub fn client_certs(&self) -> ClientCerts {
+        self.client_certs
+    }
+
     /// The broker's certificate chain and key; with `client_ca`, the authority whose certificates identify clients.
     pub fn from_pem_files(
         cert: &Path,
@@ -95,6 +106,12 @@ impl ClientTls {
             client_certs,
         })
     }
+}
+
+/// Who a verified client certificate says its holder is, for another listener of the same program (the schema
+/// registry's): the principal the broker would give the same certificate.
+pub fn certificate_principal(cert: &CertificateDer<'_>) -> Option<super::Principal> {
+    certificate_name(cert).map(|name| super::Principal::user(&name))
 }
 
 /// The principal name a verified client certificate carries: its first URI name, else its first DNS name.

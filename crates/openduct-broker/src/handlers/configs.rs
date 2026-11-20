@@ -3,20 +3,27 @@
 
 //! DescribeCluster, DescribeConfigs and IncrementalAlterConfigs: the brokers and the controller, and the settings of
 //! a topic or a broker. Every setting answered is one OpenDuct honours, with the value it acts on. A topic's
-//! `retention.ms` can be changed; every other setting is read-only.
+//! `retention.ms` and the settings in `openduct_storage::TOPIC_SETTINGS` (`cleanup.policy`, `retention.bytes`,
+//! `max.message.bytes`, `delete.retention.ms`, `min.compaction.lag.ms`, `message.timestamp.type`,
+//! `min.insync.replicas`, `segment.ms`)
+//! can be changed - by IncrementalAlterConfigs, one at a time, or by AlterConfigs, which replaces them all; every
+//! other setting is read-only, and one OpenDuct would store and ignore is refused.
 
+use kafka_protocol::messages::alter_configs_request::AlterConfigsResource as WholeResource;
+use kafka_protocol::messages::alter_configs_response::AlterConfigsResourceResponse as WholeResourceResponse;
 use kafka_protocol::messages::describe_cluster_response::DescribeClusterBroker;
 use kafka_protocol::messages::describe_configs_response::{
     DescribeConfigsResourceResult, DescribeConfigsResult, DescribeConfigsSynonym,
 };
 use kafka_protocol::messages::incremental_alter_configs_request::AlterConfigsResource;
 use kafka_protocol::messages::incremental_alter_configs_response::AlterConfigsResourceResponse;
+use kafka_protocol::messages::{AlterConfigsRequest, AlterConfigsResponse};
 use kafka_protocol::messages::{
     BrokerId, DescribeClusterRequest, DescribeClusterResponse, DescribeConfigsRequest,
     DescribeConfigsResponse,
 };
 use kafka_protocol::messages::{IncrementalAlterConfigsRequest, IncrementalAlterConfigsResponse};
-use openduct_storage::MAX_BATCH_BYTES;
+use openduct_storage::{MAX_BATCH_BYTES, SettingKind, TOPIC_SETTINGS, TopicInfo, TopicSettings};
 
 use super::{State, blocking, s, topic_info};
 use crate::codes;
@@ -138,50 +145,47 @@ fn largest_batch(state: &State) -> usize {
     MAX_BATCH_BYTES.min(state.config.max_request_bytes)
 }
 
-fn topic_settings(state: &State, retention_ms: Option<i64>) -> Vec<Setting> {
-    vec![
-        setting(
-            "cleanup.policy",
-            "delete",
-            DEFAULT,
-            LIST,
-            "Old data is deleted by retention; compaction is not supported.",
-        ),
-        Setting {
+fn topic_settings(topic: &TopicInfo) -> Vec<Setting> {
+    let mut out = vec![Setting {
+        changeable: true,
+        ..match topic.retention_ms {
+            Some(ms) => setting("retention.ms", ms, FROM_TOPIC, LONG, "How long a batch is kept."),
+            None => setting(
+                "retention.ms",
+                -1,
+                DEFAULT,
+                LONG,
+                "How long a batch is kept: -1, for ever.",
+            ),
+        }
+    }];
+    // The topic's own settings (openduct_storage settings.rs): its value where it was given one, else the default.
+    for spec in TOPIC_SETTINGS {
+        let own = topic.settings.own(spec.name);
+        out.push(Setting {
             changeable: true,
-            ..match retention_ms {
-                Some(ms) => setting("retention.ms", ms, FROM_TOPIC, LONG, "How long a batch is kept."),
-                None => setting(
-                    "retention.ms",
-                    -1,
-                    DEFAULT,
-                    LONG,
-                    "How long a batch is kept: -1, for ever.",
-                ),
-            }
-        },
-        setting(
-            "max.message.bytes",
-            largest_batch(state),
-            STATIC_BROKER,
-            INT,
-            "The largest record batch taken.",
-        ),
-        setting(
-            "compression.type",
-            "producer",
-            DEFAULT,
-            STRING,
-            "Batches are stored as the producer compressed them.",
-        ),
-        setting(
-            "message.timestamp.type",
-            "CreateTime",
-            DEFAULT,
-            STRING,
-            "Records keep the timestamps their producer gave them.",
-        ),
-    ]
+            ..setting(
+                spec.name,
+                openduct_storage::setting_text(spec.name, own.unwrap_or(spec.default)),
+                if own.is_some() { FROM_TOPIC } else { DEFAULT },
+                match spec.kind {
+                    SettingKind::Long { .. } => LONG,
+                    SettingKind::Int { .. } => INT,
+                    SettingKind::Policy => LIST,
+                    SettingKind::Words(_) => STRING,
+                },
+                spec.about,
+            )
+        });
+    }
+    out.push(setting(
+        "compression.type",
+        "producer",
+        DEFAULT,
+        STRING,
+        "Batches are stored as the producer compressed them.",
+    ));
+    out
 }
 
 fn broker_settings(state: &State) -> Vec<Setting> {
@@ -292,7 +296,7 @@ pub(crate) async fn describe_configs(
             // Refused before the topic is looked for, so a principal learns nothing of topics it may not see.
             TOPIC if !may(Some(&name)) => Err((crate::security::TOPIC_AUTHORIZATION_FAILED, None)),
             TOPIC => match topic_info(state, &name).await {
-                Some(t) => Ok(topic_settings(state, t.retention_ms)),
+                Some(t) => Ok(topic_settings(&t)),
                 None => Err((codes::UNKNOWN_TOPIC_OR_PARTITION, None)),
             },
             BROKER if !may(None) => Err((crate::security::CLUSTER_AUTHORIZATION_FAILED, None)),
@@ -378,7 +382,7 @@ fn retention(op: i8, value: Option<&str>) -> Result<Option<i64>, String> {
     }
 }
 
-/// IncrementalAlterConfigs: a topic's `retention.ms` - the one setting OpenDuct lets a client change. `may`: whether
+/// IncrementalAlterConfigs: a topic's changeable settings, each set or put back to its default. `may`: whether
 /// the principal may alter the configs of a topic (`Some(name)`) or of the cluster (`None`).
 pub(crate) async fn incremental_alter_configs(
     state: &State,
@@ -407,64 +411,154 @@ async fn alter_one(
     validate_only: bool,
     may: &impl Fn(Option<&str>) -> bool,
 ) -> Result<(), (i16, String)> {
-    match r.resource_type {
-        TOPIC if !may(Some(name)) => {
-            return Err((
-                crate::security::TOPIC_AUTHORIZATION_FAILED,
-                "not allowed".to_owned(),
-            ));
-        }
-        TOPIC => {}
-        BROKER if !may(None) => {
-            return Err((
-                crate::security::CLUSTER_AUTHORIZATION_FAILED,
-                "not allowed".to_owned(),
-            ));
-        }
-        BROKER => {
-            return Err((
-                codes::INVALID_REQUEST,
-                "a broker's settings are changed where it is started, not through the protocol".to_owned(),
-            ));
-        }
-        _ => {
-            return Err((
-                codes::INVALID_REQUEST,
-                "a resource type whose settings are not served".to_owned(),
-            ));
-        }
-    }
-    if topic_info(state, name).await.is_none() {
+    alterable(r.resource_type, name, may)?;
+    let Some(topic) = topic_info(state, name).await else {
         return Err((codes::UNKNOWN_TOPIC_OR_PARTITION, format!("no topic {name:?}")));
-    }
-    let mut changed = None;
-    for c in &r.configs {
-        match c.name.as_str() {
-            "retention.ms" => {
-                let value = c.value.as_ref().map(|v| v.as_str());
-                changed =
-                    Some(retention(c.config_operation, value).map_err(|why| (codes::INVALID_CONFIG, why))?);
-            }
-            other => {
-                return Err((
-                    codes::INVALID_CONFIG,
-                    format!(
-                        "{other} cannot be changed: only a topic's retention.ms can (see DescribeConfigs)"
-                    ),
-                ));
-            }
-        }
-    }
-    let Some(retention_ms) = changed else {
-        return Ok(());
     };
+    let (mut retention_ms, mut settings) = (topic.retention_ms, topic.settings.clone());
+    for c in &r.configs {
+        let value = c.value.as_ref().map(|v| v.as_str());
+        change(
+            &mut retention_ms,
+            &mut settings,
+            c.name.as_str(),
+            c.config_operation,
+            value,
+        )
+        .map_err(|why| (codes::INVALID_CONFIG, why))?;
+    }
     if validate_only {
         return Ok(());
     }
-    let n = name.to_owned();
-    blocking(&state.store, move |s| s.set_retention(&n, retention_ms))
-        .await
-        .map_err(|e| (codes::of_store_error(&e), e.to_string()))
+    apply(state, name, &topic, retention_ms, settings).await
+}
+
+/// One setting changed on the copies a request is working on. `retention.ms` and the topic's own settings can be
+/// set or put back to their defaults; anything else is refused by name, so nothing is taken and ignored.
+fn change(
+    retention_ms: &mut Option<i64>,
+    settings: &mut TopicSettings,
+    name: &str,
+    op: i8,
+    value: Option<&str>,
+) -> Result<(), String> {
+    if name == "retention.ms" {
+        *retention_ms = retention(op, value)?;
+        return Ok(());
+    }
+    if openduct_storage::setting_spec(name).is_none() {
+        return Err(format!(
+            "{name} cannot be changed: of a topic's settings, those DescribeConfigs does not mark read-only can"
+        ));
+    }
+    match (op, value) {
+        (DELETE, _) => settings.reset(name),
+        (SET, Some(v)) => settings.set(name, v),
+        (SET, None) => Err(format!("{name} needs a value")),
+        _ => Err(format!(
+            "{name} can be set or deleted, not added to or taken from: set the whole value"
+        )),
+    }
+}
+
+/// What changed is written: retention where it differs, the other settings where they differ. Nothing is written
+/// for a request that leaves the topic as it is.
+async fn apply(
+    state: &State,
+    name: &str,
+    topic: &TopicInfo,
+    retention_ms: Option<i64>,
+    settings: TopicSettings,
+) -> Result<(), (i16, String)> {
+    let failed = |e: openduct_storage::StoreError| (codes::of_store_error(&e), e.to_string());
+    if settings != topic.settings {
+        let n = name.to_owned();
+        blocking(&state.store, move |s| s.set_topic_settings(&n, settings))
+            .await
+            .map_err(failed)?;
+    }
+    if retention_ms != topic.retention_ms {
+        let n = name.to_owned();
+        blocking(&state.store, move |s| s.set_retention(&n, retention_ms))
+            .await
+            .map_err(failed)?;
+    }
+    Ok(())
+}
+
+/// Whether this resource's settings can be changed here, by this principal: a topic's, by one allowed to.
+fn alterable(
+    resource_type: i8,
+    name: &str,
+    may: &impl Fn(Option<&str>) -> bool,
+) -> Result<(), (i16, String)> {
+    match resource_type {
+        TOPIC if !may(Some(name)) => Err((
+            crate::security::TOPIC_AUTHORIZATION_FAILED,
+            "not allowed".to_owned(),
+        )),
+        TOPIC => Ok(()),
+        BROKER if !may(None) => Err((
+            crate::security::CLUSTER_AUTHORIZATION_FAILED,
+            "not allowed".to_owned(),
+        )),
+        BROKER => Err((
+            codes::INVALID_REQUEST,
+            "a broker's settings are changed where it is started, not through the protocol".to_owned(),
+        )),
+        _ => Err((
+            codes::INVALID_REQUEST,
+            "a resource type whose settings are not served".to_owned(),
+        )),
+    }
+}
+
+// --- AlterConfigs ----------------------------------------------------------------------------------------------
+
+/// AlterConfigs (the older API, still what `kafka-configs.sh --alter` and many clients send): a topic's settings
+/// REPLACED by the ones named - any it does not name goes back to its default. `may`: as for
+/// IncrementalAlterConfigs.
+pub(crate) async fn alter_configs(
+    state: &State,
+    req: &AlterConfigsRequest,
+    may: impl Fn(Option<&str>) -> bool,
+) -> AlterConfigsResponse {
+    let mut responses = Vec::new();
+    for r in &req.resources {
+        let name = r.resource_name.to_string();
+        let out = WholeResourceResponse::default()
+            .with_resource_type(r.resource_type)
+            .with_resource_name(r.resource_name.clone());
+        let outcome = replace_one(state, r, &name, req.validate_only, &may).await;
+        responses.push(match outcome {
+            Ok(()) => out,
+            Err((code, why)) => out.with_error_code(code).with_error_message(Some(s(why))),
+        });
+    }
+    AlterConfigsResponse::default().with_responses(responses)
+}
+
+async fn replace_one(
+    state: &State,
+    r: &WholeResource,
+    name: &str,
+    validate_only: bool,
+    may: &impl Fn(Option<&str>) -> bool,
+) -> Result<(), (i16, String)> {
+    alterable(r.resource_type, name, may)?;
+    let Some(topic) = topic_info(state, name).await else {
+        return Err((codes::UNKNOWN_TOPIC_OR_PARTITION, format!("no topic {name:?}")));
+    };
+    let (mut retention_ms, mut settings) = (None, TopicSettings::default());
+    for c in &r.configs {
+        let value = c.value.as_ref().map(|v| v.as_str());
+        change(&mut retention_ms, &mut settings, c.name.as_str(), SET, value)
+            .map_err(|why| (codes::INVALID_CONFIG, why))?;
+    }
+    if validate_only {
+        return Ok(());
+    }
+    apply(state, name, &topic, retention_ms, settings).await
 }
 
 #[cfg(test)]

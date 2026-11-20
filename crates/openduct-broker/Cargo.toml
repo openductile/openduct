@@ -22,6 +22,7 @@ kafka-protocol = { version = "0.18.0", default-features = false, features = ["br
 lz4_flex = "0.14.2"
 openduct-storage = { version = "0.1.0", path = "../openduct-storage" }
 parking_lot = "0.13.0"
+regex = { version = "1.13.1", default-features = false, features = ["std", "unicode"] }
 ring = "0.17.14"
 rustls = { version = "0.23.46", default-features = false, features = ["ring", "std", "tls12"] }
 rustls-webpki = { version = "0.103.17", default-features = false, features = ["std"] }

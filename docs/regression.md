@@ -21,7 +21,7 @@ them in CI (`cargo xtask check`); this page is a snapshot to read without runnin
 | `openduct-broker` unit tests | Framing, request limits, each API's encoding and decoding, the group coordinator's states | 37 | 2.4 s |
 | `broker/e2e` | Over TCP with an independent Kafka client (rskafka): create, list, delete; produce and fetch; long polls; durability across restarts; consumer groups and commits; idempotent retries; hostile frames | 15 | 0.5 s |
 | `broker/security` | TLS 1.3, SCRAM-SHA-256/512, OAuth bearer tokens, client certificates, PLAIN over TLS only, access rules that deny by default, quotas | 8 | 35.0 s |
-| `broker/configs` | DescribeConfigs and IncrementalAlterConfigs: what can change (retention) and what is refused | 3 | 0.0 s |
+| `broker/configs` | DescribeConfigs, IncrementalAlterConfigs and AlterConfigs: what can change (retention by time and by size, the largest batch, the cleanup policy, timestamps, copies in sync, segment time) and what is refused; a topic created with settings; a batch too large for its topic; a compacted topic read back over the wire, plain and in each of the four codecs; a record without a key refused | 9 | 0.7 s |
 | `broker/group_admin` | DescribeGroups, ListGroups, DeleteGroups, OffsetDelete | 2 | 0.0 s |
 | `broker/partitions` | CreatePartitions: added, refused, validated only | 2 | 0.1 s |
 | `broker/routed` | A client that follows leaders across brokers | 1 | 0.0 s |
@@ -43,7 +43,8 @@ them in CI (`cargo xtask check`); this page is a snapshot to read without runnin
 | Suite | What it covers | Passed | Time |
 |---|---|---|---|
 | `cli` | The commands against a running broker: topics, send, read, health | 5 | 3.9 s |
-| `cluster` | `openduct serve` as a three-node cluster: status, rebalance, removing a broker | 4 | 17.6 s |
+| `registry/serve` | The schema registry over HTTP against a running broker: registered on one node and read on another, forty registrations at once through two, a token asked for, HTTPS beside a broker that asks for TLS and sign-in, the broker's users held to rules on subjects, a connection kept for several requests | 6 | 0.1 s |
+| `cluster` | `openduct serve` as a three-node cluster: status, rebalance, removing a broker; one schema registry served by all three through the loss of the broker that led its topic | 5 | 36 s |
 | `kafka` | Pipelines reading from and writing to another Kafka cluster (here, another OpenDuct) | 4 | 3.6 s |
 | `start` | `openduct start`: the broker and the studio come up; secrets refused from the environment | 2 | 1.1 s |
 | `runs_at_once` | A workflow's runs: many at once, in order per key, nothing skipped across a restart | 1 | 18.4 s |

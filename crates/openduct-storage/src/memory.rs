@@ -77,6 +77,7 @@ impl Store for MemoryStore {
                     name: name.to_owned(),
                     partitions: config.partitions,
                     retention_ms: config.retention_ms,
+                    settings: Default::default(),
                 },
                 partitions,
             },
@@ -131,9 +132,79 @@ impl Store for MemoryStore {
         Ok(())
     }
 
+    fn set_topic_settings(&self, name: &str, settings: crate::TopicSettings) -> Result<(), StoreError> {
+        let mut topics = self.topics.write();
+        let topic = topics
+            .get_mut(name)
+            .ok_or_else(|| StoreError::UnknownTopic(name.to_owned()))?;
+        crate::store::one_copy(name, &settings)?;
+        topic.info.settings = settings;
+        Ok(())
+    }
+
+    fn compact(&self, now_ms: i64) -> Result<usize, StoreError> {
+        use crate::compact::{Cleaner, KEY_BUDGET, Latest};
+        let topics = self.topics.read();
+        let mut removed = 0usize;
+        for t in topics.values().filter(|t| t.info.settings.compacts()) {
+            let (lag, wait) = (
+                t.info.settings.min_compaction_lag_ms(),
+                t.info.settings.delete_retention_ms(),
+            );
+            for p in &t.partitions {
+                let mut index = p.lock();
+                // Every batch but the newest (this store's "segment being written to"), as far back from the
+                // end as the lag allows.
+                let batches: Vec<Bytes> = index
+                    .entries
+                    .iter()
+                    .take(index.entries.len().saturating_sub(1))
+                    .take_while(|e| e.max_timestamp <= now_ms.saturating_sub(lag))
+                    .filter_map(|e| match &e.location {
+                        Location::Memory(bytes) => Some(bytes.clone()),
+                        Location::File { .. } => None,
+                    })
+                    .collect();
+                let mut latest = Latest::of(index.fates());
+                let read = batches.iter().take_while(|b| latest.read(b, KEY_BUDGET)).count();
+                let Some(upto) = index
+                    .entries
+                    .get(read)
+                    .map(|e| e.base_offset)
+                    .filter(|_| read > 0)
+                else {
+                    continue;
+                };
+                if !index.cleaning.due(upto, now_ms, wait) {
+                    continue;
+                }
+                let from = index.entries.front().map_or(upto, |e| e.base_offset);
+                let mut cleaner = Cleaner::new(&latest, &index.cleaning.passes, now_ms, wait);
+                batches.iter().take(read).for_each(|b| cleaner.push(b));
+                let (out, gone) = cleaner.finish();
+                let entries = out
+                    .into_iter()
+                    .filter_map(|b| {
+                        let header = crate::batch::parse_stored_header(&b).ok()?;
+                        Some(crate::partition::Entry::of(&header, b.len(), Location::Memory(b)))
+                    })
+                    .collect();
+                index.replace_between(from, upto, entries);
+                index.cleaning.ran(upto, now_ms);
+                removed += gone;
+            }
+        }
+        Ok(removed)
+    }
+
     fn append(&self, topic: &str, partition: i32, batch: Bytes) -> Result<Appended, StoreError> {
+        check_supported(&parse_header(&batch)?)?;
+        // What the topic's settings ask of a batch (admit.rs); an unknown topic is refused just below.
+        let batch = match self.topics.read().get(topic) {
+            Some(t) => crate::admitted(&t.info.settings, batch, crate::now_ms())?,
+            None => batch,
+        };
         let header = parse_header(&batch)?;
-        check_supported(&header)?;
         self.with_partition(topic, partition, |index| match index.admit(&header)? {
             Admission::Duplicate(base_offset) => Ok(Appended {
                 base_offset,
@@ -149,6 +220,7 @@ impl Store for MemoryStore {
                     ..header
                 };
                 index.record(&header, base_offset, size, Location::Memory(stored));
+                index.note_transaction(&header, base_offset, None);
                 Ok(Appended {
                     base_offset,
                     log_start_offset: index.log_start,
@@ -156,6 +228,62 @@ impl Store for MemoryStore {
                 })
             }
         })
+    }
+
+    fn end_transaction(
+        &self,
+        topic: &str,
+        partition: i32,
+        producer_id: i64,
+        producer_epoch: i16,
+        marker: crate::batch::Marker,
+        coordinator_epoch: i32,
+    ) -> Result<Appended, StoreError> {
+        let batch = crate::batch::marker_batch(
+            producer_id,
+            producer_epoch,
+            marker,
+            crate::now_ms(),
+            coordinator_epoch,
+        );
+        let header = parse_header(&batch)?;
+        self.with_partition(topic, partition, |index| {
+            let base_offset = index.next_offset;
+            let stored = stored_form(&batch, base_offset, SINGLE_BROKER_EPOCH);
+            let header = BatchHeader {
+                partition_leader_epoch: SINGLE_BROKER_EPOCH,
+                ..header
+            };
+            index.record(&header, base_offset, stored.len(), Location::Memory(stored));
+            index.note_transaction(&header, base_offset, Some(marker));
+            Ok(Appended {
+                base_offset,
+                log_start_offset: index.log_start,
+                duplicate: false,
+            })
+        })
+    }
+
+    fn open_transactions(&self, topic: &str, partition: i32) -> Result<Vec<(i64, i16, i64)>, StoreError> {
+        self.with_partition(topic, partition, |index| Ok(index.open_transactions()))
+    }
+
+    fn active_producers(
+        &self,
+        topic: &str,
+        partition: i32,
+    ) -> Result<Vec<crate::ActiveProducer>, StoreError> {
+        self.with_partition(topic, partition, |index| Ok(index.active_producers()))
+    }
+
+    fn aborted_transactions(
+        &self,
+        topic: &str,
+        partition: i32,
+        from: i64,
+        upto: i64,
+    ) -> Result<Vec<crate::AbortedTransaction>, StoreError> {
+        self.with_partition(topic, partition, |index| Ok(index.aborted_between(from, upto)))
     }
 
     fn read(
@@ -179,6 +307,7 @@ impl Store for MemoryStore {
                 offsets: PartitionOffsets {
                     log_start: index.log_start,
                     high_watermark: index.next_offset,
+                    last_stable: index.last_stable(index.next_offset),
                 },
             })
         })
@@ -189,6 +318,7 @@ impl Store for MemoryStore {
             Ok(PartitionOffsets {
                 log_start: index.log_start,
                 high_watermark: index.next_offset,
+                last_stable: index.last_stable(index.next_offset),
             })
         })
     }
@@ -281,21 +411,46 @@ impl Store for MemoryStore {
         let topics = self.topics.read();
         let mut removed = 0usize;
         for t in topics.values() {
-            let Some(retention) = t.info.retention_ms else {
+            // A topic that only compacts keeps its newest records for ever.
+            let deletes = t.info.settings.deletes();
+            let cutoff = t
+                .info
+                .retention_ms
+                .filter(|_| deletes)
+                .map(|retention| now_ms.saturating_sub(retention));
+            let keep_bytes = t.info.settings.retention_bytes().filter(|_| deletes);
+            if cutoff.is_none() && keep_bytes.is_none() {
                 continue;
-            };
-            let cutoff = now_ms.saturating_sub(retention);
+            }
             for p in &t.partitions {
                 let mut index = p.lock();
-                // Keep the newest batch's offsets meaningful: remove whole batches older than the cutoff.
-                let keep_from = index
-                    .entries
-                    .iter()
-                    .find(|e| e.max_timestamp >= cutoff)
-                    .map(|e| e.base_offset)
-                    .unwrap_or(index.next_offset);
                 let before = index.entries.len();
-                index.truncate_before(keep_from);
+                if let Some(cutoff) = cutoff {
+                    // Keep the newest batch's offsets meaningful: remove whole batches older than the cutoff.
+                    let keep_from = index
+                        .entries
+                        .iter()
+                        .find(|e| e.max_timestamp >= cutoff)
+                        .map(|e| e.base_offset)
+                        .unwrap_or(index.next_offset);
+                    index.truncate_before(keep_from);
+                }
+                if let Some(keep) = keep_bytes {
+                    // retention.bytes: the oldest batches go while what is left would still be at least the
+                    // limit (Kafka's rule for segments, with a batch as this store's unit).
+                    let mut total: u64 = index.entries.iter().map(|e| e.size as u64).sum();
+                    let mut keep_from = None;
+                    for e in &index.entries {
+                        if total.saturating_sub(e.size as u64) < keep {
+                            break;
+                        }
+                        total -= e.size as u64;
+                        keep_from = Some(e.last_offset + 1);
+                    }
+                    if let Some(offset) = keep_from {
+                        index.truncate_before(offset);
+                    }
+                }
                 removed += before - index.entries.len();
             }
         }
@@ -348,6 +503,89 @@ mod tests {
         store.create_topic("b", config(1)).unwrap();
         let (a, b) = (store.topic("a").unwrap().id, store.topic("b").unwrap().id);
         assert!(!a.is_nil() && !b.is_nil() && a != b);
+    }
+
+    #[test]
+    fn retention_bytes_removes_the_oldest_batches_while_the_rest_still_holds_the_limit() {
+        let store = MemoryStore::new();
+        store.create_topic("t", config(1)).unwrap();
+        for i in 0..5 {
+            store.append("t", 0, batch(1, -1, -1, -1, i)).unwrap();
+        }
+        let one = store.read("t", 0, 0, usize::MAX).unwrap().batches[0].len() as u64;
+        let mut settings = crate::TopicSettings::default();
+        settings
+            .set(crate::RETENTION_BYTES, &(one * 2).to_string())
+            .unwrap();
+        store.set_topic_settings("t", settings).unwrap();
+        assert_eq!(
+            store.enforce_retention(0).unwrap(),
+            3,
+            "two batches hold the limit exactly"
+        );
+        let read = store.read("t", 0, 3, usize::MAX).unwrap();
+        assert_eq!((read.offsets.log_start, read.batches.len()), (3, 2));
+        assert_eq!(
+            store.topic("t").unwrap().settings.retention_bytes(),
+            Some(one * 2)
+        );
+    }
+
+    #[test]
+    fn a_compacted_topic_keeps_the_newest_of_each_key_at_its_offset() {
+        use crate::file::tests::{consumed, write_keyed};
+        let store = MemoryStore::new();
+        store.create_topic("t", config(1)).unwrap();
+        write_keyed(&store);
+        assert_eq!(
+            store.compact(10_000).unwrap(),
+            0,
+            "a topic that does not compact is left alone"
+        );
+        let mut settings = crate::TopicSettings::default();
+        settings.set(crate::CLEANUP_POLICY, "compact,delete").unwrap();
+        settings.set(crate::DELETE_RETENTION_MS, "1000").unwrap();
+        store.set_topic_settings("t", settings).unwrap();
+        assert_eq!(store.compact(10_000).unwrap(), 2);
+        assert_eq!(
+            consumed(&store, "t", 0),
+            vec![
+                (2, "a".to_owned(), true),
+                (3, "c".into(), true),
+                (4, "b".into(), false),
+                (5, "d".into(), true)
+            ]
+        );
+        assert_eq!(store.compact(10_500).unwrap(), 0);
+        assert_eq!(store.compact(11_000).unwrap(), 1, "the tombstone, after its wait");
+        assert_eq!(consumed(&store, "t", 0).len(), 3);
+        let offsets = store.offsets("t", 0).unwrap();
+        assert_eq!((offsets.log_start, offsets.high_watermark), (0, 6));
+        // compact,delete: retention still removes old batches.
+        store.set_retention("t", Some(1)).unwrap();
+        assert!(store.enforce_retention(i64::MAX / 2).unwrap() > 0);
+    }
+
+    #[test]
+    fn compaction_removes_aborted_records_and_leaves_open_transactions() {
+        let store = MemoryStore::new();
+        store
+            .create_topic(
+                "t",
+                TopicConfig {
+                    partitions: 1,
+                    retention_ms: None,
+                },
+            )
+            .unwrap();
+        crate::file::tests::compaction_minds_transactions(&store);
+    }
+
+    #[test]
+    fn a_partitions_transactions_are_tracked() {
+        let store = MemoryStore::new();
+        store.create_topic("t", config(1)).unwrap();
+        crate::file::tests::transactions_are_tracked(&store);
     }
 
     #[test]

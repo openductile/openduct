@@ -101,7 +101,7 @@ pub async fn queue(client: &mut Routed, id: &str, value: &Json, details: &Json) 
         .partition_count(&topics.input)
         .await
         .map_err(|e| format!("the workflow is not ready to run: {e}"))?;
-    let turn = i32::try_from(now_ms().rem_euclid(i64::from(partitions.max(1)))).unwrap_or(0);
+    let turn = turn_for(now_ms(), partitions);
     let message = Outgoing {
         key: None,
         value: Some(Bytes::from(envelope(value, details))),
@@ -131,8 +131,25 @@ fn hops_of(record: &kafka_protocol::records::Record) -> u32 {
 }
 
 /// The partition every scheduled run is queued to: each node of a cluster queues each one, and the one member of the
-/// group that reads this partition runs each time once.
+/// group that reads this partition runs each time once. It holds nothing else (`turn_for`), so the claim of a time -
+/// its place committed before it runs (`Runner::claim`) - is never held back by a run of another kind before it.
 const SCHEDULE_PARTITION: i32 = 0;
+
+/// The partition a run of any other kind (a webhook's delivery, the Run button) is queued to: turn by turn over all but
+/// the schedule's partition - over all of them only in a topic that has no other.
+fn turn_for(now: i64, partitions: i32) -> i32 {
+    let spread = i64::from(partitions.max(1));
+    let turn = if spread > 1 {
+        1 + now.rem_euclid(spread - 1)
+    } else {
+        0
+    };
+    i32::try_from(turn).unwrap_or(0)
+}
+
+/// How many records before a member's starting place it looks back through for the latest scheduled time claimed:
+/// every node queues each time, and one that queued late puts an earlier time after a later one.
+const CLAIM_WINDOW: i64 = 64;
 
 /// Queues the scheduled run due at `due` (milliseconds since 1970).
 async fn queue_scheduled(client: &mut Routed, id: &str, due: i64) -> Result<(), String> {
@@ -153,26 +170,39 @@ async fn queue_scheduled(client: &mut Routed, id: &str, due: i64) -> Result<(), 
         .map_err(|e| format!("cannot keep the event: {e}"))
 }
 
-/// The time of the scheduled run read last from the schedule's partition, before `next` - what the member that read
-/// it before ran - when that was one.
+/// The latest scheduled time claimed in the schedule's partition before `next` - what the member that read it before
+/// ran, or claimed to run - looking back over the last `CLAIM_WINDOW` records.
 async fn slot_before(client: &mut Routed, topic: &str, next: &BTreeMap<i32, i64>) -> Option<i64> {
-    let at = next.get(&SCHEDULE_PARTITION).copied().filter(|o| *o > 0)? - 1;
+    let next = next.get(&SCHEDULE_PARTITION).copied().filter(|o| *o > 0)?;
+    let earliest = client
+        .list_offset(topic, SCHEDULE_PARTITION, EARLIEST)
+        .await
+        .unwrap_or(0);
+    let from = (next - CLAIM_WINDOW).max(earliest).max(0);
     let fetched = client
-        .fetch(topic, &[(SCHEDULE_PARTITION, at)], 0, 64 * 1024)
+        .fetch(topic, &[(SCHEDULE_PARTITION, from)], 0, 256 * 1024)
         .await
         .ok()?;
     let answer = fetched
         .into_iter()
         .find(|f| f.partition == SCHEDULE_PARTITION && f.error_code == 0)?;
     let mut batches = answer.batches;
+    let mut latest = None;
     while !batches.is_empty() {
-        let set = RecordBatchDecoder::decode_with_custom_compression(&mut batches, Some(records::decompress))
-            .ok()?;
-        if let Some(record) = set.records.iter().find(|r| r.offset == at) {
-            return slot_of(&event_of(record, (topic, SCHEDULE_PARTITION, at), true));
+        let Ok(set) =
+            RecordBatchDecoder::decode_with_custom_compression(&mut batches, Some(records::decompress))
+        else {
+            break;
+        };
+        for record in set.records.iter().filter(|r| r.offset >= from && r.offset < next) {
+            latest = latest.max(slot_of(&event_of(
+                record,
+                (topic, SCHEDULE_PARTITION, record.offset),
+                true,
+            )));
         }
     }
-    None
+    latest
 }
 
 /// A record another workflow sent to CatchErr, as the run it starts sees it: its value as it came, and in its details
@@ -241,7 +271,7 @@ pub async fn serve(
             fetched = &mut fetching, if is_fetching => {
                 is_fetching = false;
                 runner.take_in(fetched.map_err(|e| runner.fail(&e))?)?;
-                false
+                runner.claim().await? == GroupState::Rebalancing
             }
             Some(done) = runner.running.join_next(), if !runner.running.is_empty() => {
                 runner.finished(done)?;
@@ -258,6 +288,7 @@ pub async fn serve(
         }
     }
     drop(fetching);
+    runner.launch_claimed();
     runner.drain(GRACE).await?;
     // How far it got, and leaving the group - briefly: a broker already gone does not hold up a stop.
     let _ = tokio::time::timeout(LAST_WORDS, async {
@@ -292,6 +323,9 @@ struct Item {
     event: Event,
     original: Option<Bytes>,
     hops: u32,
+    /// A scheduled time: committed (claimed) before it runs, so it runs at most once - a run cut short by a node's
+    /// loss is not run again by the member that takes the partition over.
+    claimed: bool,
 }
 
 /// A run finished: where its record was, its key, and whether its run was kept.
@@ -345,6 +379,8 @@ struct Runner {
     /// The latest scheduled time run: the same time queued by another node is run once - also by a member that has
     /// just taken the partition over, which starts from the time its last reader ran.
     last_slot: Option<i64>,
+    /// A scheduled time was taken in and its claim (the commit past it) is still to be made.
+    to_claim: bool,
     held: VecDeque<Item>,
     running: JoinSet<Finished>,
     /// Keys (in a partition) with a run going: the next record with one waits for it.
@@ -398,6 +434,7 @@ impl Runner {
             at_once,
             progress: Progress::new(BTreeMap::new()),
             last_slot: None,
+            to_claim: false,
             held: VecDeque::new(),
             running: JoinSet::new(),
             busy: HashSet::new(),
@@ -486,17 +523,23 @@ impl Runner {
             }
             event = failed_event(record, other, event);
         }
+        let mut claimed = false;
         if let Some(slot) = slot_of(&event).filter(|_| self.enveloped) {
             if self.last_slot.is_some_and(|last| slot <= last) {
                 return;
             }
             self.last_slot = Some(slot);
+            claimed = true;
+            self.to_claim = true;
         }
-        self.progress
-            .open
-            .entry(partition)
-            .or_default()
-            .insert(record.offset);
+        // A claimed time is not waited on before committing: its commit IS its claim, made before it runs.
+        if !claimed {
+            self.progress
+                .open
+                .entry(partition)
+                .or_default()
+                .insert(record.offset);
+        }
         self.held.push_back(Item {
             partition,
             offset: record.offset,
@@ -504,6 +547,7 @@ impl Runner {
             event,
             original: record.value.clone(),
             hops,
+            claimed,
         });
     }
 
@@ -594,6 +638,38 @@ impl Runner {
         Ok(())
     }
 
+    /// Claims the scheduled times just taken in, before any of them runs: their places are committed first, so a member
+    /// that takes the partition over later starts past them and never runs one of those times again. A commit the
+    /// group refuses (this member no longer holds the partition) is an error: nothing it took in runs here, and the
+    /// member that holds the partition runs those times.
+    async fn claim(&mut self) -> Result<GroupState, String> {
+        if !std::mem::take(&mut self.to_claim) {
+            return Ok(GroupState::Stable);
+        }
+        match self.commit().await {
+            Ok(state) => Ok(state),
+            Err(e) => {
+                self.held.retain(|item| !item.claimed);
+                Err(e)
+            }
+        }
+    }
+
+    /// Starts every claimed time still waiting, room or not: a time claimed is this member's to run, whether members
+    /// come or go or it stops - no one else will.
+    fn launch_claimed(&mut self) {
+        let (claimed, rest): (VecDeque<Item>, VecDeque<Item>) = std::mem::take(&mut self.held)
+            .into_iter()
+            .partition(|item| item.claimed);
+        self.held = rest;
+        for item in claimed {
+            if let Some(key) = item.key.clone() {
+                self.busy.insert((item.partition, key));
+            }
+            self.launch(item);
+        }
+    }
+
     /// Commits how far its runs have got; what the group says.
     async fn commit(&mut self) -> Result<GroupState, String> {
         let due = self.progress.due();
@@ -617,6 +693,7 @@ impl Runner {
     /// Members came or went: its runs finish and are committed, then it joins again and reads on from where the
     /// group committed.
     async fn rejoin(&mut self) -> Result<(), String> {
+        self.launch_claimed();
         self.drain(GRACE).await?;
         let _ = self.commit().await;
         self.held.clear();
@@ -750,8 +827,9 @@ async fn keep(
 }
 
 /// Writes a tick of `every` to the workflow's own topic, on the interval, counted from midnight UTC. In a cluster every
-/// node writes each tick, to the same partition and naming its time: the member that reads that partition runs each
-/// time once, so a schedule goes on while any node is up and never runs twice for one time.
+/// node writes each tick, to the same partition and naming its time: the member that reads that partition claims each
+/// time (commits past it) before it runs it, so a schedule goes on while any node is up and never runs twice for one
+/// time - across a node's loss too. A time whose run that loss cut short is not run again.
 pub async fn schedule(
     id: String,
     every: Duration,
@@ -792,4 +870,21 @@ pub fn iso(ms: i64) -> String {
         || ms.to_string(),
         |t| t.to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_run_of_another_kind_never_goes_to_the_schedules_partition() {
+        let turns: std::collections::BTreeSet<i32> = (0..1000).map(|now| turn_for(now, PARTITIONS)).collect();
+        assert!(!turns.contains(&SCHEDULE_PARTITION), "{turns:?}");
+        assert_eq!(
+            turns,
+            (1..PARTITIONS).collect(),
+            "spread over every other partition"
+        );
+        assert_eq!(turn_for(7, 1), 0, "a topic of one partition has no other");
+    }
 }

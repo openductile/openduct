@@ -31,6 +31,7 @@ pub(crate) async fn create_topics(
             t.num_partitions
         };
         let mut retention_ms = None;
+        let mut settings = openduct_storage::TopicSettings::default();
         let mut config_error = None;
         for c in &t.configs {
             let value = c.value.as_ref().map(|v| v.to_string()).unwrap_or_default();
@@ -40,9 +41,11 @@ pub(crate) async fn create_topics(
                     Ok(v) => retention_ms = Some(v),
                     Err(_) => config_error = Some(format!("retention.ms must be a number, not {value:?}")),
                 },
-                // Only deletion is supported; compaction is not, and silently ignoring it would lose data.
-                "cleanup.policy" if value != "delete" => {
-                    config_error = Some("only cleanup.policy=delete is supported".to_owned());
+                // The topic's own settings (openduct_storage settings.rs), each checked as it is taken.
+                name if openduct_storage::setting_spec(name).is_some() => {
+                    if let Err(why) = settings.set(name, &value) {
+                        config_error = Some(why);
+                    }
                 }
                 // Other settings (segment sizes, replication tuning) are the broker's to decide; accepted.
                 _ => {}
@@ -73,7 +76,15 @@ pub(crate) async fn create_topics(
                         partitions,
                         retention_ms,
                     },
-                )
+                )?;
+                // Its other settings, where it was given any. A store that cannot keep them refuses, and the
+                // topic is not left behind without the limits it was asked for.
+                if settings.is_empty() {
+                    return Ok(());
+                }
+                s.set_topic_settings(&n, settings).inspect_err(|_| {
+                    let _ = s.delete_topic(&n);
+                })
             })
             .await
             .map_err(|e| (codes::of_store_error(&e), e.to_string()))

@@ -134,7 +134,9 @@ openduct start \
   whichever node reads them, and a node lost hands its share to the others (once its session in the group runs out,
   30 seconds). An event is run at least once: a run cut short by a lost node runs again on another.
 - **Schedules run once:** every node queues each scheduled time, to the same partition and naming the time; the
-  one node reading that partition runs each time once. A schedule goes on while any node is up.
+  one node reading that partition claims each time (commits past it) before it runs it, so each time runs once -
+  also when that node is lost and another takes the partition over. A schedule goes on while any node is up. A
+  time whose run was cut short by its node's loss is not run again.
 
 ## Small and embedded devices
 
@@ -201,6 +203,11 @@ pick it up, and keeps it on disk as OpenTelemetry log records: OTLP JSON Lines, 
 - **Reading it**: the studio's Logs page (the installation's admin only) shows the newest records, filtered by level
   and text, and follows them as they come. In a cluster each node keeps and shows its own.
 - **How much**: `RUST_LOG` sets the level for both, as `RUST_LOG=info,openraft=warn`.
+
+## Schema registry
+
+`--registry-listen 127.0.0.1:8081` (`OPENDUCT_REGISTRY_LISTEN`) serves the schema registry beside the broker; beyond
+this machine it needs `--registry-token-file`. See [schema registry](registry.md).
 
 ## Metrics
 

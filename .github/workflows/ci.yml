@@ -7,6 +7,10 @@ on:
   push:
     branches: [main]
   pull_request:
+  # The full matrix, macOS included, once a week and whenever it is started by hand.
+  schedule:
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -26,10 +30,28 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest]
+        # macOS minutes cost about ten times Linux ones where minutes are billed. In a private repository a
+        # push or pull request runs Linux only; the weekly run and a run started by hand run macOS too. In a
+        # public repository every run has both, and a pull request there needs this check on macOS to merge.
+        os: >-
+          ${{ fromJSON(github.event.repository.private
+                       && github.event_name != 'schedule'
+                       && github.event_name != 'workflow_dispatch'
+                       && '["ubuntu-latest"]'
+                       || '["ubuntu-latest", "macos-latest"]') }}
     runs-on: ${{ matrix.os }}
+    # Line tables only in the test build: a panic still names its file and line, and the build fits the disk below.
+    env:
+      CARGO_PROFILE_DEV_DEBUG: line-tables-only
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      # The test build of this workspace outgrew the free disk of GitHub's Linux machines (about 14 GB): the linker
+      # died writing a test binary ("Bus error"). Toolchains this job never uses are removed first.
+      - name: Room on the disk
+        if: runner.os == 'Linux'
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/local/.ghcup /opt/hostedtoolcache/CodeQL
+          df -h /
       # rustup reads rust-toolchain.toml and installs the pinned toolchain with clippy and rustfmt.
       - run: rustup show active-toolchain || rustup toolchain install
       - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
@@ -41,6 +63,9 @@ jobs:
       - run: "! cargo tree --locked -p openduct -e normal --prefix none | grep -E '^(rustpython|malachite)'"
       - run: cargo build --release --locked -p openduct-script --bin openduct-python && ls -l target/release/openduct-python
       - run: cargo build --release --locked -p openduct --no-default-features && ls -l target/release/openduct
+      - name: Disk left
+        if: always() && runner.os == 'Linux'
+        run: df -h /
 
   cross:
     name: Builds for ${{ matrix.target }}
@@ -233,13 +258,17 @@ jobs:
       - name: Three nodes
         run: |
           kubectl create secret generic openduct-cluster --from-literal=secret="$(openssl rand -hex 32)"
-          sed 's|image: openduct:local.*|image: openduct:ci|' deploy/kubernetes/openduct.yaml | kubectl apply -f -
+          # One kind node on GitHub's 2-CPU Linux machine (a private repository's): kind's own pods ask for about one
+          # CPU, so three brokers asking 500m each do not fit and the third waits Pending. The brokers' CPU request is
+          # halved here; nothing else in the manifest changes.
+          sed -e 's|image: openduct:local.*|image: openduct:ci|' -e 's|cpu: 500m|cpu: 250m|' deploy/kubernetes/openduct.yaml | kubectl apply -f -
           kubectl rollout status statefulset/openduct --timeout=300s
           kubectl exec openduct-0 -- openduct cluster status --bootstrap 127.0.0.1:9092 | tee status.txt
           test "$(grep -c '^broker ' status.txt)" -eq 3
       - if: failure()
         run: |
           kubectl get pods -o wide
+          kubectl describe pods | grep -A6 -E '^Events:' || true
           for p in 0 1 2; do kubectl logs openduct-$p --tail=50 || true; done
 
   # cargo-fuzz (libFuzzer) over every target of crates/openduct-hostile, half a minute each, on nightly Rust (its

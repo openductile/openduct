@@ -37,8 +37,12 @@ const MAGIC_V2: i8 = 2;
 const CRC_START: usize = 21;
 
 /// Attribute bits (Kafka `RecordBatch`).
-const TRANSACTIONAL_FLAG: i16 = 0x10;
-const CONTROL_FLAG: i16 = 0x20;
+/// The batch's timestamps are the broker's (log append time), not the producer's.
+pub const LOG_APPEND_TIME_FLAG: i16 = 0x08;
+/// The batch is part of a transaction.
+pub const TRANSACTIONAL_FLAG: i16 = 0x10;
+/// The batch is a control batch: a transaction's commit or abort marker.
+pub const CONTROL_FLAG: i16 = 0x20;
 
 /// Why a batch was refused. Every variant is the client's input being wrong; none is a broker fault.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error, serde::Serialize, serde::Deserialize)]
@@ -53,7 +57,7 @@ pub enum BatchError {
     CrcMismatch,
     #[error("the record batch says {count} records but its last offset delta is {last_offset_delta}")]
     InvalidRecordCount { count: i32, last_offset_delta: i32 },
-    #[error("transactional and control batches are not supported")]
+    #[error("a control batch (a transaction's marker) is the broker's to write, not a client's")]
     Transactional,
 }
 
@@ -77,6 +81,16 @@ impl BatchHeader {
     /// The batch is from an idempotent producer: it carries a producer id and sequence numbers.
     pub fn is_idempotent(&self) -> bool {
         self.producer_id >= 0
+    }
+
+    /// The batch is part of a transaction (its data, or its marker).
+    pub fn is_transactional(&self) -> bool {
+        self.attributes & TRANSACTIONAL_FLAG != 0
+    }
+
+    /// The batch is a transaction's commit or abort marker.
+    pub fn is_control(&self) -> bool {
+        self.attributes & CONTROL_FLAG != 0
     }
 
     /// The sequence number of the batch's last record, wrapping as Kafka does.
@@ -126,6 +140,17 @@ fn read_i16(bytes: &[u8], at: usize) -> Result<i16, BatchError> {
 /// Read and check one complete batch: its length matches the slice, the format is v2, the checksum holds, and the
 /// record count agrees with the last offset delta.
 pub fn parse_header(batch: &[u8]) -> Result<BatchHeader, BatchError> {
+    parse_header_of(batch, false)
+}
+
+/// As [`parse_header`], for a batch read back from the log: compaction may have taken records out of it
+/// (records.rs), so it may hold fewer records than its offsets span - none at all, where every one went - but
+/// never more.
+pub fn parse_stored_header(batch: &[u8]) -> Result<BatchHeader, BatchError> {
+    parse_header_of(batch, true)
+}
+
+pub(crate) fn parse_header_of(batch: &[u8], compacted: bool) -> Result<BatchHeader, BatchError> {
     if batch.len() < HEADER_LEN {
         return Err(BatchError::Truncated);
     }
@@ -155,9 +180,12 @@ pub fn parse_header(batch: &[u8]) -> Result<BatchHeader, BatchError> {
         base_sequence: read_i32(batch, 53)?,
         record_count: read_i32(batch, 57)?,
     };
-    if header.record_count < 1
+    let spans = i64::from(header.last_offset_delta) + 1;
+    let count = i64::from(header.record_count);
+    if header.record_count < 0
         || header.last_offset_delta < 0
-        || i64::from(header.record_count) != i64::from(header.last_offset_delta) + 1
+        || (compacted && count > spans)
+        || (!compacted && count != spans)
     {
         return Err(BatchError::InvalidRecordCount {
             count: header.record_count,
@@ -169,10 +197,95 @@ pub fn parse_header(batch: &[u8]) -> Result<BatchHeader, BatchError> {
 
 /// Refuse what OpenDuct does not support: transactional and control batches.
 pub fn check_supported(header: &BatchHeader) -> Result<(), BatchError> {
-    if header.attributes & (TRANSACTIONAL_FLAG | CONTROL_FLAG) != 0 {
+    // A marker is the broker's to write (Store::end_transaction): a client that sends one is refused, as on Kafka.
+    if header.is_control() {
         return Err(BatchError::Transactional);
     }
     Ok(())
+}
+
+/// How a transaction ended, as its marker says.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Marker {
+    Abort,
+    Commit,
+}
+
+/// The marker a control batch carries: its one record's key is a version (i16) and a type (i16) - 0 abort, 1
+/// commit. `None` for a batch that is not a control batch, or a control record of another type.
+pub fn marker_of(batch: &[u8]) -> Option<Marker> {
+    if read_i16(batch, 21).ok()? & CONTROL_FLAG == 0 {
+        return None;
+    }
+    // The record: its length, attributes, timestamp delta and offset delta are each one byte in a marker; then
+    // the key's length and the key. Read without assuming so: skip varints by their continuation bits.
+    let mut at = HEADER_LEN;
+    let skip_varint = |at: &mut usize| -> Option<()> {
+        loop {
+            let b = *batch.get(*at)?;
+            *at += 1;
+            if b & 0x80 == 0 {
+                return Some(());
+            }
+        }
+    };
+    skip_varint(&mut at)?; // record length
+    at += 1; // attributes
+    skip_varint(&mut at)?; // timestamp delta
+    skip_varint(&mut at)?; // offset delta
+    let key_len = *batch.get(at)?; // zigzag of 4 is 8
+    if key_len != 8 {
+        return None;
+    }
+    match read_i16(batch, at + 3).ok()? {
+        0 => Some(Marker::Abort),
+        1 => Some(Marker::Commit),
+        _ => None,
+    }
+}
+
+/// A transaction's marker, as a Kafka transaction coordinator writes it: a control batch of one record from the
+/// transaction's producer, its key the marker's type and its value the coordinator's epoch.
+pub fn marker_batch(
+    producer_id: i64,
+    producer_epoch: i16,
+    marker: Marker,
+    timestamp: i64,
+    coordinator_epoch: i32,
+) -> Bytes {
+    let mut record = Vec::with_capacity(16);
+    record.push(0); // attributes
+    record.push(0); // timestamp delta
+    record.push(0); // offset delta
+    record.push(8); // key length 4
+    record.extend_from_slice(&0i16.to_be_bytes());
+    record.extend_from_slice(&(marker as i16).to_be_bytes());
+    record.push(12); // value length 6
+    record.extend_from_slice(&0i16.to_be_bytes());
+    record.extend_from_slice(&coordinator_epoch.to_be_bytes());
+    record.push(0); // no headers
+    let mut b = BytesMut::with_capacity(HEADER_LEN + 1 + record.len());
+    b.extend_from_slice(&0i64.to_be_bytes());
+    let length = i32::try_from(HEADER_LEN - LOG_OVERHEAD + 1 + record.len()).unwrap_or(0);
+    b.extend_from_slice(&length.to_be_bytes());
+    b.extend_from_slice(&0i32.to_be_bytes());
+    b.extend_from_slice(&[2]);
+    b.extend_from_slice(&0u32.to_be_bytes());
+    b.extend_from_slice(&(TRANSACTIONAL_FLAG | CONTROL_FLAG).to_be_bytes());
+    b.extend_from_slice(&0i32.to_be_bytes());
+    b.extend_from_slice(&timestamp.to_be_bytes());
+    b.extend_from_slice(&timestamp.to_be_bytes());
+    b.extend_from_slice(&producer_id.to_be_bytes());
+    b.extend_from_slice(&producer_epoch.to_be_bytes());
+    b.extend_from_slice(&(-1i32).to_be_bytes());
+    b.extend_from_slice(&1i32.to_be_bytes());
+    b.extend_from_slice(&[u8::try_from(record.len() * 2).unwrap_or(0)]); // the record's length, zigzag
+    b.extend_from_slice(&record);
+    let crc = checksum(&b);
+    if let Some(at) = b.get_mut(17..21) {
+        at.copy_from_slice(&crc.to_be_bytes());
+    }
+    b.freeze()
 }
 
 /// Split a Produce request's `records` field into its batches, each checked by [`parse_header`].
@@ -202,6 +315,30 @@ pub fn split_batches(records: &Bytes) -> Result<Vec<(BatchHeader, Bytes)>, Batch
         at += total;
     }
     Ok(out)
+}
+
+/// The batch stamped with the broker's time (`message.timestamp.type=LogAppendTime`), as a Kafka leader stamps
+/// it: the timestamp-type bit set and the batch's largest timestamp made `now_ms` - which is then every record's
+/// timestamp to a client - and the checksum, which covers both, made right again.
+pub fn with_log_append_time(batch: &Bytes, now_ms: i64) -> Bytes {
+    let mut owned = BytesMut::from(batch.as_ref());
+    let attributes = read_i16(&owned, 21).unwrap_or(0) | LOG_APPEND_TIME_FLAG;
+    if let Some(at) = owned.get_mut(21..23) {
+        at.copy_from_slice(&attributes.to_be_bytes());
+    }
+    if let Some(at) = owned.get_mut(35..43) {
+        at.copy_from_slice(&now_ms.to_be_bytes());
+    }
+    let crc = checksum(&owned);
+    if let Some(at) = owned.get_mut(17..21) {
+        at.copy_from_slice(&crc.to_be_bytes());
+    }
+    owned.freeze()
+}
+
+/// The checksum a batch's header should carry: CRC-32C of everything from its attributes on.
+pub fn checksum(batch: &[u8]) -> u32 {
+    crc32c::crc32c(batch.get(CRC_START..).unwrap_or_default())
 }
 
 /// The batch with its base offset set to `offset`.
@@ -336,5 +473,44 @@ pub(crate) mod tests {
             b.get(16..),
             "nothing the checksum covers changes"
         );
+    }
+
+    #[test]
+    fn a_marker_is_a_control_batch_that_reads_back_and_a_client_may_not_send_one() {
+        for marker in [Marker::Commit, Marker::Abort] {
+            let batch = marker_batch(77, 3, marker, 1_700_000_000_000, 5);
+            let header = parse_header(&batch).unwrap();
+            assert!(header.is_control() && header.is_transactional());
+            assert_eq!(
+                (header.producer_id, header.producer_epoch, header.record_count),
+                (77, 3, 1)
+            );
+            assert_eq!(marker_of(&batch), Some(marker));
+            assert_eq!(check_supported(&header), Err(BatchError::Transactional));
+        }
+        // A batch that is not a control batch carries no marker, and a transaction's data is taken.
+        let data = batch(2, 77, 3, 0, 10);
+        assert_eq!(marker_of(&data), None);
+        let mut transactional = data.to_vec();
+        transactional[21..23].copy_from_slice(&TRANSACTIONAL_FLAG.to_be_bytes());
+        let crc = checksum(&transactional);
+        transactional[17..21].copy_from_slice(&crc.to_be_bytes());
+        let header = parse_header(&transactional).unwrap();
+        assert!(header.is_transactional() && !header.is_control());
+        assert_eq!(check_supported(&header), Ok(()));
+        // Cut short, it is no marker, and nothing is read past its end.
+        let whole = marker_batch(1, 0, Marker::Commit, 0, 0);
+        for len in 0..whole.len() {
+            let _ = marker_of(&whole[..len]);
+        }
+    }
+
+    /// A batch of `count` records that is part of `producer`'s transaction.
+    pub(crate) fn transactional(count: i32, producer: i64, sequence: i32, timestamp: i64) -> Bytes {
+        let mut b = batch(count, producer, 0, sequence, timestamp).to_vec();
+        b[21..23].copy_from_slice(&TRANSACTIONAL_FLAG.to_be_bytes());
+        let crc = checksum(&b);
+        b[17..21].copy_from_slice(&crc.to_be_bytes());
+        Bytes::from(b)
     }
 }

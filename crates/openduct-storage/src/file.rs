@@ -40,6 +40,7 @@ use crate::store::{
 };
 
 pub(crate) mod checkpoint;
+mod cleaner;
 mod commit;
 pub(crate) mod partition_log;
 mod segments;
@@ -364,6 +365,7 @@ impl FileStore {
             name: name.to_owned(),
             partitions: config.partitions,
             retention_ms: config.retention_ms,
+            settings: Default::default(),
         };
         let mut partitions = Vec::new();
         for p in 0..config.partitions {
@@ -467,13 +469,102 @@ impl Store for FileStore {
         Ok(())
     }
 
+    fn set_topic_settings(&self, name: &str, settings: crate::TopicSettings) -> Result<(), StoreError> {
+        let mut topics = self.topics.write();
+        let topic = topics
+            .get_mut(name)
+            .ok_or_else(|| StoreError::UnknownTopic(name.to_owned()))?;
+        crate::store::one_copy(name, &settings)?;
+        let mut info = topic.info.clone();
+        info.settings = settings;
+        // On disk before it is served, as retention is: a crash leaves the old settings or the new ones, whole.
+        write_atomically(
+            &self.root.join("topics").join(name).join("topic.json"),
+            &to_json(&info)?,
+        )?;
+        topic.info = info;
+        Ok(())
+    }
+
     fn append(&self, topic: &str, partition: i32, batch: Bytes) -> Result<Appended, StoreError> {
         self.append_begin(topic, partition, batch)?.wait()
     }
 
-    fn append_begin(&self, topic: &str, partition: i32, batch: Bytes) -> Result<Pending, StoreError> {
+    fn compact(&self, now_ms: i64) -> Result<usize, StoreError> {
+        let topics = self.topics.read();
+        let mut removed = 0usize;
+        for t in topics.values().filter(|t| t.info.settings.compacts()) {
+            let (lag, wait) = (
+                t.info.settings.min_compaction_lag_ms(),
+                t.info.settings.delete_retention_ms(),
+            );
+            for p in &t.partitions {
+                removed += p.lock().compact(now_ms, lag, wait, i64::MIN)?;
+            }
+        }
+        Ok(removed)
+    }
+
+    fn end_transaction(
+        &self,
+        topic: &str,
+        partition: i32,
+        producer_id: i64,
+        producer_epoch: i16,
+        marker: crate::batch::Marker,
+        coordinator_epoch: i32,
+    ) -> Result<Appended, StoreError> {
+        let batch = crate::batch::marker_batch(
+            producer_id,
+            producer_epoch,
+            marker,
+            crate::now_ms(),
+            coordinator_epoch,
+        );
         let config = self.config;
         self.with_partition(topic, partition, |p| {
+            p.begin(&batch, &config, SINGLE_BROKER_EPOCH)
+        })?
+        .wait()
+    }
+
+    fn open_transactions(&self, topic: &str, partition: i32) -> Result<Vec<(i64, i16, i64)>, StoreError> {
+        self.with_partition(topic, partition, |p| Ok(p.index.open_transactions()))
+    }
+
+    fn active_producers(
+        &self,
+        topic: &str,
+        partition: i32,
+    ) -> Result<Vec<crate::ActiveProducer>, StoreError> {
+        self.with_partition(topic, partition, |p| Ok(p.index.active_producers()))
+    }
+
+    fn aborted_transactions(
+        &self,
+        topic: &str,
+        partition: i32,
+        from: i64,
+        upto: i64,
+    ) -> Result<Vec<crate::AbortedTransaction>, StoreError> {
+        self.with_partition(topic, partition, |p| Ok(p.index.aborted_between(from, upto)))
+    }
+
+    fn append_begin(&self, topic: &str, partition: i32, batch: Bytes) -> Result<Pending, StoreError> {
+        // What the topic's settings ask of a batch (admit.rs); an unknown topic is refused just below.
+        let (batch, segment_ms) = match self.topics.read().get(topic) {
+            Some(t) => (
+                crate::admitted(&t.info.settings, batch, crate::now_ms())?,
+                Some(t.info.settings.segment_ms()),
+            ),
+            None => (batch, None),
+        };
+        // What a client may not send (a marker) is refused here, where clients' batches come in.
+        crate::batch::check_supported(&crate::batch::parse_header(&batch)?)?;
+        let config = self.config;
+        self.with_partition(topic, partition, |p| {
+            // segment.ms: the segment is closed first when its records already span that long.
+            p.roll_ms = segment_ms;
             p.begin(&batch, &config, SINGLE_BROKER_EPOCH)
         })
     }
@@ -618,12 +709,21 @@ impl Store for FileStore {
         let topics = self.topics.read();
         let mut removed = 0usize;
         for t in topics.values() {
-            let Some(retention) = t.info.retention_ms else {
-                continue;
-            };
-            let cutoff = now_ms.saturating_sub(retention);
+            // A topic that only compacts keeps its newest records for ever.
+            let deletes = t.info.settings.deletes();
+            let cutoff = t
+                .info
+                .retention_ms
+                .filter(|_| deletes)
+                .map(|retention| now_ms.saturating_sub(retention));
+            let keep_bytes = t.info.settings.retention_bytes().filter(|_| deletes);
             for p in &t.partitions {
-                removed += p.lock().enforce_retention(cutoff)?;
+                if let Some(cutoff) = cutoff {
+                    removed += p.lock().enforce_retention(cutoff)?;
+                }
+                if let Some(keep) = keep_bytes {
+                    removed += p.lock().enforce_size(keep)?;
+                }
             }
         }
         Ok(removed)
@@ -631,4 +731,4 @@ impl Store for FileStore {
 }
 
 #[cfg(test)]
-mod tests;
+pub(crate) mod tests;

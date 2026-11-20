@@ -69,16 +69,16 @@ the widest set of SaaS apps with nothing to run. **Choose n8n** for self-hosted 
 | Smallest footprint | 9-11 MiB idle; 11 MB binary | Gigabytes of memory per broker is usual | As Kafka | About a gigabyte at the least; built for many cores | Tens of MB |
 | Replication | Raft per partition | ISR, KRaft controllers | As Kafka | Raft per partition | Raft per stream |
 | Tiered storage (S3) | Yes | Yes | Yes | Yes (enterprise licence) | No |
-| Transactions, exactly-once | No | Yes | Yes | Yes | De-duplication by message id |
-| Log compaction | No | Yes | Yes | Yes | Per subject, last value |
-| Schema registry | No | No (separate) | Yes | Built in | No |
+| Transactions, exactly-once | Yes | Yes | Yes | Yes | De-duplication by message id |
+| Log compaction | Yes | Yes | Yes | Yes | Per subject, last value |
+| Schema registry | Built in | No (separate) | Yes | Built in | No |
 | Connectors | Its own pipelines' | Kafka Connect | Many, managed | Redpanda Connect | Through other tools |
 | Stream processing | Per message (CEL) | Kafka Streams | Flink, ksqlDB | Per message (WebAssembly) | No |
 | Workflows and apps | Built in | No | No | No | No |
 | As a library in your program | Yes (Rust) | No | No | No | Yes (Go) |
 | Memory safety | Rust, `unsafe` forbidden | Managed runtime | As Kafka | C++ | Go |
 
-**Where they are stronger.** Kafka and Confluent are the most complete: transactions, compaction, Kafka Connect, Kafka
+**Where they are stronger.** Kafka and Confluent are the most complete: transactions, Kafka Connect, Kafka
 Streams and Flink, and years of use at the largest scale. Confluent adds a schema registry and a managed cloud.
 Redpanda shows one binary can serve the Kafka protocol at very high throughput, with a schema registry and an HTTP
 proxy built in. NATS is the lightest way to move messages between services and out to the edge. OpenDuct has not yet
@@ -92,7 +92,7 @@ workflow studio in the same binary.
 
 **Choose OpenDuct** for Kafka clients at the edge or on small machines, for a broker inside your own program, for
 development and CI without a heavy cluster, or for events and the workflows that act on them in one place. **Choose
-Kafka or Confluent** when you need transactions, compaction, Kafka Connect or stream processing with state, or the
+Kafka or Confluent** when you need transactions, Kafka Connect or stream processing with state, or the
 largest scale. **Choose Redpanda** for the highest Kafka throughput per machine. **Choose NATS** when you do not need
 the Kafka protocol.
 
