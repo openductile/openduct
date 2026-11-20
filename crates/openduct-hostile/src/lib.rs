@@ -41,6 +41,141 @@ pub fn record_batches(records: &[u8]) {
     }
 }
 
+/// The records inside a batch, as log compaction reads them (`openduct_storage::open`): the input is a batch's
+/// records - its first byte how many the header claims - under a header whose length and checksum are right, so
+/// the reader is reached; and the same input as the compressed records of each of Kafka's four codecs. Reading and writing the batch again must not panic or reach past the batch, and what is
+/// written again must read back with the offsets it kept.
+pub fn records(data: &[u8]) {
+    let Some((claimed, body)) = data.split_first() else {
+        return;
+    };
+    // As records that are not compressed, then as what each codec would have to decompress first.
+    for codec in 0i16..=4 {
+        records_under(i32::from(*claimed).max(1), codec, body);
+    }
+}
+
+/// `body` as the records of a batch of `count` records compressed with `codec` (0: not compressed).
+fn records_under(count: i32, codec: i16, body: &[u8]) {
+    let Ok(length) = i32::try_from(openduct_storage::batch::HEADER_LEN - 12 + body.len()) else {
+        return;
+    };
+    let mut b = Vec::with_capacity(openduct_storage::batch::HEADER_LEN + body.len());
+    b.extend_from_slice(&0i64.to_be_bytes());
+    b.extend_from_slice(&length.to_be_bytes());
+    b.extend_from_slice(&0i32.to_be_bytes());
+    b.push(2);
+    b.extend_from_slice(&0u32.to_be_bytes());
+    b.extend_from_slice(&codec.to_be_bytes());
+    b.extend_from_slice(&(count - 1).to_be_bytes());
+    b.extend_from_slice(&[0u8; 16]);
+    b.extend_from_slice(&(-1i64).to_be_bytes());
+    b.extend_from_slice(&(-1i16).to_be_bytes());
+    b.extend_from_slice(&(-1i32).to_be_bytes());
+    b.extend_from_slice(&count.to_be_bytes());
+    b.extend_from_slice(body);
+    let crc = openduct_storage::batch::checksum(&b);
+    if let Some(at) = b.get_mut(17..21) {
+        at.copy_from_slice(&crc.to_be_bytes());
+    }
+    let batch = Bytes::from(b);
+    let Ok(opened) = openduct_storage::open(&batch) else {
+        return;
+    };
+    // A key is read through the opened batch, which checks where it lies.
+    for r in &opened.records {
+        let _ = opened.key(r);
+    }
+    if let Ok(openduct_storage::Retained::Some(left)) = opened.retain(&batch, |r, _| r.offset_delta % 2 == 0)
+    {
+        let read = openduct_storage::open(&left);
+        assert!(read.is_ok(), "a batch written again does not read back");
+        let kept = read.map(|o| o.records).unwrap_or_default();
+        assert!(
+            kept.iter().all(|r| r.offset_delta % 2 == 0),
+            "a record that was not kept"
+        );
+    }
+}
+
+/// The schema registry (`openduct_registry`), which reads what any client sends it: the input as an Avro schema,
+/// a JSON Schema and a .proto file, each to read and to compare with itself and a plain one; as a request's body to every route that takes one, with
+/// the input's first line as the path; and as a record of the registry's topic. Whatever it is, the registry
+/// answers - a status and a body that is JSON - and what it says to write can be written and read back.
+pub fn registry(data: &[u8]) {
+    use openduct_registry::api::{Outcome, Request, handle};
+    use openduct_registry::registry::Registry;
+    let text = String::from_utf8_lossy(data);
+    if let Ok(schema) = openduct_registry::avro::Schema::parse(&text) {
+        let _ = schema.can_read(&schema);
+        if let Ok(plain) = openduct_registry::avro::Schema::parse("\"string\"") {
+            let _ = schema.can_read(&plain);
+            let _ = plain.can_read(&schema);
+        }
+    }
+    // The same input as a JSON Schema and as a .proto file.
+    if let Ok(schema) = openduct_registry::json_schema::Schema::parse(&text) {
+        let _ = schema.can_read(&schema);
+        if let Ok(plain) = openduct_registry::json_schema::Schema::parse("{\"type\":\"object\"}") {
+            let _ = schema.can_read(&plain);
+            let _ = plain.can_read(&schema);
+        }
+    }
+    if let Ok(schema) = openduct_registry::protobuf::Schema::parse(&text) {
+        assert!(
+            schema.can_read(&schema).is_ok(),
+            "a .proto file that does not read what it wrote"
+        );
+    }
+    let mut state = Registry::default();
+    let (first, rest) = text.split_once('\n').unwrap_or((&text, ""));
+    let (path, query) = first.split_once('?').unwrap_or((first, ""));
+    let paths = [
+        path,
+        "/subjects/s/versions",
+        "/subjects/s",
+        "/compatibility/subjects/s/versions",
+        "/config",
+        "/mode",
+    ];
+    for method in ["GET", "POST", "PUT", "DELETE"] {
+        for path in paths {
+            for body in [data, rest.as_bytes()] {
+                let request = Request {
+                    method,
+                    path,
+                    query,
+                    body,
+                };
+                let response = match handle(&state, &request) {
+                    Outcome::Answer(response) => response,
+                    Outcome::Write { changes, then } => {
+                        for change in &changes {
+                            let record = openduct_registry::log::encode(change);
+                            let read = openduct_registry::log::decode(&record.key, record.value.as_deref());
+                            assert!(
+                                matches!(&read, Ok(Some(back)) if back == change),
+                                "a change does not read back from its record"
+                            );
+                            assert!(
+                                state.apply(change).is_ok(),
+                                "a change the registry made does not apply"
+                            );
+                        }
+                        then
+                    }
+                };
+                assert!((200..600).contains(&response.status), "a status that is not one");
+            }
+        }
+    }
+    let (key, value) = data.split_at(data.len() / 2);
+    if let Ok(Some(change)) = openduct_registry::log::decode(key, Some(value)) {
+        let _ = state.apply(&change);
+    }
+    let _ = openduct_registry::log::decode(data, None);
+}
+
 /// A directory of its own under the system's temporary directory, removed when dropped.
 struct Scratch(PathBuf);
 

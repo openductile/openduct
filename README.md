@@ -54,7 +54,17 @@ it does not yet do everything Kafka does. Today it supports:
 
 - producing (idempotent producers included) and fetching, with long polling;
 - offsets, including lookup by timestamp;
-- topics: create, list and delete (by name or by id), with time-based retention;
+- topics: create, list and delete (by name or by id), add partitions, and change a topic's settings while it runs:
+  retention by time and by size, compaction, the broker's timestamps, the copies a write needs
+  ([protocol](docs/protocol.md#other-topic-settings));
+- transactions: a producer writes to several partitions and commits a consumer group's offsets together or not at
+  all (exactly-once), on one broker and in a cluster, with `read_committed` consumers and Kafka 4's second
+  transaction protocol ([protocol](docs/protocol.md#transactions));
+- log compaction: `cleanup.policy=compact` keeps the newest record of each key at its offset, tombstones delete,
+  compressed batches included, on one broker or in a cluster ([protocol](docs/protocol.md#log-compaction));
+- a schema registry built in (`--registry-listen`): Confluent's REST API for Avro, JSON Schema and Protobuf, with
+  references, compatibility levels, HTTPS and access rules, served by every broker of a cluster
+  ([schema registry](docs/registry.md));
 - consumer groups with committed offsets, spread over the brokers;
 - compressed batches, passed through untouched;
 - an in-memory store, and a durable store on local disk;
@@ -73,8 +83,7 @@ it does not yet do everything Kafka does. Today it supports:
 - JavaScript and Python steps in workflows, built in and run in a sandbox
   ([JavaScript and Python steps](#javascript-and-python-steps)).
 
-**Not yet:** transactions, log compaction, changing settings other than a topic's retention, a schema registry,
-app triggers, AI agents and single sign-on. [docs/capabilities.md](docs/capabilities.md) lists what OpenDuct does
+**Not yet:** app triggers, AI agents and single sign-on. [docs/capabilities.md](docs/capabilities.md) lists what OpenDuct does
 and does not do yet, and [docs/protocol.md](docs/protocol.md) exactly what each Kafka API does.
 
 ## Quick start
@@ -224,6 +233,7 @@ The [user guide](docs/guide/README.md) covers the rest:
 And beside it:
 
 - [what OpenDuct does, and does not do yet](docs/capabilities.md);
+- [the schema registry](docs/registry.md): Confluent's REST API, built into the broker;
 - [OpenDuct beside Zapier, Make, n8n, Workato, MuleSoft, Kafka, Confluent, Redpanda, NATS, LangGraph and
   Temporal](docs/comparison.md);
 - [what the broker is for](docs/use-cases.md): the edge, small machines, moving data, low trust, AI;
@@ -306,11 +316,14 @@ The workspace's crates:
 
 ## Compatibility
 
-OpenDuct implements the Kafka APIs a producer, a consumer and a consumer group need, at the versions current clients
-use; [docs/protocol.md](docs/protocol.md) lists each one. Every change is tested end to end over TCP with an
-independent Kafka client, [rskafka](https://crates.io/crates/rskafka). Each run creates, lists and deletes topics,
-produces and fetches, runs long polls, checks consumer groups and their commits and idempotent producers, and
-sends hostile input. If a client does not work with OpenDuct, please
+OpenDuct implements the Kafka APIs a producer, a consumer, a consumer group and a transaction need, and those that
+change a topic's settings, at the versions current clients use; [docs/protocol.md](docs/protocol.md) lists each one.
+Every change is tested end to end over TCP with an independent Kafka client,
+[rskafka](https://crates.io/crates/rskafka). Each run creates, lists and deletes topics, produces and fetches, runs
+long polls, checks consumer groups and their commits and idempotent producers, and sends hostile input.
+Transactions and the schema registry are also run against other people's clients: Apache Kafka's own command-line
+tools, librdkafka's transactional producer (through `confluent-kafka`), and Confluent's serializers
+([how](crates/openduct-broker/tests/clients/README.md), [schema registry](docs/registry.md)). If a client does not work with OpenDuct, please
 [open an issue](https://github.com/openductile/openduct/issues).
 
 ## Testing
@@ -322,7 +335,8 @@ of every dependency. The tests include:
 - unit tests of the log's recovery: torn writes, damage in place, interrupted topic creation, interrupted deletes,
   and producer state after a restart;
 - end-to-end tests over TCP with an independent Kafka client: durability across restarts, long polls, consumer
-  groups, idempotent retries, and hostile input (oversized, negative, garbage and unknown-API frames, a request
+  groups, idempotent retries, transactions (committed, aborted, fenced, timed out, on one broker and in a cluster),
+  compaction, topic settings, and hostile input (oversized, negative, garbage and unknown-API frames, a request
   that never arrives);
 - hostile input everywhere OpenDuct reads bytes it did not write - requests, record batches, segment files,
   expressions, pipeline files and what connectors read from other systems - mutated at random with a fixed seed in

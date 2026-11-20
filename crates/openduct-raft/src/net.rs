@@ -839,6 +839,27 @@ async fn serve_messages(mut r: Reader, mut w: Writer, members: Arc<Members>) -> 
     result
 }
 
+/// Whether an append sent by another broker is one a broker writes itself: a transaction's marker (a control
+/// batch), or a record of the transaction coordinator's own topic.
+fn own_append(members: &Members, group: &GroupId, command: &Command) -> bool {
+    let Command::Append { batch } = command else {
+        return false;
+    };
+    if openduct_storage::batch::marker_of(batch).is_some() {
+        return true;
+    }
+    let (GroupId::Partition { topic, .. }, Some(Member::Controller(_, control))) =
+        (group, members.get(&GroupId::Controller))
+    else {
+        return false;
+    };
+    control
+        .state()
+        .topics
+        .get(openduct_storage::TRANSACTIONS_TOPIC)
+        .is_some_and(|t| t.info.id == *topic)
+}
+
 async fn handle(members: &Members, group: GroupId, request: Request) -> Response {
     if let Request::Leaders = request {
         return Response::Leaders(members.hosted_leaders());
@@ -879,13 +900,14 @@ async fn handle(members: &Members, group: GroupId, request: Request) -> Response
         },
         Request::Forward(command) => match &member {
             Member::Controller(raft, _) => Response::Forward(lead_write(raft, command).await),
-            // To a partition, only a consumer group's commit or deletion (a partition of the offsets topic): nothing
-            // else reaches a partition's log except through its leader's own client.
+            // To a partition, only what a broker itself writes: a consumer group's commit or deletion (a
+            // partition of the offsets topic), a transaction's marker, a record of the transaction coordinator's
+            // topic. Nothing else reaches a partition's log except through its leader's own client.
             Member::Partition(raft, _)
                 if matches!(
                     command,
                     Command::CommitOffsets { .. } | Command::DeleteOffsets { .. }
-                ) =>
+                ) || own_append(members, &group, &command) =>
             {
                 Response::Forward(lead_write(raft, command).await)
             }

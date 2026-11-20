@@ -20,9 +20,10 @@ new `Store`, with no change to the protocol side.
 
 | Crate | What it holds |
 |---|---|
-| `openduct-storage` | The `Store` trait, record-batch parsing and checking (`batch.rs`), the per-partition index with the idempotent-producer rules (`partition.rs`), the in-memory store and the file store. No networking, no async. |
+| `openduct-storage` | The `Store` trait, record-batch parsing and checking (`batch.rs`), the records inside a batch and their codecs (`records.rs`, `codec.rs`), the per-partition index with the idempotent-producer and transaction rules (`partition.rs`), a topic's settings (`settings.rs`), compaction (`compact.rs`, and the file store's `cleaner.rs`), the in-memory store and the file store. No networking, no async. |
 | `openduct-raft` | Replication: Raft groups (the controller, and one per partition), their logs on disk with one shared flusher, the state machines and their hard-link snapshots, the multiplexed connections between brokers, and the replicated `Store` the broker serves in a cluster. |
-| `openduct-broker` | The TCP server, the request handlers, the group coordinator and a client (`client::Shared`: one set of connections for a node's workflows). Async on Tokio. |
+| `openduct-broker` | The TCP server, the request handlers, the group coordinator, the transaction coordinator (`handlers/transactions.rs`) and a client (`client::Shared`: one set of connections for a node's workflows). Async on Tokio. |
+| `openduct-registry` | The schema registry: Confluent's REST API for Avro, JSON Schema and Protobuf, its compatibility rules, and its records kept in the compacted topic `_schemas` ([schema registry](registry.md)). |
 | `openduct-value` | The values a message carries: JSON in and out, numbers, times. |
 | `openduct-expr` | CEL expressions with OpenDuct's limits on time, size and depth ([expressions](expressions.md)). |
 | `openduct-pipeline` | Pipeline files: what each message becomes; secrets named as `secret:NAME` ([pipelines](pipelines.md)). |

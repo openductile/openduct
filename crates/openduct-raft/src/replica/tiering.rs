@@ -34,6 +34,17 @@ pub(super) async fn tend(inner: Arc<Inner>, tier: TierConfig) {
             if inner.members.leader_of(&group).map(|(l, _)| l) != Some(inner.id) {
                 continue;
             }
+            // A compacted topic stays on the local disk, as in Kafka: its segments are written again as records
+            // are replaced, and object storage holds a segment as it was when stored.
+            let compacts = inner
+                .control
+                .state()
+                .topics
+                .get(&topic.to_string())
+                .is_some_and(|t| t.info.settings.compacts());
+            if compacts {
+                continue;
+            }
             if let Err(e) = store(&raft, &tier, &topic.to_string(), partition, &log).await {
                 tracing::warn!(%group, error = %e, "storing segments goes on later");
             }

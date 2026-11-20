@@ -572,3 +572,607 @@ fn deleted_records_are_gone_their_segments_with_them_and_the_start_lasts() {
         Err(StoreError::OffsetOutOfRange { .. })
     ));
 }
+
+fn limited(bytes: &str) -> crate::TopicSettings {
+    let mut s = crate::TopicSettings::default();
+    s.set(crate::RETENTION_BYTES, bytes).unwrap();
+    s
+}
+
+#[test]
+fn retention_bytes_removes_the_oldest_segments_while_the_rest_still_holds_the_limit() {
+    let dir = tempfile::tempdir().unwrap();
+    // A segment a batch: every batch closes the one before it.
+    let small = FileStoreConfig {
+        segment_bytes: 1,
+        ..FileStoreConfig::default()
+    };
+    let store = FileStore::open(dir.path(), small).unwrap();
+    store.create_topic("t", topic_config(1)).unwrap();
+    for i in 0..6 {
+        store.append("t", 0, batch(1, -1, -1, -1, 100 + i)).unwrap();
+    }
+    let one = store.read("t", 0, 0, usize::MAX).unwrap().batches[0].len() as u64;
+    assert_eq!(
+        store.enforce_retention(i64::MAX / 2).unwrap(),
+        0,
+        "no limit set: nothing goes"
+    );
+
+    // Room for two and a half batches: the oldest go while at least that much is left - three stay.
+    store
+        .set_topic_settings("t", limited(&(one * 5 / 2).to_string()))
+        .unwrap();
+    assert_eq!(store.enforce_retention(0).unwrap(), 3);
+    let read = store.read("t", 0, 3, usize::MAX).unwrap();
+    assert_eq!(read.offsets.log_start, 3);
+    assert_eq!(read.batches.len(), 3);
+    assert_eq!(
+        store.enforce_retention(0).unwrap(),
+        0,
+        "and nothing more the next time"
+    );
+
+    // A limit of nothing still keeps the segment being written to.
+    store.set_topic_settings("t", limited("0")).unwrap();
+    store.enforce_retention(0).unwrap();
+    let left = store.read("t", 0, 5, usize::MAX).unwrap();
+    assert_eq!((left.offsets.log_start, left.offsets.high_watermark), (5, 6));
+}
+
+#[test]
+fn a_topics_settings_are_kept_across_a_restart_and_a_topic_without_any_is_written_as_before() {
+    let dir = tempfile::tempdir().unwrap();
+    {
+        let store = FileStore::open(dir.path(), FileStoreConfig::default()).unwrap();
+        store.create_topic("plain", topic_config(1)).unwrap();
+        store.create_topic("limited", topic_config(1)).unwrap();
+        store.set_topic_settings("limited", limited("4096")).unwrap();
+        assert!(matches!(
+            store.set_topic_settings("nowhere", limited("1")),
+            Err(StoreError::UnknownTopic(_))
+        ));
+    }
+    let plain = fs::read_to_string(dir.path().join("topics/plain/topic.json")).unwrap();
+    assert!(
+        !plain.contains("settings"),
+        "an older build reads this file unchanged: {plain}"
+    );
+    let store = FileStore::open(dir.path(), FileStoreConfig::default()).unwrap();
+    assert_eq!(
+        store.topic("limited").unwrap().settings.retention_bytes(),
+        Some(4096)
+    );
+    assert!(store.topic("plain").unwrap().settings.is_empty());
+}
+
+fn compacting(wait_ms: &str) -> crate::TopicSettings {
+    let mut s = crate::TopicSettings::default();
+    s.set(crate::CLEANUP_POLICY, "compact").unwrap();
+    s.set(crate::DELETE_RETENTION_MS, wait_ms).unwrap();
+    s
+}
+
+/// What a consumer reading a partition from `from` sees: (offset, key, has a value). Checks the log has no hole.
+pub(crate) fn consumed(store: &dyn Store, topic: &str, from: i64) -> Vec<(i64, String, bool)> {
+    let read = store.read(topic, 0, from, usize::MAX).unwrap();
+    let mut out = Vec::new();
+    let mut next = None;
+    for b in &read.batches {
+        let (header, all) = crate::records::records(b).unwrap();
+        assert!(
+            next.is_none_or(|n| n == header.base_offset),
+            "a hole before {}",
+            header.base_offset
+        );
+        next = Some(header.base_offset + i64::from(header.last_offset_delta) + 1);
+        for r in all {
+            let key = String::from_utf8(b[r.key.unwrap()].to_vec()).unwrap();
+            out.push((header.base_offset + i64::from(r.offset_delta), key, !r.tombstone));
+        }
+    }
+    assert_eq!(
+        next.unwrap_or(read.offsets.high_watermark),
+        read.offsets.high_watermark
+    );
+    out
+}
+
+/// The same five batches for both stores: a and b, a again, c, a tombstone for b, d.
+pub(crate) fn write_keyed(store: &dyn Store) {
+    use crate::records::tests::keyed;
+    for (i, records) in [
+        &[(Some("a"), Some("1")), (Some("b"), Some("1"))][..],
+        &[(Some("a"), Some("2"))],
+        &[(Some("c"), Some("1"))],
+        &[(Some("b"), None)],
+        &[(Some("d"), Some("1"))],
+    ]
+    .into_iter()
+    .enumerate()
+    {
+        store.append("t", 0, keyed(records, 1_000 + i as i64, 0)).unwrap();
+    }
+}
+
+#[test]
+fn a_compacted_topic_keeps_the_newest_of_each_key_at_its_offset_across_a_restart() {
+    let dir = tempfile::tempdir().unwrap();
+    // A segment a batch: the last one is the segment being written to, which is never cleaned.
+    let small = FileStoreConfig {
+        segment_bytes: 1,
+        ..FileStoreConfig::default()
+    };
+    let after = vec![
+        (2, "a".to_owned(), true),
+        (3, "c".into(), true),
+        (5, "d".into(), true),
+    ];
+    {
+        let store = FileStore::open(dir.path(), small).unwrap();
+        store.create_topic("t", topic_config(1)).unwrap();
+        store.create_topic("plain", topic_config(1)).unwrap();
+        write_keyed(&store);
+        assert_eq!(
+            store.compact(10_000).unwrap(),
+            0,
+            "a topic that does not compact is left alone"
+        );
+        store.set_topic_settings("t", compacting("1000")).unwrap();
+        let before = store
+            .read("t", 0, 0, usize::MAX)
+            .unwrap()
+            .batches
+            .iter()
+            .map(Bytes::len)
+            .sum::<usize>();
+
+        assert_eq!(store.compact(10_000).unwrap(), 2, "the first a and b went");
+        assert_eq!(
+            consumed(&store, "t", 0),
+            vec![
+                (2, "a".to_owned(), true),
+                (3, "c".into(), true),
+                (4, "b".into(), false),
+                (5, "d".into(), true)
+            ]
+        );
+        let now = store.read("t", 0, 0, usize::MAX).unwrap();
+        assert!(now.batches.iter().map(Bytes::len).sum::<usize>() < before);
+        assert_eq!((now.offsets.log_start, now.offsets.high_watermark), (0, 6));
+        assert_eq!(
+            consumed(&store, "t", 4).first().unwrap().0,
+            4,
+            "a read from the middle starts there"
+        );
+
+        // The tombstone waits delete.retention.ms after the pass that cleaned past it.
+        assert_eq!(store.compact(10_999).unwrap(), 0);
+        assert_eq!(store.compact(11_000).unwrap(), 1);
+        assert_eq!(consumed(&store, "t", 0), after);
+        assert_eq!(store.compact(99_000).unwrap(), 0, "nothing new: nothing done");
+    }
+    let store = FileStore::open(dir.path(), small).unwrap();
+    assert_eq!(
+        consumed(&store, "t", 0),
+        after,
+        "read back from the segments as compaction left them"
+    );
+    assert_eq!(
+        store.compact(99_500).unwrap(),
+        0,
+        "what was cleaned is remembered"
+    );
+    // Offsets go on from where they were, and a new value for a replaces the kept one on the next pass.
+    use crate::records::tests::keyed;
+    assert_eq!(
+        store
+            .append("t", 0, keyed(&[(Some("a"), Some("3"))], 2_000, 0))
+            .unwrap()
+            .base_offset,
+        6
+    );
+    assert_eq!(
+        store
+            .append("t", 0, keyed(&[(Some("e"), Some("1"))], 2_001, 0))
+            .unwrap()
+            .base_offset,
+        7
+    );
+    assert_eq!(store.compact(100_000).unwrap(), 1);
+    assert_eq!(
+        consumed(&store, "t", 0),
+        vec![
+            (3, "c".to_owned(), true),
+            (5, "d".into(), true),
+            (6, "a".into(), true),
+            (7, "e".into(), true)
+        ]
+    );
+    // A topic that only compacts keeps its newest records for ever: retention by time removes nothing.
+    store.set_retention("t", Some(1)).unwrap();
+    assert_eq!(store.enforce_retention(i64::MAX / 2).unwrap(), 0);
+    assert!(
+        !dir.path()
+            .join("topics/t/0")
+            .read_dir()
+            .unwrap()
+            .any(|f| { f.unwrap().file_name().to_string_lossy().ends_with(".clean") })
+    );
+}
+
+#[test]
+fn records_younger_than_the_lag_are_not_compacted() {
+    let dir = tempfile::tempdir().unwrap();
+    let small = FileStoreConfig {
+        segment_bytes: 1,
+        ..FileStoreConfig::default()
+    };
+    let store = FileStore::open(dir.path(), small).unwrap();
+    store.create_topic("t", topic_config(1)).unwrap();
+    let mut settings = compacting("1000");
+    settings.set(crate::MIN_COMPACTION_LAG_MS, "500").unwrap();
+    store.set_topic_settings("t", settings).unwrap();
+    write_keyed(&store);
+    // The batches were written at 1000 to 1004: at 1400 none is old enough, at 1501 the first two are.
+    assert_eq!(store.compact(1_400).unwrap(), 0);
+    assert_eq!(consumed(&store, "t", 0).len(), 6);
+    assert_eq!(
+        store.compact(1_501).unwrap(),
+        1,
+        "the first a, replaced by the second"
+    );
+    assert_eq!(consumed(&store, "t", 0).len(), 5);
+}
+
+#[test]
+fn segment_ms_closes_a_segment_that_is_not_full_so_compaction_reaches_it() {
+    use crate::records::tests::keyed;
+    let dir = tempfile::tempdir().unwrap();
+    // Segments of the usual size: none of these few batches would ever fill one.
+    let store = FileStore::open(dir.path(), FileStoreConfig::default()).unwrap();
+    store.create_topic("t", topic_config(1)).unwrap();
+    let mut settings = compacting("1000");
+    settings.set(crate::SEGMENT_MS, "100").unwrap();
+    store.set_topic_settings("t", settings).unwrap();
+    // a at 1000 and 1050 share a segment; 1100 is 100 ms after its first record and starts the next; so does 1200.
+    for (i, at) in [1_000, 1_050, 1_100, 1_200].into_iter().enumerate() {
+        let value = i.to_string();
+        store
+            .append("t", 0, keyed(&[(Some("a"), Some(&value))], at, 0))
+            .unwrap();
+    }
+    let segments = || {
+        let mut names: Vec<String> = dir
+            .path()
+            .join("topics/t/0")
+            .read_dir()
+            .unwrap()
+            .map(|f| f.unwrap().file_name().to_string_lossy().into_owned())
+            .filter(|name| name.ends_with(".log"))
+            .collect();
+        names.sort();
+        names
+    };
+    assert_eq!(
+        segments(),
+        vec![
+            "00000000000000000000.log".to_owned(),
+            "00000000000000000002.log".into(),
+            "00000000000000000003.log".into()
+        ]
+    );
+    assert_eq!(
+        store.compact(10_000).unwrap(),
+        2,
+        "the two closed segments are cleaned"
+    );
+    assert_eq!(
+        consumed(&store, "t", 0),
+        vec![(2, "a".to_owned(), true), (3, "a".into(), true)]
+    );
+    drop(store);
+    // Read back: the segment being written to still knows when its first record was written.
+    let store = FileStore::open(dir.path(), FileStoreConfig::default()).unwrap();
+    store
+        .append("t", 0, keyed(&[(Some("a"), Some("4"))], 1_250, 0))
+        .unwrap();
+    assert_eq!(
+        segments().len(),
+        3,
+        "50 ms after the segment's first record: no new one"
+    );
+    store
+        .append("t", 0, keyed(&[(Some("a"), Some("5"))], 1_300, 0))
+        .unwrap();
+    assert_eq!(segments().len(), 4);
+}
+
+#[test]
+fn a_compacted_topic_refuses_a_keyless_record_and_log_append_time_stamps_what_is_stored() {
+    use crate::records::tests::keyed;
+    let dir = tempfile::tempdir().unwrap();
+    let store = FileStore::open(dir.path(), FileStoreConfig::default()).unwrap();
+    store.create_topic("t", topic_config(1)).unwrap();
+    let mut settings = compacting("1000");
+    settings
+        .set(crate::MESSAGE_TIMESTAMP_TYPE, "LogAppendTime")
+        .unwrap();
+    store.set_topic_settings("t", settings.clone()).unwrap();
+    assert!(matches!(
+        store.append("t", 0, keyed(&[(None, Some("1"))], 5, 0)),
+        Err(StoreError::KeylessRecord(0))
+    ));
+    let before = crate::now_ms();
+    assert_eq!(
+        store
+            .append("t", 0, keyed(&[(Some("a"), Some("1"))], 5, 0))
+            .unwrap()
+            .base_offset,
+        0
+    );
+    let stored = store.read("t", 0, 0, usize::MAX).unwrap().batches;
+    let header = crate::batch::parse_stored_header(&stored[0]).unwrap();
+    assert!(
+        header.max_timestamp >= before,
+        "the broker's time, not the producer's 5"
+    );
+    assert_ne!(header.attributes & crate::batch::LOG_APPEND_TIME_FLAG, 0);
+    // One broker keeps one copy: it does not promise two.
+    settings.set(crate::MIN_INSYNC_REPLICAS, "2").unwrap();
+    match store.set_topic_settings("t", settings) {
+        Err(StoreError::Unsupported(why)) => assert!(why.contains("one copy"), "{why}"),
+        other => panic!("refused, not {other:?}"),
+    }
+    assert_eq!(store.topic("t").unwrap().settings.min_insync_replicas(), 1);
+}
+
+/// How long a pass holds a partition: not a check, a measurement. Run it with
+/// `cargo test --release -p openduct-storage -- --ignored --nocapture how_long_a_pass_takes`.
+#[test]
+#[ignore = "a measurement: about 256 MiB written and compacted"]
+fn how_long_a_pass_takes() {
+    use crate::records::tests::keyed;
+    let dir = tempfile::tempdir().unwrap();
+    let config = FileStoreConfig {
+        segment_bytes: 16 * 1024 * 1024,
+        fsync: FsyncPolicy::Never,
+    };
+    let store = FileStore::open(dir.path(), config).unwrap();
+    store.create_topic("t", topic_config(1)).unwrap();
+    store.set_topic_settings("t", compacting("1000")).unwrap();
+    // Batches of 16 records of 1 KiB over 20,000 keys, so most records are replaced later.
+    let value = "v".repeat(1024);
+    let mut written = 0usize;
+    let mut n = 0u64;
+    while written < 256 * 1024 * 1024 {
+        let keys: Vec<String> = (0..16)
+            .map(|i| format!("key-{}", (n * 16 + i) % 20_000))
+            .collect();
+        let records: Vec<(Option<&str>, Option<&str>)> = keys
+            .iter()
+            .map(|k| (Some(k.as_str()), Some(value.as_str())))
+            .collect();
+        let batch = keyed(&records, 1_000, 0);
+        written += batch.len();
+        store.append("t", 0, batch).unwrap();
+        n += 1;
+    }
+    let started = std::time::Instant::now();
+    let removed = store.compact(10_000).unwrap();
+    let took = started.elapsed();
+    let left: usize = store
+        .read("t", 0, 0, usize::MAX)
+        .unwrap()
+        .batches
+        .iter()
+        .map(Bytes::len)
+        .sum();
+    println!(
+        "compacted {} MiB in {:.2} s ({:.0} MiB/s): {removed} records removed, {} MiB left",
+        written / (1024 * 1024),
+        took.as_secs_f64(),
+        written as f64 / (1024.0 * 1024.0) / took.as_secs_f64(),
+        left / (1024 * 1024)
+    );
+}
+
+/// The same for both stores: two producers' transactions side by side, one committed and one aborted.
+pub(crate) fn transactions_are_tracked(store: &dyn Store) {
+    use crate::batch::{Marker, tests::transactional};
+    let offsets = |store: &dyn Store| {
+        let o = store.offsets("t", 0).unwrap();
+        (o.high_watermark, o.last_stable)
+    };
+    // Outside any transaction: the last stable offset is the end.
+    store.append("t", 0, batch(2, -1, -1, -1, 1)).unwrap();
+    assert_eq!(offsets(store), (2, 2));
+    // Producer 7 opens a transaction at offset 2: nothing from there on is stable, whoever wrote it.
+    assert_eq!(
+        store
+            .append("t", 0, transactional(2, 7, 0, 2))
+            .unwrap()
+            .base_offset,
+        2
+    );
+    store.append("t", 0, batch(1, -1, -1, -1, 3)).unwrap();
+    assert_eq!(offsets(store), (5, 2));
+    // Producer 9 opens one at 5, and commits: still held back by producer 7's.
+    store.append("t", 0, transactional(1, 9, 0, 4)).unwrap();
+    let committed = store.end_transaction("t", 0, 9, 0, Marker::Commit, 1).unwrap();
+    assert_eq!(committed.base_offset, 6, "a marker takes an offset of its own");
+    assert_eq!(offsets(store), (7, 2));
+    assert!(store.aborted_transactions("t", 0, 0, 100).unwrap().is_empty());
+    // Producer 7 writes more, then aborts: everything is stable, and its records are named to be skipped.
+    store.append("t", 0, transactional(3, 7, 2, 5)).unwrap();
+    let aborted = store.end_transaction("t", 0, 7, 0, Marker::Abort, 1).unwrap();
+    assert_eq!(aborted.base_offset, 10);
+    assert_eq!(offsets(store), (11, 11));
+    let skipped = crate::AbortedTransaction {
+        producer_id: 7,
+        first_offset: 2,
+        last_offset: 10,
+    };
+    assert_eq!(store.aborted_transactions("t", 0, 0, 100).unwrap(), vec![skipped]);
+    // Asked for by the range a consumer reads: only what overlaps it.
+    assert_eq!(store.aborted_transactions("t", 0, 10, 11).unwrap(), vec![skipped]);
+    assert!(store.aborted_transactions("t", 0, 11, 100).unwrap().is_empty());
+    assert!(store.aborted_transactions("t", 0, 0, 2).unwrap().is_empty());
+    // The same producer's next transaction is its own.
+    store.append("t", 0, transactional(1, 7, 5, 6)).unwrap();
+    assert_eq!(offsets(store), (12, 11));
+    store.end_transaction("t", 0, 7, 0, Marker::Commit, 1).unwrap();
+    assert_eq!(offsets(store), (13, 13));
+    assert_eq!(store.aborted_transactions("t", 0, 0, 100).unwrap().len(), 1);
+    // A client may not write a marker; every batch, markers too, reads back as it was stored.
+    let forged = crate::batch::marker_batch(7, 0, Marker::Commit, 0, 0);
+    assert!(matches!(store.append("t", 0, forged), Err(StoreError::Batch(_))));
+    assert_eq!(store.read("t", 0, 0, usize::MAX).unwrap().batches.len(), 9);
+}
+
+#[test]
+fn a_partitions_transactions_are_tracked_and_read_back_from_its_segments() {
+    let dir = tempfile::tempdir().unwrap();
+    let small = FileStoreConfig {
+        segment_bytes: 200,
+        ..FileStoreConfig::default()
+    };
+    {
+        let store = FileStore::open(dir.path(), small).unwrap();
+        store.create_topic("t", topic_config(1)).unwrap();
+        transactions_are_tracked(&store);
+        // One more left open when the broker stops.
+        store
+            .append("t", 0, crate::batch::tests::transactional(1, 21, 0, 9))
+            .unwrap();
+    }
+    let store = FileStore::open(dir.path(), small).unwrap();
+    let offsets = store.offsets("t", 0).unwrap();
+    assert_eq!(
+        (offsets.high_watermark, offsets.last_stable),
+        (14, 13),
+        "the open one is open still"
+    );
+    assert_eq!(
+        store.aborted_transactions("t", 0, 0, 100).unwrap(),
+        vec![crate::AbortedTransaction {
+            producer_id: 7,
+            first_offset: 2,
+            last_offset: 10
+        }]
+    );
+    // Retention that removes an aborted transaction whole forgets it.
+    store.set_retention("t", Some(1)).unwrap();
+    store.enforce_retention(i64::MAX / 2).unwrap();
+    let start = store.offsets("t", 0).unwrap().log_start;
+    assert!(start > 10, "the test's segments are small enough to go: {start}");
+    assert!(store.aborted_transactions("t", 0, 0, 100).unwrap().is_empty());
+}
+
+/// A batch of keyed records in a transaction of `producer`.
+fn keyed_in_transaction(records: &[(Option<&str>, Option<&str>)], producer: i64, sequence: i32) -> Bytes {
+    let mut b = crate::records::tests::keyed(records, 1_000, 0x10).to_vec();
+    b[43..51].copy_from_slice(&producer.to_be_bytes());
+    b[51..53].copy_from_slice(&0i16.to_be_bytes());
+    b[53..57].copy_from_slice(&sequence.to_be_bytes());
+    let crc = crate::batch::checksum(&b);
+    b[17..21].copy_from_slice(&crc.to_be_bytes());
+    Bytes::from(b)
+}
+
+/// For both stores: compaction of a topic that holds transactions - one aborted, two committed, one still open.
+pub(crate) fn compaction_minds_transactions(store: &dyn Store) {
+    use crate::batch::Marker;
+    use crate::records::tests::keyed;
+    store.set_topic_settings("t", compacting("0")).unwrap();
+    store
+        .append("t", 0, keyed(&[(Some("a"), Some("1"))], 1_000, 0))
+        .unwrap(); // 0
+    // Aborted: a newer `a`, and a `b` nobody else wrote.
+    store
+        .append(
+            "t",
+            0,
+            keyed_in_transaction(&[(Some("a"), Some("lost")), (Some("b"), Some("lost"))], 7, 0),
+        )
+        .unwrap(); // 1, 2
+    store.end_transaction("t", 0, 7, 0, Marker::Abort, 0).unwrap(); // 3
+    // Committed, twice: the second `c` replaces the first.
+    store
+        .append("t", 0, keyed_in_transaction(&[(Some("c"), Some("1"))], 8, 0))
+        .unwrap(); // 4
+    store.end_transaction("t", 0, 8, 0, Marker::Commit, 0).unwrap(); // 5
+    store
+        .append("t", 0, keyed_in_transaction(&[(Some("c"), Some("2"))], 8, 1))
+        .unwrap(); // 6
+    store.end_transaction("t", 0, 8, 0, Marker::Commit, 0).unwrap(); // 7
+    // Still open: a newer `c` that may yet be aborted. Then records outside any transaction.
+    store
+        .append("t", 0, keyed_in_transaction(&[(Some("c"), Some("maybe"))], 9, 0))
+        .unwrap(); // 8
+    store
+        .append("t", 0, keyed(&[(Some("d"), Some("1"))], 1_000, 0))
+        .unwrap(); // 9
+    store
+        .append("t", 0, keyed(&[(Some("e"), Some("1"))], 1_000, 0))
+        .unwrap(); // 10
+    store
+        .append("t", 0, keyed(&[(Some("f"), Some("1"))], 1_000, 0))
+        .unwrap(); // 11: never cleaned
+    let before = store.offsets("t", 0).unwrap();
+    assert_eq!((before.high_watermark, before.last_stable), (12, 8));
+
+    // (Markers carry the time they were written at: the pass runs after that.)
+    let now = crate::now_ms() + 10_000;
+    assert_eq!(store.compact(now).unwrap(), 3, "the aborted two, and the first c");
+    // The aborted `a` replaced nothing: the committed one is still there. The open `c` replaced nothing either,
+    // and stays.
+    assert_eq!(
+        consumed(store, "t", 0),
+        [
+            (0, "a".to_owned(), true),
+            (6, "c".into(), true),
+            (8, "c".into(), true),
+            (9, "d".into(), true),
+            (10, "e".into(), true),
+            (11, "f".into(), true),
+        ]
+    );
+    // What a consumer of committed data is told is unchanged: where the open transaction starts, and the
+    // aborted one to skip (its marker is still there; its records are not).
+    let after = store.offsets("t", 0).unwrap();
+    assert_eq!((after.high_watermark, after.last_stable), (12, 8));
+    assert_eq!(store.aborted_transactions("t", 0, 0, 100).unwrap().len(), 1);
+    // The open one is aborted after all: its record goes with the next pass, and nothing else changes.
+    store.end_transaction("t", 0, 9, 0, Marker::Abort, 0).unwrap(); // 12
+    store
+        .append("t", 0, keyed(&[(Some("g"), Some("1"))], 1_000, 0))
+        .unwrap(); // 13: never cleaned
+    assert_eq!(store.compact(now + 10_000).unwrap(), 1);
+    assert_eq!(
+        consumed(store, "t", 0).iter().map(|r| r.0).collect::<Vec<_>>(),
+        [0, 6, 9, 10, 11, 13]
+    );
+}
+
+#[test]
+fn compaction_removes_aborted_records_and_leaves_open_transactions_across_a_restart() {
+    let dir = tempfile::tempdir().unwrap();
+    let small = FileStoreConfig {
+        segment_bytes: 1,
+        ..FileStoreConfig::default()
+    };
+    {
+        let store = FileStore::open(dir.path(), small).unwrap();
+        store.create_topic("t", topic_config(1)).unwrap();
+        compaction_minds_transactions(&store);
+    }
+    // Read back from its segments: the same records, and nothing left open.
+    let store = FileStore::open(dir.path(), small).unwrap();
+    assert_eq!(
+        consumed(&store, "t", 0).iter().map(|r| r.0).collect::<Vec<_>>(),
+        [0, 6, 9, 10, 11, 13]
+    );
+    let offsets = store.offsets("t", 0).unwrap();
+    assert_eq!((offsets.high_watermark, offsets.last_stable), (14, 14));
+}

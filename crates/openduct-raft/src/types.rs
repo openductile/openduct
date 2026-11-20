@@ -117,6 +117,27 @@ pub enum Command {
     DeleteRecords {
         before: i64,
     },
+    /// The controller's: a topic's settings beside retention.ms, replaced whole (feature level 2).
+    SetTopicSettings {
+        name: String,
+        settings: openduct_storage::TopicSettings,
+    },
+    /// A partition's: its oldest segments removed while what is left still holds this many bytes -
+    /// `retention.bytes` (feature level 2).
+    RetainBytes {
+        keep: u64,
+    },
+    /// A partition's: one pass of log compaction, decided by its leader - its clock and the topic's settings as
+    /// it saw them - so every copy cleans alike (feature level 3).
+    Compact {
+        now_ms: i64,
+        lag_ms: i64,
+        delete_retention_ms: i64,
+    },
+    /// A partition's: the segment being written to is closed and the next started - `segment.ms`, decided by the
+    /// leader before the batch that would overrun it, so every copy's segments start at the same batch (feature
+    /// level 3).
+    Roll,
 }
 
 impl fmt::Display for Command {
@@ -157,6 +178,16 @@ impl fmt::Display for Command {
             } => write!(f, "broker {id} runs {version} (feature level {supported_level})"),
             Command::RaiseLevel { level } => write!(f, "the cluster's feature level rises to {level}"),
             Command::DeleteRecords { before } => write!(f, "records before offset {before} deleted"),
+            Command::SetTopicSettings { name, settings } => {
+                write!(
+                    f,
+                    "topic {name} has {} settings of its own",
+                    settings.iter().count()
+                )
+            }
+            Command::RetainBytes { keep } => write!(f, "remove the oldest while {keep} bytes are left"),
+            Command::Compact { now_ms, .. } => write!(f, "compact, as of {now_ms}"),
+            Command::Roll => f.write_str("start the next segment"),
             Command::AddPartitions {
                 name,
                 total,
@@ -298,6 +329,9 @@ impl Refusal {
             | StoreError::PartitionsNotAdded { .. }
             | StoreError::InvalidReplicas(_)
             | StoreError::Unavailable(_)
+            | StoreError::BatchTooLarge { .. }
+            | StoreError::KeylessRecord(_)
+            | StoreError::Unsupported(_)
             | StoreError::Locked(_)
             | StoreError::Corrupt(_)
             | StoreError::Io(_) => return None,

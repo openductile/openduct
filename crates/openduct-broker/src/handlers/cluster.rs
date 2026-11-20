@@ -114,12 +114,28 @@ pub(crate) fn find_coordinator(
     version: i16,
 ) -> FindCoordinatorResponse {
     const GROUP: i8 = 0;
-    let found = |key: &str| {
-        if req.key_type == GROUP {
-            coordinator(state, key)
-        } else {
-            None
-        }
+    const TRANSACTION: i8 = 1;
+    let found = |key: &str| match req.key_type {
+        GROUP => coordinator(state, key),
+        // A broker that keeps its partitions alone coordinates its own transactions; in a cluster, the broker
+        // leading the coordinator's topic does (handlers/transactions.rs).
+        TRANSACTION => match state.store.cluster() {
+            None => Some((
+                BrokerId(state.config.node_id),
+                s(state.config.advertised_host.clone()),
+                state.config.advertised_port,
+            )),
+            Some(view) => state
+                .store
+                .placement(
+                    openduct_storage::TRANSACTIONS_TOPIC,
+                    super::transactions::partition_of(state, key),
+                )
+                .and_then(|p| p.leader)
+                .and_then(|leader| view.brokers.into_iter().find(|b| b.id == leader))
+                .map(|b| (BrokerId(b.id), s(b.host), b.port)),
+        },
+        _ => None,
     };
     let mut res = FindCoordinatorResponse::default();
     if version >= 4 {

@@ -47,6 +47,17 @@ pub enum StoreError {
     /// A replicated store that cannot reach most of its brokers, or has no leader yet.
     #[error("the cluster cannot take this now: {0}")]
     Unavailable(String),
+    /// A batch larger than its topic takes (`max.message.bytes`).
+    #[error("a record batch of {size} bytes is larger than the topic takes ({limit})")]
+    BatchTooLarge { size: usize, limit: usize },
+    /// A record without a key sent to a compacted topic, which keeps records by their key.
+    #[error(
+        "a compacted topic takes only records with a key; the record at position {0} of the batch has none"
+    )]
+    KeylessRecord(i32),
+    /// Something this store does not do, said so the caller can tell a client it will not pass by trying again.
+    #[error("{0}")]
+    Unsupported(String),
     #[error("data is corrupt: {0}")]
     Corrupt(String),
     #[error("storage I/O failed: {0}")]

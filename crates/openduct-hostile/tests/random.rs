@@ -491,6 +491,40 @@ fn kafka_requests() {
 }
 
 #[test]
+fn records() {
+    // One record with a key and a value, and two of them with a tombstone: what a compacted topic holds.
+    let one = [0x10u8, 0, 0, 0, 2, b'k', 2, b'v', 0];
+    let tombstone = [0x0eu8, 0, 0, 2, 2, b'k', 1, 0];
+    let mut seeds = vec![[&[1u8][..], &one[..]].concat()];
+    seeds.push([&[2u8][..], &one[..], &tombstone[..]].concat());
+    // The same two as each codec would hold them, so the decompressors are driven from real streams too.
+    let both = [&one[..], &tombstone[..]].concat();
+    for codec in [1i16, 2, 3, 4] {
+        let packed = openduct_storage::codec::compress(codec, &both).unwrap();
+        seeds.push([&[2u8][..], &packed[..]].concat());
+    }
+    drive("records", 3, 20_000, &seeds, quiet(openduct_hostile::records));
+}
+
+#[test]
+fn registry() {
+    let order = r#"{"type":"record","name":"Order","namespace":"shop","fields":[{"name":"id","type":"long"},{"name":"tags","type":{"type":"array","items":"string"},"default":[]},{"name":"next","type":["null","Order"],"default":null}]}"#;
+    let seeds: Vec<Vec<u8>> = vec![
+        order.as_bytes().to_vec(),
+        format!("/subjects/orders-value/versions?deleted=true\n{{\"schema\":{order:?}}}").into_bytes(),
+        b"/config/orders-value\n{\"compatibility\":\"FULL_TRANSITIVE\"}".to_vec(),
+        br#"{"keytype":"SCHEMA","subject":"s","version":1,"magic":1}{"subject":"s","version":1,"id":1,"schema":"\"string\"","deleted":false}"#.to_vec(),
+        br#"{"type":"enum","name":"E","symbols":["A","B"],"default":"A"}"#.to_vec(),
+        br##"{"type":"object","properties":{"id":{"type":"integer","minimum":0},"next":{"$ref":"#/definitions/n"}},"required":["id"],"additionalProperties":false,"definitions":{"n":{"anyOf":[{"type":"null"},{"$ref":"#"}]}}}"##.to_vec(),
+        b"syntax = \"proto3\"; package shop; message Order { int64 id = 1; repeated Line lines = 2; map<string, string> tags = 3; oneof pay { string card = 4; } message Line { string sku = 1; } enum Status { A = 0; } }".to_vec(),
+        b"/subjects/clicks-value/versions\n{\"schemaType\":\"PROTOBUF\",\"schema\":\"syntax = \\\"proto3\\\"; message A { int32 a = 1; }\"}".to_vec(),
+        b"/subjects/clicks-value/versions\n{\"schemaType\":\"JSON\",\"schema\":\"{\\\"type\\\":\\\"object\\\"}\"}".to_vec(),
+        b"/subjects/s/versions\n{\"schema\":\"\\\"string\\\"\",\"references\":[{\"name\":\"a\",\"subject\":\"s\",\"version\":1}]}".to_vec(),
+    ];
+    drive("registry", 4, 10_000, &seeds, quiet(openduct_hostile::registry));
+}
+
+#[test]
 fn record_batches() {
     drive(
         "record_batches",

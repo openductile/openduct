@@ -73,8 +73,20 @@ topic of the same name created later starts clean.
 
 ### Retention
 
-A topic created with a retention time loses whole segments once their newest batch is older than it. The segment
-being written to is never removed. Retention is checked every `--retention-check-secs` (60 by default).
+A topic with a retention time loses whole segments once their newest batch is older than it; one with a retention size
+(`retention.bytes`) loses its oldest closed segments for as long as what is left still holds at least that many bytes.
+The segment being written to is never removed. Both can be changed while the topic runs (AlterConfigs), and retention
+is checked every `--retention-check-secs` (60 by default).
+
+### Compaction
+
+A topic whose `cleanup.policy` has `compact` keeps, of the records with a key, only the newest of each key, at its own
+offset; a record with a key and no value deletes the key. Closed segments are cleaned with the retention round, never
+the one being written to: what stays of a segment (compressed batches again with their producer's codec) is written to
+a file beside it, flushed, and renamed over it, so a crash leaves the segment as it was or as it now is, whole.
+Offsets do not move, so a segment keeps its name. `segment.ms` closes a segment that spans that long, so a quiet topic
+is still cleaned. In a cluster each partition's leader orders the pass and every copy cleans alike.
+[protocol](protocol.md#log-compaction) has the rules a client sees, transactions included.
 
 ## Replicated (`--brokers`)
 

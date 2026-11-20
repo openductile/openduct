@@ -530,30 +530,41 @@ impl Inner {
     /// one it forwards to.
     fn commit_through_leader(&self, partition: i32, command: Command) -> Result<(), StoreError> {
         let group = self.group(crate::offsets::OFFSETS_TOPIC, partition)?;
-        let leader = self.members.leader_of(&group).map(|(l, _)| l);
-        let answer = match (leader, self.members.get(&group)) {
-            (Some(l), Some(Member::Partition(raft, _))) if l == self.id => {
-                self.runtime.block_on(lead_write(&raft, command))
+        self.write_through_leader(group, command)?.done()
+    }
+
+    /// A write to a partition by the broker itself - a group's commit, a transaction's marker, a record of an
+    /// internal topic - through the partition's leader: this broker, or the one it forwards to. Waits out an
+    /// election.
+    pub(crate) fn write_through_leader(&self, group: GroupId, command: Command) -> Result<Reply, StoreError> {
+        let deadline = Instant::now() + WRITE_WAIT;
+        loop {
+            let leader = self.members.leader_of(&group).map(|(l, _)| l);
+            let answer = match (leader, self.members.get(&group)) {
+                (Some(l), Some(Member::Partition(raft, _))) if l == self.id => {
+                    Some(self.runtime.block_on(lead_write(&raft, command.clone())))
+                }
+                (Some(l), _) => match self.broker(l) {
+                    Some(b) => Some(self.runtime.block_on(self.links.forward(
+                        l,
+                        &b.raft,
+                        group,
+                        command.clone(),
+                        WRITE_WAIT,
+                    ))),
+                    None => None,
+                },
+                (None, _) => None,
+            };
+            match answer {
+                Some(Ok((reply, _))) => return Ok(reply),
+                Some(Err(Forwarded::Unavailable(why))) => return Err(StoreError::Unavailable(why)),
+                Some(Err(Forwarded::NotLeader { .. })) | None => {}
             }
-            (Some(l), _) => {
-                let b = self
-                    .broker(l)
-                    .ok_or_else(|| StoreError::Unavailable(format!("broker {l} is unknown")))?;
-                self.runtime
-                    .block_on(self.links.forward(l, &b.raft, group, command, WRITE_WAIT))
+            if Instant::now() >= deadline {
+                return Err(StoreError::Unavailable(format!("{group} has no leader now")));
             }
-            (None, _) => {
-                return Err(StoreError::Unavailable(
-                    "the group's offsets have no leader now".to_owned(),
-                ));
-            }
-        };
-        match answer {
-            Ok((reply, _)) => reply.done(),
-            Err(Forwarded::NotLeader { leader }) => Err(StoreError::NotLeader {
-                leader: leader.and_then(|l| self.broker(l)).map(|b| b.kafka),
-            }),
-            Err(Forwarded::Unavailable(why)) => Err(StoreError::Unavailable(why)),
+            std::thread::sleep(Duration::from_millis(50));
         }
     }
 

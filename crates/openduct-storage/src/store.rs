@@ -8,6 +8,7 @@ use bytes::Bytes;
 use serde::{Deserialize, Serialize};
 
 use crate::error::StoreError;
+use crate::settings::TopicSettings;
 
 /// A topic as it is created.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -28,6 +29,21 @@ pub struct TopicInfo {
     pub name: String,
     pub partitions: i32,
     pub retention_ms: Option<i64>,
+    /// Its other settings (settings.rs). Absent from what an older build wrote, and left out when there are none,
+    /// so a topic without any is written exactly as before.
+    #[serde(default, skip_serializing_if = "TopicSettings::is_empty")]
+    pub settings: TopicSettings,
+}
+
+/// A store with one copy of everything honours `min.insync.replicas` of one, and says so for more.
+pub(crate) fn one_copy(name: &str, settings: &TopicSettings) -> Result<(), StoreError> {
+    let wanted = settings.min_insync_replicas();
+    if wanted > 1 {
+        return Err(StoreError::Unsupported(format!(
+            "min.insync.replicas={wanted} needs a cluster: this broker keeps one copy; {name:?} is unchanged"
+        )));
+    }
+    Ok(())
 }
 
 /// Where an appended batch landed.
@@ -45,6 +61,9 @@ pub struct Appended {
 pub struct PartitionOffsets {
     pub log_start: i64,
     pub high_watermark: i64,
+    /// The last stable offset: every record before it is committed, aborted or not part of a transaction. The
+    /// high watermark, when no transaction is open.
+    pub last_stable: i64,
 }
 
 /// Batches read from a partition, exactly as stored.
@@ -110,9 +129,13 @@ impl std::fmt::Debug for Pending {
 /// create or delete it.
 pub const OFFSETS_TOPIC: &str = "__consumer_offsets";
 
+/// The internal topic holding what the transaction coordinator knows of each transactional producer. Clients
+/// may not write, create or delete it.
+pub const TRANSACTIONS_TOPIC: &str = "__transaction_state";
+
 /// Whether a topic is one of OpenDuct's own.
 pub fn is_internal_topic(topic: &str) -> bool {
-    topic == OFFSETS_TOPIC
+    topic == OFFSETS_TOPIC || topic == TRANSACTIONS_TOPIC
 }
 
 /// One broker of a cluster, as clients reach it.
@@ -202,6 +225,14 @@ pub trait Store: Send + Sync + std::fmt::Debug + 'static {
     ) -> Result<(), StoreError>;
     /// Change how long a topic keeps its batches (`None`: for ever); retention acts on it from its next round.
     fn set_retention(&self, name: &str, retention_ms: Option<i64>) -> Result<(), StoreError>;
+    /// A topic's other settings, replaced whole (the caller has checked each one - settings.rs). A store that
+    /// does not keep them yet says so, and nothing is half-applied.
+    fn set_topic_settings(&self, name: &str, settings: TopicSettings) -> Result<(), StoreError> {
+        let _ = settings;
+        Err(StoreError::Unsupported(format!(
+            "this store does not keep a topic's settings beyond retention.ms yet; {name:?} is unchanged"
+        )))
+    }
 
     /// Append one record batch (already split and checked by the broker). Applies the idempotent-producer rules.
     fn append(&self, topic: &str, partition: i32, batch: Bytes) -> Result<Appended, StoreError>;
@@ -254,6 +285,70 @@ pub trait Store: Send + Sync + std::fmt::Debug + 'static {
 
     /// Remove batches older than their topic's retention. Returns how many batches were removed.
     fn enforce_retention(&self, now_ms: i64) -> Result<usize, StoreError>;
+    /// Ends a producer's transaction on a partition: writes its marker - committed, or aborted - as a transaction
+    /// coordinator does. Where the marker landed.
+    fn end_transaction(
+        &self,
+        topic: &str,
+        partition: i32,
+        producer_id: i64,
+        producer_epoch: i16,
+        marker: crate::batch::Marker,
+        coordinator_epoch: i32,
+    ) -> Result<Appended, StoreError> {
+        let _ = (partition, producer_id, producer_epoch, marker, coordinator_epoch);
+        Err(StoreError::Unsupported(format!(
+            "this store does not keep transactions yet; {topic:?} is unchanged"
+        )))
+    }
+    /// Whether the store keeps transactions now. A shared store does once every broker of its cluster is upgraded
+    /// (and a moment after a new cluster's first start, while its feature level is being set).
+    fn transactions_ready(&self) -> bool {
+        true
+    }
+    /// Appends a batch of the broker's own (a record of one of its internal topics) to a partition, whichever
+    /// broker leads it: a store kept by one broker appends; a shared one sends it to the partition's leader.
+    fn append_through_leader(
+        &self,
+        topic: &str,
+        partition: i32,
+        batch: Bytes,
+    ) -> Result<Appended, StoreError> {
+        self.append(topic, partition, batch)
+    }
+    /// The transactions open on a partition now: (producer id, its epoch, the offset the transaction starts at).
+    /// On a shared store: at the partition's leader. Cheap when none is open.
+    fn open_transactions(&self, topic: &str, partition: i32) -> Result<Vec<(i64, i16, i64)>, StoreError> {
+        let _ = (topic, partition);
+        Ok(Vec::new())
+    }
+    /// The producers a partition knows now, by producer id (on a shared store: at its leader).
+    fn active_producers(
+        &self,
+        topic: &str,
+        partition: i32,
+    ) -> Result<Vec<crate::ActiveProducer>, StoreError> {
+        let _ = (topic, partition);
+        Ok(Vec::new())
+    }
+    /// The aborted transactions of a partition with records at or after `from` and before `upto`: what a
+    /// consumer reading only committed data must skip.
+    fn aborted_transactions(
+        &self,
+        topic: &str,
+        partition: i32,
+        from: i64,
+        upto: i64,
+    ) -> Result<Vec<crate::AbortedTransaction>, StoreError> {
+        let _ = (topic, partition, from, upto);
+        Ok(Vec::new())
+    }
+    /// Log compaction, one round: on every topic whose `cleanup.policy` has `compact`, the records a newer one
+    /// of the same key replaced are removed (compact.rs). How many records went.
+    fn compact(&self, now_ms: i64) -> Result<usize, StoreError> {
+        let _ = now_ms;
+        Ok(0)
+    }
 
     /// The brokers sharing this store and its coordinator; `None` for a store kept by this broker alone. Cheap: it
     /// never blocks.

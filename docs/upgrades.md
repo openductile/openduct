@@ -30,6 +30,13 @@ The level never goes down. A broker whose release is older than the level in use
 So a rollback is possible while the cluster has not moved to the new level - that is, until the last broker is
 upgraded. After that, roll forward.
 
+| Level | What starts at it |
+|---|---|
+| 1 | Everything up to the first release. |
+| 2 | A topic's own settings beside `retention.ms`: `retention.bytes` and `max.message.bytes`. Until the last broker is upgraded, setting one answers `INVALID_CONFIG` and nothing changes. |
+| 3 | Log compaction: `cleanup.policy` with `compact`, `delete.retention.ms`, `min.compaction.lag.ms`; and `segment.ms` closing segments by time. |
+| 4 | Transactions: a partition's log holds a transaction's records and its commit and abort markers. |
+
 ## Formats on disk
 
 | What | Where | Format |

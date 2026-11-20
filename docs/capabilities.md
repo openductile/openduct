@@ -11,10 +11,13 @@ with the tools that do. [comparison.md](comparison.md) sets it beside those tool
 |---|---|
 | Kafka wire protocol | Producers, consumers and consumer groups with the clients you have ([protocol](protocol.md)) |
 | Idempotent producers | Retries never write twice |
+| Transactions | A producer writes to several partitions and commits a consumer group's offsets together or not at all (exactly-once), on one broker and in a cluster; `read_committed` consumers. [protocol](protocol.md#transactions) says what is missing |
 | Durable writes | `fsync` before every acknowledgement; every read checksum-verified; recovery cuts off only an unacknowledged torn write ([storage](storage.md)) |
 | Replication | A Raft group per partition, leaders spread over the brokers; brokers join and leave, partitions move, while clients carry on |
 | Tiered storage | Older segments in S3-compatible storage, read back from it |
-| Retention | By time, per topic, changeable while running; `DeleteRecords` |
+| Retention | By time and by size, per topic, changeable while running; `DeleteRecords` |
+| Log compaction | `cleanup.policy=compact` (or `compact,delete`): the newest record of each key stays at its offset, tombstones delete, compressed batches included; on one broker or a cluster ([protocol](protocol.md#log-compaction)) |
+| Schema registry | Built in (`--registry-listen`): Confluent's REST API for Avro, JSON Schema and Protobuf - subjects, versions, ids, the seven compatibility levels, references between subjects, soft and permanent deletes - kept in a compacted topic and served by every broker of a cluster ([schema registry](registry.md)) |
 | Topics and partitions | Create, list, delete (by name or id), add partitions |
 | Consumer groups | Classic protocol, committed offsets, spread over the brokers; describe, list, delete |
 | Security | TLS 1.3; SCRAM, OAuth bearer tokens, client certificates, PLAIN over TLS; access rules that deny by default; quotas per principal ([security](security.md)) |
@@ -74,10 +77,7 @@ with the tools that do. [comparison.md](comparison.md) sets it beside those tool
 
 | Missing | Who has it |
 |---|---|
-| Transactions and exactly-once processing | Apache Kafka, Confluent, Redpanda |
-| Log compaction (keep the last value of each key) | Apache Kafka, Confluent, Redpanda |
-| Changing settings other than retention while running | Apache Kafka, Confluent, Redpanda |
-| A schema registry (Avro, Protobuf, JSON Schema) | Confluent, Redpanda (built in) |
+| Changing a broker's settings while running (a topic's change while it runs) | Apache Kafka, Confluent, Redpanda |
 | The Kafka Connect API (OpenDuct has its own connectors instead) | Apache Kafka, Confluent |
 | Stream processing with windows, joins and state (pipelines change one message at a time) | Kafka Streams, Apache Flink, ksqlDB |
 | The newer consumer group protocol (KIP-848) and queue-style share groups (KIP-932) | Apache Kafka 4.x |

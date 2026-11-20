@@ -48,6 +48,73 @@ pub fn batch(count: i32, timestamp: i64) -> Bytes {
     Bytes::from(b)
 }
 
+fn varint(out: &mut Vec<u8>, n: i64) {
+    let mut raw = ((n << 1) ^ (n >> 63)) as u64;
+    loop {
+        let b = (raw & 0x7f) as u8;
+        raw >>= 7;
+        if raw == 0 {
+            out.push(b);
+            return;
+        }
+        out.push(b | 0x80);
+    }
+}
+
+/// A record batch (format 2) of real records, each a key and a value - or no value, a tombstone.
+#[allow(dead_code)]
+pub fn keyed(records: &[(&str, Option<&str>)], timestamp: i64) -> Bytes {
+    let with_keys: Vec<(Option<&str>, Option<&str>)> = records.iter().map(|(k, v)| (Some(*k), *v)).collect();
+    records_batch(&with_keys, timestamp)
+}
+
+/// As [`keyed`], where a record may have no key.
+#[allow(dead_code)]
+pub fn records_batch(records: &[(Option<&str>, Option<&str>)], timestamp: i64) -> Bytes {
+    let mut body = Vec::new();
+    for (i, (key, value)) in records.iter().enumerate() {
+        let mut r = vec![0u8];
+        varint(&mut r, 0);
+        varint(&mut r, i as i64);
+        match key {
+            Some(k) => {
+                varint(&mut r, k.len() as i64);
+                r.extend_from_slice(k.as_bytes());
+            }
+            None => varint(&mut r, -1),
+        }
+        match value {
+            Some(v) => {
+                varint(&mut r, v.len() as i64);
+                r.extend_from_slice(v.as_bytes());
+            }
+            None => varint(&mut r, -1),
+        }
+        varint(&mut r, 0);
+        varint(&mut body, r.len() as i64);
+        body.extend_from_slice(&r);
+    }
+    let count = i32::try_from(records.len()).unwrap();
+    let mut b = Vec::new();
+    b.extend_from_slice(&0i64.to_be_bytes());
+    b.extend_from_slice(&i32::try_from(49 + body.len()).unwrap().to_be_bytes());
+    b.extend_from_slice(&0i32.to_be_bytes());
+    b.push(2u8);
+    b.extend_from_slice(&0u32.to_be_bytes());
+    b.extend_from_slice(&0i16.to_be_bytes());
+    b.extend_from_slice(&(count - 1).to_be_bytes());
+    b.extend_from_slice(&timestamp.to_be_bytes());
+    b.extend_from_slice(&timestamp.to_be_bytes());
+    b.extend_from_slice(&(-1i64).to_be_bytes());
+    b.extend_from_slice(&(-1i16).to_be_bytes());
+    b.extend_from_slice(&(-1i32).to_be_bytes());
+    b.extend_from_slice(&count.to_be_bytes());
+    b.extend_from_slice(&body);
+    let crc = crc32c::crc32c(&b[21..]);
+    b[17..21].copy_from_slice(&crc.to_be_bytes());
+    Bytes::from(b)
+}
+
 pub fn free_port() -> u16 {
     TcpListener::bind("127.0.0.1:0")
         .unwrap()
@@ -76,6 +143,8 @@ pub struct Cluster {
     pub tier: Option<TierConfig>,
     /// The feature level a broker's build supports, when it is not the current one (an older build).
     pub levels: BTreeMap<u64, u32>,
+    /// The size a partition's segment closes at, when a test needs many small ones.
+    pub segment_bytes: Option<u64>,
 }
 
 impl Cluster {
@@ -103,6 +172,7 @@ impl Cluster {
             tls: BTreeMap::new(),
             tier: None,
             levels: BTreeMap::new(),
+            segment_bytes: None,
         }
     }
 
@@ -136,6 +206,9 @@ impl Cluster {
         if let Some(tier) = &self.tier {
             config.tier = Some(tier.clone());
             config.store.segment_bytes = 1024;
+        }
+        if let Some(bytes) = self.segment_bytes {
+            config.store.segment_bytes = bytes;
         }
         let replica = Replica::start(config).await.unwrap();
         self.running.insert(id, Arc::new(replica));

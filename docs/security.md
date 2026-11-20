@@ -62,7 +62,8 @@ before it stay):
 ```
 
 - **Deny by default:** nothing is allowed unless a rule allows it; a `deny` rule wins over every `allow`.
-- Resources: `topic`, `group`, `cluster` (name `kafka-cluster`), `transactional_id`. Patterns: `literal` (the name,
+- Resources: `topic`, `group`, `cluster` (name `kafka-cluster`), `transactional_id`, and `subject` - a subject of
+  the [schema registry](registry.md#who-may-do-what). Patterns: `literal` (the name,
   or `*` for all) and `prefixed` (a tenant's name space). `host` holds a rule to one address (default `*`).
 - Operations as Kafka names them: `read`, `write`, `create`, `delete`, `alter`, `describe`, `cluster_action`,
   `describe_configs`, `alter_configs`, `idempotent_write`, `all`. Read, write, delete and alter imply describe.

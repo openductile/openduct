@@ -43,9 +43,20 @@ pub(crate) async fn list_offsets(
         for p in &t.partitions {
             let mut out = ListOffsetsPartitionResponse::default().with_partition_index(p.partition_index);
             let (topic, partition, ts) = (name.clone(), p.partition_index, p.timestamp);
+            // To a consumer that reads only committed data, the end is the last stable offset.
+            let committed_only = req.isolation_level == 1;
             let found = blocking(&state.store, move |s| {
                 let found = match ts {
-                    LATEST => s.offsets(&topic, partition).map(|o| Some((o.high_watermark, -1))),
+                    LATEST => s.offsets(&topic, partition).map(|o| {
+                        Some((
+                            if committed_only {
+                                o.last_stable
+                            } else {
+                                o.high_watermark
+                            },
+                            -1,
+                        ))
+                    }),
                     EARLIEST => s.offsets(&topic, partition).map(|o| Some((o.log_start, -1))),
                     MAX_TIMESTAMP => s.max_timestamp(&topic, partition),
                     t => s.offset_for_timestamp(&topic, partition, t),

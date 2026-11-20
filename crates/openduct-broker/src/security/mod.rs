@@ -34,7 +34,7 @@ pub(crate) use authorize::{
 pub use credentials::{Credentials, Users, add_user, remove_user};
 pub use jwt::JwtSettings;
 pub(crate) use tls::certificate_name;
-pub use tls::{ClientCerts, ClientTls};
+pub use tls::{ClientCerts, ClientTls, certificate_principal};
 
 use scram::{ScramMechanism, ScramServer, Step};
 
@@ -183,6 +183,46 @@ impl Security {
             m.push("OAUTHBEARER");
         }
         m
+    }
+
+    /// Whether clients can sign in here by name and password, or with a token.
+    pub fn can_sign_in(&self) -> bool {
+        self.credentials.is_some() || self.tokens.is_some()
+    }
+
+    /// Who a name and password are, for another listener of the same program that takes them directly (the
+    /// schema registry's, over basic sign-in): checked against the same credentials SCRAM uses. `None` when they
+    /// are not right, or the address has failed too often lately - which a wrong answer here counts towards.
+    pub fn principal_of_password(&self, peer: IpAddr, name: &str, password: &str) -> Option<Principal> {
+        if self.kept_out(peer) {
+            return None;
+        }
+        let credentials = self.credentials.as_ref()?;
+        let right = ScramMechanism::ALL.into_iter().rev().find_map(|mechanism| {
+            credentials
+                .lookup(mechanism, name)
+                .map(|kept| kept.matches(mechanism, password))
+        });
+        if right == Some(true) {
+            return Some(Principal::user(name));
+        }
+        self.failed(peer);
+        None
+    }
+
+    /// Who a signed token names, for another listener of the same program (the schema registry's bearer
+    /// sign-in): verified as OAUTHBEARER's are. `None` when it does not verify, with the same count of failures.
+    pub fn principal_of_token(&self, peer: IpAddr, token: &str) -> Option<Principal> {
+        if self.kept_out(peer) {
+            return None;
+        }
+        match self.tokens.as_ref()?.verify(token, SystemTime::now()) {
+            Ok((name, _)) => Some(Principal::user(&name)),
+            Err(_) => {
+                self.failed(peer);
+                None
+            }
+        }
     }
 
     /// Whether an address has failed to sign in too often lately.

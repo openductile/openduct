@@ -115,6 +115,7 @@ impl ControllerState {
                     name: name.clone(),
                     partitions: config.partitions,
                     retention_ms: config.retention_ms,
+                    settings: Default::default(),
                 };
                 self.topics.insert(
                     name,
@@ -189,6 +190,13 @@ impl ControllerState {
                 t.info.retention_ms = retention_ms;
                 Reply::Done
             }
+            Command::SetTopicSettings { name, settings } => {
+                let Some(t) = self.topics.get_mut(&name) else {
+                    return refused(StoreError::UnknownTopic(name));
+                };
+                t.info.settings = settings;
+                Reply::Done
+            }
             Command::DeleteOffsets { group, partitions } => {
                 openduct_storage::forget_offsets(&mut self.offsets, &group, partitions.as_deref());
                 Reply::Done
@@ -255,6 +263,9 @@ impl ControllerState {
             }
             other @ (Command::Append { .. }
             | Command::Retain { .. }
+            | Command::RetainBytes { .. }
+            | Command::Compact { .. }
+            | Command::Roll
             | Command::Tiered { .. }
             | Command::Offload { .. }
             | Command::DeleteRecords { .. }) => Reply::Refused(Refusal::Misrouted(other.to_string())),

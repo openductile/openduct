@@ -261,6 +261,21 @@ impl PartitionLog {
         self.partition.lock().read(offset, max_bytes)
     }
 
+    /// The transactions open on the partition now.
+    pub fn open_transactions(&self) -> Vec<(i64, i16, i64)> {
+        self.partition.lock().index.open_transactions()
+    }
+
+    /// The producers the partition knows now.
+    pub fn active_producers(&self) -> Vec<crate::ActiveProducer> {
+        self.partition.lock().index.active_producers()
+    }
+
+    /// The aborted transactions with records at or after `from` and before `upto`.
+    pub fn aborted_transactions(&self, from: i64, upto: i64) -> Vec<crate::AbortedTransaction> {
+        self.partition.lock().index.aborted_between(from, upto)
+    }
+
     pub fn offsets(&self) -> PartitionOffsets {
         self.partition.lock().offsets()
     }
@@ -298,6 +313,50 @@ impl PartitionLog {
         self.retain_tiers(&mut p, cutoff_ms)
     }
 
+    /// `retention.bytes`: the oldest segments go while what is left would still hold at least `keep` bytes; how
+    /// many batches went.
+    pub fn enforce_size(&self, keep: u64) -> Result<usize, StoreError> {
+        let mut p = self.partition.lock();
+        self.retain_size_tiers(&mut p, keep)
+    }
+
+    /// `segment.ms`: whether the segment being written to already spans that long for a batch of this timestamp.
+    pub fn roll_due(&self, segment_ms: i64, timestamp: i64) -> bool {
+        self.partition.lock().roll_due(segment_ms, timestamp)
+    }
+
+    /// Closes the segment being written to and starts the next (nothing, when it is empty).
+    pub fn roll(&self) -> Result<(), StoreError> {
+        self.partition.lock().roll()
+    }
+
+    /// Log compaction, one pass (file/cleaner.rs): the closed segments on the local disk that object storage
+    /// does not hold, cleaned as far as `lag_ms` allows. How many records went.
+    pub fn compact(&self, now_ms: i64, lag_ms: i64, delete_retention_ms: i64) -> Result<usize, StoreError> {
+        let floor = self.compaction_floor();
+        self.partition
+            .lock()
+            .compact(now_ms, lag_ms, delete_retention_ms, floor)
+    }
+
+    /// Whether a pass now would have anything to do.
+    pub fn compaction_due(&self, now_ms: i64, lag_ms: i64, delete_retention_ms: i64) -> bool {
+        let floor = self.compaction_floor();
+        self.partition
+            .lock()
+            .compaction_due(now_ms, lag_ms, delete_retention_ms, floor)
+    }
+
+    /// Segments object storage holds are never written again: compaction starts after the last of them.
+    fn compaction_floor(&self) -> i64 {
+        self.tier.lock().segments.last().map_or(i64::MIN, |s| s.last + 1)
+    }
+
+    /// The bytes of its segments on the local disk.
+    pub fn local_bytes(&self) -> u64 {
+        self.partition.lock().segments.values().map(|s| s.size).sum()
+    }
+
     /// Takes a checkpoint into `dest` (a new directory): every segment linked with its length now, and the producer
     /// table. Appends wait meanwhile. On the device once `sync_checkpoint` has run on it.
     pub fn checkpoint(&self, dest: &Path) -> Result<Manifest, StoreError> {
@@ -324,6 +383,8 @@ impl PartitionLog {
         }
         let table = write_versioned(p.index.producers())?;
         let p_start = p.index.log_start;
+        // What compaction did here, when it did anything: the copy made from this waits for tombstones alike.
+        let cleaning = fs::read(p.dir.join(super::cleaner::STATE)).ok();
         let tiered = write_versioned(self.tier.lock().segments.clone())?;
         let offsets = {
             let held = self.offsets.lock();
@@ -337,6 +398,13 @@ impl PartitionLog {
             files.push(ManifestFile {
                 path: OFFSETS.to_owned(),
                 len: offsets.len() as u64,
+            });
+        }
+        if let Some(cleaning) = cleaning {
+            fs::write(dest.join(super::cleaner::STATE), &cleaning)?;
+            files.push(ManifestFile {
+                path: super::cleaner::STATE.to_owned(),
+                len: cleaning.len() as u64,
             });
         }
         let start = write_versioned(p_start)?;

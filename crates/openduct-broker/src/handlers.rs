@@ -9,7 +9,7 @@ use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use bytes::{Bytes, BytesMut};
 use kafka_protocol::messages::api_versions_response::ApiVersion;
-use kafka_protocol::messages::fetch_response::{FetchableTopicResponse, PartitionData};
+use kafka_protocol::messages::fetch_response::{AbortedTransaction, FetchableTopicResponse, PartitionData};
 use kafka_protocol::messages::join_group_response::JoinGroupResponseMember;
 use kafka_protocol::messages::leave_group_response::MemberResponse;
 use kafka_protocol::messages::metadata_response::{MetadataResponsePartition, MetadataResponseTopic};
@@ -43,6 +43,7 @@ mod configs;
 mod group_admin;
 mod offsets;
 mod topics;
+pub(crate) mod transactions;
 pub(crate) use admin::{
     alter_partition_reassignments, init_producer_refused, list_partition_reassignments,
     reassignment_list_refused, reassignments_refused, unregister_broker, unregister_refused,
@@ -51,7 +52,7 @@ pub(crate) use cluster::{
     find_coordinator, heartbeat_refused, join_refused, leave_refused, not_coordinator, offset_commit_refused,
     offset_fetch_refused, sync_refused,
 };
-pub(crate) use configs::{describe_cluster, describe_configs, incremental_alter_configs};
+pub(crate) use configs::{alter_configs, describe_cluster, describe_configs, incremental_alter_configs};
 pub(crate) use group_admin::{delete_groups, delete_offsets, describe_groups, list_groups};
 pub(crate) use offsets::{delete_records, list_offsets, offset_for_leader_epoch};
 pub(crate) use topics::{create_partitions, create_topics, delete_topics};
@@ -80,8 +81,17 @@ pub(crate) const SUPPORTED: &[(ApiKey, i16, i16)] = &[
     (ApiKey::DeleteTopics, 1, 6),
     (ApiKey::CreatePartitions, 0, 3),
     (ApiKey::InitProducerId, 0, 4),
+    (ApiKey::AddPartitionsToTxn, 0, 5),
+    (ApiKey::AddOffsetsToTxn, 0, 3),
+    (ApiKey::EndTxn, 0, 5),
+    (ApiKey::TxnOffsetCommit, 0, 5),
+    (ApiKey::WriteTxnMarkers, 0, 1),
+    (ApiKey::DescribeProducers, 0, 0),
+    (ApiKey::DescribeTransactions, 0, 0),
+    (ApiKey::ListTransactions, 0, 2),
     (ApiKey::DescribeConfigs, 1, 4),
     (ApiKey::IncrementalAlterConfigs, 0, 1),
+    (ApiKey::AlterConfigs, 0, 2),
     (ApiKey::OffsetForLeaderEpoch, 2, 4),
     (ApiKey::AlterPartitionReassignments, 0, 1),
     (ApiKey::ListPartitionReassignments, 0, 0),
@@ -111,6 +121,8 @@ pub(crate) struct State {
     pub(crate) request_memory: Arc<tokio::sync::Semaphore>,
     /// What the broker measures, for `--metrics-listen`.
     pub(crate) metrics: crate::metrics::Metrics,
+    /// The transaction coordinator's state.
+    pub(crate) transactions: transactions::Transactions,
 }
 
 fn s(text: impl Into<String>) -> StrBytes {
@@ -140,7 +152,13 @@ async fn blocking<T: Send + 'static>(
 
 // ---------------------------------------------------------------------------------------------------------------
 
-pub(crate) fn api_versions(_req: &ApiVersionsRequest, version: i16) -> ApiVersionsResponse {
+/// `second_protocol`: whether the store keeps transactions now, so a client may use Kafka 4's second transaction
+/// protocol (the feature `transaction.version` at 2) - announced from version 3, where features are told.
+pub(crate) fn api_versions(
+    _req: &ApiVersionsRequest,
+    version: i16,
+    second_protocol: bool,
+) -> ApiVersionsResponse {
     let mut res = ApiVersionsResponse::default().with_api_keys(
         SUPPORTED
             .iter()
@@ -152,7 +170,22 @@ pub(crate) fn api_versions(_req: &ApiVersionsRequest, version: i16) -> ApiVersio
             })
             .collect(),
     );
-    let _ = version;
+    if version >= 3 && second_protocol {
+        use kafka_protocol::messages::api_versions_response::{FinalizedFeatureKey, SupportedFeatureKey};
+        res.supported_features = vec![
+            SupportedFeatureKey::default()
+                .with_name(s("transaction.version"))
+                .with_min_version(0)
+                .with_max_version(2),
+        ];
+        res.finalized_features = vec![
+            FinalizedFeatureKey::default()
+                .with_name(s("transaction.version"))
+                .with_min_version_level(0)
+                .with_max_version_level(2),
+        ];
+        res.finalized_features_epoch = 1;
+    }
     res.error_code = codes::NONE;
     res
 }
@@ -160,7 +193,7 @@ pub(crate) fn api_versions(_req: &ApiVersionsRequest, version: i16) -> ApiVersio
 /// The answer to an ApiVersions of a version OpenDuct does not speak: sent as v0, so any client can read it and
 /// retry with one it does.
 pub(crate) fn api_versions_unsupported() -> ApiVersionsResponse {
-    let mut res = api_versions(&ApiVersionsRequest::default(), 0);
+    let mut res = api_versions(&ApiVersionsRequest::default(), 0, false);
     res.error_code = codes::UNSUPPORTED_VERSION;
     res
 }
@@ -311,6 +344,51 @@ enum Appending {
     Waiting(tokio::task::JoinHandle<Vec<Placed>>),
 }
 
+/// From Produce 12 a partition is part of a transaction by the transaction's first record there, with no request
+/// of the producer's: the partition's leader tells the coordinator before it writes the record - once for each
+/// transaction, since a producer with one open here is known to have been told of.
+async fn added_to_its_transaction(
+    state: &State,
+    req: &ProduceRequest,
+    version: i16,
+    topic: &str,
+    partition: i32,
+    batches: &[Bytes],
+) -> Result<(), (i16, String)> {
+    let (Some(id), true) = (&req.transactional_id, version >= 12) else {
+        return Ok(());
+    };
+    let Some(header) = batches
+        .first()
+        .and_then(|b| openduct_storage::batch::parse_header(b).ok())
+        .filter(openduct_storage::batch::BatchHeader::is_transactional)
+    else {
+        return Ok(());
+    };
+    let (name, producer) = (topic.to_owned(), header.producer_id);
+    let open = blocking(&state.store, move |s| s.open_transactions(&name, partition))
+        .await
+        .is_ok_and(|open| open.iter().any(|(id, _, _)| *id == producer));
+    if open {
+        return Ok(());
+    }
+    transactions::added_by_its_first_record(
+        state,
+        id.0.as_str(),
+        header.producer_id,
+        header.producer_epoch,
+        topic,
+        partition,
+    )
+    .await
+    .map_err(|code| {
+        (
+            code,
+            "the transaction's coordinator could not be told of this partition".to_owned(),
+        )
+    })
+}
+
 /// Write every partition's batches now - each partition on its own thread, a partition's batches in order - and
 /// start waiting for them to reach the device.
 pub(crate) async fn produce_begin(state: &State, req: &ProduceRequest, version: i16) -> ProduceStarted {
@@ -325,18 +403,21 @@ pub(crate) async fn produce_begin(state: &State, req: &ProduceRequest, version: 
         for p in &topic.partition_data {
             let planned_one = if !acks_ok {
                 Err((codes::INVALID_REQUIRED_ACKS, "acks must be 0, 1 or -1".to_owned()))
-            } else if req.transactional_id.is_some() {
-                Err((
-                    codes::INVALID_REQUEST,
-                    "transactions are not supported".to_owned(),
-                ))
             } else if let Err(e) = &topic_ready {
                 Err((codes::of_store_error(e), e.to_string()))
             } else {
-                partition_batches(p.records.clone()).map(|batches| {
-                    work.push((name.clone(), p.index, batches));
-                    work.len() - 1
-                })
+                match partition_batches(p.records.clone(), req.transactional_id.is_some()) {
+                    Ok(batches) => {
+                        match added_to_its_transaction(state, req, version, &name, p.index, &batches).await {
+                            Ok(()) => {
+                                work.push((name.clone(), p.index, batches));
+                                Ok(work.len() - 1)
+                            }
+                            Err(refused) => Err(refused),
+                        }
+                    }
+                    Err(refused) => Err(refused),
+                }
             };
             parts.push(planned_one);
         }
@@ -459,7 +540,7 @@ pub(crate) async fn produce_finish(state: &State, started: ProduceStarted) -> Op
 }
 
 /// One partition's records, split into the batches the store appends.
-fn partition_batches(records: Option<Bytes>) -> Result<Vec<Bytes>, (i16, String)> {
+fn partition_batches(records: Option<Bytes>, transactional: bool) -> Result<Vec<Bytes>, (i16, String)> {
     let records = records.ok_or((codes::INVALID_RECORD, "a partition with no records".to_owned()))?;
     let batches = split_batches(&records).map_err(|e| {
         let e = StoreError::Batch(e);
@@ -469,6 +550,14 @@ fn partition_batches(records: Option<Bytes>) -> Result<Vec<Bytes>, (i16, String)
         return Err((
             codes::INVALID_RECORD,
             "a partition with no record batches".to_owned(),
+        ));
+    }
+    // A transaction's records come in a request that names its transactional id (which is what the access rules
+    // are checked against): without one they would open a transaction nothing would ever end.
+    if !transactional && batches.iter().any(|(header, _)| header.is_transactional()) {
+        return Err((
+            codes::INVALID_REQUEST,
+            "a transactional batch in a request that names no transactional id".to_owned(),
         ));
     }
     Ok(batches.into_iter().map(|(_, batch)| batch).collect())
@@ -565,23 +654,53 @@ async fn fetch_once(
                 .unwrap_or(usize::MAX)
                 .min(max_bytes.saturating_sub(total).max(1));
             let (topic, partition, offset) = (name.clone(), p.partition, p.fetch_offset);
+            // read_committed: only what is before the last stable offset, with the aborted transactions in it
+            // named for the consumer to skip.
+            let committed_only = req.isolation_level == 1;
             // Once the answer is full, the other partitions report their ends and wait for the next Fetch.
             let full = total > 0 && total >= max_bytes;
             let read = blocking(&state.store, move |s| {
                 if full {
-                    s.offsets(&topic, partition).map(|offsets| ReadResult {
-                        batches: Vec::new(),
-                        offsets,
+                    s.offsets(&topic, partition).map(|offsets| {
+                        (
+                            ReadResult {
+                                batches: Vec::new(),
+                                offsets,
+                            },
+                            Vec::new(),
+                        )
                     })
                 } else {
-                    s.read(&topic, partition, offset, budget)
+                    let mut read = s.read(&topic, partition, offset, budget)?;
+                    let mut aborted = Vec::new();
+                    if committed_only {
+                        let stable = read.offsets.last_stable;
+                        read.batches.retain(|b| {
+                            openduct_storage::batch::parse_stored_header(b)
+                                .is_ok_and(|h| h.base_offset < stable)
+                        });
+                        aborted = s.aborted_transactions(&topic, partition, offset, stable)?;
+                    }
+                    Ok((read, aborted))
                 }
             })
             .await;
             match read {
-                Ok(read) => {
+                Ok((read, aborted)) => {
                     out.high_watermark = read.offsets.high_watermark;
-                    out.last_stable_offset = read.offsets.high_watermark;
+                    out.last_stable_offset = read.offsets.last_stable;
+                    if committed_only && version >= 4 {
+                        out.aborted_transactions = Some(
+                            aborted
+                                .iter()
+                                .map(|t| {
+                                    AbortedTransaction::default()
+                                        .with_producer_id(t.producer_id.into())
+                                        .with_first_offset(t.first_offset)
+                                })
+                                .collect(),
+                        );
+                    }
                     if version >= 5 {
                         out.log_start_offset = read.offsets.log_start;
                     }
@@ -633,14 +752,11 @@ async fn fetch_once(
 // ---------------------------------------------------------------------------------------------------------------
 
 pub(crate) async fn init_producer_id(state: &State, req: &InitProducerIdRequest) -> InitProducerIdResponse {
-    let mut res = InitProducerIdResponse::default();
-    if req.transactional_id.is_some() {
-        // Transactions are not supported; an idempotent producer sends no transactional id.
-        res.error_code = codes::INVALID_REQUEST;
-        res.producer_id = ProducerId(-1);
-        res.producer_epoch = -1;
-        return res;
+    // A transactional id is the transaction coordinator's to answer.
+    if let Some(id) = &req.transactional_id {
+        return transactions::init(state, req, id.0.as_str()).await;
     }
+    let mut res = InitProducerIdResponse::default();
     // ALWAYS A NEW ID, whatever id and epoch the request names, as Kafka does for a producer that is not
     // transactional: clients send their current id and epoch - or 0 and 0 for a new producer (2026-11-15: keeping
     // the named id gave every such producer id 0, and their sequences refused each other's batches for good).

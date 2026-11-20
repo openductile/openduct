@@ -20,6 +20,7 @@ openduct-broker = { version = "0.1.0", path = "../openduct-broker" }
 openduct-connect = { version = "0.1.0", path = "../openduct-connect" }
 openduct-expr = { version = "0.1.0", path = "../openduct-expr" }
 openduct-pipeline = { version = "0.1.0", path = "../openduct-pipeline" }
+openduct-registry = { version = "0.1.0", path = "../openduct-registry" }
 openduct-storage = { version = "0.1.0", path = "../openduct-storage" }
 tokio = { version = "1.54.1", features = ["rt-multi-thread", "net", "io-util", "time"] }
 

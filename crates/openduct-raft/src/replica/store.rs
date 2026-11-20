@@ -20,6 +20,24 @@ use crate::members::Forwarded;
 use crate::offsets::OFFSETS_TOPIC;
 use crate::types::Command;
 
+impl Replica {
+    /// Whether the cluster keeps transactions yet: a broker of the release before refuses their records and
+    /// markers, so none is written until every broker reads them.
+    fn transactions_in_use(&self, topic: &str) -> Result<(), StoreError> {
+        let (active, needed) = (
+            self.inner.members.levels().active(),
+            crate::features::TRANSACTIONS_LEVEL,
+        );
+        if active < needed {
+            return Err(StoreError::Unsupported(format!(
+                "transactions need every broker of the cluster upgraded (feature level {needed}; the cluster is at \
+                 {active}); {topic:?} is unchanged"
+            )));
+        }
+        Ok(())
+    }
+}
+
 impl Store for Replica {
     fn create_topic(&self, name: &str, config: TopicConfig) -> Result<(), StoreError> {
         // Checked here too, so nothing the controller would refuse is replicated.
@@ -88,7 +106,35 @@ impl Store for Replica {
     }
 
     fn append_begin(&self, topic: &str, partition: i32, batch: Bytes) -> Result<Pending, StoreError> {
-        let (raft, _) = self.inner.leading(topic, partition)?;
+        let (raft, shared) = self.inner.leading(topic, partition)?;
+        // What the topic's settings ask of a batch (openduct_storage admit.rs), decided here by the leader before
+        // the batch is proposed: no copy ever holds one that was refused, and all hold the same bytes.
+        let settings = self
+            .inner
+            .control
+            .state()
+            .topics
+            .get(topic)
+            .map(|t| t.info.settings.clone())
+            .unwrap_or_default();
+        let batch = openduct_storage::admitted(&settings, batch, openduct_storage::now_ms())?;
+        // What a client may not send (a transaction's marker) is refused here, where clients' batches come in.
+        let sent = openduct_storage::batch::parse_header(&batch)?;
+        openduct_storage::batch::check_supported(&sent)?;
+        if sent.is_transactional() {
+            self.transactions_in_use(topic)?;
+        }
+        // segment.ms: the segment is closed first when its records already span that long - told to every copy,
+        // in order before the batch, so their segments start at the same one.
+        if self.inner.members.levels().active() >= crate::features::COMPACTION_LEVEL
+            && let Ok(header) = openduct_storage::batch::parse_header(&batch)
+            && shared.log().roll_due(settings.segment_ms(), header.max_timestamp)
+        {
+            self.inner
+                .runtime
+                .block_on(raft.client_write_ff(Command::Roll, None))
+                .map_err(|e| StoreError::Unavailable(e.to_string()))?;
+        }
         let (responder, answer) = ProgressResponder::complete_only();
         // Proposed now, in order; answered once most replicas hold it and it is applied here.
         self.inner
@@ -120,6 +166,74 @@ impl Store for Replica {
             .1
             .log()
             .read(offset, max_bytes)
+    }
+
+    fn end_transaction(
+        &self,
+        topic: &str,
+        partition: i32,
+        producer_id: i64,
+        producer_epoch: i16,
+        marker: openduct_storage::batch::Marker,
+        coordinator_epoch: i32,
+    ) -> Result<Appended, StoreError> {
+        self.transactions_in_use(topic)?;
+        // The marker is a batch like any other to the partition's copies: its leader writes it - this broker, or
+        // the one this one sends it to - and each copy stores the same bytes.
+        let batch = openduct_storage::batch::marker_batch(
+            producer_id,
+            producer_epoch,
+            marker,
+            openduct_storage::now_ms(),
+            coordinator_epoch,
+        );
+        let group = self.inner.group(topic, partition)?;
+        self.inner
+            .write_through_leader(group, Command::Append { batch })?
+            .appended()
+    }
+
+    fn transactions_ready(&self) -> bool {
+        self.inner.members.levels().active() >= crate::features::TRANSACTIONS_LEVEL
+    }
+
+    fn append_through_leader(
+        &self,
+        topic: &str,
+        partition: i32,
+        batch: Bytes,
+    ) -> Result<Appended, StoreError> {
+        let group = self.inner.group(topic, partition)?;
+        self.inner
+            .write_through_leader(group, Command::Append { batch })?
+            .appended()
+    }
+
+    fn open_transactions(&self, topic: &str, partition: i32) -> Result<Vec<(i64, i16, i64)>, StoreError> {
+        Ok(self.inner.leading(topic, partition)?.1.log().open_transactions())
+    }
+
+    fn active_producers(
+        &self,
+        topic: &str,
+        partition: i32,
+    ) -> Result<Vec<openduct_storage::ActiveProducer>, StoreError> {
+        Ok(self.inner.leading(topic, partition)?.1.log().active_producers())
+    }
+
+    fn aborted_transactions(
+        &self,
+        topic: &str,
+        partition: i32,
+        from: i64,
+        upto: i64,
+    ) -> Result<Vec<openduct_storage::AbortedTransaction>, StoreError> {
+        Ok(self
+            .inner
+            .leading(topic, partition)?
+            .1
+            .log()
+            .aborted_transactions(from, upto))
     }
 
     fn offsets(&self, topic: &str, partition: i32) -> Result<PartitionOffsets, StoreError> {
@@ -258,6 +372,61 @@ impl Store for Replica {
             .done()
     }
 
+    fn set_topic_settings(
+        &self,
+        name: &str,
+        settings: openduct_storage::TopicSettings,
+    ) -> Result<(), StoreError> {
+        // A broker of the version before could not read the command: only once every broker is upgraded.
+        let (active, needed) = (
+            self.inner.members.levels().active(),
+            crate::features::TOPIC_SETTINGS_LEVEL,
+        );
+        if active < needed {
+            return Err(StoreError::Unsupported(format!(
+                "a topic's settings beside retention.ms need every broker of the cluster upgraded (feature level \
+                 {needed}; the cluster is at {active}); {name:?} is unchanged"
+            )));
+        }
+        // min.insync.replicas: a write is acknowledged once a majority of the partition's copies hold it, so any
+        // number up to that majority is kept; more would be a promise nothing here keeps.
+        let wanted = settings.min_insync_replicas();
+        let majority = self
+            .inner
+            .control
+            .state()
+            .topics
+            .get(name)
+            .and_then(|t| t.replicas.iter().map(Vec::len).min())
+            .map_or(1, |copies| copies / 2 + 1);
+        if usize::try_from(wanted).unwrap_or(usize::MAX) > majority {
+            return Err(StoreError::Unsupported(format!(
+                "min.insync.replicas={wanted} is more than a majority of {name:?}'s copies ({majority}), which is \
+                 what holds a write before it is acknowledged; {name:?} is unchanged"
+            )));
+        }
+        // Compaction's settings need the release that compacts on every broker.
+        let compaction = [
+            openduct_storage::DELETE_RETENTION_MS,
+            openduct_storage::MIN_COMPACTION_LAG_MS,
+        ];
+        let needed = crate::features::COMPACTION_LEVEL;
+        if active < needed
+            && (settings.compacts() || compaction.iter().any(|name| settings.own(name).is_some()))
+        {
+            return Err(StoreError::Unsupported(format!(
+                "log compaction (cleanup.policy=compact and its settings) needs every broker of the cluster \
+                 upgraded (feature level {needed}; the cluster is at {active}); {name:?} is unchanged"
+            )));
+        }
+        self.inner
+            .write(Command::SetTopicSettings {
+                name: name.to_owned(),
+                settings,
+            })?
+            .done()
+    }
+
     fn delete_offsets(&self, group: &str, partitions: Option<&[(String, i32)]>) -> Result<(), StoreError> {
         let command = Command::DeleteOffsets {
             group: group.to_owned(),
@@ -338,21 +507,75 @@ impl Store for Replica {
         // Each partition's leader decides by its clock, for every copy alike.
         let topics: Vec<TopicRecord> = self.inner.control.state().topics.values().cloned().collect();
         let mut removed = 0;
+        let sized = self.inner.members.levels().active() >= crate::features::TOPIC_SETTINGS_LEVEL;
         for t in topics {
-            let Some(retention) = t.info.retention_ms else {
+            // A topic that only compacts keeps its newest records for ever.
+            let deletes = t.info.settings.deletes();
+            let by_time = t
+                .info
+                .retention_ms
+                .filter(|_| deletes)
+                .map(|retention| Command::Retain {
+                    before_ms: now_ms.saturating_sub(retention),
+                });
+            let keep = t.info.settings.retention_bytes().filter(|_| sized && deletes);
+            if by_time.is_none() && keep.is_none() {
                 continue;
-            };
+            }
             for p in 0..t.info.partitions {
-                let Ok((raft, _)) = self.inner.leading(&t.info.name, p) else {
+                let Ok((raft, shared)) = self.inner.leading(&t.info.name, p) else {
                     continue;
                 };
-                let command = Command::Retain {
-                    before_ms: now_ms.saturating_sub(retention),
+                // By size only when the local disk alone could be over the limit... or older data is remote:
+                // a partition well under its limit costs no entry in its log each round.
+                let by_size = keep
+                    .filter(|keep| {
+                        let log = shared.log();
+                        log.local_bytes() >= *keep || !log.tiered().is_empty()
+                    })
+                    .map(|keep| Command::RetainBytes { keep });
+                for command in by_time.iter().cloned().chain(by_size) {
+                    match self.inner.runtime.block_on(raft.client_write(command)) {
+                        Ok(written) => removed += written.data.removed()?,
+                        Err(e) => {
+                            tracing::debug!(topic = %t.info.name, partition = p, error = %e, "retention left for later")
+                        }
+                    }
+                }
+            }
+        }
+        Ok(removed)
+    }
+
+    fn compact(&self, now_ms: i64) -> Result<usize, StoreError> {
+        if self.inner.members.levels().active() < crate::features::COMPACTION_LEVEL {
+            return Ok(0);
+        }
+        // Each partition's leader decides, by its clock and the settings it sees, for every copy alike.
+        let topics: Vec<TopicRecord> = self.inner.control.state().topics.values().cloned().collect();
+        let mut removed = 0;
+        for t in topics.iter().filter(|t| t.info.settings.compacts()) {
+            let (lag_ms, delete_retention_ms) = (
+                t.info.settings.min_compaction_lag_ms(),
+                t.info.settings.delete_retention_ms(),
+            );
+            for p in 0..t.info.partitions {
+                let Ok((raft, shared)) = self.inner.leading(&t.info.name, p) else {
+                    continue;
+                };
+                // A pass with nothing to do costs no entry in the partition's log.
+                if !shared.log().compaction_due(now_ms, lag_ms, delete_retention_ms) {
+                    continue;
+                }
+                let command = Command::Compact {
+                    now_ms,
+                    lag_ms,
+                    delete_retention_ms,
                 };
                 match self.inner.runtime.block_on(raft.client_write(command)) {
                     Ok(written) => removed += written.data.removed()?,
                     Err(e) => {
-                        tracing::debug!(topic = %t.info.name, partition = p, error = %e, "retention left for later")
+                        tracing::debug!(topic = %t.info.name, partition = p, error = %e, "compaction left for later")
                     }
                 }
             }
@@ -377,6 +600,13 @@ impl Store for Replica {
             && let Some(b) = self.inner.config.brokers.get(&c)
         {
             brokers.push((c, b.clone()));
+        }
+        // In its first moments a broker's copy of the membership names no one yet. It answers for itself then: a
+        // client told of no broker at all has no one to ask again (librdkafka's admin client waits for good).
+        if brokers.is_empty()
+            && let Some(b) = self.inner.config.brokers.get(&self.inner.id)
+        {
+            brokers.push((self.inner.id, b.clone()));
         }
         let listed = |c: &u64| brokers.iter().any(|(id, _)| id == c);
         Some(ClusterView {

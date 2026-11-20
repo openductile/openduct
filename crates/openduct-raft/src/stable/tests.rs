@@ -175,6 +175,22 @@ fn commands() -> Vec<(&'static str, Command)> {
             replicas: vec![vec![1, 2, 3], vec![2, 3, 1]],
         },
         Command::DeleteRecords { before: 120 },
+        Command::SetTopicSettings {
+            name: "orders".to_owned(),
+            settings: {
+                let mut s = openduct_storage::TopicSettings::default();
+                s.set(openduct_storage::RETENTION_BYTES, "1073741824").unwrap();
+                s.set(openduct_storage::MAX_MESSAGE_BYTES, "65536").unwrap();
+                s
+            },
+        },
+        Command::RetainBytes { keep: 1_073_741_824 },
+        Command::Compact {
+            now_ms: 1_699_000_000_000,
+            lag_ms: 60_000,
+            delete_retention_ms: 86_400_000,
+        },
+        Command::Roll,
     ];
     all.into_iter()
         .map(|c| {
@@ -195,6 +211,10 @@ fn commands() -> Vec<(&'static str, Command)> {
                 Command::SetRetention { .. } => "set-retention",
                 Command::AddPartitions { .. } => "add-partitions",
                 Command::DeleteRecords { .. } => "delete-records",
+                Command::SetTopicSettings { .. } => "set-topic-settings",
+                Command::RetainBytes { .. } => "retain-bytes",
+                Command::Compact { .. } => "compact",
+                Command::Roll => "roll",
             };
             (name, c)
         })
@@ -486,6 +506,7 @@ fn every_small_file_raft_keeps_is_written_and_read_as_format_1() {
                 name: "orders".to_owned(),
                 partitions: 1,
                 retention_ms: None,
+                settings: Default::default(),
             },
             replicas: vec![vec![1, 2, 3]],
             created_at: 4,

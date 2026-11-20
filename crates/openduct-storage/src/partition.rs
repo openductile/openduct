@@ -6,7 +6,7 @@
 
 use std::collections::{HashMap, VecDeque};
 
-use crate::batch::BatchHeader;
+use crate::batch::{BatchHeader, Marker};
 use crate::error::StoreError;
 
 /// How many recent batches per producer are remembered to answer a retry with its original offset (as Kafka).
@@ -82,6 +82,15 @@ impl Producer {
         }
     }
 
+    /// A marker written in `epoch`: a producer of an earlier epoch is fenced from here on, and one of this epoch
+    /// starts its sequence afresh. This is how a partition learns that a transactional producer was replaced.
+    pub(crate) fn raise(&mut self, epoch: i16) {
+        if epoch > self.epoch {
+            self.epoch = epoch;
+            self.recent.clear();
+        }
+    }
+
     /// Record a stored batch of this producer: a new epoch starts its batches afresh.
     pub(crate) fn record(&mut self, header: &BatchHeader, base_offset: i64) {
         if header.producer_epoch != self.epoch {
@@ -114,13 +123,99 @@ pub(crate) struct PartitionIndex {
     pub(crate) next_offset: i64,
     pub(crate) log_start: i64,
     producers: HashMap<i64, Producer>,
+    /// What log compaction has done here so far (compact.rs).
+    pub(crate) cleaning: crate::compact::Cleaning,
+    /// The transactions the log holds: those still open, and those that were aborted.
+    pub(crate) transactions: Transactions,
+}
+
+/// A producer as a partition knows it now (Kafka's DescribeProducers).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ActiveProducer {
+    pub producer_id: i64,
+    pub epoch: i16,
+    /// The last sequence it wrote here; -1 when only its epoch is known (a marker fenced older ones).
+    pub last_sequence: i32,
+    /// The newest timestamp of its last batch, while the log still holds it; -1 otherwise.
+    pub last_timestamp: i64,
+    /// The offset its open transaction starts at, if it has one open.
+    pub open_from: Option<i64>,
+}
+
+/// A transaction that was aborted: its producer, and the offsets of its first record and of its abort marker.
+/// A consumer that reads only committed data skips that producer's records between them.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct AbortedTransaction {
+    pub producer_id: i64,
+    pub first_offset: i64,
+    pub last_offset: i64,
+}
+
+/// A partition's transactions, as its batches tell them: a transactional batch opens its producer's transaction
+/// (if none is open), and that producer's marker ends it - committed, or aborted.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub(crate) struct Transactions {
+    /// Each producer with a transaction open: the offset of its first record.
+    open: std::collections::BTreeMap<i64, i64>,
+    /// In the order their markers were written.
+    aborted: Vec<AbortedTransaction>,
+}
+
+impl Transactions {
+    fn note(&mut self, header: &BatchHeader, base_offset: i64, marker: Option<Marker>) {
+        if !header.is_transactional() {
+            return;
+        }
+        if !header.is_control() {
+            self.open.entry(header.producer_id).or_insert(base_offset);
+            return;
+        }
+        let first = self.open.remove(&header.producer_id);
+        if let (Some(first_offset), Some(Marker::Abort)) = (first, marker) {
+            self.aborted.push(AbortedTransaction {
+                producer_id: header.producer_id,
+                first_offset,
+                last_offset: base_offset,
+            });
+        }
+    }
+
+    /// The first offset of the oldest transaction still open: nothing from there on is known to be committed.
+    fn first_unstable(&self) -> Option<i64> {
+        self.open.values().min().copied()
+    }
 }
 
 fn next_sequence(last: i32) -> i32 {
     if last == i32::MAX { 0 } else { last + 1 }
 }
 
+impl Entry {
+    /// The entry of a stored batch with this header.
+    pub(crate) fn of(header: &BatchHeader, size: usize, location: Location) -> Self {
+        Self {
+            base_offset: header.base_offset,
+            last_offset: header.base_offset + i64::from(header.last_offset_delta),
+            leader_epoch: header.partition_leader_epoch,
+            max_timestamp: header.max_timestamp,
+            size,
+            location,
+        }
+    }
+}
+
 impl PartitionIndex {
+    /// Puts `with` in place of the entries holding offsets from `from` up to (not including) `to`: compaction
+    /// wrote those batches again. The offsets covered are the same; nothing else moves.
+    pub(crate) fn replace_between(&mut self, from: i64, to: i64, with: Vec<Entry>) {
+        let start = self.entries.partition_point(|e| e.base_offset < from);
+        let end = self.entries.partition_point(|e| e.base_offset < to);
+        let tail = self.entries.split_off(end);
+        self.entries.truncate(start);
+        self.entries.extend(with);
+        self.entries.extend(tail);
+    }
+
     pub(crate) fn starting_at(offset: i64) -> Self {
         Self {
             next_offset: offset,
@@ -152,12 +247,91 @@ impl PartitionIndex {
             location,
         });
         self.next_offset = last_offset + 1;
-        if header.is_idempotent() {
+        // A marker is its coordinator's, not a batch of the producer's sequence: it only tells the epoch.
+        if header.is_control() && header.is_idempotent() {
+            self.producers
+                .entry(header.producer_id)
+                .or_default()
+                .raise(header.producer_epoch);
+        }
+        if header.is_idempotent() && !header.is_control() {
             self.producers
                 .entry(header.producer_id)
                 .or_default()
                 .record(header, base_offset);
         }
+    }
+
+    /// Notes what a stored batch means for the partition's transactions: `marker`, when it is a control batch.
+    /// Called for every batch recorded, in order.
+    pub(crate) fn note_transaction(
+        &mut self,
+        header: &BatchHeader,
+        base_offset: i64,
+        marker: Option<Marker>,
+    ) {
+        self.transactions.note(header, base_offset, marker);
+    }
+
+    /// The last stable offset among the batches before `end`: every record before it is committed, aborted, or
+    /// not part of a transaction - so a consumer that reads only committed data reads up to here.
+    pub(crate) fn last_stable(&self, end: i64) -> i64 {
+        self.transactions
+            .first_unstable()
+            .map_or(end, |first| first.min(end))
+    }
+
+    /// Every producer the partition knows, by producer id.
+    pub(crate) fn active_producers(&self) -> Vec<ActiveProducer> {
+        let mut out: Vec<ActiveProducer> = self
+            .producers
+            .iter()
+            .map(|(id, p)| {
+                let last = p.recent.back();
+                let last_timestamp = last
+                    .and_then(|l| {
+                        let at = self.entries.partition_point(|e| e.base_offset < l.base_offset);
+                        self.entries.get(at).filter(|e| e.base_offset == l.base_offset)
+                    })
+                    .map_or(-1, |e| e.max_timestamp);
+                ActiveProducer {
+                    producer_id: *id,
+                    epoch: p.epoch,
+                    last_sequence: last.map_or(-1, |l| l.last_sequence),
+                    last_timestamp,
+                    open_from: self.transactions.open.get(id).copied(),
+                }
+            })
+            .collect();
+        out.sort_unstable_by_key(|p| p.producer_id);
+        out
+    }
+
+    /// What became of this partition's transactions, for a compaction pass.
+    pub(crate) fn fates(&self) -> crate::compact::Fates {
+        crate::compact::Fates::new(
+            self.last_stable(self.next_offset),
+            self.transactions.aborted.iter().copied(),
+        )
+    }
+
+    /// The producers with a transaction open here: (producer id, its epoch, the offset the transaction starts at).
+    pub(crate) fn open_transactions(&self) -> Vec<(i64, i16, i64)> {
+        self.transactions
+            .open
+            .iter()
+            .map(|(id, first)| (*id, self.producers.get(id).map_or(0, |p| p.epoch), *first))
+            .collect()
+    }
+
+    /// The aborted transactions with records at or after `from` and before `upto`.
+    pub(crate) fn aborted_between(&self, from: i64, upto: i64) -> Vec<AbortedTransaction> {
+        self.transactions
+            .aborted
+            .iter()
+            .filter(|t| t.last_offset >= from && t.first_offset < upto)
+            .copied()
+            .collect()
     }
 
     /// The position in `entries` of the first batch holding `offset` or anything after it.
@@ -300,6 +474,9 @@ impl PartitionIndex {
             self.entries.pop_front();
         }
         self.log_start = self.log_start.max(offset);
+        // An aborted transaction whose every record is gone need not be told to anyone.
+        let start = self.log_start;
+        self.transactions.aborted.retain(|t| t.last_offset >= start);
     }
 }
 

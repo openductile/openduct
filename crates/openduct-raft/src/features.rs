@@ -20,8 +20,22 @@ use std::sync::atomic::{AtomicU32, Ordering};
 /// one. Version 3 is the first with OpenDuct's own shapes on the wire (nothing earlier was released).
 pub(crate) const PROTOCOLS: RangeInclusive<u16> = 3..=3;
 
-/// The feature level this build supports. Level 1: everything up to the first release.
-pub const SUPPORTED_LEVEL: u32 = 1;
+/// The feature level this build supports. Level 1: everything up to the first release. Level 2: a topic's own
+/// settings (`TOPIC_SETTINGS_LEVEL`). Level 3: log compaction (`COMPACTION_LEVEL`). Level 4: transactions
+/// (`TRANSACTIONS_LEVEL`).
+pub const SUPPORTED_LEVEL: u32 = 4;
+
+/// From this level a partition's log may hold a transaction's records and its markers: a broker of an earlier
+/// level refuses both when it applies them, so none is proposed before every broker reads them.
+pub(crate) const TRANSACTIONS_LEVEL: u32 = 4;
+
+/// From this level a partition can be told to compact (the Compact command) and a topic's `cleanup.policy` can
+/// have `compact`; and to start its next segment (the Roll command, `segment.ms`).
+pub(crate) const COMPACTION_LEVEL: u32 = 3;
+
+/// From this level a topic carries settings beside retention.ms (the SetTopicSettings and RetainBytes commands,
+/// and `settings` in a topic's record): a broker of level 1 could read none of them.
+pub(crate) const TOPIC_SETTINGS_LEVEL: u32 = 2;
 
 /// The newest protocol both ends speak, if any.
 pub(crate) fn agree(ours: &RangeInclusive<u16>, theirs: (u16, u16)) -> Option<u16> {

@@ -44,6 +44,8 @@ struct Cluster {
     tls: Option<std::path::PathBuf>,
     /// Settings for every broker's environment (tiered storage, say).
     env: Vec<(String, String)>,
+    /// The port each broker serves the schema registry on, for the brokers that do.
+    registry: BTreeMap<u64, u16>,
 }
 
 impl Cluster {
@@ -56,6 +58,7 @@ impl Cluster {
             processes: BTreeMap::new(),
             tls: None,
             env: Vec::new(),
+            registry: BTreeMap::new(),
         }
     }
 
@@ -119,6 +122,9 @@ impl Cluster {
                 .env("OPENDUCT_REPLICATION_TLS_CERT", dir.join(format!("{id}.pem")))
                 .env("OPENDUCT_REPLICATION_TLS_KEY", dir.join(format!("{id}.key")))
                 .env("OPENDUCT_REPLICATION_TLS_CA", dir.join("ca.pem"));
+        }
+        if let Some(port) = self.registry.get(&id) {
+            command.env("OPENDUCT_REGISTRY_LISTEN", format!("127.0.0.1:{port}"));
         }
         command
             .args(["serve", "--listen"])
@@ -577,4 +583,483 @@ fn walk(dir: &std::path::Path) -> Vec<std::path::PathBuf> {
         }
     }
     out
+}
+
+/// One request to a broker's schema registry: the status and the body, or `None` while it does not answer.
+async fn registry(
+    port: u16,
+    method: &str,
+    target: &str,
+    body: Option<serde_json::Value>,
+) -> Option<(u16, serde_json::Value)> {
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+    let body = body.map(|b| b.to_string()).unwrap_or_default();
+    let request = format!(
+        "{method} {target} HTTP/1.1\r\nHost: 127.0.0.1\r\nConnection: close\r\nContent-Length: {}\r\n\r\n{body}",
+        body.len()
+    );
+    let asked = async {
+        let mut socket = tokio::net::TcpStream::connect(("127.0.0.1", port)).await.ok()?;
+        socket.write_all(request.as_bytes()).await.ok()?;
+        let mut answer = Vec::new();
+        socket.read_to_end(&mut answer).await.ok()?;
+        let answer = String::from_utf8(answer).ok()?;
+        let (head, body) = answer.split_once("\r\n\r\n")?;
+        let status = head.split(' ').nth(1)?.parse().ok()?;
+        Some((
+            status,
+            serde_json::from_str(body).unwrap_or(serde_json::Value::Null),
+        ))
+    };
+    tokio::time::timeout(Duration::from_secs(40), asked)
+        .await
+        .ok()
+        .flatten()
+}
+
+/// Asks until the registry gives this status (it starts once the cluster has formed, and a write waits out an
+/// election): the body it gave.
+async fn registry_until(
+    port: u16,
+    method: &str,
+    target: &str,
+    body: Option<serde_json::Value>,
+    want: u16,
+) -> serde_json::Value {
+    let deadline = Instant::now() + Duration::from_secs(90);
+    loop {
+        let got = registry(port, method, target, body.clone()).await;
+        if let Some((status, answer)) = &got
+            && *status == want
+        {
+            return answer.clone();
+        }
+        assert!(
+            Instant::now() < deadline,
+            "{method} {target} on port {port}: {got:?}, not {want}"
+        );
+        tokio::time::sleep(Duration::from_millis(250)).await;
+    }
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn every_broker_serves_one_schema_registry_and_it_outlives_the_broker_that_led_its_topic() {
+    use serde_json::json;
+    let mut cluster = Cluster::new();
+    for id in [1, 2, 3] {
+        cluster.registry.insert(id, free_port());
+        cluster.start(id);
+    }
+    cluster.leader().await;
+    let port = |cluster: &Cluster, id: u64| cluster.registry[&id];
+    let order = |fields: &str| json!({ "schema": format!(r#"{{"type":"record","name":"Order","fields":[{fields}]}}"#) });
+    let id_only = r#"{"name":"id","type":"long"}"#;
+    let with_note = r#"{"name":"id","type":"long"},{"name":"note","type":"string","default":""}"#;
+
+    // Registered through broker 1; read through 2 and 3, which read it from the topic.
+    let made = registry_until(
+        port(&cluster, 1),
+        "POST",
+        "/subjects/orders-value/versions",
+        Some(order(id_only)),
+        200,
+    )
+    .await;
+    assert_eq!(made, json!({ "id": 1 }));
+    for id in [2, 3] {
+        let seen = registry_until(port(&cluster, id), "GET", "/schemas/ids/1", None, 200).await;
+        assert_eq!(seen, order(id_only), "broker {id}");
+    }
+    // A level set through broker 3 holds on broker 2: a breaking schema is refused there.
+    registry_until(
+        port(&cluster, 3),
+        "PUT",
+        "/config/orders-value",
+        Some(json!({ "compatibility": "FULL" })),
+        200,
+    )
+    .await;
+    registry_until(port(&cluster, 2), "GET", "/config/orders-value", None, 200).await;
+    let breaking = order(r#"{"name":"id","type":"long"},{"name":"total","type":"double"}"#);
+    let refused = registry(
+        port(&cluster, 2),
+        "POST",
+        "/subjects/orders-value/versions",
+        Some(breaking),
+    )
+    .await;
+    assert_eq!(refused.map(|(status, _)| status), Some(409));
+
+    // The process that leads the registry's topic dies. The other two elect a leader among them and go on:
+    // a new version is registered through one and read through the other.
+    let leader = cluster.partition_leaders("_schemas", 1).await[0];
+    cluster.kill(leader);
+    let left: Vec<u64> = cluster.processes.keys().copied().collect();
+    let made = registry_until(
+        port(&cluster, left[0]),
+        "POST",
+        "/subjects/orders-value/versions",
+        Some(order(with_note)),
+        200,
+    )
+    .await;
+    assert_eq!(made, json!({ "id": 2 }));
+    let versions = registry_until(
+        port(&cluster, left[1]),
+        "GET",
+        "/subjects/orders-value/versions/2",
+        None,
+        200,
+    )
+    .await;
+    assert_eq!(versions["id"], json!(2));
+
+    // The killed broker comes back, reads the topic from its own copy and what it missed, and serves it all.
+    cluster.start(leader);
+    let seen = registry_until(
+        port(&cluster, leader),
+        "GET",
+        "/subjects/orders-value/versions/2",
+        None,
+        200,
+    )
+    .await;
+    assert_eq!(seen["version"], json!(2));
+    let level = registry_until(port(&cluster, leader), "GET", "/config/orders-value", None, 200).await;
+    assert_eq!(level, json!({ "compatibilityLevel": "FULL" }));
+}
+
+/// A transaction's records for one partition: one batch of one value, marked transactional.
+fn transactional_batch(producer_id: i64, epoch: i16, sequence: i32, value: &str) -> bytes::Bytes {
+    use kafka_protocol::records::{
+        Compression as NoCompression, Record as WireRecord, RecordBatchEncoder, RecordEncodeOptions,
+        TimestampType,
+    };
+    let records = [WireRecord {
+        transactional: true,
+        control: false,
+        delete_horizon: false,
+        partition_leader_epoch: 0,
+        producer_id,
+        producer_epoch: epoch,
+        timestamp_type: TimestampType::Creation,
+        offset: 0,
+        sequence,
+        timestamp: 1_700_000_000_000,
+        key: None,
+        value: Some(bytes::Bytes::copy_from_slice(value.as_bytes())),
+        headers: Default::default(),
+    }];
+    let mut buf = bytes::BytesMut::new();
+    RecordBatchEncoder::encode(
+        &mut buf,
+        &records,
+        &RecordEncodeOptions {
+            version: 2,
+            compression: NoCompression::None,
+        },
+    )
+    .unwrap();
+    buf.freeze()
+}
+
+/// The transactions of one transactional id, as a client drives them across a cluster's brokers.
+struct Transactor<'a> {
+    cluster: &'a Cluster,
+    id: &'static str,
+    producer_id: i64,
+    epoch: i16,
+}
+
+/// Errors a client answers by looking for the coordinator again and trying once more.
+const TRY_AGAIN: [i16; 4] = [14, 15, 16, 51];
+
+impl Transactor<'_> {
+    async fn connect(&self, broker: u64) -> Option<Client> {
+        Client::connect(
+            &format!("127.0.0.1:{}", self.cluster.kafka[&broker]),
+            Duration::from_secs(2),
+        )
+        .await
+        .ok()
+    }
+
+    /// The broker coordinating the id, as a running broker names it - and it is running.
+    async fn coordinator(&self) -> u64 {
+        use kafka_protocol::messages::FindCoordinatorRequest;
+        let deadline = Instant::now() + Duration::from_secs(60);
+        loop {
+            for broker in self.cluster.processes.keys() {
+                let Some(mut c) = self.connect(*broker).await else {
+                    continue;
+                };
+                let request = FindCoordinatorRequest::default()
+                    .with_key(kafka_protocol::protocol::StrBytes::from_static_str(self.id))
+                    .with_key_type(1);
+                if let Ok(found) = c.send(&request, 2).await
+                    && found.error_code == 0
+                    && let Ok(node) = u64::try_from(found.node_id.0)
+                    && self.cluster.processes.contains_key(&node)
+                {
+                    return node;
+                }
+            }
+            assert!(Instant::now() < deadline, "no broker coordinates {}", self.id);
+            tokio::time::sleep(Duration::from_millis(200)).await;
+        }
+    }
+
+    /// One request to the coordinator, tried again while there is none or it is moving: what it answered.
+    async fn ask<R, F>(&self, version: i16, request: &R, code: F) -> R::Response
+    where
+        R: kafka_protocol::protocol::Request,
+        F: Fn(&R::Response) -> i16,
+    {
+        let deadline = Instant::now() + Duration::from_secs(90);
+        loop {
+            let coordinator = self.coordinator().await;
+            if let Some(mut c) = self.connect(coordinator).await
+                && let Ok(answer) = c.send(request, version).await
+                && !TRY_AGAIN.contains(&code(&answer))
+            {
+                return answer;
+            }
+            assert!(
+                Instant::now() < deadline,
+                "the coordinator of {} never answered",
+                self.id
+            );
+            tokio::time::sleep(Duration::from_millis(200)).await;
+        }
+    }
+
+    async fn init(&mut self) {
+        use kafka_protocol::messages::{InitProducerIdRequest, ProducerId, TransactionalId};
+        let request = InitProducerIdRequest::default()
+            .with_transactional_id(Some(TransactionalId(
+                kafka_protocol::protocol::StrBytes::from_static_str(self.id),
+            )))
+            .with_transaction_timeout_ms(60_000)
+            .with_producer_id(ProducerId(-1))
+            .with_producer_epoch(-1);
+        let answer = self.ask(2, &request, |a| a.error_code).await;
+        assert_eq!(answer.error_code, 0);
+        (self.producer_id, self.epoch) = (answer.producer_id.0, answer.producer_epoch);
+    }
+
+    /// Adds the topic's three partitions to the transaction, and writes one value to each at its leader.
+    async fn write(&self, topic: &str, sequence: i32, value: &str) {
+        use kafka_protocol::messages::add_partitions_to_txn_request::AddPartitionsToTxnTopic;
+        use kafka_protocol::messages::produce_request::{PartitionProduceData, TopicProduceData};
+        use kafka_protocol::messages::{
+            AddPartitionsToTxnRequest, ProduceRequest, ProducerId, TopicName, TransactionalId,
+        };
+        use kafka_protocol::protocol::StrBytes;
+        let name = TopicName(StrBytes::from_string(topic.to_owned()));
+        let id = TransactionalId(StrBytes::from_static_str(self.id));
+        let request = AddPartitionsToTxnRequest::default()
+            .with_v3_and_below_transactional_id(id.clone())
+            .with_v3_and_below_producer_id(ProducerId(self.producer_id))
+            .with_v3_and_below_producer_epoch(self.epoch)
+            .with_v3_and_below_topics(vec![
+                AddPartitionsToTxnTopic::default()
+                    .with_name(name.clone())
+                    .with_partitions(vec![0, 1, 2]),
+            ]);
+        let added = self
+            .ask(1, &request, |a| {
+                a.results_by_topic_v3_and_below[0].results_by_partition[0].partition_error_code
+            })
+            .await;
+        for p in &added.results_by_topic_v3_and_below[0].results_by_partition {
+            assert_eq!(p.partition_error_code, 0, "partition {}", p.partition_index);
+        }
+        let leaders = self.cluster.partition_leaders(topic, 3).await;
+        for (partition, leader) in leaders.iter().enumerate() {
+            let partition = i32::try_from(partition).unwrap();
+            let batch = transactional_batch(
+                self.producer_id,
+                self.epoch,
+                sequence,
+                &format!("{value}-{partition}"),
+            );
+            let request = ProduceRequest::default()
+                .with_transactional_id(Some(id.clone()))
+                .with_acks(-1)
+                .with_timeout_ms(10_000)
+                .with_topic_data(vec![
+                    TopicProduceData::default()
+                        .with_name(name.clone())
+                        .with_partition_data(vec![
+                            PartitionProduceData::default()
+                                .with_index(partition)
+                                .with_records(Some(batch)),
+                        ]),
+                ]);
+            let mut c = self.connect(*leader).await.unwrap();
+            let answer = c.send(&request, 9).await.unwrap();
+            assert_eq!(
+                answer.responses[0].partition_responses[0].error_code, 0,
+                "partition {partition}"
+            );
+        }
+    }
+
+    async fn end(&self, commit: bool) -> i16 {
+        use kafka_protocol::messages::{EndTxnRequest, ProducerId, TransactionalId};
+        let request = EndTxnRequest::default()
+            .with_transactional_id(TransactionalId(
+                kafka_protocol::protocol::StrBytes::from_static_str(self.id),
+            ))
+            .with_producer_id(ProducerId(self.producer_id))
+            .with_producer_epoch(self.epoch)
+            .with_committed(commit);
+        self.ask(1, &request, |a| a.error_code).await.error_code
+    }
+
+    /// What a consumer of committed data reads from each of the topic's three partitions, at its leader.
+    async fn committed(&self, topic: &str) -> Vec<Vec<String>> {
+        use kafka_protocol::messages::fetch_request::{FetchPartition, FetchTopic};
+        use kafka_protocol::messages::{BrokerId, FetchRequest, TopicName};
+        use kafka_protocol::records::RecordBatchDecoder;
+        let leaders = self.cluster.partition_leaders(topic, 3).await;
+        let mut out = Vec::new();
+        for (partition, leader) in leaders.iter().enumerate() {
+            let request = FetchRequest::default()
+                .with_replica_id(BrokerId(-1))
+                .with_max_wait_ms(0)
+                .with_min_bytes(0)
+                .with_max_bytes(1 << 20)
+                .with_isolation_level(1)
+                .with_topics(vec![
+                    FetchTopic::default()
+                        .with_topic(TopicName(kafka_protocol::protocol::StrBytes::from_string(
+                            topic.to_owned(),
+                        )))
+                        .with_partitions(vec![
+                            FetchPartition::default()
+                                .with_partition(i32::try_from(partition).unwrap())
+                                .with_fetch_offset(0)
+                                .with_partition_max_bytes(1 << 20),
+                        ]),
+                ]);
+            let mut c = self.connect(*leader).await.unwrap();
+            let answer = c.send(&request, 11).await.unwrap();
+            let part = &answer.responses[0].partitions[0];
+            assert_eq!(part.error_code, 0);
+            let aborted: Vec<(i64, i64)> = part
+                .aborted_transactions
+                .iter()
+                .flatten()
+                .map(|t| (t.producer_id.0, t.first_offset))
+                .collect();
+            let (mut values, mut skipping) = (Vec::new(), false);
+            let mut batches = part.records.clone().unwrap_or_default();
+            while !batches.is_empty() {
+                for r in RecordBatchDecoder::decode(&mut batches).unwrap().records {
+                    if aborted.contains(&(r.producer_id, r.offset)) {
+                        skipping = true;
+                    }
+                    if r.control {
+                        skipping = false;
+                    } else if !skipping {
+                        values.push(String::from_utf8(r.value.unwrap().to_vec()).unwrap());
+                    }
+                }
+            }
+            out.push(values);
+        }
+        out
+    }
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn a_transaction_spans_three_brokers_and_is_finished_by_another_when_its_coordinator_is_killed() {
+    let mut cluster = Cluster::new();
+    for id in [1, 2, 3] {
+        cluster.start(id);
+    }
+    cluster.leader().await;
+    let client = ClientBuilder::new(cluster.bootstrap()).build().await.unwrap();
+    client
+        .controller_client()
+        .unwrap()
+        .create_topic("ledger", 3, 3, 5_000)
+        .await
+        .unwrap();
+    drop(client);
+    cluster.partition_leaders("ledger", 3).await;
+
+    let coordinator;
+    {
+        let mut t = Transactor {
+            cluster: &cluster,
+            id: "bookkeeper",
+            producer_id: -1,
+            epoch: -1,
+        };
+        t.init().await;
+        assert_eq!(t.epoch, 0);
+        // The cluster's transactional ids are shared out over its brokers: not one broker coordinates them all.
+        let mut coordinators = std::collections::BTreeSet::new();
+        for id in [
+            "a", "b", "c", "d", "e", "f", "g", "h", "payments", "orders", "ledger", "billing",
+        ] {
+            let other = Transactor {
+                cluster: &cluster,
+                id,
+                producer_id: -1,
+                epoch: -1,
+            };
+            coordinators.insert(other.coordinator().await);
+        }
+        assert!(
+            coordinators.len() > 1,
+            "every id is coordinated by {coordinators:?}"
+        );
+        // Written to three partitions; none of it is read until the transaction is committed - then all of it.
+        t.write("ledger", 0, "first").await;
+        assert_eq!(t.committed("ledger").await, vec![Vec::<String>::new(); 3]);
+        assert_eq!(t.end(true).await, 0);
+        assert_eq!(
+            t.committed("ledger").await,
+            [["first-0"], ["first-1"], ["first-2"]]
+        );
+        // One aborted: never read.
+        t.write("ledger", 1, "dropped").await;
+        assert_eq!(t.end(false).await, 0);
+        assert_eq!(
+            t.committed("ledger").await,
+            [["first-0"], ["first-1"], ["first-2"]]
+        );
+        // Another is open when the coordinator's process is killed.
+        t.write("ledger", 2, "second").await;
+        coordinator = t.coordinator().await;
+    }
+    cluster.kill(coordinator);
+    let mut t = Transactor {
+        cluster: &cluster,
+        id: "bookkeeper",
+        producer_id: -1,
+        epoch: -1,
+    };
+    // Another broker coordinates the id now, and knows what the first one knew: the producer comes back, is
+    // given the next epoch, and what it had left open is aborted - on every partition, wherever it is led now.
+    assert_ne!(t.coordinator().await, coordinator);
+    t.init().await;
+    assert_eq!(t.epoch, 1, "the id's producer and epoch outlived the coordinator");
+    assert_eq!(
+        t.committed("ledger").await,
+        [["first-0"], ["first-1"], ["first-2"]]
+    );
+    t.write("ledger", 0, "third").await;
+    assert_eq!(t.end(true).await, 0);
+    assert_eq!(
+        t.committed("ledger").await,
+        [
+            ["first-0", "third-0"],
+            ["first-1", "third-1"],
+            ["first-2", "third-2"]
+        ]
+    );
 }

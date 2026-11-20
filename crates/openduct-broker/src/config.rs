@@ -46,6 +46,10 @@ pub struct BrokerConfig {
     pub group_max_session_timeout: Duration,
     /// How often retention is enforced.
     pub retention_check_interval: Duration,
+    /// How long a transaction may stay open on a partition before the partition's leader aborts it itself: longer
+    /// than any transaction's timeout, so only one no coordinator will end (its producer never told one of this
+    /// partition) is ever met.
+    pub hanging_transaction_after: Duration,
     /// The client port's TLS, sign-in and access rules (see [`crate::security`]).
     pub security: crate::security::Security,
 }
@@ -72,6 +76,7 @@ impl BrokerConfig {
             group_min_session_timeout: Duration::from_secs(1),
             group_max_session_timeout: Duration::from_secs(1800),
             retention_check_interval: Duration::from_secs(60),
+            hanging_transaction_after: Duration::from_secs(16 * 60),
             security: crate::security::Security::open(),
         }
     }

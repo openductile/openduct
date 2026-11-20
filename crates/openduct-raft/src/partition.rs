@@ -105,6 +105,17 @@ impl PartitionShared {
             Command::Retain { before_ms } => log
                 .enforce_retention(before_ms)
                 .map(|n| Reply::Removed(u64::try_from(n).unwrap_or(u64::MAX))),
+            Command::RetainBytes { keep } => log
+                .enforce_size(keep)
+                .map(|n| Reply::Removed(u64::try_from(n).unwrap_or(u64::MAX))),
+            Command::Compact {
+                now_ms,
+                lag_ms,
+                delete_retention_ms,
+            } => log
+                .compact(now_ms, lag_ms, delete_retention_ms)
+                .map(|n| Reply::Removed(u64::try_from(n).unwrap_or(u64::MAX))),
+            Command::Roll => log.roll().map(|()| Reply::Done),
             Command::Tiered { segment } => log.mark_tiered(segment).map(|()| Reply::Done),
             Command::Offload { before } => log
                 .offload(before)

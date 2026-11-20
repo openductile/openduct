@@ -47,74 +47,107 @@ pub(crate) struct Target {
 
 impl Target {
     fn security(&self) -> Result<openduct_broker::client::ClientSecurity, String> {
-        use openduct_broker::client::{ClientSecurity, SignIn};
-        use openduct_broker::security::scram::ScramMechanism;
-        let read =
-            |p: &std::path::Path| std::fs::read(p).map_err(|e| format!("cannot read {}: {e}", p.display()));
-        let mut s = ClientSecurity::default();
-        if let Some(ca) = &self.tls_ca {
-            let ca = read(ca)?;
-            let identity = match (&self.tls_cert, &self.tls_key) {
-                (Some(c), Some(k)) => Some((read(c)?, read(k)?)),
-                _ => None,
-            };
-            s.tls = Some(ClientSecurity::tls_from_pem(
-                &ca,
-                identity.as_ref().map(|(c, k)| (c.as_slice(), k.as_slice())),
-            )?);
-            s.server_name.clone_from(&self.tls_server_name);
-        }
-        let password = || -> Result<String, String> {
-            if let Some(p) = &self.password_file {
-                let raw = read(p)?;
-                return Ok(String::from_utf8_lossy(&raw)
-                    .trim_end_matches(['\n', '\r'])
-                    .to_owned());
-            }
-            crate::cluster::refuse_old("OPENDUCT_CLIENT_PASSWORD", "--password-file")?;
-            Err("signing in needs --password-file: a file holding the password, only you may read".to_owned())
-        };
-        let user = || {
-            self.user
-                .clone()
-                .ok_or_else(|| "signing in needs --user".to_owned())
-        };
-        s.sign_in = match self
-            .sasl_mechanism
-            .as_deref()
-            .map(str::to_ascii_lowercase)
-            .as_deref()
-        {
-            None => None,
-            Some("scram-sha-512") => Some(SignIn::Scram {
-                mechanism: ScramMechanism::Sha512,
-                user: user()?,
-                password: password()?,
-            }),
-            Some("scram-sha-256") => Some(SignIn::Scram {
-                mechanism: ScramMechanism::Sha256,
-                user: user()?,
-                password: password()?,
-            }),
-            Some("plain") => {
-                if s.tls.is_none() {
-                    return Err("PLAIN sends the password: it needs --tls-ca".to_owned());
-                }
-                Some(SignIn::Plain {
-                    user: user()?,
-                    password: password()?,
-                })
-            }
-            Some("oauthbearer") => {
-                let path = self.token_file.as_ref().ok_or("oauthbearer needs --token-file")?;
-                Some(SignIn::Token(
-                    String::from_utf8_lossy(&read(path)?).trim().to_owned(),
-                ))
-            }
-            Some(other) => return Err(format!("unknown --sasl-mechanism {other:?}")),
-        };
-        Ok(s)
+        client_security(&ClientAuth {
+            flag: "--",
+            tls_ca: self.tls_ca.as_deref(),
+            tls_cert: self.tls_cert.as_deref(),
+            tls_key: self.tls_key.as_deref(),
+            tls_server_name: self.tls_server_name.as_deref(),
+            sasl_mechanism: self.sasl_mechanism.as_deref(),
+            user: self.user.as_deref(),
+            password_file: self.password_file.as_deref(),
+            token_file: self.token_file.as_deref(),
+        })
     }
+}
+
+/// How a client reaches a broker that asks for TLS or sign-in: what the flags of a command said. `flag` is what
+/// those flags start with (`--`, or `--registry-broker-` for the registry's own connection), for messages that
+/// name the one that is missing.
+pub(crate) struct ClientAuth<'a> {
+    pub(crate) flag: &'static str,
+    pub(crate) tls_ca: Option<&'a std::path::Path>,
+    pub(crate) tls_cert: Option<&'a std::path::Path>,
+    pub(crate) tls_key: Option<&'a std::path::Path>,
+    pub(crate) tls_server_name: Option<&'a str>,
+    pub(crate) sasl_mechanism: Option<&'a str>,
+    pub(crate) user: Option<&'a str>,
+    pub(crate) password_file: Option<&'a std::path::Path>,
+    pub(crate) token_file: Option<&'a std::path::Path>,
+}
+
+pub(crate) fn client_security(
+    auth: &ClientAuth<'_>,
+) -> Result<openduct_broker::client::ClientSecurity, String> {
+    use openduct_broker::client::{ClientSecurity, SignIn};
+    use openduct_broker::security::scram::ScramMechanism;
+    let flag = auth.flag;
+    let read =
+        |p: &std::path::Path| std::fs::read(p).map_err(|e| format!("cannot read {}: {e}", p.display()));
+    let mut s = ClientSecurity::default();
+    if let Some(ca) = auth.tls_ca {
+        let ca = read(ca)?;
+        let identity = match (auth.tls_cert, auth.tls_key) {
+            (Some(c), Some(k)) => Some((read(c)?, read(k)?)),
+            _ => None,
+        };
+        s.tls = Some(ClientSecurity::tls_from_pem(
+            &ca,
+            identity.as_ref().map(|(c, k)| (c.as_slice(), k.as_slice())),
+        )?);
+        s.server_name = auth.tls_server_name.map(str::to_owned);
+    }
+    let password = || -> Result<String, String> {
+        if let Some(p) = auth.password_file {
+            let raw = read(p)?;
+            return Ok(String::from_utf8_lossy(&raw)
+                .trim_end_matches(['\n', '\r'])
+                .to_owned());
+        }
+        if flag == "--" {
+            crate::cluster::refuse_old("OPENDUCT_CLIENT_PASSWORD", "--password-file")?;
+        }
+        Err(format!(
+            "signing in needs {flag}password-file: a file holding the password, only you may read"
+        ))
+    };
+    let user = || {
+        auth.user
+            .map(str::to_owned)
+            .ok_or_else(|| format!("signing in needs {flag}user"))
+    };
+    s.sign_in = match auth.sasl_mechanism.map(str::to_ascii_lowercase).as_deref() {
+        None => None,
+        Some("scram-sha-512") => Some(SignIn::Scram {
+            mechanism: ScramMechanism::Sha512,
+            user: user()?,
+            password: password()?,
+        }),
+        Some("scram-sha-256") => Some(SignIn::Scram {
+            mechanism: ScramMechanism::Sha256,
+            user: user()?,
+            password: password()?,
+        }),
+        Some("plain") => {
+            if s.tls.is_none() {
+                return Err(format!("PLAIN sends the password: it needs {flag}tls-ca"));
+            }
+            Some(SignIn::Plain {
+                user: user()?,
+                password: password()?,
+            })
+        }
+        Some("oauthbearer") => {
+            let path = auth
+                .token_file
+                .ok_or_else(|| format!("oauthbearer needs {flag}token-file"))?;
+            Some(SignIn::Token(
+                String::from_utf8_lossy(&read(path)?).trim().to_owned(),
+            ))
+        }
+        Some(other) => return Err(format!("unknown {flag}sasl-mechanism {other:?}")),
+    };
+    Ok(s)
 }
 
 #[derive(Debug, Subcommand)]

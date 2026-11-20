@@ -25,6 +25,9 @@ pub enum Resource {
     Group,
     Cluster,
     TransactionalId,
+    /// A subject of the schema registry: Read (its versions and schemas), Write (register), Delete,
+    /// DescribeConfigs and AlterConfigs (its compatibility level).
+    Subject,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]

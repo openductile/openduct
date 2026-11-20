@@ -34,3 +34,7 @@ serde_json = { version = "1.0.154", features = ["preserve_order"] }
 tokio = { version = "1.54.1", features = ["rt-multi-thread", "macros", "net", "time", "sync"] }
 tracing = "0.1.44"
 yaml-rust2 = "0.13.0"
+
+[dev-dependencies]
+# The schedule tests run a broker in memory (tests/schedule.rs).
+openduct-storage = { version = "0.1.0", path = "../openduct-storage" }

@@ -4,6 +4,7 @@ members = [
     "crates/openduct-storage",
     "crates/openduct-raft",
     "crates/openduct-broker",
+    "crates/openduct-registry",
     "crates/openduct",
     "crates/openduct-value",
     "crates/openduct-expr",
