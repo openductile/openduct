@@ -1875,7 +1875,7 @@ dependencies = [
 
 [[package]]
 name = "openduct-broker"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "anyhow",
  "base64 0.23.1",
@@ -1902,7 +1902,7 @@ dependencies = [
 
 [[package]]
 name = "openduct-connect"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "anyhow",
  "async-opcua",
@@ -1940,7 +1940,7 @@ dependencies = [
 
 [[package]]
 name = "openduct-expr"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "cel",
  "chrono",
@@ -1960,7 +1960,7 @@ dependencies = [
 
 [[package]]
 name = "openduct-hostile"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "bytes",
  "kafka-protocol",
@@ -1975,7 +1975,7 @@ dependencies = [
 
 [[package]]
 name = "openduct-pipeline"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "chrono",
  "openduct-expr",
@@ -1984,7 +1984,7 @@ dependencies = [
 
 [[package]]
 name = "openduct-registry"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "bytes",
  "kafka-protocol",
@@ -1997,7 +1997,7 @@ dependencies = [
 
 [[package]]
 name = "openduct-storage"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "bytes",
  "crc32c",
@@ -2015,7 +2015,7 @@ dependencies = [
 
 [[package]]
 name = "openduct-value"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "chrono",
  "indexmap",
