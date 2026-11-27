@@ -291,7 +291,7 @@ impl ControllerShared {
         self.changed.subscribe()
     }
 
-    fn bump(&self) {
+    pub(crate) fn bump(&self) {
         self.changed.send_modify(|n| *n = n.wrapping_add(1));
     }
 }
@@ -303,6 +303,16 @@ pub struct ControllerMachine {
 }
 
 impl ControllerMachine {
+    /// Whether this copy of the cluster's state can be rebuilt up to `purged`, the last entry its Raft log no longer
+    /// holds: only from a snapshot on this disk that reaches at least that far.
+    pub(crate) fn covers(&self, purged: &crate::types::LogId) -> bool {
+        self.shared
+            .snapshots
+            .current()
+            .and_then(|(meta, _)| meta.last_log_id)
+            .is_some_and(|snapshot| snapshot.index >= purged.index)
+    }
+
     /// Opens the machine in `dir`: an empty state to start from, and the newest snapshot, which Raft installs.
     pub fn open(dir: impl Into<PathBuf>) -> io::Result<Self> {
         let dir = dir.into();

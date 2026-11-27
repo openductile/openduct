@@ -189,6 +189,21 @@ impl PartitionMachine {
     pub(crate) fn shared(&self) -> Arc<PartitionShared> {
         Arc::clone(&self.shared)
     }
+
+    /// How far this machine's Raft log may be purged (snapshot.rs `Floor`).
+    pub(crate) fn purge_floor(&self) -> Arc<crate::snapshot::Floor> {
+        self.shared.snapshots.floor()
+    }
+
+    /// Whether this copy can be rebuilt up to `purged`, the last entry its Raft log no longer holds: only from a
+    /// snapshot on this disk that reaches at least that far. Without one, what was purged is on this broker no more.
+    pub(crate) fn covers(&self, purged: &LogId) -> bool {
+        self.shared
+            .snapshots
+            .current()
+            .and_then(|(meta, _)| meta.last_log_id)
+            .is_some_and(|snapshot| snapshot.index >= purged.index)
+    }
 }
 
 /// A snapshot being made: the log's files already linked (consistent with the entries applied so far), still to be

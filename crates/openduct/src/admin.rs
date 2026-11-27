@@ -227,7 +227,70 @@ pub(crate) async fn topic(command: TopicCommand) -> Result<(), String> {
     Ok(())
 }
 
-pub(crate) async fn health(target: Target) -> Result<(), String> {
+#[derive(clap::Args, Debug)]
+pub(crate) struct HealthArgs {
+    #[command(flatten)]
+    target: Target,
+    /// Ask whether the broker is READY rather than whether it answers: joined to its cluster, every partition it
+    /// holds started, led and level with its leader. What a rolling restart waits for before the next broker is
+    /// stopped. Asked of the broker's own --metrics-listen address (see --ready-address).
+    #[arg(long)]
+    ready: bool,
+    /// Where the broker serves /ready: its --metrics-listen address.
+    #[arg(
+        long,
+        env = "OPENDUCT_READY_ADDRESS",
+        default_value = "127.0.0.1:9645",
+        requires = "ready"
+    )]
+    ready_address: std::net::SocketAddr,
+}
+
+/// `GET /ready` of a broker's metrics address: `Ok` when it says 200, else what it said.
+pub(crate) async fn ask_ready(at: std::net::SocketAddr, within: std::time::Duration) -> Result<(), String> {
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+    let asked = async {
+        let mut socket = tokio::net::TcpStream::connect(at)
+            .await
+            .map_err(|e| format!("cannot reach {at}: {e}"))?;
+        socket
+            .write_all(format!("GET /ready HTTP/1.1\r\nHost: {at}\r\nConnection: close\r\n\r\n").as_bytes())
+            .await
+            .map_err(|e| e.to_string())?;
+        let mut answer = Vec::new();
+        socket
+            .take(64 * 1024)
+            .read_to_end(&mut answer)
+            .await
+            .map_err(|e| e.to_string())?;
+        Ok::<String, String>(String::from_utf8_lossy(&answer).into_owned())
+    };
+    let answer = tokio::time::timeout(within, asked)
+        .await
+        .map_err(|_| format!("{at} did not answer in time"))??;
+    let status = answer.lines().next().unwrap_or_default();
+    if status.split(' ').nth(1) == Some("200") {
+        return Ok(());
+    }
+    let body = answer.split_once("\r\n\r\n").map_or("", |(_, b)| b).trim();
+    Err(if body.is_empty() {
+        format!("{at} answered \"{status}\"")
+    } else {
+        body.to_owned()
+    })
+}
+
+pub(crate) async fn health(args: HealthArgs) -> Result<(), String> {
+    let target = args.target;
+    if args.ready {
+        ask_ready(
+            args.ready_address,
+            std::time::Duration::from_secs(target.timeout_secs),
+        )
+        .await?;
+        println!("ready: {}", args.ready_address);
+        return Ok(());
+    }
     let mut client = connect(&target).await?;
     let versions = client.api_versions().await.map_err(|e| e.to_string())?;
     println!(

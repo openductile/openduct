@@ -2,7 +2,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
 //! `--metrics-listen`: what the broker measures (and, under `openduct start`, its workflows) for Prometheus, at
-//! `GET /metrics`.
+//! `GET /metrics` - and, at `GET /ready`, whether the broker can be relied on right now: 200 when it has joined its
+//! cluster and every partition it holds is started, led and level with its leader, 503 with the reasons otherwise
+//! (`openduct health --ready` asks it; a broker that is not part of a cluster is ready when it answers). `/ready`
+//! needs no token: it says how many, never which topics.
 //!
 //! A small HTTP/1.1 responder of its own rather than a web framework, so a broker-only build stays small: one
 //! request per connection, a few connections at a time, each request read within a few seconds and at most 8 KiB.
@@ -28,6 +31,17 @@ const AT_ONCE: usize = 8;
 
 /// More metrics beside the broker's (the workflows', under `openduct start`).
 pub(crate) type Extra = fn() -> String;
+
+/// How the broker stands, asked at each request: whether it is ready, why not (a line a reason), and its own
+/// gauges in the Prometheus text format.
+pub(crate) type Standing = Arc<dyn Fn() -> Stand + Send + Sync>;
+
+#[derive(Debug, Clone, Default)]
+pub(crate) struct Stand {
+    pub(crate) ready: bool,
+    pub(crate) reasons: Vec<String>,
+    pub(crate) gauges: String,
+}
 
 /// The token Prometheus sends, from `path`: the file's first line, which only its owner may read.
 pub(crate) fn read_token(path: &Path) -> Result<Arc<str>, String> {
@@ -70,6 +84,7 @@ pub(crate) async fn start(
     allow_insecure: bool,
     broker: BrokerMetrics,
     extra: Option<Extra>,
+    standing: Option<Standing>,
 ) -> Result<tokio::task::JoinHandle<()>, String> {
     if !listen.ip().is_loopback() && token.is_none() && !allow_insecure {
         return Err(format!(
@@ -82,10 +97,16 @@ pub(crate) async fn start(
         .map_err(|e| format!("cannot listen for metrics on {listen}: {e}"))?;
     let at = listener.local_addr().map_err(|e| e.to_string())?;
     tracing::info!(address = %at, "metrics for Prometheus at http://{at}/metrics");
-    Ok(tokio::spawn(serve(listener, token, broker, extra)))
+    Ok(tokio::spawn(serve(listener, token, broker, extra, standing)))
 }
 
-async fn serve(listener: TcpListener, token: Option<Arc<str>>, broker: BrokerMetrics, extra: Option<Extra>) {
+async fn serve(
+    listener: TcpListener,
+    token: Option<Arc<str>>,
+    broker: BrokerMetrics,
+    extra: Option<Extra>,
+    standing: Option<Standing>,
+) {
     let permits = Arc::new(Semaphore::new(AT_ONCE));
     loop {
         let Ok(permit) = Arc::clone(&permits).acquire_owned().await else {
@@ -94,10 +115,13 @@ async fn serve(listener: TcpListener, token: Option<Arc<str>>, broker: BrokerMet
         let Ok((socket, _)) = listener.accept().await else {
             continue;
         };
-        let (token, broker) = (token.clone(), broker.clone());
+        let (token, broker, standing) = (token.clone(), broker.clone(), standing.clone());
         tokio::spawn(async move {
-            let _ = tokio::time::timeout(READ_TIMEOUT * 2, answer(socket, token.as_deref(), &broker, extra))
-                .await;
+            let _ = tokio::time::timeout(
+                READ_TIMEOUT * 2,
+                answer(socket, token.as_deref(), &broker, extra, standing.as_ref()),
+            )
+            .await;
             drop(permit);
         });
     }
@@ -108,13 +132,27 @@ async fn answer(
     token: Option<&str>,
     broker: &BrokerMetrics,
     extra: Option<Extra>,
+    standing: Option<&Standing>,
 ) -> std::io::Result<()> {
     let Ok(Some(head)) = tokio::time::timeout(READ_TIMEOUT, read_head(&mut socket)).await else {
         return Ok(());
     };
+    let stand = || standing.map(|s| s());
     let (status, body) = match route(&head, token) {
+        _ if asks_ready(&head) => match stand() {
+            // Not part of a cluster: it answers, so it is ready.
+            None => ("200 OK", Body::Full("ready\n".to_owned())),
+            Some(s) if s.ready => ("200 OK", Body::Full("ready\n".to_owned())),
+            Some(s) => (
+                "503 Service Unavailable",
+                Body::Full(format!("not ready\n{}\n", s.reasons.join("\n"))),
+            ),
+        },
         Ok(head_only) => {
             let mut body = broker.render().await;
+            if let Some(s) = stand() {
+                body.push_str(&s.gauges);
+            }
             if let Some(extra) = extra {
                 body.push_str(&extra());
             }
@@ -166,6 +204,13 @@ async fn read_head(socket: &mut TcpStream) -> Option<String> {
             return None;
         }
     }
+}
+
+/// Whether the request is `GET /ready` (or HEAD): asked by a probe, answered without a token.
+fn asks_ready(head: &str) -> bool {
+    let mut first = head.split("\r\n").next().unwrap_or_default().split(' ');
+    let (method, target) = (first.next().unwrap_or_default(), first.next().unwrap_or_default());
+    matches!(method, "GET" | "HEAD") && target.split('?').next() == Some("/ready")
 }
 
 /// Whether the request may have the metrics (`Ok(true)` for HEAD: headers only), or the status refusing it.
@@ -231,6 +276,97 @@ mod tests {
         );
         assert_eq!(route("GET /admin HTTP/1.1\r\n\r\n", None), Err("404 Not Found"));
         assert_eq!(route("GET /metrics?x=1 HTTP/1.1\r\n\r\n", None), Ok(false));
+    }
+
+    #[test]
+    fn ready_is_asked_with_get_or_head_and_nothing_else_is_mistaken_for_it() {
+        assert!(asks_ready("GET /ready HTTP/1.1\r\n\r\n"));
+        assert!(asks_ready("HEAD /ready?probe=1 HTTP/1.1\r\n\r\n"));
+        assert!(!asks_ready("POST /ready HTTP/1.1\r\n\r\n"));
+        assert!(!asks_ready("GET /readyz HTTP/1.1\r\n\r\n"));
+        assert!(!asks_ready("GET /metrics HTTP/1.1\r\n\r\n"));
+    }
+
+    /// A broker's HTTP address answering as `stand` says, and what `openduct health --ready` makes of it.
+    async fn asked(stand: Option<Stand>, token: Option<&str>) -> (Result<(), String>, String) {
+        let standing = stand.map(|s| Arc::new(move || s.clone()) as Standing);
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let at = listener.local_addr().unwrap();
+        let mut config = openduct_broker::BrokerConfig::new("127.0.0.1:0".parse().unwrap());
+        config.advertised_port = 0;
+        let broker = openduct_broker::Broker::start(config, Arc::new(openduct_storage::MemoryStore::new()))
+            .await
+            .unwrap();
+        let task = tokio::spawn(serve(
+            listener,
+            token.map(Arc::from),
+            broker.metrics(),
+            None,
+            standing,
+        ));
+        let ready = crate::admin::ask_ready(at, Duration::from_secs(5)).await;
+        // The gauges are in what Prometheus reads, beside the broker's own.
+        let mut socket = TcpStream::connect(at).await.unwrap();
+        let auth = token.map_or(String::new(), |t| format!("Authorization: Bearer {t}\r\n"));
+        socket
+            .write_all(format!("GET /metrics HTTP/1.1\r\n{auth}\r\n").as_bytes())
+            .await
+            .unwrap();
+        let mut metrics = String::new();
+        socket.read_to_string(&mut metrics).await.unwrap();
+        task.abort();
+        broker.shutdown().await;
+        (ready, metrics)
+    }
+
+    #[tokio::test]
+    async fn a_broker_says_it_is_ready_only_when_it_is_and_says_why_when_it_is_not() {
+        let up = Stand {
+            ready: true,
+            reasons: vec![],
+            gauges: "openduct_ready 1\n".to_owned(),
+        };
+        let (ready, metrics) = asked(Some(up), None).await;
+        assert_eq!(ready, Ok(()));
+        assert!(metrics.contains("openduct_ready 1"), "{metrics}");
+
+        let down = Stand {
+            ready: false,
+            reasons: vec![
+                "2 of 9 copies are being rebuilt from their leader".to_owned(),
+                "1 of 9 partitions held here have no leader".to_owned(),
+            ],
+            gauges: "openduct_ready 0\n".to_owned(),
+        };
+        let (ready, metrics) = asked(Some(down), None).await;
+        assert_eq!(
+            ready,
+            Err("not ready\n2 of 9 copies are being rebuilt from their leader\n1 of 9 partitions held here have no leader".to_owned())
+        );
+        assert!(metrics.contains("openduct_ready 0"), "{metrics}");
+
+        // A broker that is not part of a cluster is ready when it answers.
+        assert_eq!(asked(None, None).await.0, Ok(()));
+        // A probe needs no token, where the metrics do.
+        let guarded = Stand {
+            ready: true,
+            ..Stand::default()
+        };
+        assert_eq!(
+            asked(Some(guarded), Some("a-token-sixteen-chars")).await.0,
+            Ok(())
+        );
+    }
+
+    #[tokio::test]
+    async fn nothing_listening_is_not_ready() {
+        let free = TcpListener::bind("127.0.0.1:0")
+            .await
+            .unwrap()
+            .local_addr()
+            .unwrap();
+        let refused = crate::admin::ask_ready(free, Duration::from_secs(2)).await;
+        assert!(refused.is_err_and(|e| e.contains("cannot reach")));
     }
 
     #[test]

@@ -134,6 +134,9 @@ struct Shared {
     flusher: Arc<Flusher>,
     /// Set once a flush failed: the device can no longer be trusted with what was written, so nothing more is.
     failed: Arc<Mutex<Option<String>>>,
+    /// How far this log may be purged (snapshot.rs `Floor`): asked before every purge. `None` only for a log
+    /// opened on its own (the storage tests).
+    floor: Mutex<Option<Arc<crate::snapshot::Floor>>>,
 }
 
 /// The log store: given to Raft, and cloned as the log reader its replication uses.
@@ -366,8 +369,14 @@ impl LogStore {
                 log: RwLock::new(log),
                 flusher,
                 failed: Arc::new(Mutex::new(None)),
+                floor: Mutex::new(None),
             }),
         })
+    }
+
+    /// Ties this log to its machine's snapshots: from here it is never purged past one that is on disk.
+    pub fn purge_no_further_than(&self, floor: Arc<crate::snapshot::Floor>) {
+        *self.shared.floor.lock() = Some(floor);
     }
 
     /// Reads one segment into the log's slots; returns its size once checked (and cut, if its end was torn).
@@ -820,6 +829,36 @@ impl RaftLogStorage<TypeConfig> for LogStore {
 
     async fn purge(&mut self, log_id: LogId) -> Result<(), io::Error> {
         self.check()?;
+        // NEVER PAST A SNAPSHOT THAT IS ON THIS DISK. Raft asks for a purge after a snapshot; this store does not
+        // take that on trust. Asked to go further than the newest snapshot read back from disk covers, it purges
+        // up to what is covered and keeps the rest - more log than asked for costs disk, less is a copy that
+        // cannot be rebuilt.
+        let log_id = match self.shared.floor.lock().clone() {
+            None => log_id,
+            Some(floor) => match floor.covered() {
+                Some(covered) if covered >= log_id.index => log_id,
+                covered => {
+                    let kept_from = covered.map_or(0, |c| c + 1);
+                    tracing::warn!(
+                        asked = %log_id,
+                        covered = ?covered,
+                        "asked to purge the log past the newest snapshot on disk: entries from {kept_from} are kept"
+                    );
+                    let within = covered.and_then(|c| {
+                        let log = self.shared.log.read();
+                        log.slots
+                            .iter()
+                            .rev()
+                            .find(|s| s.log_id.index <= c)
+                            .map(|s| s.log_id)
+                    });
+                    match within {
+                        Some(lesser) => lesser,
+                        None => return Ok(()),
+                    }
+                }
+            },
+        };
         // On the device first: a crash after a segment is removed must not show the log starting earlier.
         write_file(
             &self.shared.dir,

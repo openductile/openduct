@@ -35,6 +35,28 @@ pub(crate) struct ClusterArgs {
     /// them, and leaders spread over the brokers.
     #[arg(long, env = "OPENDUCT_REPLICATION_FACTOR", default_value_t = 3, value_parser = clap::value_parser!(u64).range(1..=7))]
     replication_factor: u64,
+    /// For recovery, by a person's decision: where most copies of a partition were lost, take the copies that kept
+    /// their log as they are. Give the recovery a name of your choosing (a date will do) and start every broker
+    /// with it. A broker that lost its copy sets it aside and is caught up from the others by itself; it votes for
+    /// no one until it is, so with most copies lost a partition waits. With this, the brokers being caught up
+    /// vote, and a copy that kept its log leads. A write only the lost copies held is gone. The name holds for one
+    /// recovery: once every partition has a leader it is written down as done and does nothing from then on, so
+    /// it may stay in the settings - a later loss needs a new name.
+    #[arg(long, env = "OPENDUCT_ACCEPT_SURVIVING_COPIES", value_name = "NAME")]
+    accept_surviving_copies: Option<String>,
+    /// For recovery, by a person's decision, when NO copy of a partition kept its log: start that partition again
+    /// empty. The stronger of the two recovery words, and it includes the one above. Give it a name and start
+    /// every broker with it. Where a copy that kept its log can be reached, it leads within moments and the others
+    /// are caught up from it, as above. A partition that has had no leader for thirty seconds is started again
+    /// from nothing by the copies being rebuilt: what it held is gone. So is what a copy that kept its log but
+    /// could not be reached in that time alone held - have every broker up before giving this. What was on each
+    /// disk stays in its set-aside directory. The name holds for one recovery, as above.
+    #[arg(
+        long,
+        env = "OPENDUCT_START_EMPTY_WHERE_NO_COPY_SURVIVED",
+        value_name = "NAME"
+    )]
+    start_empty_where_no_copy_survived: Option<String>,
     /// TLS between brokers: this broker's certificate (PEM, its chain leaf first). With --replication-tls-key and
     /// --replication-tls-ca, every connection between brokers is encrypted and both ends must show a certificate
     /// the cluster's authority signed, naming their replication host.
@@ -257,6 +279,8 @@ pub(crate) async fn start(
         tracing::info!(bucket, "tiered storage on: closed segments go to object storage");
     }
     config.replication_factor = usize::try_from(args.replication_factor).unwrap_or(3);
+    config.accept_surviving_copies = args.accept_surviving_copies.clone();
+    config.start_empty_where_none_survived = args.start_empty_where_no_copy_survived.clone();
     let replica = Replica::start(config)
         .await
         .map_err(|e| format!("cannot start replication: {e}"))?;

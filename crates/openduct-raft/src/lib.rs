@@ -32,6 +32,7 @@ pub mod tier;
 pub mod tls;
 pub mod types;
 
+pub use members::Readiness;
 pub use net::ClusterAuth;
 pub use replica::{Replica, ReplicaConfig, Timing};
 pub use tier::{S3, S3Settings, TierConfig};

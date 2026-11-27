@@ -336,6 +336,55 @@ pub(crate) async fn run(args: ServeArgs) -> Result<(), String> {
     run_until(args, stopped(), |_| {}, None).await
 }
 
+/// How a broker of a cluster stands, for `/ready` and its gauges (openduct-raft `Readiness`).
+fn standing_of(replica: Arc<openduct_raft::Replica>) -> crate::metrics_http::Standing {
+    Arc::new(move || {
+        let r = replica.readiness();
+        let gauge = |name: &str, help: &str, value: usize| {
+            format!("# HELP {name} {help}\n# TYPE {name} gauge\n{name} {value}\n")
+        };
+        let gauges = [
+            gauge(
+                "openduct_ready",
+                "1 when this broker has joined its cluster and every partition it holds is started, led and level with its leader.",
+                usize::from(r.is_ready()),
+            ),
+            gauge("openduct_partitions_held", "Partitions this broker holds a copy of.", r.held),
+            gauge(
+                "openduct_partitions_pending",
+                "Partitions this broker should hold whose group is not started here yet.",
+                r.pending,
+            ),
+            gauge(
+                "openduct_partitions_not_started",
+                "Partitions this broker should hold and could not start.",
+                r.not_started.len(),
+            ),
+            gauge(
+                "openduct_partitions_recovering",
+                "Copies on this broker being rebuilt from their leader.",
+                r.recovering,
+            ),
+            gauge(
+                "openduct_partitions_without_leader",
+                "Partitions held here that have no leader.",
+                r.without_leader,
+            ),
+            gauge(
+                "openduct_partitions_behind",
+                "Copies on this broker behind their leader.",
+                r.behind,
+            ),
+        ]
+        .concat();
+        crate::metrics_http::Stand {
+            ready: r.is_ready(),
+            reasons: r.reasons(),
+            gauges,
+        }
+    })
+}
+
 /// Runs the broker until `stop` completes; `ready` is told the address it listens on, once it does. `extra` adds
 /// metrics beside the broker's (the workflows', under `openduct start`).
 pub(crate) async fn run_until(
@@ -415,6 +464,7 @@ pub(crate) async fn run_until(
                 args.security.allow_insecure(),
                 broker.metrics(),
                 extra,
+                replica.as_ref().map(|r| standing_of(Arc::clone(r))),
             )
             .await?,
         ),
@@ -446,6 +496,11 @@ pub(crate) async fn run_until(
     }
     if let Some(registry) = registry {
         registry.abort();
+    }
+    // What this broker leads is given to the others first, while it still answers: stopped outright, its
+    // partitions had no leader until an election, and writes to them were refused meanwhile.
+    if let Some(replica) = &replica {
+        replica.hand_over(std::time::Duration::from_secs(10)).await;
     }
     broker.shutdown().await;
     if let Some(replica) = replica {

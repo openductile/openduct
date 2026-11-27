@@ -163,6 +163,39 @@ async fn data_written_through_the_protocol_survives_a_broker_restart() {
 }
 
 #[tokio::test]
+async fn a_stopping_broker_does_not_wait_out_a_fetch_waiting_for_records() {
+    // The restart drill in a test lane, 2026-11-24: a stopping broker was still waiting on something sixty seconds
+    // later, when its pod was killed. A fetch waiting for records that will not come must not be that: the stop
+    // ends it. (It passes with or without the drain's bound in server.rs - a waiting fetch already ends on the stop.
+    // The bound is for a request that does not: in the drill, most likely a write to a partition the stopping
+    // broker had been handed back, which members.rs `leave` now prevents.)
+    let (broker, addr) = start(Arc::new(MemoryStore::new())).await;
+    let client = Arc::new(ClientBuilder::new(vec![addr]).build().await.unwrap());
+    client
+        .controller_client()
+        .unwrap()
+        .create_topic("quiet", 1, 1, 5_000)
+        .await
+        .unwrap();
+    let reader = client
+        .partition_client("quiet", 0, UnknownTopicHandling::Error)
+        .await
+        .unwrap();
+    let waiting = tokio::spawn(async move { reader.fetch_records(0, 1..1_000_000, 30_000).await });
+    tokio::time::sleep(Duration::from_millis(300)).await;
+    let started = Instant::now();
+    tokio::time::timeout(Duration::from_secs(15), broker.shutdown())
+        .await
+        .expect("the broker stopped, not after the fetch's thirty seconds");
+    assert!(
+        started.elapsed() < Duration::from_secs(10),
+        "stopped in {:?}",
+        started.elapsed()
+    );
+    waiting.abort();
+}
+
+#[tokio::test]
 async fn a_waiting_fetch_returns_as_soon_as_a_record_arrives() {
     let (broker, addr) = start(Arc::new(MemoryStore::new())).await;
     let client = Arc::new(ClientBuilder::new(vec![addr]).build().await.unwrap());

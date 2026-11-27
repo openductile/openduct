@@ -86,6 +86,10 @@ can also come from a file (`--cluster-secret-file`).
 - **A broker back after a stop** catches up from the others. One back with an empty disk (a replaced volume)
   rejoins under its id - broker 1 too - and is rebuilt from the others' snapshots and logs; until it has caught up
   it does not vote, so it cannot help elect a leader missing what it had acknowledged.
+- **A broker new to the cluster** - a founder started a little after the others, or one added later - starts with an
+  empty disk too, but has nothing to rebuild: the cluster has no record of it, and its copies take part at once. The
+  cluster records each broker before that broker holds a copy of anything, which is how a broker back with an empty
+  disk is told from a new one (`openduct-raft` `empty_disk`).
 - **Adding a broker:** start it like the others, with every broker in `--brokers` (itself included). It joins the
   cluster by itself; new topics use it at once. `openduct cluster rebalance --bootstrap <any broker>` then moves
   partitions onto it until every broker holds, and leads, about as many as the others.
@@ -262,14 +266,102 @@ Worth an alert: `openduct_partitions_without_leader > 0` for more than a minute;
 
 ## Health
 
-`openduct health --bootstrap <host:port>` asks the broker which Kafka APIs it supports and exits 0 when it answers.
-Kubernetes can also check the Kafka port itself:
+There are two questions, and a restart needs the second one.
+
+**Does it answer?** `openduct health --bootstrap <host:port>` asks the broker which Kafka APIs it supports and exits 0
+when it answers. Use it for liveness: a broker that does not answer should be restarted.
+
+**Can it be relied on?** `openduct health --ready` exits 0 only when the broker has joined its cluster and every
+partition it holds a copy of is started, is not being rebuilt, has a leader, and is level with that leader. A broker
+that has just started answers long before that is true. Use it for readiness, so that a rolling restart or a node
+replacement waits for the broker that came back before it stops the next one. Taking brokers down one at a time
+protects nothing if "back" means "answers".
+
+`--ready` asks the broker's own `--metrics-listen` address (`GET /ready`: 200, or 503 with the reasons, a line each),
+so the broker must be started with one. `127.0.0.1:9645` is enough, and needs no token. A broker that is not part of a
+cluster is ready when it answers.
 
 ```yaml
+# Kubernetes
 livenessProbe:
-  tcpSocket:
-    port: 9092
-readinessProbe:
   exec:
     command: ["openduct", "health", "--bootstrap", "127.0.0.1:9092"]
+readinessProbe:
+  exec:
+    command: ["openduct", "health", "--ready", "--ready-address", "127.0.0.1:9645"]
 ```
+
+The same standing is in the metrics: `openduct_ready`, `openduct_partitions_held`, `_pending`, `_not_started`,
+`_recovering`, `_without_leader` and `_behind`. Alert on `openduct_ready == 0` for longer than a restart takes.
+
+Do not let an orchestrator's own rolling update wait on readiness alone when you change every broker at once: if the
+cluster is already without a majority, no broker becomes ready, and the change that would mend it never reaches the
+others. Replace the brokers that are not ready first, then the ready ones one at a time.
+
+## When a copy is lost
+
+A broker checks every copy before it serves it. Its replication log holds nothing before the last snapshot, so a copy
+can be rebuilt on its broker only from a snapshot on that disk. When there is none - a lost disk, a damaged
+directory - the broker sets the copy aside whole under `<data-dir>/set-aside/` (kept; nothing removes it), takes the
+partition up again empty, and is caught up from the partition's leader. Until it is level it votes for no one and
+does not stand for election, so it can never help elect a leader that is missing what it once acknowledged. This
+needs nobody: one broker's loss repairs itself from the others. The same holds for a broker's copy of the cluster's
+own state.
+
+A snapshot that is there but cannot be read (a failed read, or one written by a newer build) is never removed; the
+copy does not start until it reads.
+
+### When most copies are lost
+
+With most copies of a partition lost, the ones left cannot elect a leader: the brokers being rebuilt do not vote.
+That is deliberate, and it means the partition waits. Nothing is removed while it waits.
+
+A person may decide that the copies which kept their log are to be taken as they are. Start **every** broker with
+
+    openduct serve ... --accept-surviving-copies <name>
+
+where `<name>` is any name for this recovery (a date will do; `OPENDUCT_ACCEPT_SURVIVING_COPIES` in the environment
+is the same). The brokers being rebuilt then vote, a copy that kept its log leads, and the others are rebuilt from
+it. A write that only the lost copies held is gone - that is what is being accepted.
+
+The name holds for one recovery. Once every partition a broker holds has a leader and is level, the broker writes the
+name into `<data-dir>/recoveries-done` and it does nothing from then on, so it may stay in your settings. A later loss
+needs a new name: it is never settled by a switch somebody left on.
+
+A partition the surviving broker was leading recovers without any of this: it still holds its term, needs nobody's
+vote, and the emptied copies are caught up from it.
+
+### When no copy is left
+
+It can happen that every copy of a partition lost what could rebuild it. `--accept-surviving-copies` does nothing for
+such a partition - there is no surviving copy to accept - and it waits. `openduct health --ready` on any broker says
+how many of its copies are being rebuilt; the same number on every broker, never going down, is this case.
+
+A person may decide that such a partition is to be started again empty. Have **every** broker running, then start
+them all with
+
+    openduct serve ... --start-empty-where-no-copy-survived <name>
+
+(`OPENDUCT_START_EMPTY_WHERE_NO_COPY_SURVIVED` in the environment is the same.) It includes
+`--accept-surviving-copies`: a partition with a copy that kept its log is led by that copy within moments and the
+others are rebuilt from it, exactly as above, and nothing of it is lost. Only a partition that has had no leader for
+thirty seconds is started again from nothing.
+
+What you are accepting: everything such a partition held is gone. So is what a copy that kept its log, but could not
+be reached during those thirty seconds, alone held - which is why every broker should be up first. What was on each
+disk is not removed: it stays under `<data-dir>/set-aside/`.
+
+The name holds for one recovery, as above.
+
+## Stopping a broker
+
+A broker asked to stop (`SIGTERM`, or Ctrl-C) first gives away what it leads: for each partition it leads, the
+follower that is furthest along takes over, and the broker goes on answering until it has. From that moment it takes
+no leadership back - it refuses any that is offered and stands for no election - however long it takes to stop. A
+restart of one broker at a time therefore leaves no partition without a leader. It allows ten seconds for the hand-over
+and five for the requests in flight, then stops whatever is left. Give it at least that long before it is killed
+(Kubernetes' default of thirty seconds is enough).
+
+A broker that comes back gets its partitions back: each goes to its first broker two minutes after another broker took
+it over, once the returning broker has caught up - long enough that a broker that is only stopping is never handed
+anything.

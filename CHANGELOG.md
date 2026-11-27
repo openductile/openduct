@@ -6,6 +6,54 @@ All notable changes to OpenDuct are recorded here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- `--start-empty-where-no-copy-survived <name>`: by a person's decision, a partition of which no copy kept its log is
+  started again empty after thirty seconds without a leader. A partition with a surviving copy is rebuilt from it,
+  as under `--accept-surviving-copies`, which this includes.
+- A broker asked to stop gives its leadership to the other brokers first, so restarting brokers one at a time leaves
+  no partition without a leader.
+
+### Fixed
+
+- A broker new to its cluster - a founder started a few seconds after the first, while the cluster formed - was
+  taken for one that had lost its disk: it refused its vote to every partition made before it came, and with two
+  such brokers of three those partitions never had a leader (seen as the schema registry never starting). A broker
+  is now registered with the controller before it holds a copy of anything; one starting with an empty disk that the
+  controller has no record of is new, and its copies vote at once. One on record still catches up before it votes.
+- A broker that had begun to stop was handed back, five seconds later, every partition it had just given away - it was
+  caught up, as a stopping broker is - and led them until it was killed. A stopping broker now takes no leadership,
+  offered or by election; a leader hands a partition back to its first broker only two minutes after taking it over;
+  and a stopping broker waits at most five seconds for requests in flight.
+- A copy being rebuilt that was its partition's first replica started the group, and so led it with nothing in it -
+  under `--accept-surviving-copies`, a partition of which no copy was left came back empty at once, unasked. A copy
+  being rebuilt never starts a group.
+- A broker's own snapshot was removed at its second clean stop, with the replication log behind it already purged: the
+  partition could not start on that broker again ("state machine is behind the purged logs"). Two rolling restarts
+  were enough; with every broker restarted twice a partition lost its majority. A snapshot is now removed only when
+  another one replaced it and that one reads back from the disk.
+- A snapshot whose record could not be read was removed at a start. It is kept, and the copy waits until it reads.
+- One partition that could not start stopped every later partition of the broker from starting.
+- That a copy was being rebuilt was held in memory only: a broker restarted half way came back able to vote with a
+  short log. It is written beside the copy and removed the moment the copy is level with its leader.
+
+### Added
+
+- `openduct health --ready` and `GET /ready`: a broker says whether it can be relied on - joined, every partition
+  it holds started, led, and level with its leader - not merely whether it answers
+  ([deployment](docs/deployment.md#health)). Gauges `openduct_ready` and `openduct_partitions_*`.
+- A copy that cannot be rebuilt is set aside and rebuilt from the partition's leader by itself; so is a broker's copy
+  of the cluster's own state ([deployment](docs/deployment.md#when-a-copy-is-lost)).
+- `--accept-surviving-copies <name>`: a person's decision, for one recovery, that the copies which kept their log
+  are to be taken when most copies of a partition were lost
+  ([deployment](docs/deployment.md#when-most-copies-are-lost)).
+
+### Changed
+
+- The replication log is purged only as far as a snapshot on disk, read back, covers - whatever asks for more.
+- A broker removes no partition directory while its copy of the cluster's state is not level with a leader it hears
+  from.
+
 ## [0.1.2] - 2026-11-20
 
 ### Added

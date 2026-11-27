@@ -122,6 +122,12 @@ cluster. Each leader, seeing the new copy, lets that broker's log go back to emp
 goes back otherwise) and rebuilds it. Until each of its copies has applied what its leader has committed, it votes
 for no one: an empty copy must not help elect a leader missing writes this broker acknowledged before.
 
+**A broker new to its cluster** also starts with an empty disk while the cluster is up, but it never held a copy:
+it votes at once. Every broker registers with the controller before it starts a copy of anything, so the controller's
+record tells the two apart: a broker on record that comes back empty lost its disk; one not on record is new. It
+looks itself up once its copy of the controller has what the cluster had committed when it asked, and only then
+registers.
+
 ## Tiered storage (`--tier-s3-bucket`)
 
 In a cluster, each partition's leader copies its closed segments to an S3 bucket (AWS, or an S3-compatible store

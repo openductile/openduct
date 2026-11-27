@@ -626,17 +626,29 @@ async fn registry_until(
     body: Option<serde_json::Value>,
     want: u16,
 ) -> serde_json::Value {
-    let deadline = Instant::now() + Duration::from_secs(90);
+    let started = Instant::now();
+    let deadline = started + Duration::from_secs(90);
+    // What each try answered, in order: "no answer" (nothing in 40 s, or the connection refused) is told apart from
+    // a status, so a failure on a loaded runner says whether the registry was down, slow, or saying no.
+    let mut tries: Vec<String> = Vec::new();
     loop {
+        let asked = Instant::now();
         let got = registry(port, method, target, body.clone()).await;
         if let Some((status, answer)) = &got
             && *status == want
         {
             return answer.clone();
         }
+        tries.push(match &got {
+            Some((status, _)) => format!("{status} after {:.1}s", asked.elapsed().as_secs_f64()),
+            None => format!("no answer after {:.1}s", asked.elapsed().as_secs_f64()),
+        });
         assert!(
             Instant::now() < deadline,
-            "{method} {target} on port {port}: {got:?}, not {want}"
+            "{method} {target} on port {port}: {got:?}, not {want}, after {:.0}s and {} tries: {}",
+            started.elapsed().as_secs_f64(),
+            tries.len(),
+            tries.join("; ")
         );
         tokio::time::sleep(Duration::from_millis(250)).await;
     }

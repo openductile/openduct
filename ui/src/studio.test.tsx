@@ -201,7 +201,8 @@ describe("credentials, workspaces and AI", () => {
     render(<App />);
     fireEvent.click(await screen.findByText("Add a credential"));
     // Its kind first, from the tiles, then that kind's fields by their plain names.
-    fireEvent.click(screen.getByText("AI model"));
+    // The tiles come from their own request, which the button does not wait for: wait for them.
+    fireEvent.click(await screen.findByText("AI model"));
     // A service from the list fills in its address; "Any other" leaves it to be written.
     fireEvent.click(screen.getByText("Any other"));
     fireEvent.change(screen.getByLabelText(/Name/), { target: { value: "model" } });
@@ -292,7 +293,8 @@ describe("credentials, workspaces and AI", () => {
     render(<App />);
     fireEvent.click(await screen.findByText("sum"));
     expect(screen.getByRole("dialog", { name: "sum" }).textContent).toContain("Ask AI");
-    expect(screen.getByText("model (ai)")).toBeTruthy();
+    // The credentials come from their own request, not the workflow's: wait for them.
+    expect(await screen.findByText("model (ai)")).toBeTruthy();
     // The model is chosen from what the credential's service offers.
     expect(await screen.findByText("Some model (some-model)")).toBeTruthy();
     expect(screen.getByText("other-model")).toBeTruthy();
@@ -416,7 +418,10 @@ describe("dashboard and alerts", () => {
       expect((await screen.findAllByText(name)).length).toBeGreaterThan(0);
     const on = screen.getByLabelText("Google Chat: on") as HTMLInputElement;
     expect(on.disabled).toBe(true);
-    fireEvent.change(screen.getByLabelText("Google Chat: credential"), { target: { value: "space" } });
+    // The credentials come from their own request, not the messengers': wait for the one to choose.
+    const choose = screen.getByLabelText("Google Chat: credential");
+    await within(choose).findByRole("option", { name: "space" });
+    fireEvent.change(choose, { target: { value: "space" } });
     fireEvent.click(screen.getByLabelText("Google Chat: on"));
     fireEvent.click(screen.getByText("Save"));
     await waitFor(() => expect(sent.some((x) => x.route === "PUT /api/workspaces/w1/alerts")).toBe(true));
@@ -529,7 +534,8 @@ describe("apps", () => {
     const window = await screen.findByRole("dialog", { name: "orders" });
     await waitFor(() => expect(within(window).getByLabelText("Status (optional)")).toBeTruthy());
     expect((within(window).getByLabelText("Status (optional)") as HTMLInputElement).value).toBe("paid");
-    expect(within(window).getByText("my-shop (shop_key)")).toBeTruthy();
+    // The credentials come from their own request, not the apps': wait for them.
+    expect(await within(window).findByText("my-shop (shop_key)")).toBeTruthy();
     // Another action: its inputs.
     fireEvent.change(within(window).getByLabelText("Action"), { target: { value: "add_customer" } });
     expect(within(window).getByLabelText("Email")).toBeTruthy();
