@@ -1,0 +1,22 @@
+description: A note on a contact
+action: add_note
+credential: {domain: shopexample, email: dana@shop.example, api_key: agile-test-key}
+input:
+  subject: Called Ann
+  description: She wants ten seats.
+  contact_ids: ['5629585249009664']
+exchanges:
+- sent:
+    method: POST
+    url: https://shopexample.agilecrm.com/dev/api/notes
+    headers: {authorization: Basic ZGFuYUBzaG9wLmV4YW1wbGU6YWdpbGUtdGVzdC1rZXk=, accept: application/json}
+    query: {}
+    body:
+      subject: Called Ann
+      description: She wants ten seats.
+      contact_ids: ['5629585249009664']
+  answer:
+    status: 200
+    body: &id001 {id: 5688267051630500, created_time: 1764237600, subject: Called Ann, description: She wants ten seats.,
+      entity_type: note}
+result: *id001

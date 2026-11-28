@@ -1,0 +1,9 @@
+description: A Brevo template filled in with values
+action: send_email
+credential: { api_key: xkeysib-test-1 }
+input: { to: ann@example.com, template_id: 12, params: { FIRSTNAME: Ann, ORDER: A-1001 } }
+exchanges:
+  - sent:
+      body: { to: [{ email: ann@example.com }], templateId: 12, params: { FIRSTNAME: Ann, ORDER: A-1001 } }
+    answer: { status: 201, body: { messageId: "<202611271000.2@smtp-relay.example.com>" } }
+result: { messageId: "<202611271000.2@smtp-relay.example.com>" }

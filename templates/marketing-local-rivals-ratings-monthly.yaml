@@ -1,0 +1,64 @@
+name: How you and your local rivals are rated, each month
+description: >-
+  For restaurants, salons, gyms and other local businesses: on the first of each month, read the Yelp rating and review
+  count of your business and the rivals nearby you name, compare them with last month's (kept between runs), and email a
+  short table - who gained reviews, whose stars moved, where you rank - so you see the trend, not just today's number.
+  Needs: a Yelp Fusion API key as a bearer credential called yelp, and a mail server credential called mail.
+category: Marketing
+trigger:
+  schedule: { every: month, on: [1], at: "09:00", timezone: America/Chicago }
+# What a test runs on: an event as this trigger gives it.
+sample:
+  scheduled_at: "2026-12-01T15:00:00Z"
+steps:
+  - name: settings
+    set:
+      # Your business first, then your rivals: each one's Yelp id (the end of its Yelp address).
+      businesses: "['your-business-chicago', 'rival-one-chicago', 'rival-two-chicago']"
+      send_to: "'owner@example.com'"
+  - name: each_business
+    for_each:
+      items: steps.settings.businesses
+      steps:
+        - name: business
+          http:
+            method: GET
+            url: "https://api.yelp.com/v3/businesses/{{ item }}"
+            credential: yelp
+            sample: { id: your-business-chicago, name: Lantern Noodle Bar, rating: 4.5, review_count: 412, is_closed: false, url: "https://www.yelp.com/biz/your-business-chicago" }
+          retry: { attempts: 3, wait: 10s }
+          on_error: continue
+  - name: table
+    javascript:
+      state: true
+      code: |
+        // This month's figures against last month's; the state keeps this month's for the next run.
+        const last = state.figures || {};
+        const now = {};
+        const rows = steps.settings.businesses.map((id, i) => {
+          const b = (steps.each_business[i] || {}).business;
+          if (!b || b.status !== 200) return { id, name: id, missing: true };
+          const { name, rating, review_count: reviews, is_closed: closed } = b.body;
+          now[id] = { rating, reviews };
+          const before = last[id];
+          return { id, name, rating, reviews, closed,
+                   stars: before ? Math.round((rating - before.rating) * 10) / 10 : null,
+                   gained: before ? reviews - before.reviews : null };
+        });
+        state.figures = now;
+        const ranked = rows.filter(r => !r.missing).sort((a, b) => b.rating - a.rating || b.reviews - a.reviews);
+        const place = ranked.findIndex(r => r.id === steps.settings.businesses[0]) + 1;
+        const sign = n => n === null ? "new" : n > 0 ? `+${n}` : `${n}`;
+        const lines = ranked.map((r, i) =>
+          `${i + 1}. ${r.name}${r.id === steps.settings.businesses[0] ? " (you)" : ""}: ${r.rating} stars (${sign(r.stars)}), ` +
+          `${r.reviews} reviews (${sign(r.gained)})${r.closed ? ", marked closed" : ""}`);
+        const missing = rows.filter(r => r.missing).map(r => r.id);
+        return { place, of: ranked.length,
+                 text: lines.join("\n") + (missing.length ? `\n\nNot found on Yelp: ${missing.join(", ")}` : "") };
+  - name: send
+    email:
+      credential: mail
+      to: "{{ steps.settings.send_to }}"
+      subject: "Local ratings this month: {{ steps.table.place > 0 ? 'you are ' + string(steps.table.place) + ' of ' + string(steps.table.of) : 'your business was not found' }}"
+      text: "{{ steps.table.text }}\n\n(Changes are since last month's email.)"
+    retry: { attempts: 3, wait: 30s }

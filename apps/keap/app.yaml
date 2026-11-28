@@ -1,0 +1,1201 @@
+# Copyright 2026 Ductile AI, Inc
+# SPDX-License-Identifier: Apache-2.0
+# Keap: made by `openduct app from-openapi` from https://github.com/infusionsoft/keap-sdk/blob/c386b1ea7d13/sdks/v2/swagger.yml (the description says Apache 2.0; the repository is MIT) (Keap API v2, OpenAPI 3.1).
+# Checked as made. Change what you like, then run `openduct app check` and `openduct app test` again.
+app: keap
+name: Keap
+category: crm
+description: "Contacts, companies, tags, notes, tasks, opportunities and orders in Keap; emails sent and campaign goals reached."
+docs: "https://developer.keap.com/docs/restv2/"
+hosts: [api.keap.com]
+base_url: "https://api.keap.com/crm"
+sign_in:
+  - id: keap
+    label: "Sign in with Keap"
+    oauth2:
+      authorize: "https://accounts.infusionsoft.com/app/oauth/authorize"
+      token: "https://api.infusionsoft.com/token"
+      # Keap's only scope.
+      scopes: [full]
+    headers: { Authorization: "Bearer {{ credential.access_token }}" }
+  - id: keap_key
+    label: "A personal access token or service account key"
+    fields: [{ name: api_key, label: "The personal access token or service account key", secret: true }]
+    headers: { Authorization: "Bearer {{ credential.api_key }}" }
+actions:
+  list_tasks:
+    label: "List tasks"
+    description: "Tasks, filtered and ordered as asked, every page."
+    method: GET
+    path: "/rest/v2/tasks"
+    inputs:
+      - name: filter
+        label: "A filter, such as email==ann@example.com (the fields it takes are below)"
+        description: "Filter to apply, allowed fields are: - (String) contact_id - (String) has_due_date - (String) is_completed - (String) user_id - (String) opportunity_id - (String) task_ids - (String) priority — one of CRITICAL, ESSENTIAL, NONESSENTIAL - (String) since_time - (String) until_time - (String) id —…"
+      - { name: order_by, label: "Order: a field and asc or desc, such as create_time desc" }
+    query: { filter: "{{ input.filter }}", order_by: "{{ input.order_by }}", page_size: "100" }
+    items: value.tasks
+    next: "value.next_page_token == null || value.next_page_token == '' ? null : {'page_token': value.next_page_token}"
+    output:
+      id: text
+      title: text
+      description: text
+      type: text
+      priority: text
+      completed: boolean
+      create_time: text
+      modification_time: text
+      completion_time: text
+      due_time: text
+      remind_time_mins: number
+      assigned_to_user_id: text
+      created_by_user_id: text
+      last_updated_by_user_id: text
+      contact_id: text
+      opportunity_id: text
+      accepted: boolean
+      custom_fields: list
+  list_tags:
+    label: "List tags"
+    description: "The tags of the account; filter==NONE finds those with an empty field."
+    method: GET
+    path: "/rest/v2/tags"
+    inputs:
+      - name: filter
+        label: "A filter, such as email==ann@example.com (the fields it takes are below)"
+        description: "Filter to apply, allowed fields are: - (String) name - (String) description - (String) category_id - (String) tag_ids - (String) since_create_time - (String) until_create_time - (String) since_update_time - (String) until_update_time You will need to apply the == operator to check the equality of…"
+      - { name: order_by, label: "Order: a field and asc or desc, such as create_time desc" }
+    query: { filter: "{{ input.filter }}", order_by: "{{ input.order_by }}", page_size: "100" }
+    items: value.tags
+    next: "value.next_page_token == null || value.next_page_token == '' ? null : {'page_token': value.next_page_token}"
+    output:
+      id: text
+      name: text
+      description: text
+      category: record
+      create_time: text
+      update_time: text
+  list_orders:
+    label: "List orders"
+    description: "Orders, filtered and ordered as asked, every page."
+    method: GET
+    path: "/rest/v2/orders"
+    inputs:
+      - name: filter
+        label: "A filter, such as email==ann@example.com (the fields it takes are below)"
+        description: "Filter to apply, allowed fields are: - (String) id - Allowable operators: \"==\",\"<=\", \"<\", \">=\", \">\", \"!=\" - (List[String]) ids - (String) product_id - (String) contact_id - (String) invoice_id - (String) invoice_xid - (Boolean) paid - (String) created_since_time - (String) created_until_time -…"
+      - { name: order_by, label: "Order: a field and asc or desc, such as create_time desc" }
+    query: { filter: "{{ input.filter }}", order_by: "{{ input.order_by }}", page_size: "100" }
+    items: value.orders
+    next: "value.next_page_token == null || value.next_page_token == '' ? null : {'page_token': value.next_page_token}"
+    output:
+      id: text
+      title: text
+      status: text
+      total: record
+      contact: record
+      notes: text
+      terms: text
+      order_type: text
+      source_type: text
+      creation_time: text
+      modification_time: text
+      order_time: text
+      lead_affiliate_id: text
+      sales_affiliate_id: text
+      total_paid: record
+      total_due: record
+      shipping_information: record
+      refund_total: record
+      allow_payment: boolean
+      allow_paypal: boolean
+      order_items: list
+      payment_plan: record
+      invoice_number: text
+      files: list
+      credit_status: text
+      promo_code: text
+      refund_status: text
+      synced: boolean
+      invoice_id: text
+      custom_fields: list
+      sent_time: text
+      due_time: text
+      external_create_user: text
+      external_create_time: text
+      external_update_time: text
+  list_opportunities:
+    label: "List opportunities"
+    description: "Opportunities in the sales pipeline, filtered and ordered as asked, every page."
+    method: GET
+    path: "/rest/v2/opportunities"
+    inputs:
+      - name: filter
+        label: "A filter, such as email==ann@example.com (the fields it takes are below)"
+        description: "Filter to apply, allowed fields are: - (String) stage_id - (String) user_id - (String) contact_id - (String) opportunity_title — supports wildcard prefix search (e.g. opportunity_title==Deal*) - (String) lead_source_name — supports wildcard prefix search (e.g. lead_source_name==Web*) - (String)…"
+      - { name: order_by, label: "Order: a field and asc or desc, such as created_time desc" }
+    query: { filter: "{{ input.filter }}", order_by: "{{ input.order_by }}", page_size: "100" }
+    items: value.opportunities
+    next: "value.next_page_token == null || value.next_page_token == '' ? null : {'page_token': value.next_page_token}"
+    output:
+      id: text
+      contact: record
+      stage: record
+      user: record
+      opportunity_title: text
+      next_action_time: text
+      next_action_notes: text
+      opportunity_notes: text
+      estimated_close_time: text
+      include_in_forecast: boolean
+      projected_revenue_low: number
+      projected_revenue_high: number
+      custom_fields: list
+      created_time: text
+      last_updated_time: text
+      affiliate_id: text
+      lead_source: text
+      monthly_revenue: number
+      order_revenue: number
+      objection: text
+      status: text
+      status_id: text
+      stage_entrance_time: text
+      last_updated_by: text
+      created_by: text
+  list_contacts:
+    label: "List contacts"
+    description: "Contacts, filtered (by email, name, phone, company or when changed) and ordered as asked, every page."
+    method: GET
+    path: "/rest/v2/contacts"
+    inputs:
+      - name: filter
+        label: "A filter, such as email==ann@example.com (the fields it takes are below)"
+        description: "Filter to apply, allowed fields are: - (String) email — supports wildcard (e.g. email==john*) - (String) given_name — supports wildcard (e.g. given_name==Mar*) - (String) family_name — supports wildcard (e.g. family_name==Smi*) - (String) middle_name — supports wildcard (e.g. middle_name==J*) -…"
+      - { name: order_by, label: "Order: a field and asc or desc, such as create_time desc" }
+    query: { filter: "{{ input.filter }}", order_by: "{{ input.order_by }}", page_size: "100" }
+    items: value.contacts
+    next: "value.next_page_token == null || value.next_page_token == '' ? null : {'page_token': value.next_page_token}"
+    output:
+      id: text
+      links: list
+      addresses: list
+      company: record
+      origin: record
+      prefix: text
+      suffix: text
+      website: text
+      groups: text
+      update_time: text
+      create_time: text
+      score_value: text
+      tag_ids: list
+      anniversary_date: text
+      birth_date: text
+      contact_type: text
+      custom_fields: list
+      email_addresses: list
+      family_name: text
+      fax_numbers: list
+      given_name: text
+      job_title: text
+      leadsource_id: text
+      middle_name: text
+      owner_id: text
+      phone_numbers: list
+      preferred_locale: text
+      preferred_name: text
+      referral_code: text
+      social_accounts: list
+      source_type: text
+      spouse_name: text
+      time_zone: text
+      utm_parameters: list
+      account_id: text
+      assistant_name: text
+      assistant_phone: text
+      billing_information: text
+      created_by: text
+      last_updated_by: text
+  list_companies:
+    label: "List companies"
+    description: "Companies, filtered and ordered as asked, every page."
+    method: GET
+    path: "/rest/v2/companies"
+    inputs:
+      - name: filter
+        label: "A filter, such as email==ann@example.com (the fields it takes are below)"
+        description: "Filter to apply, allowed fields are: - (String) company_name - exact match on company name (equality only) - (String) name - company name with support for a wildcard at the end (e.g. smith*) - (String) email - exact match on email - (String) city - company city (Contact.City) with support for a…"
+      - { name: order_by, label: "Order: a field and asc or desc, such as create_time desc" }
+    query: { filter: "{{ input.filter }}", order_by: "{{ input.order_by }}", page_size: "100" }
+    items: value.companies
+    next: "value.next_page_token == null || value.next_page_token == '' ? null : {'page_token': value.next_page_token}"
+    output:
+      id: text
+      address: record
+      notes: text
+      website: text
+      suffix: text
+      title: text
+      groups: text
+      company_name: text
+      custom_fields: list
+      email_address: record
+      fax_number: record
+      phone_number: record
+      update_time: text
+      create_time: text
+      anniversary_date: text
+      assistant_name: text
+      assistant_phone: text
+      billing_information: text
+      birth_date: text
+      contact_type: text
+      first_name: text
+      job_title: text
+      last_name: text
+      middle_name: text
+      preferred_name: text
+      owner_id: text
+      referral_code: text
+      spouse_name: text
+      account_id: text
+      created_by: text
+      last_updated_by: text
+  list_notes:
+    label: "List a contact's notes"
+    description: "The notes on one contact."
+    method: GET
+    path: "/rest/v2/contacts/{{ input.contact_id }}/notes"
+    inputs:
+      - { name: contact_id, label: "The contact's id", required: true }
+      - { name: filter, label: "A filter, as field==value" }
+      - { name: order_by, label: "Order: a field and asc or desc, such as create_time desc" }
+    query: { filter: "{{ input.filter }}", order_by: "{{ input.order_by }}", page_size: "100" }
+    items: value.notes
+    next: "value.next_page_token == null || value.next_page_token == '' ? null : {'page_token': value.next_page_token}"
+    output:
+      id: text
+      text: text
+      title: text
+      type: text
+      contact_id: text
+      assigned_to_user: record
+      create_time: text
+      update_time: text
+      last_updated_by_user_id: text
+      pinned_at: text
+      created_by_user_id: text
+      custom_fields: list
+  list_contact_tags:
+    label: "List a contact's tags"
+    description: "The tags applied to one contact."
+    method: GET
+    path: "/rest/v2/contacts/{{ input.contact_id }}/tags"
+    inputs:
+      - { name: contact_id, label: "Contact identifier", required: true }
+      - name: filter
+        label: "A filter, such as email==ann@example.com (the fields it takes are below)"
+        description: "Filter to apply, allowed fields are: - (String) name - (String) description - (String) category_id (use category_id==NONE to filter tags not assigned to any category) - (String) since_applied_time - (String) until_applied_time - (String) since_create_time - (String) until_create_time - (String)…"
+      - { name: order_by, label: "Order: a field and asc or desc, such as create_time desc" }
+    query: { filter: "{{ input.filter }}", order_by: "{{ input.order_by }}", page_size: "100" }
+    items: value.tags
+    next: "value.next_page_token == null || value.next_page_token == '' ? null : {'page_token': value.next_page_token}"
+    output: { tag: record, applied_time: text }
+  create_task:
+    label: "Create a task"
+    description: "A new task for a user, on a contact or an opportunity if given."
+    write: true
+    method: POST
+    path: "/rest/v2/tasks"
+    inputs:
+      - { name: title, label: "Task title" }
+      - { name: description, label: "Task description" }
+      - { name: type, label: "Task type" }
+      - { name: priority, label: "Task priority" }
+      - { name: completed, label: "Whether task is completed", kind: boolean }
+      - { name: completion_time, label: "Completion timestamp (ISO-8601)" }
+      - { name: due_time, label: "Due date/time (ISO-8601)" }
+      - name: remind_time_mins
+        label: "Value in minutes before start_date to show pop-up reminder"
+        kind: number
+      - { name: assigned_to_user_id, label: "Assigned user ID", required: true }
+      - { name: contact_id, label: "Associated contact ID" }
+      - { name: opportunity_id, label: "Associated opportunity ID" }
+      - { name: accepted, label: "Whether the task has been accepted", kind: boolean }
+      - { name: custom_fields, label: "Custom field values for the task", kind: list }
+    send:
+      title: "{{ input.title }}"
+      description: "{{ input.description }}"
+      type: "{{ input.type }}"
+      priority: "{{ input.priority }}"
+      completed: "{{ input.completed }}"
+      completion_time: "{{ input.completion_time }}"
+      due_time: "{{ input.due_time }}"
+      remind_time_mins: "{{ input.remind_time_mins }}"
+      assigned_to_user_id: "{{ input.assigned_to_user_id }}"
+      contact_id: "{{ input.contact_id }}"
+      opportunity_id: "{{ input.opportunity_id }}"
+      accepted: "{{ input.accepted }}"
+      custom_fields: "{{ input.custom_fields }}"
+    output:
+      id: text
+      title: text
+      description: text
+      type: text
+      priority: text
+      completed: boolean
+      create_time: text
+      modification_time: text
+      completion_time: text
+      due_time: text
+      remind_time_mins: number
+      assigned_to_user_id: text
+      created_by_user_id: text
+      last_updated_by_user_id: text
+      contact_id: text
+      opportunity_id: text
+      accepted: boolean
+      custom_fields: list
+  create_order:
+    label: "Create an order"
+    description: "A one-time order for a contact, with its items."
+    write: true
+    method: POST
+    path: "/rest/v2/orders"
+    inputs:
+      - { name: notes, label: "Internal notes" }
+      - { name: terms, label: "Order terms" }
+      - { name: title, label: "A title for the invoice" }
+      - { name: contact_id, label: "ID of the contact for this order", required: true }
+      - { name: order_items, label: "List of items to include in the order", kind: list }
+      - { name: order_title, label: "Title for the order", required: true }
+      - { name: order_time, label: "The date and time of the order", required: true }
+      - { name: order_type, label: "The order type", required: true }
+      - { name: promo_codes, label: "Uses multiple strings as promo codes", kind: list }
+      - { name: lead_affiliate_id, label: "Lead affiliate ID" }
+      - { name: sales_affiliate_id, label: "Sales affiliate ID" }
+      - { name: shipping_address, label: "Shipping address", kind: record }
+      - { name: custom_fields, label: "List of custom field values to apply to this order", kind: list }
+      - { name: sent_time, label: "The date and time the invoice was sent" }
+      - { name: due_time, label: "The date and time the invoice is due" }
+      - { name: invoice_number, label: "Invoice number" }
+      - { name: external_create_user, label: "The external system user that created this order" }
+      - name: external_create_time
+        label: "The date and time the order was created in the external system"
+      - name: external_update_time
+        label: "The date and time the order was last updated in the external system"
+    send:
+      notes: "{{ input.notes }}"
+      terms: "{{ input.terms }}"
+      title: "{{ input.title }}"
+      contact_id: "{{ input.contact_id }}"
+      order_items: "{{ input.order_items }}"
+      order_title: "{{ input.order_title }}"
+      order_time: "{{ input.order_time }}"
+      order_type: "{{ input.order_type }}"
+      promo_codes: "{{ input.promo_codes }}"
+      lead_affiliate_id: "{{ input.lead_affiliate_id }}"
+      sales_affiliate_id: "{{ input.sales_affiliate_id }}"
+      shipping_address: "{{ input.shipping_address }}"
+      custom_fields: "{{ input.custom_fields }}"
+      sent_time: "{{ input.sent_time }}"
+      due_time: "{{ input.due_time }}"
+      invoice_number: "{{ input.invoice_number }}"
+      external_create_user: "{{ input.external_create_user }}"
+      external_create_time: "{{ input.external_create_time }}"
+      external_update_time: "{{ input.external_update_time }}"
+    output:
+      id: text
+      title: text
+      status: text
+      total: record
+      contact: record
+      notes: text
+      terms: text
+      order_type: text
+      source_type: text
+      creation_time: text
+      modification_time: text
+      order_time: text
+      lead_affiliate_id: text
+      sales_affiliate_id: text
+      total_paid: record
+      total_due: record
+      shipping_information: record
+      refund_total: record
+      allow_payment: boolean
+      allow_paypal: boolean
+      order_items: list
+      payment_plan: record
+      invoice_number: text
+      files: list
+      credit_status: text
+      promo_code: text
+      refund_status: text
+      synced: boolean
+      invoice_id: text
+      custom_fields: list
+      sent_time: text
+      due_time: text
+      external_create_user: text
+      external_create_time: text
+      external_update_time: text
+  create_opportunity:
+    label: "Create an opportunity"
+    description: "A new opportunity for a contact, at a stage of the pipeline."
+    write: true
+    method: POST
+    path: "/rest/v2/opportunities"
+    inputs:
+      - { name: opportunity_title, label: "Opportunity title", required: true }
+      - { name: next_action_time, label: "Next action timestamp (ISO-8601)" }
+      - { name: next_action_notes, label: "Notes for next action" }
+      - { name: opportunity_notes, label: "General notes" }
+      - { name: estimated_close_time, label: "Estimated close timestamp (ISO-8601)" }
+      - { name: include_in_forecast, label: "Include in sales forecast", kind: boolean }
+      - { name: projected_revenue_low, label: "Low revenue estimate", kind: number }
+      - { name: projected_revenue_high, label: "High revenue estimate", kind: number }
+      - { name: contact_id, label: "Associated contact ID", required: true }
+      - { name: stage_id, label: "Pipeline stage ID", required: true }
+      - { name: user_id, label: "Assigned user ID" }
+      - { name: custom_fields, label: "Custom fields", kind: list }
+      - { name: affiliate_id, label: "Affiliate ID" }
+    send:
+      opportunity_title: "{{ input.opportunity_title }}"
+      next_action_time: "{{ input.next_action_time }}"
+      next_action_notes: "{{ input.next_action_notes }}"
+      opportunity_notes: "{{ input.opportunity_notes }}"
+      estimated_close_time: "{{ input.estimated_close_time }}"
+      include_in_forecast: "{{ input.include_in_forecast }}"
+      projected_revenue_low: "{{ input.projected_revenue_low }}"
+      projected_revenue_high: "{{ input.projected_revenue_high }}"
+      contact_id: "{{ input.contact_id }}"
+      stage_id: "{{ input.stage_id }}"
+      user_id: "{{ input.user_id }}"
+      custom_fields: "{{ input.custom_fields }}"
+      affiliate_id: "{{ input.affiliate_id }}"
+    output:
+      id: text
+      contact: record
+      stage: record
+      user: record
+      opportunity_title: text
+      next_action_time: text
+      next_action_notes: text
+      opportunity_notes: text
+      estimated_close_time: text
+      include_in_forecast: boolean
+      projected_revenue_low: number
+      projected_revenue_high: number
+      custom_fields: list
+      created_time: text
+      last_updated_time: text
+      affiliate_id: text
+      lead_source: text
+      monthly_revenue: number
+      order_revenue: number
+      objection: text
+      status: text
+      status_id: text
+      stage_entrance_time: text
+      last_updated_by: text
+      created_by: text
+  create_contact:
+    label: "Create a contact"
+    description: "A new contact; with a duplicate check, one already there by email (or email and name) is changed instead."
+    write: true
+    method: POST
+    path: "/rest/v2/contacts"
+    inputs:
+      - { name: duplicate_option, label: "Duplicate check: Email, EmailAndName or EmailAndNameAndCompany (a contact found is changed)" }
+      - name: addresses
+        label: "Addresses (as JSON); on a change, the list replaces the one there"
+        kind: list
+      - { name: company, label: Company, kind: record }
+      - { name: origin, label: Origin, kind: record }
+      - { name: prefix, label: "Name prefix" }
+      - { name: suffix, label: "Name suffix" }
+      - { name: website, label: "Personal website URL" }
+      - { name: anniversary_date, label: "The anniversary date" }
+      - { name: birth_date, label: "The birth date" }
+      - { name: contact_type, label: "Type of contact" }
+      - name: custom_fields
+        label: "Custom fields (as JSON: each an id and a content); on a change, the list replaces the one there"
+        kind: list
+      - name: email_addresses
+        label: "Email addresses (as JSON: each an email and a field, such as EMAIL1); on a change, the list replaces the one there"
+        kind: list
+      - { name: family_name, label: "Last name / surname" }
+      - name: fax_numbers
+        label: "Fax numbers (as JSON); on a change, the list replaces the one there"
+        kind: list
+      - { name: given_name, label: "First name" }
+      - { name: job_title, label: "Job title" }
+      - { name: leadsource_id, label: "Lead source identifier" }
+      - { name: middle_name, label: "Middle name" }
+      - { name: owner_id, label: "ID of the user who owns this contact" }
+      - name: phone_numbers
+        label: "Phone numbers (as JSON: each a number and a field, such as PHONE1); on a change, the list replaces the one there"
+        kind: list
+      - { name: preferred_locale, label: "Preferred locale" }
+      - { name: preferred_name, label: "Preferred name or nickname" }
+      - { name: referral_code, label: "Referral code" }
+      - name: social_accounts
+        label: "Social accounts (as JSON); on a change, the list replaces the one there"
+        kind: list
+      - { name: source_type, label: "Source type" }
+      - { name: spouse_name, label: "Spouse's name" }
+      - { name: time_zone, label: "Contact's timezone" }
+      - { name: utm_parameters, label: "Utm parameters", kind: record }
+      - { name: assistant_name, label: "Assistant's name" }
+      - { name: assistant_phone, label: "Assistant's phone number" }
+      - { name: billing_information, label: "Billing information" }
+    query: { duplicate_option: "{{ input.duplicate_option }}" }
+    send:
+      addresses: "{{ input.addresses }}"
+      company: "{{ input.company }}"
+      origin: "{{ input.origin }}"
+      prefix: "{{ input.prefix }}"
+      suffix: "{{ input.suffix }}"
+      website: "{{ input.website }}"
+      anniversary_date: "{{ input.anniversary_date }}"
+      birth_date: "{{ input.birth_date }}"
+      contact_type: "{{ input.contact_type }}"
+      custom_fields: "{{ input.custom_fields }}"
+      email_addresses: "{{ input.email_addresses }}"
+      family_name: "{{ input.family_name }}"
+      fax_numbers: "{{ input.fax_numbers }}"
+      given_name: "{{ input.given_name }}"
+      job_title: "{{ input.job_title }}"
+      leadsource_id: "{{ input.leadsource_id }}"
+      middle_name: "{{ input.middle_name }}"
+      owner_id: "{{ input.owner_id }}"
+      phone_numbers: "{{ input.phone_numbers }}"
+      preferred_locale: "{{ input.preferred_locale }}"
+      preferred_name: "{{ input.preferred_name }}"
+      referral_code: "{{ input.referral_code }}"
+      social_accounts: "{{ input.social_accounts }}"
+      source_type: "{{ input.source_type }}"
+      spouse_name: "{{ input.spouse_name }}"
+      time_zone: "{{ input.time_zone }}"
+      utm_parameters: "{{ input.utm_parameters }}"
+      assistant_name: "{{ input.assistant_name }}"
+      assistant_phone: "{{ input.assistant_phone }}"
+      billing_information: "{{ input.billing_information }}"
+    output:
+      id: text
+      links: list
+      addresses: list
+      company: record
+      origin: record
+      prefix: text
+      suffix: text
+      website: text
+      groups: text
+      update_time: text
+      create_time: text
+      score_value: text
+      tag_ids: list
+      anniversary_date: text
+      birth_date: text
+      contact_type: text
+      custom_fields: list
+      email_addresses: list
+      family_name: text
+      fax_numbers: list
+      given_name: text
+      job_title: text
+      leadsource_id: text
+      middle_name: text
+      owner_id: text
+      phone_numbers: list
+      preferred_locale: text
+      preferred_name: text
+      referral_code: text
+      social_accounts: list
+      source_type: text
+      spouse_name: text
+      time_zone: text
+      utm_parameters: list
+      account_id: text
+      assistant_name: text
+      assistant_phone: text
+      billing_information: text
+      created_by: text
+      last_updated_by: text
+  create_company:
+    label: "Create a company"
+    description: "A new company (a country code is needed when a region is given)."
+    write: true
+    method: POST
+    path: "/rest/v2/companies"
+    inputs:
+      - { name: address, label: Address, kind: record }
+      - { name: notes, label: "Notes about the company" }
+      - { name: website, label: "The company's website URL" }
+      - { name: suffix, label: "Name suffix" }
+      - { name: title, label: "Name prefix or salutation" }
+      - { name: company_name, label: "The name of the company" }
+      - { name: custom_fields, label: "Custom fields", kind: list }
+      - { name: email_address, label: "Email address", kind: record }
+      - { name: fax_number, label: "Fax number", kind: record }
+      - { name: phone_number, label: "Phone number", kind: record }
+      - { name: anniversary_date, label: "The anniversary date" }
+      - { name: assistant_name, label: "The name of the company contact's assistant" }
+      - { name: assistant_phone, label: "The phone number of the company contact's assistant" }
+      - { name: billing_information, label: "Billing information for the company" }
+      - { name: birth_date, label: "The birth date" }
+      - { name: contact_type, label: "Type of contact" }
+      - { name: first_name, label: "First name of the company contact" }
+      - { name: job_title, label: "Job title of the company contact" }
+      - { name: last_name, label: "Last name of the company contact" }
+      - { name: middle_name, label: "Middle name of the company contact" }
+      - { name: preferred_name, label: "Preferred name or nickname of the company contact" }
+      - { name: owner_id, label: "ID of the user who owns this company" }
+      - { name: referral_code, label: "Referral code" }
+      - { name: spouse_name, label: "Spouse's name" }
+    send:
+      address: "{{ input.address }}"
+      notes: "{{ input.notes }}"
+      website: "{{ input.website }}"
+      suffix: "{{ input.suffix }}"
+      title: "{{ input.title }}"
+      company_name: "{{ input.company_name }}"
+      custom_fields: "{{ input.custom_fields }}"
+      email_address: "{{ input.email_address }}"
+      fax_number: "{{ input.fax_number }}"
+      phone_number: "{{ input.phone_number }}"
+      anniversary_date: "{{ input.anniversary_date }}"
+      assistant_name: "{{ input.assistant_name }}"
+      assistant_phone: "{{ input.assistant_phone }}"
+      billing_information: "{{ input.billing_information }}"
+      birth_date: "{{ input.birth_date }}"
+      contact_type: "{{ input.contact_type }}"
+      first_name: "{{ input.first_name }}"
+      job_title: "{{ input.job_title }}"
+      last_name: "{{ input.last_name }}"
+      middle_name: "{{ input.middle_name }}"
+      preferred_name: "{{ input.preferred_name }}"
+      owner_id: "{{ input.owner_id }}"
+      referral_code: "{{ input.referral_code }}"
+      spouse_name: "{{ input.spouse_name }}"
+    output:
+      id: text
+      address: record
+      notes: text
+      website: text
+      suffix: text
+      title: text
+      groups: text
+      company_name: text
+      custom_fields: list
+      email_address: record
+      fax_number: record
+      phone_number: record
+      update_time: text
+      create_time: text
+      anniversary_date: text
+      assistant_name: text
+      assistant_phone: text
+      billing_information: text
+      birth_date: text
+      contact_type: text
+      first_name: text
+      job_title: text
+      last_name: text
+      middle_name: text
+      preferred_name: text
+      owner_id: text
+      referral_code: text
+      spouse_name: text
+      account_id: text
+      created_by: text
+      last_updated_by: text
+  create_note:
+    label: "Add a note to a contact"
+    description: "A note on a contact, written as a user."
+    write: true
+    method: POST
+    path: "/rest/v2/contacts/{{ input.contact_id }}/notes"
+    inputs:
+      - { name: contact_id, label: "The contact's id", required: true }
+      - { name: title, label: "A value for either title or type is required" }
+      - { name: text, label: "Note content" }
+      - { name: type, label: "A value for either title or type is required" }
+      - { name: user_id, label: "ID of user creating the note", required: true }
+      - { name: is_pinned, label: "Whether to pin this note", kind: boolean }
+      - { name: custom_fields, label: "Custom field values for the note", kind: list }
+    send:
+      title: "{{ input.title }}"
+      text: "{{ input.text }}"
+      type: "{{ input.type }}"
+      user_id: "{{ input.user_id }}"
+      is_pinned: "{{ input.is_pinned }}"
+      custom_fields: "{{ input.custom_fields }}"
+    output:
+      id: text
+      text: text
+      title: text
+      type: text
+      contact_id: text
+      assigned_to_user: record
+      create_time: text
+      update_time: text
+      last_updated_by_user_id: text
+      pinned_at: text
+      created_by_user_id: text
+      custom_fields: list
+  get_order:
+    label: "Look up an order"
+    description: "One order, with its items and what was paid."
+    method: GET
+    path: "/rest/v2/orders/{{ input.order_id }}"
+    inputs: [{ name: order_id, label: "Order id", required: true }]
+    output:
+      id: text
+      title: text
+      status: text
+      total: record
+      contact: record
+      notes: text
+      terms: text
+      order_type: text
+      source_type: text
+      creation_time: text
+      modification_time: text
+      order_time: text
+      lead_affiliate_id: text
+      sales_affiliate_id: text
+      total_paid: record
+      total_due: record
+      shipping_information: record
+      refund_total: record
+      allow_payment: boolean
+      allow_paypal: boolean
+      order_items: list
+      payment_plan: record
+      invoice_number: text
+      files: list
+      credit_status: text
+      promo_code: text
+      refund_status: text
+      synced: boolean
+      invoice_id: text
+      custom_fields: list
+      sent_time: text
+      due_time: text
+      external_create_user: text
+      external_create_time: text
+      external_update_time: text
+  get_contact:
+    label: "Look up a contact"
+    description: "One contact, with the fields asked for."
+    method: GET
+    path: "/rest/v2/contacts/{{ input.contact_id }}"
+    inputs: [{ name: contact_id, label: "The contact's id", required: true }]
+    output:
+      id: text
+      links: list
+      addresses: list
+      company: record
+      origin: record
+      prefix: text
+      suffix: text
+      website: text
+      groups: text
+      update_time: text
+      create_time: text
+      score_value: text
+      tag_ids: list
+      anniversary_date: text
+      birth_date: text
+      contact_type: text
+      custom_fields: list
+      email_addresses: list
+      family_name: text
+      fax_numbers: list
+      given_name: text
+      job_title: text
+      leadsource_id: text
+      middle_name: text
+      owner_id: text
+      phone_numbers: list
+      preferred_locale: text
+      preferred_name: text
+      referral_code: text
+      social_accounts: list
+      source_type: text
+      spouse_name: text
+      time_zone: text
+      utm_parameters: list
+      account_id: text
+      assistant_name: text
+      assistant_phone: text
+      billing_information: text
+      created_by: text
+      last_updated_by: text
+  add_to_campaign_sequence:
+    label: "Add contacts to a campaign sequence"
+    description: "Puts contacts in a sequence of a campaign; the answer says how each went."
+    write: true
+    method: POST
+    path: "/rest/v2/campaigns/{{ input.campaign_id }}/sequences/{{ input.sequence_id }}:addContacts"
+    inputs:
+      - { name: campaign_id, label: "Campaign id", required: true }
+      - { name: sequence_id, label: "Sequence id", required: true }
+      - { name: contact_ids, label: "List of contact IDs to add to the sequence", required: true, kind: list }
+    send: { contact_ids: "{{ input.contact_ids }}" }
+    output: { add_to_sequence_results: record }
+  update_task:
+    label: "Change a task"
+    description: "Changes the fields given of a task; the others stay."
+    write: true
+    method: PATCH
+    path: "/rest/v2/tasks/{{ input.task_id }}"
+    inputs:
+      - { name: task_id, label: "Task id", required: true }
+      - { name: title, label: "Task title" }
+      - { name: description, label: "Task description" }
+      - { name: type, label: "Task type" }
+      - { name: priority, label: "Task priority" }
+      - { name: completed, label: "Whether task is completed", kind: boolean }
+      - { name: completion_time, label: "Completion timestamp (ISO-8601)" }
+      - { name: due_time, label: "Due date/time (ISO-8601)" }
+      - name: remind_time_mins
+        label: "Value in minutes before start_date to show pop-up reminder"
+        kind: number
+      - { name: assigned_to_user_id, label: "Assigned user ID" }
+      - { name: contact_id, label: "Associated contact ID" }
+      - { name: opportunity_id, label: "Associated opportunity ID" }
+      - { name: accepted, label: "Whether the task has been accepted", kind: boolean }
+      - { name: custom_fields, label: "Custom field values for the task", kind: list }
+    send:
+      title: "{{ input.title }}"
+      description: "{{ input.description }}"
+      type: "{{ input.type }}"
+      priority: "{{ input.priority }}"
+      completed: "{{ input.completed }}"
+      completion_time: "{{ input.completion_time }}"
+      due_time: "{{ input.due_time }}"
+      remind_time_mins: "{{ input.remind_time_mins }}"
+      assigned_to_user_id: "{{ input.assigned_to_user_id }}"
+      contact_id: "{{ input.contact_id }}"
+      opportunity_id: "{{ input.opportunity_id }}"
+      accepted: "{{ input.accepted }}"
+      custom_fields: "{{ input.custom_fields }}"
+    output:
+      id: text
+      title: text
+      description: text
+      type: text
+      priority: text
+      completed: boolean
+      create_time: text
+      modification_time: text
+      completion_time: text
+      due_time: text
+      remind_time_mins: number
+      assigned_to_user_id: text
+      created_by_user_id: text
+      last_updated_by_user_id: text
+      contact_id: text
+      opportunity_id: text
+      accepted: boolean
+      custom_fields: list
+  update_opportunity:
+    label: "Change an opportunity"
+    description: "Changes the fields given of an opportunity, such as its stage; the others stay."
+    write: true
+    method: PATCH
+    path: "/rest/v2/opportunities/{{ input.opportunity_id }}"
+    inputs:
+      - { name: opportunity_id, label: "Opportunity id", required: true }
+      - { name: opportunity_title, label: "Opportunity title" }
+      - { name: next_action_time, label: "Next action timestamp (ISO-8601)" }
+      - { name: next_action_notes, label: "Notes for next action" }
+      - { name: opportunity_notes, label: "General notes" }
+      - { name: estimated_close_time, label: "Estimated close timestamp (ISO-8601)" }
+      - { name: include_in_forecast, label: "Include in sales forecast", kind: boolean }
+      - { name: projected_revenue_low, label: "Low revenue estimate", kind: number }
+      - { name: projected_revenue_high, label: "High revenue estimate", kind: number }
+      - { name: contact_id, label: "Associated contact ID" }
+      - { name: stage_id, label: "Pipeline stage ID" }
+      - { name: user_id, label: "Assigned user ID" }
+      - { name: custom_fields, label: "Custom fields", kind: list }
+      - { name: affiliate_id, label: "Affiliate ID" }
+    send:
+      opportunity_title: "{{ input.opportunity_title }}"
+      next_action_time: "{{ input.next_action_time }}"
+      next_action_notes: "{{ input.next_action_notes }}"
+      opportunity_notes: "{{ input.opportunity_notes }}"
+      estimated_close_time: "{{ input.estimated_close_time }}"
+      include_in_forecast: "{{ input.include_in_forecast }}"
+      projected_revenue_low: "{{ input.projected_revenue_low }}"
+      projected_revenue_high: "{{ input.projected_revenue_high }}"
+      contact_id: "{{ input.contact_id }}"
+      stage_id: "{{ input.stage_id }}"
+      user_id: "{{ input.user_id }}"
+      custom_fields: "{{ input.custom_fields }}"
+      affiliate_id: "{{ input.affiliate_id }}"
+    output:
+      id: text
+      contact: record
+      stage: record
+      user: record
+      opportunity_title: text
+      next_action_time: text
+      next_action_notes: text
+      opportunity_notes: text
+      estimated_close_time: text
+      include_in_forecast: boolean
+      projected_revenue_low: number
+      projected_revenue_high: number
+      custom_fields: list
+      created_time: text
+      last_updated_time: text
+      affiliate_id: text
+      lead_source: text
+      monthly_revenue: number
+      order_revenue: number
+      objection: text
+      status: text
+      status_id: text
+      stage_entrance_time: text
+      last_updated_by: text
+      created_by: text
+  update_contact:
+    label: "Change a contact"
+    description: "Changes the fields given of a contact; the others stay."
+    write: true
+    method: PATCH
+    path: "/rest/v2/contacts/{{ input.contact_id }}"
+    inputs:
+      - { name: contact_id, label: "The contact's id", required: true }
+      - name: addresses
+        label: "Addresses (as JSON); on a change, the list replaces the one there"
+        kind: list
+      - { name: company, label: Company, kind: record }
+      - { name: origin, label: Origin, kind: record }
+      - { name: prefix, label: "Name prefix" }
+      - { name: suffix, label: "Name suffix" }
+      - { name: website, label: "Personal website URL" }
+      - { name: anniversary_date, label: "The anniversary date" }
+      - { name: birth_date, label: "The birth date" }
+      - { name: contact_type, label: "Type of contact" }
+      - name: custom_fields
+        label: "Custom fields (as JSON: each an id and a content); on a change, the list replaces the one there"
+        kind: list
+      - name: email_addresses
+        label: "Email addresses (as JSON: each an email and a field, such as EMAIL1); on a change, the list replaces the one there"
+        kind: list
+      - { name: family_name, label: "Last name / surname" }
+      - name: fax_numbers
+        label: "Fax numbers (as JSON); on a change, the list replaces the one there"
+        kind: list
+      - { name: given_name, label: "First name" }
+      - { name: job_title, label: "Job title" }
+      - { name: leadsource_id, label: "Lead source identifier" }
+      - { name: middle_name, label: "Middle name" }
+      - { name: owner_id, label: "ID of the user who owns this contact" }
+      - name: phone_numbers
+        label: "Phone numbers (as JSON: each a number and a field, such as PHONE1); on a change, the list replaces the one there"
+        kind: list
+      - { name: preferred_locale, label: "Preferred locale" }
+      - { name: preferred_name, label: "Preferred name or nickname" }
+      - { name: referral_code, label: "Referral code" }
+      - name: social_accounts
+        label: "Social accounts (as JSON); on a change, the list replaces the one there"
+        kind: list
+      - { name: source_type, label: "Source type" }
+      - { name: spouse_name, label: "Spouse's name" }
+      - { name: time_zone, label: "Contact's timezone" }
+      - { name: utm_parameters, label: "Utm parameters", kind: record }
+      - { name: assistant_name, label: "Assistant's name" }
+      - { name: assistant_phone, label: "Assistant's phone number" }
+      - { name: billing_information, label: "Billing information" }
+    send:
+      addresses: "{{ input.addresses }}"
+      company: "{{ input.company }}"
+      origin: "{{ input.origin }}"
+      prefix: "{{ input.prefix }}"
+      suffix: "{{ input.suffix }}"
+      website: "{{ input.website }}"
+      anniversary_date: "{{ input.anniversary_date }}"
+      birth_date: "{{ input.birth_date }}"
+      contact_type: "{{ input.contact_type }}"
+      custom_fields: "{{ input.custom_fields }}"
+      email_addresses: "{{ input.email_addresses }}"
+      family_name: "{{ input.family_name }}"
+      fax_numbers: "{{ input.fax_numbers }}"
+      given_name: "{{ input.given_name }}"
+      job_title: "{{ input.job_title }}"
+      leadsource_id: "{{ input.leadsource_id }}"
+      middle_name: "{{ input.middle_name }}"
+      owner_id: "{{ input.owner_id }}"
+      phone_numbers: "{{ input.phone_numbers }}"
+      preferred_locale: "{{ input.preferred_locale }}"
+      preferred_name: "{{ input.preferred_name }}"
+      referral_code: "{{ input.referral_code }}"
+      social_accounts: "{{ input.social_accounts }}"
+      source_type: "{{ input.source_type }}"
+      spouse_name: "{{ input.spouse_name }}"
+      time_zone: "{{ input.time_zone }}"
+      utm_parameters: "{{ input.utm_parameters }}"
+      assistant_name: "{{ input.assistant_name }}"
+      assistant_phone: "{{ input.assistant_phone }}"
+      billing_information: "{{ input.billing_information }}"
+    output:
+      id: text
+      links: list
+      addresses: list
+      company: record
+      origin: record
+      prefix: text
+      suffix: text
+      website: text
+      groups: text
+      update_time: text
+      create_time: text
+      score_value: text
+      tag_ids: list
+      anniversary_date: text
+      birth_date: text
+      contact_type: text
+      custom_fields: list
+      email_addresses: list
+      family_name: text
+      fax_numbers: list
+      given_name: text
+      job_title: text
+      leadsource_id: text
+      middle_name: text
+      owner_id: text
+      phone_numbers: list
+      preferred_locale: text
+      preferred_name: text
+      referral_code: text
+      social_accounts: list
+      source_type: text
+      spouse_name: text
+      time_zone: text
+      utm_parameters: list
+      account_id: text
+      assistant_name: text
+      assistant_phone: text
+      billing_information: text
+      created_by: text
+      last_updated_by: text
+  achieve_goal:
+    label: "Achieve a campaign goal"
+    description: "Tells an automation that a contact reached one of its API goals (by its integration and call name), so the contact moves on in it."
+    write: true
+    method: POST
+    path: "/rest/v2/automations/goals/achieve"
+    inputs:
+      - { name: integration, label: "The goal's integration name (as set in the API goal)" }
+      - { name: call_name, label: "The goal's call name (as set in the API goal)" }
+      - { name: automation_id, label: "The automation ID", kind: number }
+      - { name: goal_id, label: "The goal ID within the automation", kind: number }
+      - name: contact_id
+        label: "The contact ID for whom to achieve the goal"
+        required: true
+        kind: number
+    send:
+      integration: "{{ input.integration }}"
+      call_name: "{{ input.call_name }}"
+      automation_id: "{{ input.automation_id }}"
+      goal_id: "{{ input.goal_id }}"
+      contact_id: "{{ input.contact_id }}"
+    output: { results: list }
+  remove_tag:
+    label: "Remove a tag from contacts"
+    description: "Takes a tag off each of the contacts given."
+    write: true
+    method: POST
+    path: "/rest/v2/tags/{{ input.tag_id }}/contacts:removeTags"
+    inputs:
+      - { name: tag_id, label: "The tag's id", required: true }
+      - name: contact_ids
+        label: "The contacts (their ids)"
+        required: true
+        kind: list
+    send: { contact_ids: "{{ input.contact_ids }}" }
+  apply_tag:
+    label: "Apply a tag to contacts"
+    description: "Puts a tag on each of the contacts given (which can start a campaign)."
+    write: true
+    method: POST
+    path: "/rest/v2/tags/{{ input.tag_id }}/contacts:applyTags"
+    inputs:
+      - { name: tag_id, label: "The tag's id", required: true }
+      - name: contact_ids
+        label: "The contacts (their ids)"
+        required: true
+        kind: list
+    send: { contact_ids: "{{ input.contact_ids }}" }
+    output: { results: record }
+  delete_contact:
+    label: "Delete a contact"
+    description: "Removes a contact."
+    write: true
+    method: DELETE
+    path: "/rest/v2/contacts/{{ input.contact_id }}"
+    inputs: [{ name: contact_id, label: "The contact's id", required: true }]
+  send_email:
+    label: "Send an email"
+    description: "Sends an email to contacts, as a user of the account."
+    write: true
+    method: POST
+    path: "/rest/v2/emails:send"
+    inputs:
+      - { name: contacts, label: "The contacts to send it to (their ids)", required: true, kind: list }
+      - { name: subject, label: "Subject", required: true }
+      - name: attachments
+        label: "Attachments to be sent with each copy of the email, maximum of 10 with size of…"
+        kind: list
+      - { name: user_id, label: "The user it is sent as (their id)" }
+      - { name: from_address, label: "From: one of the account's confirmed sender addresses" }
+      - { name: html, label: "The message, as HTML" }
+      - { name: text, label: "The message, as plain text" }
+      - name: address_field
+        label: "Email field of each Contact record to address the email to, such as 'Email',…"
+        description: "Email field of each Contact record to address the email to, such as 'Email', 'EmailAddress2', 'EmailAddress3' or '_CustomFieldName', defaulting to the contact's primary email."
+    send:
+      contacts: "{{ input.contacts }}"
+      subject: "{{ input.subject }}"
+      attachments: "{{ input.attachments }}"
+      user_id: "{{ input.user_id }}"
+      from_address: "{{ input.from_address }}"
+      html_content: "{{ base64.encode(bytes(input.html)) }}"
+      plain_content: "{{ base64.encode(bytes(input.text)) }}"
+      address_field: "{{ input.address_field }}"
+triggers:
+  new_contact:
+    label: A new contact
+    description: Each contact added, the newest asked for every few minutes.
+    poll:
+      action: list_contacts
+      input: { order_by: create_time desc }
+      newest_first: true
+      id: item.id
+      every: 5m
+  updated_contact:
+    label: A contact added or changed
+    description: Each contact added or changed, the last changed asked for every few minutes.
+    poll:
+      action: list_contacts
+      input: { order_by: update_time desc }
+      newest_first: true
+      id: item.id
+      version: item.update_time
+      every: 5m
+  new_order:
+    label: A new order
+    description: Each order made, the newest asked for every few minutes.
+    poll:
+      action: list_orders
+      input: { order_by: order_time desc }
+      newest_first: true
+      id: item.id
+      every: 5m

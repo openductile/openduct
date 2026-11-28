@@ -1,0 +1,6 @@
+action: athlete_zones
+credential: { access_token: st_test_1 }
+exchanges:
+  - sent: { method: GET, url: https://www.strava.com/api/v3/athlete/zones }
+    answer: { body: { heart_rate: { custom_zones: false, zones: [{ min: 0, max: 120 }, { min: 120, max: 150 }] } } }
+result: { heart_rate: { custom_zones: false, zones: [{ min: 0, max: 120 }, { min: 120, max: 150 }] } }

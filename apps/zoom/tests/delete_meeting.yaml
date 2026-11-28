@@ -1,0 +1,7 @@
+action: delete_meeting
+credential: { access_token: zoom-test-token }
+input: { meeting_id: "85700000002", tell_registrants: true }
+exchanges:
+  - sent: { method: DELETE, url: https://api.zoom.us/v2/meetings/85700000002, query: { cancel_meeting_reminder: "true" } }
+    answer: { status: 204 }
+result: { cancelled: true }

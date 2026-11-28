@@ -1,0 +1,7 @@
+action: create_user
+credential: { subdomain: acme, token: zm_test_1 }
+input: { email: bob@example.com, firstname: Bob, lastname: Ray, organization: Example Supplies }
+exchanges:
+  - sent: { method: POST, url: https://acme.zammad.com/api/v1/users, body: { email: bob@example.com, firstname: Bob, lastname: Ray, organization: Example Supplies } }
+    answer: { status: 201, body: { id: 9, login: bob@example.com, email: bob@example.com, firstname: Bob, lastname: Ray, organization_id: 3, role_ids: [3] } }
+result: { id: 9, login: bob@example.com, email: bob@example.com, firstname: Bob, lastname: Ray, organization_id: 3, role_ids: [3] }

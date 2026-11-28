@@ -1,0 +1,9 @@
+description: A notification that carries no secret is refused
+trigger: new_message
+workflow: wf1
+sign_in: teams
+credential: { access_token: eyJ0.teams, "client_state@wf1": s3cr3t }
+delivery:
+  body: '{"value":[{"subscriptionId":"9f9d1ed0","changeType":"created","resource":"teams(''t'')/channels(''c'')/messages(''1'')"}]}'
+  at: 1700000000
+refused: "does not carry the secret"

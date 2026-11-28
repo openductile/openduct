@@ -1,0 +1,6 @@
+action: list_labels
+credential: { token: todoist-test-token }
+exchanges:
+  - sent: { method: GET, url: https://api.todoist.com/api/v1/labels, query: { limit: "200" } }
+    answer: { body: { results: [{ id: "2100000001", name: phone, color: charcoal, order: 1, is_favorite: false }] } }
+result: [{ id: "2100000001", name: phone, color: charcoal, order: 1, is_favorite: false }]

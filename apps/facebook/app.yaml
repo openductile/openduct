@@ -1,0 +1,127 @@
+# Copyright 2026 Ductile AI, Inc
+# SPDX-License-Identifier: Apache-2.0
+app: facebook
+name: Facebook and Instagram
+category: social
+description: Posts and photos on a Facebook Page, posts on an Instagram business account, comments and insights.
+docs: https://developers.facebook.com/docs/graph-api
+hosts: [graph.facebook.com]
+# Graph API v25.0 (supported until July 2028), or the version the credential names.
+base_url: "https://graph.facebook.com/{{ has(credential.api_version) && credential.api_version != null && credential.api_version.matches(r'^v[0-9]+\\.[0-9]$') ? credential.api_version : 'v25.0' }}"
+sign_in:
+  - id: facebook
+    label: An access token
+    fields:
+      - { name: access_token, label: "A Page access token, or a system user's token for the Page and its Instagram account", secret: true }
+      - { name: api_version, label: "The Graph API version, such as v25.0 (v25.0 when empty)", optional: true }
+    headers: { Authorization: "Bearer {{ credential.access_token }}" }
+error: value.error.message
+default_action: post_to_page
+actions:
+  post_to_page:
+    label: Post to a Facebook Page
+    description: A post on the Page, with a link if given; or kept to appear later (unpublished, with a time).
+    write: true
+    method: POST
+    path: "/{{ input.page_id }}/feed"
+    body: form
+    inputs:
+      - { name: page_id, label: "The Page's id", required: true }
+      - { name: message, label: "What the post says", required: true }
+      - { name: link, label: "A link shown with it" }
+      - { name: publish_at, label: "Appear at this time instead of now: 2026-12-01T09:00:00Z (10 minutes to 30 days ahead)" }
+    send:
+      message: "{{ input.message }}"
+      link: "{{ input.link }}"
+      published: "{{ input.publish_at == null ? null : false }}"
+      scheduled_publish_time: "{{ input.publish_at }}"
+  post_photo_to_page:
+    label: Post a photo to a Facebook Page
+    write: true
+    method: POST
+    path: "/{{ input.page_id }}/photos"
+    body: form
+    inputs:
+      - { name: page_id, label: "The Page's id", required: true }
+      - { name: image_url, label: "The photo's address on the web (public)", required: true }
+      - { name: caption, label: "What the post says" }
+    send: { url: "{{ input.image_url }}", caption: "{{ input.caption }}" }
+  make_instagram_media:
+    label: Prepare an Instagram post
+    description: >-
+      The first of two steps: Instagram fetches the picture or video and gives a container id. Publish it with Publish
+      an Instagram post (a video may need a minute: see Check an Instagram post).
+    write: true
+    method: POST
+    path: "/{{ input.instagram_account_id }}/media"
+    body: form
+    inputs:
+      - { name: instagram_account_id, label: "The Instagram business account's id", required: true }
+      - { name: image_url, label: "A picture's address on the web (public, JPEG)" }
+      - { name: video_url, label: "Or a video's address on the web (public)" }
+      - { name: media_type, label: "REELS or STORIES for a video or a story (a picture post when empty)" }
+      - { name: caption, label: "What the post says, with its hashtags" }
+    send:
+      image_url: "{{ input.image_url }}"
+      video_url: "{{ input.video_url }}"
+      media_type: "{{ input.media_type }}"
+      caption: "{{ input.caption }}"
+  publish_instagram_media:
+    label: Publish an Instagram post
+    write: true
+    method: POST
+    path: "/{{ input.instagram_account_id }}/media_publish"
+    body: form
+    inputs:
+      - { name: instagram_account_id, label: "The Instagram business account's id", required: true }
+      - { name: container_id, label: "The id Prepare an Instagram post gave", required: true }
+    send: { creation_id: "{{ input.container_id }}" }
+  check_instagram_media:
+    label: Check an Instagram post
+    description: Whether a prepared post is ready to publish (FINISHED), still IN_PROGRESS, or failed (ERROR, EXPIRED).
+    method: GET
+    path: "/{{ input.container_id }}"
+    inputs:
+      - { name: container_id, label: "The id Prepare an Instagram post gave", required: true }
+    query: { fields: "status_code,status" }
+  reply_to_comment:
+    label: Reply to a comment
+    description: An answer under a comment on a Facebook post, or on an Instagram post.
+    write: true
+    method: POST
+    path: "/{{ input.comment_id }}/{{ has(input.on_instagram) && input.on_instagram == true ? 'replies' : 'comments' }}"
+    body: form
+    inputs:
+      - { name: comment_id, label: "The comment's id", required: true }
+      - { name: message, label: The answer, required: true }
+      - { name: on_instagram, label: "The comment is on Instagram", kind: boolean }
+    send: { message: "{{ input.message }}" }
+  get_insights:
+    label: Get insights
+    description: Numbers about a Page, a post, an Instagram account or an ad account, as the Graph API names them.
+    method: GET
+    path: "/{{ input.object_id }}/insights"
+    inputs:
+      - { name: object_id, label: "Whose: a Page's, post's, Instagram account's or ad account's (act_...) id", required: true }
+      - { name: metric, label: "Which numbers, with commas (page_impressions_unique,page_post_engagements)" }
+      - { name: period, label: "day, week, days_28, month or lifetime" }
+      - { name: since, label: "From (2026-11-01)" }
+      - { name: until, label: "Until (2026-11-30)" }
+      - { name: fields, label: "For an ad account: which fields, with commas (spend,impressions,clicks)" }
+    query:
+      metric: "{{ input.metric }}"
+      period: "{{ input.period }}"
+      since: "{{ input.since }}"
+      until: "{{ input.until }}"
+      fields: "{{ input.fields }}"
+    items: value.data
+    next: value.paging.next
+  read:
+    label: Read from the Graph API
+    description: "Any object, or a list of what it has: a Page's posts (<page-id>/posts), an account's media, a post's comments."
+    method: GET
+    path: "/{{ input.path }}"
+    inputs:
+      - { name: path, label: "What: an id, or an id and what it has (1234/posts)", required: true }
+      - { name: fields, label: "Which fields, with commas (id,message,created_time)" }
+    query: { fields: "{{ input.fields }}" }

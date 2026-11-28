@@ -1,0 +1,11 @@
+description: A table's records that match, in display values
+action: list_records
+credential: { instance: acme, username: integration.user, password: pw-test-1 }
+input: { table: change_request, query: "state=-1", display_values: true }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://acme.service-now.com/api/now/table/change_request"
+      query: { sysparm_query: "state=-1", sysparm_display_value: "true", sysparm_exclude_reference_link: "true", sysparm_limit: "100" }
+    answer: { status: 200, body: { result: [{ sys_id: 0a1b2c3d4e5f60718293a4b5c6d7e8f9, number: CHG0030001, short_description: Replace the core switch, state: Implement }] } }
+result: [{ sys_id: 0a1b2c3d4e5f60718293a4b5c6d7e8f9, number: CHG0030001, short_description: Replace the core switch, state: Implement }]

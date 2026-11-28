@@ -1,0 +1,17 @@
+description: Records made since the poll before (with five minutes to spare), those seen before passed
+trigger: new_record
+credential: { token: pat_1 }
+input: { base_id: app1, table: Leads }
+seen: { cursor: "2023-11-14T22:08:20Z", items: [["rec1", ""]] }
+exchanges:
+  - sent:
+      query:
+        filterByFormula: "IS_AFTER(CREATED_TIME(), DATEADD('2023-11-14T22:08:20Z', -5, 'minutes'))"
+        pageSize: "100"
+    answer:
+      body:
+        records:
+          - { id: rec1, createdTime: "2023-11-14T22:04:00.000Z", fields: { Name: Ann } }
+          - { id: rec2, createdTime: "2023-11-14T22:12:00.000Z", fields: { Name: Bob } }
+runs: [{ id: rec2, createdTime: "2023-11-14T22:12:00.000Z", fields: { Name: Bob } }]
+cursor: "2023-11-14T22:13:20Z"

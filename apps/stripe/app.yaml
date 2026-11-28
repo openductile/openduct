@@ -12,6 +12,7 @@ sign_in:
     label: A secret key (or a restricted key)
     fields:
       - { name: secret_key, label: "The secret key (sk_live_... or rk_live_...)", secret: true }
+      - { name: webhook_secret, label: "A webhook's signing secret (whsec_...), for an endpoint added in Stripe by hand", secret: true, optional: true }
     headers:
       Authorization: "Bearer {{ credential.secret_key }}"
 error: value.error.message
@@ -63,3 +64,27 @@ actions:
       payment_intent: "{{ input.payment_intent }}"
       amount: "{{ input.amount }}"
       reason: "{{ input.reason }}"
+triggers:
+  event:
+    label: An event (a payment, a checkout, a subscription, a refund ...)
+    description: >-
+      Each event of the kinds chosen, as Stripe sends it, signed. Turning the workflow on adds its address to the
+      account's webhook endpoints, and turning it off deletes it.
+    inputs:
+      - { name: events, label: "Which events, separated by commas", required: true, description: "As Stripe names them: checkout.session.completed, payment_intent.succeeded, invoice.paid, customer.subscription.deleted - or * for all" }
+    webhook:
+      signature: { header: stripe-signature, pairs: { signature: v1, time: t }, signed: "{time}.{body}" }
+      secret: webhook_secret
+      id: value.id
+      only: "input.events.split(',').map(e, e.trim()).exists(e, e == '*' || e == value.type)"
+      register:
+        - method: POST
+          path: /webhook_endpoints
+          body: form
+          send:
+            url: "{{ input.address }}"
+            "enabled_events[]": "{{ input.events.split(',').map(e, e.trim()) }}"
+            description: "OpenDuct workflow {{ input.workflow }}"
+      keep: { webhook_secret: value.secret, webhook_id: value.id }
+      unregister:
+        - { method: DELETE, path: "/webhook_endpoints/{{ input.registered.webhook_id }}" }

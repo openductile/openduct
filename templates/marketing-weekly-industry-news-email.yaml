@@ -1,0 +1,60 @@
+name: The week in your industry, by e-mail every Monday
+description: >-
+  Every Monday at 8:00 Chicago time, ask NewsAPI for the last week's articles on your market (set the search to your
+  own words), have a model pick what matters for your marketing - trends, competitors' moves, ideas for posts - and
+  e-mail the team a short digest with links from your Gmail. A week with no articles sends nothing. Needs: a NewsAPI
+  key as a header credential named X-Api-Key (newsapi), Gmail (gmail) and an AI credential (model).
+category: Marketing
+trigger:
+  schedule: { every: week, on: [monday], at: "08:00", timezone: America/Chicago }
+# What a test runs on: an event as this trigger gives it.
+sample:
+  scheduled_at: '2026-11-30T14:00:00Z'
+steps:
+  - name: news
+    http:
+      credential: newsapi
+      url: https://newsapi.org/v2/everything
+      query:
+        # Your market, as NewsAPI searches: quotes for a phrase, OR between choices.
+        q: '"specialty coffee" OR "coffee roasters" OR "cafe chains"'
+        from: "{{ string(timestamp(value.scheduled_at) - duration('168h')).substring(0, 10) }}"
+        language: en
+        sortBy: relevancy
+        pageSize: "40"
+      sample:
+        status: ok
+        totalResults: 2
+        articles:
+          - source: { name: Example Business News }
+            title: Coffee prices climb for a third month
+            description: Wholesale bean prices rose again as harvests came in short.
+            url: https://news.example.com/coffee-prices
+            publishedAt: "2026-11-26T10:00:00Z"
+          - source: { name: Example Food Weekly }
+            title: Small roasters turn to subscriptions
+            description: Independent roasters say monthly boxes now bring a third of their sales.
+            url: https://food.example.com/roaster-subscriptions
+            publishedAt: "2026-11-25T08:30:00Z"
+    retry: { attempts: 3, wait: 60s }
+  - where: size(steps.news.body.articles) > 0
+  - name: digest
+    ai:
+      credential: model
+      system: >-
+        You write a weekly market digest for a small company's marketing team. From the articles given, pick up to
+        six that matter: trends, competitors' moves, things customers will talk about. For each, one line on what
+        happened and one on what it means for us, then its link. End with two ideas for posts this week. Plain
+        words, no greeting.
+      prompt: >-
+        This week's articles (source | title | what it says | link):
+        {{ steps.news.body.articles.map(a, a.source.name + ' | ' + a.title + ' | ' + (a.description != null ? a.description : '') + ' | ' + a.url).join('\n') }}
+      max_tokens: 900
+  - name: send
+    gmail:
+      action: send_email
+      credential: gmail
+      to: marketing@example.com
+      subject: "The week in our market: {{ size(steps.news.body.articles) }} articles read"
+      text: "{{ steps.digest.text }}"
+    retry: { attempts: 3, wait: 30s }

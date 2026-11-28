@@ -1,0 +1,52 @@
+description: "Change an organization"
+action: update_organization
+credential: { api_key: test-key }
+input: { id: 1 }
+exchanges:
+  - sent:
+      method: PATCH
+      url: "https://api.pipedrive.com/api/v2/organizations/1"
+      query: {}
+      headers: { x-api-token: test-key }
+      body: {}
+    answer:
+      status: 200
+      body:
+        success: true
+        data:
+          id: 1
+          name: example
+          owner_id: 1
+          add_time: example
+          update_time: example
+          is_deleted: true
+          visible_to: 1
+          address:
+            value: example
+            country: example
+            admin_area_level_1: example
+            admin_area_level_2: example
+            locality: example
+            sublocality: example
+            route: example
+            street_number: example
+            subpremise: example
+            postal_code: example
+          label_ids: [1]
+          website: example
+          linkedin: example
+          industry: 1
+result:
+  id: 1
+  name: example
+  owner_id: 1
+  add_time: example
+  update_time: example
+  is_deleted: true
+  visible_to: 1
+  address: {value: example, country: example, admin_area_level_1: example, admin_area_level_2: example, locality: example,
+    sublocality: example, route: example, street_number: example, subpremise: example, postal_code: example}
+  label_ids: [1]
+  website: example
+  linkedin: example
+  industry: 1

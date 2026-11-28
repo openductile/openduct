@@ -1,0 +1,10 @@
+description: A delivery whose signature is not the webhook secret's is refused, and runs nothing
+trigger: task_event
+workflow: wf1
+credential: { api_key: pk_1_TEST, "webhook_secret@wf1": O94IM25S7PXBPYTMNXLLET230SRP0S89 }
+input: { team_id: "108" }
+delivery:
+  headers: { x-signature: "0000000000000000000000000000000000000000000000000000000000000000" }
+  body: '{"event":"taskCreated","history_items":[],"task_id":"86a1b2c3f","webhook_id":"7fa3ec74-69a8-4530-a251-8a13730bd204"}'
+  at: 1764235200
+refused: signature

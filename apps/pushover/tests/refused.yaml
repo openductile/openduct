@@ -1,0 +1,11 @@
+description: "Pushover refuses a wrong user key, in its words"
+action: send_notification
+credential: {"token": "aTestTokenAbcdefghijklmnopqrst", "user_key": "uTestUserKeyAbcdefghijklmnopq"}
+input: {"message": "Hello", "user": "uWrongKey"}
+exchanges:
+  - sent:
+      method: POST
+      url: "https://api.pushover.net/1/messages.json"
+      body: {"token": "aTestTokenAbcdefghijklmnopqrst", "user": "uWrongKey", "message": "Hello"}
+    answer: {"status": 400, "body": {"user": "invalid", "errors": ["user identifier is not a valid user, group, or subscribed user key"], "status": 0, "request": "5042853c-402d-4a18-abcb-168734a801de"}}
+error: "user identifier is not a valid user, group, or subscribed user key"

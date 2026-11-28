@@ -1,0 +1,9 @@
+description: An account held in Zoho's European data centre is asked there
+action: list_records
+sign_in: zoho_crm_eu
+credential: { access_token: 1000.test.token }
+input: { module: Contacts, fields: Email }
+exchanges:
+  - sent: { url: https://www.zohoapis.eu/crm/v8/Contacts, headers: { authorization: Zoho-oauthtoken 1000.test.token } }
+    answer: { body: { data: [{ id: "2000000000000000301", Email: lea@example.com }], info: { page: 1, more_records: false } } }
+result: [{ id: "2000000000000000301", Email: lea@example.com }]

@@ -1,0 +1,32 @@
+description: 'No document matches: Firestore answers only the time'
+action: find_documents
+credential:
+  access_token: ya29.test
+input:
+  project_id: sample-shop
+  collection: orders
+  field: paid
+  value: 'false'
+  value_kind: boolean
+exchanges:
+- sent:
+    method: POST
+    url: https://firestore.googleapis.com/v1/projects/sample-shop/databases/(default)/documents:runQuery
+    headers:
+      authorization: Bearer ya29.test
+    body:
+      structuredQuery:
+        from:
+        - collectionId: orders
+        where:
+          fieldFilter:
+            field:
+              fieldPath: paid
+            op: EQUAL
+            value:
+              booleanValue: false
+  answer:
+    status: 200
+    body:
+    - readTime: '2026-11-21T08:00:00.000000Z'
+result: []

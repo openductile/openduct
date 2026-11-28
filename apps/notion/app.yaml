@@ -54,3 +54,33 @@ actions:
     send:
       parent: { database_id: "{{ input.database_id }}" }
       properties: "{{ input.properties }}"
+triggers:
+  new_item:
+    label: A new item in a database
+    description: Each page added to the database, the newest asked for every few minutes.
+    inputs:
+      - { name: database_id, label: "The database's id (in its address)", required: true }
+    poll:
+      method: POST
+      path: "/databases/{{ input.database_id }}/query"
+      send: { sorts: [{ timestamp: created_time, direction: descending }], page_size: 100 }
+      items: value.results
+      next: "value.has_more ? {'start_cursor': value.next_cursor} : null"
+      page_in: body
+      newest_first: true
+      id: item.id
+  updated_item:
+    label: An item changed in a database
+    description: Each page added to the database or changed, the last changed asked for every few minutes.
+    inputs:
+      - { name: database_id, label: "The database's id (in its address)", required: true }
+    poll:
+      method: POST
+      path: "/databases/{{ input.database_id }}/query"
+      send: { sorts: [{ timestamp: last_edited_time, direction: descending }], page_size: 100 }
+      items: value.results
+      next: "value.has_more ? {'start_cursor': value.next_cursor} : null"
+      page_in: body
+      newest_first: true
+      id: item.id
+      version: item.last_edited_time

@@ -1,0 +1,9 @@
+description: A delivery signed with another secret is refused
+trigger: new_contact
+workflow: wf1
+credential: {"site_url": "https://mautic.example.com", "username": "admin", "password": "pw-test", "webhook_secret@wf1": "mautic-hook-secret-1"}
+delivery:
+  headers: { webhook-signature: "PfDdb1elQLHkMxRgnoaE1R7BiEu7xcREC6RozQ96tHA=" }
+  body: '{"mautic.lead_post_save_new":[{"contact":{"id":52,"isPublished":true,"dateAdded":"2026-11-27T10:00:00+00:00","dateModified":null,"points":0,"fields":{"core":{"firstname":{"alias":"firstname","value":"Dee"},"lastname":{"alias":"lastname","value":"Ray"},"email":{"alias":"email","value":"dee@example.com"}},"social":[],"personal":[],"professional":[]}},"timestamp":"2026-11-27T10:00:00+00:00"},{"contact":{"id":53,"isPublished":true,"dateAdded":"2026-11-27T10:01:00+00:00","dateModified":null,"points":0,"fields":[]},"timestamp":"2026-11-27T10:01:00+00:00"}],"timestamp":"2026-11-27T10:01:05+00:00"}'
+  at: 1764237600
+refused: "signature does not match"

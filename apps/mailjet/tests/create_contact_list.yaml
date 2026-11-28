@@ -1,0 +1,34 @@
+description: A new list
+action: create_contact_list
+credential:
+  api_key: test-key
+  secret_key: test-secret
+input:
+  name: Newsletter
+exchanges:
+- sent:
+    method: POST
+    url: https://api.mailjet.com/v3/REST/contactslist
+    headers:
+      authorization: Basic dGVzdC1rZXk6dGVzdC1zZWNyZXQ=
+    body:
+      Name: Newsletter
+  answer:
+    status: 201
+    body:
+      Count: 1
+      Data:
+      - ID: 55
+        Name: Newsletter
+        Address: k8sd7f6g5
+        SubscriberCount: 0
+        CreatedAt: '2026-05-01T10:00:00Z'
+        IsDeleted: false
+      Total: 1
+result:
+  ID: 55
+  Name: Newsletter
+  Address: k8sd7f6g5
+  SubscriberCount: 0
+  CreatedAt: '2026-05-01T10:00:00Z'
+  IsDeleted: false

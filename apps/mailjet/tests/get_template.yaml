@@ -1,0 +1,32 @@
+description: One template
+action: get_template
+credential:
+  api_key: test-key
+  secret_key: test-secret
+input:
+  template_id: '2101'
+exchanges:
+- sent:
+    method: GET
+    url: https://api.mailjet.com/v3/REST/template/2101
+    headers:
+      authorization: Basic dGVzdC1rZXk6dGVzdC1zZWNyZXQ=
+  answer:
+    status: 200
+    body:
+      Count: 1
+      Data:
+      - &id001
+        ID: 2101
+        Name: Order shipped
+        Description: Sent when an order leaves
+        Author: Sample Shop
+        Locale: en_US
+        EditMode: 2
+        OwnerType: user
+        Purposes:
+        - transactional
+        CreatedAt: '2026-04-01T10:00:00Z'
+        LastUpdatedAt: '2026-04-02T10:00:00Z'
+      Total: 1
+result: *id001

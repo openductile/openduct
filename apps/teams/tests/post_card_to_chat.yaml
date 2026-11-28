@@ -1,0 +1,16 @@
+description: The same card in a chat, when a chat is given
+action: post_card
+sign_in: teams
+credential: { access_token: eyJ0.teams }
+input:
+  chat_id: "19:2da4c29f6d7041eca70b638b43d45437@thread.v2"
+  card: '{"type":"AdaptiveCard","version":"1.4","body":[{"type":"TextBlock","text":"Approved"}]}'
+exchanges:
+  - sent:
+      method: POST
+      url: "https://graph.microsoft.com/v1.0/chats/19:2da4c29f6d7041eca70b638b43d45437@thread.v2/messages"
+      body:
+        body: { contentType: html, content: "<attachment id=\"card\"></attachment>" }
+        attachments: [{ id: card, contentType: application/vnd.microsoft.card.adaptive, content: '{"type":"AdaptiveCard","version":"1.4","body":[{"type":"TextBlock","text":"Approved"}]}' }]
+    answer: { status: 201, body: { id: "1616991463151", createdDateTime: "2026-11-23T04:20:00Z", attachments: [] } }
+result: { id: "1616991463151", createdDateTime: "2026-11-23T04:20:00Z", attachments: [] }

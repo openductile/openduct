@@ -1,0 +1,13 @@
+description: A campaign paused - an update of its status alone
+action: set_campaign_status
+credential: { access_token: ya29.test }
+input: { customer_id: 123-456-7890, campaign_id: "111", status: PAUSED, developer_token: devtok-test }
+exchanges:
+  - sent:
+      method: POST
+      url: "https://googleads.googleapis.com/v26/customers/1234567890/campaigns:mutate"
+      headers: { authorization: Bearer ya29.test, developer-token: devtok-test }
+      body:
+        operations: [{ update: { resourceName: customers/1234567890/campaigns/111, status: PAUSED }, updateMask: status }]
+    answer: { status: 200, body: { results: [{ resourceName: "customers/1234567890/campaigns/111" }] } }
+result: { results: [{ resourceName: "customers/1234567890/campaigns/111" }] }

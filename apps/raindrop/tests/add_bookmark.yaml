@@ -1,0 +1,14 @@
+description: "A link saved in a collection, with tags"
+action: add_bookmark
+credential: { token: test-token }
+input: { link: "https://supplier.example/catalog", title: Supplier catalog, tags: [supplier, prices], collection_id: 77 }
+exchanges:
+  - sent:
+      method: POST
+      url: https://api.raindrop.io/rest/v1/raindrop
+      body: { link: "https://supplier.example/catalog", title: Supplier catalog, tags: [supplier, prices], collection: { $id: 77 } }
+    answer:
+      body:
+        result: true
+        item: { _id: 1001, link: "https://supplier.example/catalog", title: Supplier catalog, tags: [supplier, prices], type: link, domain: supplier.example, collection: { $id: 77 }, created: "2026-11-27T09:00:00.000Z" }
+result: { _id: 1001, link: "https://supplier.example/catalog", title: Supplier catalog, tags: [supplier, prices], type: link, domain: supplier.example, collection: { $id: 77 }, created: "2026-11-27T09:00:00.000Z" }

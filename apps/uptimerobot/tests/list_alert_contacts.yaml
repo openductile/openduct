@@ -1,0 +1,6 @@
+action: list_alert_contacts
+credential: { api_key: ur_test_1 }
+exchanges:
+  - sent: { method: GET, url: https://api.uptimerobot.com/v3/user/alert-contacts }
+    answer: { body: [{ id: 4401, friendlyName: Ops email, type: EMAIL, value: ops@example.com, status: ACTIVE }] }
+result: [{ id: 4401, friendlyName: Ops email, type: EMAIL, value: ops@example.com, status: ACTIVE }]

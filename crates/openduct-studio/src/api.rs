@@ -42,11 +42,20 @@ pub(crate) async fn route(state: &State, call: Call) -> Answer {
             Err(answer) => answer,
         },
         _ if let Some(answer) = crate::workspaces::route(state, &call).await => answer,
+        _ if let Some(answer) = crate::cicd::route(state, &call).await => answer, // developer CI/CD
+        _ if let Some(answer) = crate::api_tokens::route(state, &call).await => answer, // developer CI/CD
         _ if let Some(answer) = crate::workflows::route(state, &call).await => answer,
         _ if let Some(answer) = crate::credentials::route(state, &call).await => answer,
         _ if let Some(answer) = crate::oauth::route(state, &call).await => answer,
         _ if let Some(answer) = crate::files::route(state, &call).await => answer,
+        _ if let Some(answer) = crate::run_files::route(state, &call).await => answer, // G6 files
         _ if let Some(answer) = crate::pipelines::route(state, &call).await => answer,
+        _ if let Some(answer) = crate::mcp::route(state, &call).await => answer, // MCP
+        _ if let Some(answer) = crate::custom_apps::route(state, &call).await => answer, // app generator
+        // forms-and-resume
+        _ if let Some(answer) = crate::forms::route(state, &call).await => answer,
+        _ if let Some(answer) = crate::tables::api::route(state, &call).await => answer, // data tables
+        (&Method::GET, "/api/storage/roots") => crate::storage::roots(state, &call).await, // storage
         (_, path) if path.starts_with("/api/") || path.starts_with("/hooks/") => {
             problem(StatusCode::NOT_FOUND, "no such request")
         }
@@ -294,6 +303,10 @@ pub(crate) struct Access {
 /// The signed-in user in the workspace the request names, if its role there is at least `need`; a change must carry
 /// the session's token.
 pub(crate) async fn access(state: &State, call: &Call, need: Role) -> Result<Access, Answer> {
+    // developer CI/CD: a request signed with an API token instead of a session.
+    if let Some(by_token) = crate::api_tokens::access(state, call, need).await {
+        return by_token;
+    }
     let change = call.method != Method::GET && call.method != Method::HEAD;
     let (user, _) = if change {
         changing(state, call).await?

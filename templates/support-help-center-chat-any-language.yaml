@@ -1,0 +1,79 @@
+name: A help-centre chat that answers in the customer's language
+description: >-
+  For software and service companies: a chat for your site that answers from your own help answers (kept in Postgres
+  with pgvector by "Keep your help answers searchable, from a sheet") and from your public status page, in whatever
+  language the customer writes. A short first call notes the language and puts the question in English; an AI agent then
+  searches the answers, checks the status page when something seems down, and replies in the customer's language, naming
+  the answer it used. Needs: an AI credential called model (with an embedding model), and a Postgres credential called
+  docs_db.
+category: Support
+trigger:
+  chat:
+    texts:
+      title: Help
+      welcome: "Hi! Ask me anything about the product - in your own language."
+      placeholder: Your question
+    # The sites that may show the chat (add yours), beside its own page.
+    origins: []
+    history: 6
+    limits: { message: 2000, per_session: 20, per_address: 60 }
+# What a test runs on: a message as this trigger gives it.
+sample:
+  message: "Hola, no puedo exportar mis facturas a PDF desde esta mañana. ¿Es un problema vuestro?"
+  session: 1679091c5a880faf6fb5e6087eb1b2dc
+  history: []
+  person: {}
+steps:
+  - name: language
+    ai:
+      credential: model
+      system: "Say which language the message is in, and write the question in plain English. Answer as JSON."
+      prompt: "{{ value.message }}"
+      schema:
+        type: object
+        properties:
+          language: { type: string, description: "The language's name in English, as Spanish" }
+          question: { type: string, description: "The question, in English" }
+        required: [language, question]
+      max_tokens: 300
+  - name: helper
+    agent:
+      credential: model
+      instructions: >-
+        You answer customers of a software product from its help articles. Search the articles before you answer and
+        say which article you used. If the customer says something does not work, also check the status page. If the
+        articles do not answer it, say a person from support will reply, and do not guess. Answer in
+        {{ has(steps.language.json) ? steps.language.json.language : 'the language the customer wrote in' }}, in at
+        most five sentences.
+      input: "{{ has(steps.language.json) ? steps.language.json.question : value.message }} (the customer wrote: {{ value.message }})"
+      tools:
+        - name: help_articles
+          description: Searches the help articles and answers from them, naming the articles it used.
+          parameters:
+            type: object
+            properties:
+              question: { type: string, description: "The question to look up, in English" }
+            required: [question]
+          ask_documents:
+            credential: docs_db
+            table: help_pieces
+            embed_with: model
+            question: "{{ args.question }}"
+            top_k: 4
+            max_tokens: 400
+        - name: service_status
+          description: Whether the product is working right now, from its public status page, with any incident.
+          http:
+            method: GET
+            # Your own status page (one made with Statuspage answers here).
+            url: https://status.example.com/api/v2/summary.json
+            timeout: 15s
+      allow: [help_articles, service_status]
+      memory:
+        key: "{{ value.session }}"
+        window: 6
+      max_turns: 6
+      max_tool_calls: 4
+  - name: reply
+    respond:
+      body: { text: "{{ steps.helper.text }}" }

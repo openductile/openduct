@@ -1,0 +1,303 @@
+# Copyright 2026 Ductile AI, Inc
+# SPDX-License-Identifier: Apache-2.0
+# Phantombuster: made by `openduct app from-openapi` from
+# https://github.com/phantombuster/public-gists/blob/30d0778a0456/swagger-api-v2.json (ISC licence) (Phantombuster API
+# v2 2.0.0, OpenAPI 3.0), then finished by hand.
+app: phantombuster
+name: Phantombuster
+category: data
+description: Launch Phantoms (automations that gather leads from LinkedIn, Sales Navigator, maps and the web) and read what they found.
+docs: "https://hub.phantombuster.com/reference"
+hosts: [api.phantombuster.com]
+base_url: "https://api.phantombuster.com/api/v2"
+sign_in:
+  - id: phantombuster
+    label: "An API key"
+    fields:
+      - { name: api_key, label: "The API key (Workspace settings, API keys)", secret: true }
+    headers: { X-Phantombuster-Key: "{{ credential.api_key }}" }
+default_action: launch_agent
+actions:
+  launch_agent:
+    label: "Launch a Phantom"
+    description: >-
+      Puts a Phantom in the queue to run now, with its saved settings or others for this launch; gives the launch's
+      id (containerId), to read its results by.
+    # A launch spends the workspace's execution time: a preview shows it and does not send it.
+    write: true
+    method: POST
+    path: "/agents/launch"
+    inputs:
+      - { name: id, label: "The Phantom's id (in its address: phantombuster.com/.../phantoms/<id>)", required: true }
+      - name: argument
+        label: "Its settings for this launch, in place of the saved ones (a record, as the Phantom's setup shows them)"
+        kind: record
+      - name: bonus_argument
+        label: "Settings added to the saved ones for this launch only (a record)"
+        kind: record
+      - { name: save_argument, label: "Keep the settings given as the Phantom's own", kind: boolean }
+      - { name: max_instance_count, label: "Launch only if fewer than this many are running", kind: number }
+    send:
+      id: "{{ input.id }}"
+      argument: "{{ input.argument }}"
+      bonusArgument: "{{ input.bonus_argument }}"
+      saveArgument: "{{ input.save_argument }}"
+      maxInstanceCount: "{{ input.max_instance_count }}"
+    output: { containerId: text }
+  get_agent_output:
+    label: "Get a Phantom's latest output"
+    description: "The console output of a Phantom's latest launch, whether it is still running, and how far it has got."
+    method: GET
+    path: "/agents/fetch-output"
+    inputs:
+      - { name: id, label: "The Phantom's id", required: true }
+    query: { id: "{{ input.id }}" }
+    output:
+      containerId: text
+      status: text
+      output: text
+      outputPos: number
+      mostRecentEndedAt: number
+      progress: number
+      progressLabel: text
+      isAgentRunning: boolean
+  get_agent:
+    label: "Look up a Phantom"
+    description: "A Phantom's name, script, settings, schedule and how its last launch ended."
+    method: GET
+    path: "/agents/fetch"
+    inputs:
+      - { name: id, label: "The Phantom's id", required: true }
+    query: { id: "{{ input.id }}" }
+    output:
+      id: text
+      name: text
+      script: text
+      argument: text
+      lastEndType: text
+      launchType: text
+      repeatedLaunchTimes: record
+      nbLaunches: number
+      executionTimeLimit: number
+      updatedAt: number
+  list_agents:
+    label: "List Phantoms"
+    description: "Every Phantom of the workspace, with how each last ended and how many are running."
+    method: GET
+    path: "/agents/fetch-all"
+    inputs:
+      - { name: with_argument, label: "With each Phantom's settings", kind: boolean }
+    query: { withArgument: "{{ input.with_argument }}" }
+    items: value
+    output:
+      id: text
+      name: text
+      createdAt: number
+      script: text
+      argument: text
+      lastEndType: text
+      lastEndedAt: number
+      lastExitCode: number
+      nbContainersRunning: number
+      launchType: text
+      repeatedLaunchTimes: record
+  list_launches:
+    label: "List a Phantom's launches"
+    description: "A Phantom's launches (its containers), the latest first: each one's status, how it ended and when."
+    method: GET
+    path: "/containers/fetch-all"
+    inputs:
+      - { name: agent_id, label: "The Phantom's id", required: true }
+      - { name: limit, label: "At most this many launches", kind: number }
+      - { name: before_ended_at, label: "Only launches that ended before this time (milliseconds since 1970)", kind: number }
+    query:
+      agentId: "{{ input.agent_id }}"
+      limit: "{{ input.limit }}"
+      beforeEndedAt: "{{ input.before_ended_at }}"
+    items: value.containers
+    output:
+      id: text
+      status: text
+      createdAt: number
+      launchType: text
+      endType: text
+      endedAt: number
+      exitCode: number
+      retryNumber: number
+  get_launch:
+    label: "Look up a launch"
+    description: "One launch of a Phantom: its status, how it ended, and its output and results if asked."
+    method: GET
+    path: "/containers/fetch"
+    inputs:
+      - { name: id, label: "The launch's id (containerId)", required: true }
+      - { name: with_result, label: "With its results (resultObject)", kind: boolean }
+      - { name: with_output, label: "With its console output", kind: boolean }
+    query:
+      id: "{{ input.id }}"
+      withResultObject: "{{ input.with_result }}"
+      withOutput: "{{ input.with_output }}"
+    output:
+      id: text
+      status: text
+      createdAt: number
+      launchedAt: number
+      launchType: text
+      endType: text
+      endedAt: number
+      exitCode: number
+      retryNumber: number
+      output: text
+      resultObject: text
+  get_launch_result:
+    label: "Get a launch's results"
+    description: "What a launch found, as the Phantom keeps it: its resultObject, a JSON text (often a list of records)."
+    method: GET
+    path: "/containers/fetch-result-object"
+    inputs:
+      - { name: id, label: "The launch's id (containerId)", required: true }
+    query: { id: "{{ input.id }}" }
+    output: { resultObject: text }
+  get_launch_output:
+    label: "Get a launch's console output"
+    description: "The messages a launch wrote as it ran."
+    method: GET
+    path: "/containers/fetch-output"
+    inputs:
+      - { name: id, label: "The launch's id (containerId)", required: true }
+    query: { id: "{{ input.id }}" }
+    output: { output: text }
+  stop_agent:
+    label: "Stop a Phantom"
+    description: "Stops a Phantom that is running."
+    write: true
+    method: POST
+    path: "/agents/stop"
+    inputs:
+      - { name: id, label: "The Phantom's id", required: true }
+      - { name: soft_abort, label: "Let it finish what it is doing and keep what it found so far", kind: boolean }
+    send: { id: "{{ input.id }}", softAbort: "{{ input.soft_abort }}" }
+  get_usage:
+    label: "Check usage and limits"
+    description: "The workspace's plan, and how much execution time, email discovery and AI credit it has used today and this month."
+    method: GET
+    path: "/orgs/fetch-resources"
+    output:
+      planName: text
+      agentCount: number
+      dailyExecutionTime: number
+      monthlyExecutionTime: number
+      dailyDiscoveredMail: number
+      monthlyDiscoveredMail: number
+      dailyAiCredit: number
+      monthlyAiCredit: number
+      dailyResourceNextResetAt: number
+      monthlyResourceNextResetAt: number
+  list_leads:
+    label: "List the leads of a list"
+    description: "Every lead of one of the workspace's lead lists (beta), 100 at a time, with their companies if asked."
+    method: POST
+    path: "/org-storage/leads/by-list/{{ input.list_id }}"
+    inputs:
+      - { name: list_id, label: "The lead list's id", required: true }
+      - { name: with_companies, label: "With each lead's company", kind: boolean }
+    send:
+      paginationOptions: { paginationSize: 100, paginationOffset: 0 }
+      withCompanies: "{{ input.with_companies }}"
+    items: value.leads
+    # The next page's paginationOptions take the place of the first page's in the body.
+    page_in: body
+    next: >-
+      size(value.leads) < 100 ? null
+      : {'paginationOptions': {'paginationSize': 100,
+         'paginationOffset': (page == null ? 0 : int(page.paginationOptions.paginationOffset)) + 100}}
+    output:
+      id: text
+      linkedinProfileSlug: text
+      firstName: text
+      lastName: text
+      location: text
+      companyName: text
+      companyWebsite: text
+      linkedinJobTitle: text
+      linkedinHeadline: text
+      professionalEmails: list
+      phoneNumbers: list
+      company: record
+  save_lead:
+    label: "Save a lead"
+    description: "Adds a lead to the workspace's leads (beta), or changes the one with the same LinkedIn profile."
+    write: true
+    method: POST
+    path: "/org-storage/leads/save"
+    inputs:
+      - { name: linkedin_profile_url, label: "Their LinkedIn profile's address", required: true }
+      - { name: first_name, label: "First name" }
+      - { name: last_name, label: "Last name" }
+      - { name: company_name, label: "Their company" }
+      - { name: company_website, label: "Their company's website" }
+      - { name: job_title, label: "Their job title" }
+      - { name: location, label: "Where they are" }
+      - { name: professional_emails, label: "Work email addresses", kind: list }
+      - { name: phone_numbers, label: "Phone numbers", kind: list }
+      - { name: metadata, label: "Other fields to keep with the lead", kind: record }
+    send:
+      linkedinProfileUrl: "{{ input.linkedin_profile_url }}"
+      firstName: "{{ input.first_name }}"
+      lastName: "{{ input.last_name }}"
+      companyName: "{{ input.company_name }}"
+      companyWebsite: "{{ input.company_website }}"
+      linkedinJobTitle: "{{ input.job_title }}"
+      location: "{{ input.location }}"
+      professionalEmails: "{{ input.professional_emails }}"
+      phoneNumbers: "{{ input.phone_numbers }}"
+      metadata: "{{ input.metadata }}"
+    output:
+      isCreation: boolean
+      id: text
+      linkedinProfileSlug: text
+      firstName: text
+      lastName: text
+      companyName: text
+      linkedinJobTitle: text
+      professionalEmails: list
+      changedFields: list
+  save_leads:
+    label: "Save many leads"
+    description: "Adds or changes many leads at once (beta); says for each whether it was saved."
+    write: true
+    method: POST
+    path: "/org-storage/leads/save-many"
+    inputs:
+      - name: leads
+        label: "The leads: each a record with linkedinProfileUrl, and firstName, lastName, companyName ... if known"
+        required: true
+        kind: list
+    send: { leads: "{{ input.leads }}" }
+    output: { linkedinProfileUrl: text, status: text, isCreation: boolean, changedFields: list, error: text }
+  delete_leads:
+    label: "Remove leads"
+    description: "Removes leads from the workspace's leads, by their ids."
+    write: true
+    method: POST
+    path: "/org-storage/leads/delete-many"
+    inputs:
+      - { name: ids, label: "The leads' ids", required: true, kind: list }
+    send: { ids: "{{ input.ids }}" }
+    output: { deletedCount: number }
+triggers:
+  launch_finished:
+    label: A Phantom's launch finished
+    description: >-
+      Each launch of a Phantom that has ended, read with its results, asked for every few minutes: to send what it
+      found to a sheet or a CRM.
+    inputs:
+      - { name: agent_id, label: "The Phantom's id", required: true }
+    poll:
+      method: GET
+      path: /containers/fetch-all
+      query: { agentId: "{{ input.agent_id }}", mode: finalized, limit: "50" }
+      items: value.containers
+      id: item.id
+      each: { action: get_launch, input: { id: "{{ item.id }}", with_result: true } }
+      every: 5m

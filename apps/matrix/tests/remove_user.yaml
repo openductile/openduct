@@ -1,0 +1,11 @@
+description: Someone taken out of a room, with why
+action: remove_user
+credential: { homeserver: "https://matrix.example.org", token: syt_test_token }
+input: { room_id: "!abc123:example.org", user_id: "@bo:example.org", reason: Order closed }
+exchanges:
+  - sent:
+      method: POST
+      url: "https://matrix.example.org/_matrix/client/v3/rooms/!abc123:example.org/kick"
+      body: { user_id: "@bo:example.org", reason: Order closed }
+    answer: { status: 200, body: {} }
+result: { removed: true }

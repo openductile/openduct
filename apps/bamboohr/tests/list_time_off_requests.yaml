@@ -1,0 +1,56 @@
+description: Requests between two dates
+action: list_time_off_requests
+credential:
+  company_domain: acme
+  api_key: test-key
+input:
+  start: '2026-12-01'
+  end: '2026-12-31'
+  status: requested
+exchanges:
+- sent:
+    method: GET
+    url: https://acme.bamboohr.com/api/v1/time_off/requests
+    query:
+      start: '2026-12-01'
+      end: '2026-12-31'
+      status: requested
+    headers:
+      authorization: Basic dGVzdC1rZXk6eA==
+      accept: application/json
+  answer:
+    status: 200
+    body:
+    - &id001
+      id: 1348
+      employeeId: 101
+      name: Ada Sample
+      start: '2026-12-21'
+      end: '2026-12-23'
+      created: '2026-11-20'
+      status:
+        lastChanged: '2026-11-20'
+        lastChangedByUserId: 7
+        status: requested
+      type:
+        id: 78
+        name: Vacation
+        icon: palm-trees
+      amount:
+        unit: days
+        amount: 3
+      actions:
+        view: true
+        edit: true
+        cancel: true
+        approve: true
+        deny: true
+        bypass: false
+      dates:
+        '2026-12-21': 1
+        '2026-12-22': 1
+        '2026-12-23': 1
+      notes:
+        employee: Family visit
+result:
+- *id001

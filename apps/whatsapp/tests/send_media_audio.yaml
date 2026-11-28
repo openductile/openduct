@@ -1,0 +1,9 @@
+description: A sound by the id of media uploaded before; audio takes no caption
+action: send_media
+credential: { access_token: EAAG1, phone_number_id: "1234", api_version: v21.0 }
+input: { to: "16505551234", kind: audio, media_id: "1013859600285441", caption: ignored }
+exchanges:
+  - sent:
+      body: { messaging_product: whatsapp, recipient_type: individual, to: "16505551234", type: audio, audio: { id: "1013859600285441" } }
+    answer: { body: { messaging_product: whatsapp, messages: [{ id: wamid.A1 }] } }
+result: { messaging_product: whatsapp, messages: [{ id: wamid.A1 }] }

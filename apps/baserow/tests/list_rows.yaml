@@ -1,0 +1,26 @@
+description: A table's rows by their fields' names, over two pages - the next page's address as Baserow gives it
+action: list_rows
+credential: { token: br-test-token }
+input: { table_id: 1203, search: Ann }
+exchanges:
+  - sent:
+      method: GET
+      url: https://api.baserow.io/api/database/rows/table/1203/
+      query: { user_field_names: "true", search: Ann, size: "200" }
+      headers: { authorization: Token br-test-token }
+    answer:
+      body:
+        count: 2
+        next: "https://api.baserow.io/api/database/rows/table/1203/?page=2&search=Ann&size=200&user_field_names=true"
+        previous: null
+        results: [{ id: 1, order: "1.00000000000000000000", Name: Ann Example, Status: { id: 3, value: Open, color: blue } }]
+  - sent: { url: "https://api.baserow.io/api/database/rows/table/1203/?page=2&search=Ann&size=200&user_field_names=true", query: {} }
+    answer:
+      body:
+        count: 2
+        next: null
+        previous: "https://api.baserow.io/api/database/rows/table/1203/?search=Ann&size=200&user_field_names=true"
+        results: [{ id: 7, order: "7.00000000000000000000", Name: Ann Other, Status: null }]
+result:
+  - { id: 1, order: "1.00000000000000000000", Name: Ann Example, Status: { id: 3, value: Open, color: blue } }
+  - { id: 7, order: "7.00000000000000000000", Name: Ann Other, Status: null }

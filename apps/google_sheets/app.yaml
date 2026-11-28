@@ -49,3 +49,37 @@ actions:
       - { name: rows, label: "The rows: a list of lists (as JSON)", required: true, kind: list }
     query: { valueInputOption: USER_ENTERED }
     send: { values: "{{ input.rows }}" }
+triggers:
+  new_row:
+    label: A new row
+    description: >-
+      Each row added under the header row, asked for every few minutes: its columns by the header's names, and its
+      row_number.
+    inputs:
+      - { name: spreadsheet_id, label: "The spreadsheet's id (in its address)", required: true }
+      - { name: sheet, label: "The sheet's name, such as Sheet1", required: true }
+    poll:
+      method: GET
+      path: "/spreadsheets/{{ input.spreadsheet_id }}/values/{{ input.sheet }}"
+      query: { majorDimension: ROWS }
+      items: "value.values == null ? [] : value.values"
+      # The first row names the columns: each row after it is a record of them, with its row_number.
+      header_row: true
+      id: string(item.row_number)
+  new_or_updated_row:
+    label: A new or changed row
+    description: >-
+      Each row added, or changed since the poll before. A row is known by its number: rows put in above it, or taken
+      out, make the rows below it look changed.
+    inputs:
+      - { name: spreadsheet_id, label: "The spreadsheet's id (in its address)", required: true }
+      - { name: sheet, label: "The sheet's name, such as Sheet1", required: true }
+    poll:
+      method: GET
+      path: "/spreadsheets/{{ input.spreadsheet_id }}/values/{{ input.sheet }}"
+      query: { majorDimension: ROWS }
+      items: "value.values == null ? [] : value.values"
+      # The first row names the columns: each row after it is a record of them, with its row_number.
+      header_row: true
+      id: string(item.row_number)
+      version: item

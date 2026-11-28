@@ -1,0 +1,17 @@
+description: A phrase keyword added to an ad group, the valid ones kept if one fails
+action: change_keywords
+credential: { access_token: ya29.test }
+input:
+  customer_id: "1234567890"
+  operations: [{ create: { adGroup: customers/1234567890/adGroups/501, status: ENABLED, keyword: { text: teak garden chairs, matchType: PHRASE } } }]
+  partial_failure: true
+  developer_token: devtok-test
+exchanges:
+  - sent:
+      method: POST
+      url: "https://googleads.googleapis.com/v26/customers/1234567890/adGroupCriteria:mutate"
+      body:
+        operations: [{ create: { adGroup: customers/1234567890/adGroups/501, status: ENABLED, keyword: { text: teak garden chairs, matchType: PHRASE } } }]
+        partialFailure: true
+    answer: { status: 200, body: { results: [{ resourceName: customers/1234567890/adGroupCriteria/501~7001 }] } }
+result: { results: [{ resourceName: customers/1234567890/adGroupCriteria/501~7001 }] }

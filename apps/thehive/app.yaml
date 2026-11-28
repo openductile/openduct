@@ -1,0 +1,464 @@
+# Copyright 2026 Ductile AI, Inc
+# SPDX-License-Identifier: Apache-2.0
+# TheHive: written by hand from StrangeBee's own API description of TheHive (OpenAPI 3,
+# https://docs.strangebee.com/thehive/api-docs/docs.yaml, "TheHive v6.0.0", fetched 2026-11-27; no licence stated),
+# using its /api/v1 endpoints (TheHive 5 and later).
+app: thehive
+name: TheHive
+category: security
+description: "Security alerts and cases in TheHive: raised, turned into cases, worked through with tasks, observables and comments."
+docs: https://docs.strangebee.com/thehive/api-docs/
+base_url_field: url
+sign_in:
+  - id: thehive
+    label: An API key
+    fields:
+      - { name: url, label: "TheHive's address, such as https://thehive.example.com" }
+      - { name: api_key, label: The API key, secret: true }
+      - { name: organisation, label: "The organization to work in, when the user is in several (their default otherwise)", optional: true }
+    headers:
+      Authorization: "Bearer {{ credential.api_key }}"
+      X-Organisation: "{{ credential.organisation }}"
+error: "status < 400 ? null : (has(value.message) ? (has(value.type) ? value.type + ': ' + value.message : value.message) : null)"
+actions:
+  create_alert:
+    label: Raise an alert
+    description: "A new alert from a source (a mail gateway, a SIEM ...), with its own reference there, and its observables."
+    write: true
+    method: POST
+    path: /api/v1/alert
+    inputs:
+      - { name: title, label: Title, required: true }
+      - { name: description, label: "What happened (Markdown)", required: true }
+      - { name: type, label: "Its kind, such as phishing", required: true }
+      - { name: source, label: "Where it comes from, such as mail-gateway", required: true }
+      - { name: source_ref, label: "Its reference there (unique for the source)", required: true }
+      - { name: severity, label: "1 low, 2 medium (the default), 3 high, 4 critical", kind: number }
+      - { name: tags, label: Tags, kind: list }
+      - { name: tlp, label: "Who may see it (TLP): 0 clear, 1 green, 2 amber, 3 red", kind: number }
+      - { name: external_link, label: "A link to it in the source" }
+      - name: observables
+        label: "Its observables, such as [{\"dataType\": \"ip\", \"data\": \"192.0.2.1\"}]"
+        kind: list
+    send:
+      title: "{{ input.title }}"
+      description: "{{ input.description }}"
+      type: "{{ input.type }}"
+      source: "{{ input.source }}"
+      sourceRef: "{{ input.source_ref }}"
+      severity: "{{ input.severity }}"
+      tags: "{{ input.tags }}"
+      tlp: "{{ input.tlp }}"
+      externalLink: "{{ input.external_link }}"
+      observables: "{{ input.observables }}"
+    output: &alert
+      _id: text
+      _createdAt: number
+      _updatedAt: number
+      type: text
+      source: text
+      sourceRef: text
+      externalLink: text
+      title: text
+      description: text
+      severity: number
+      severityLabel: text
+      date: number
+      tags: list
+      tlp: number
+      status: text
+      stage: text
+      assignee: text
+      caseId: text
+      observableCount: number
+      summary: text
+  get_alert:
+    label: Get an alert
+    description: One alert by its ID.
+    method: GET
+    path: "/api/v1/alert/{{ input.alert_id }}"
+    inputs: &alert_id
+      - { name: alert_id, label: "The alert's ID (such as ~4096)", required: true }
+    output: *alert
+  list_alerts:
+    label: List alerts
+    description: "The newest alerts, or those of a status (New, InProgress, Imported ...), up to a number."
+    method: POST
+    path: /api/v1/query
+    inputs:
+      - { name: status, label: "Only of this status, such as New" }
+      - { name: limit, label: "How many at most (100 by default)", kind: number }
+    send:
+      query: >-
+        {{ [{'_name': 'listAlert'}]
+          + (has(input.status) && input.status != null ? [{'_name': 'filter', '_eq': {'_field': 'status', '_value': input.status} }] : [])
+          + [{'_name': 'sort', '_fields': [{'_createdAt': 'desc'}]},
+             {'_name': 'page', 'from': 0, 'to': has(input.limit) && input.limit != null ? int(input.limit) : 100}] }}
+    result: value
+    output: *alert
+  update_alert:
+    label: Change an alert
+    description: "An alert's status, assignee, severity, summary or tags (tags given take the place of its tags)."
+    write: true
+    method: PATCH
+    path: "/api/v1/alert/{{ input.alert_id }}"
+    inputs:
+      - { name: alert_id, label: "The alert's ID (such as ~4096)", required: true }
+      - { name: status, label: "Its status, such as InProgress or Ignored" }
+      - { name: assignee, label: "Who handles it (their login)" }
+      - { name: severity, label: "1 low, 2 medium, 3 high, 4 critical", kind: number }
+      - { name: summary, label: What triage found }
+      - { name: add_tags, label: Tags to add, kind: list }
+    send:
+      status: "{{ input.status }}"
+      assignee: "{{ input.assignee }}"
+      severity: "{{ input.severity }}"
+      summary: "{{ input.summary }}"
+      addTags: "{{ input.add_tags }}"
+    result: "{'updated': true}"
+    output: { updated: boolean }
+  create_case_from_alert:
+    label: Make a case of an alert
+    description: "A new case from an alert, its observables brought along, with a case template if given."
+    write: true
+    method: POST
+    path: "/api/v1/alert/{{ input.alert_id }}/case"
+    inputs:
+      - { name: alert_id, label: "The alert's ID (such as ~4096)", required: true }
+      - { name: case_template, label: "A case template's name" }
+      - { name: assignee, label: "Who handles the case (their login)" }
+    send: { caseTemplate: "{{ input.case_template }}", assignee: "{{ input.assignee }}" }
+    output: &case
+      _id: text
+      _createdAt: number
+      _updatedAt: number
+      number: number
+      title: text
+      description: text
+      severity: number
+      severityLabel: text
+      startDate: number
+      endDate: number
+      tags: list
+      flag: boolean
+      tlp: number
+      pap: number
+      status: text
+      stage: text
+      summary: text
+      impactStatus: text
+      assignee: text
+      customFields: list
+  merge_alert:
+    label: Add an alert to a case
+    description: "Merges an alert into a case that is there: its observables, tags and description go to the case."
+    write: true
+    method: POST
+    path: "/api/v1/alert/{{ input.alert_id }}/merge/{{ input.case_id }}"
+    inputs:
+      - { name: alert_id, label: "The alert's ID (such as ~4096)", required: true }
+      - { name: case_id, label: "The case's ID (such as ~8192) or number", required: true }
+    output: *case
+  comment_on_alert:
+    label: Comment on an alert
+    description: A comment on an alert, for the team.
+    write: true
+    method: POST
+    path: "/api/v1/alert/{{ input.alert_id }}/comment"
+    inputs:
+      - { name: alert_id, label: "The alert's ID (such as ~4096)", required: true }
+      - { name: message, label: "The comment (Markdown)", required: true }
+    send: { message: "{{ input.message }}" }
+    output: &comment { _id: text, createdBy: text, createdAt: number, message: text, isEdited: boolean }
+  delete_alert:
+    label: Delete an alert
+    description: "Deletes an alert for good (closing it keeps it)."
+    write: true
+    method: DELETE
+    path: "/api/v1/alert/{{ input.alert_id }}"
+    inputs: *alert_id
+    result: "{'deleted': true}"
+    output: { deleted: boolean }
+  create_case:
+    label: Open a case
+    description: "A new case, from a case template if given, with its severity, tags and who handles it."
+    write: true
+    method: POST
+    path: /api/v1/case
+    inputs:
+      - { name: title, label: Title, required: true }
+      - { name: description, label: "What it is about (Markdown)", required: true }
+      - { name: severity, label: "1 low, 2 medium (the default), 3 high, 4 critical", kind: number }
+      - { name: tags, label: Tags, kind: list }
+      - { name: tlp, label: "Who may see it (TLP): 0 clear, 1 green, 2 amber, 3 red", kind: number }
+      - { name: assignee, label: "Who handles it (their login)" }
+      - { name: case_template, label: "A case template's name" }
+      - { name: flag, label: "Flag it as important", kind: boolean }
+    send:
+      title: "{{ input.title }}"
+      description: "{{ input.description }}"
+      severity: "{{ input.severity }}"
+      tags: "{{ input.tags }}"
+      tlp: "{{ input.tlp }}"
+      assignee: "{{ input.assignee }}"
+      caseTemplate: "{{ input.case_template }}"
+      flag: "{{ input.flag }}"
+    output: *case
+  get_case:
+    label: Get a case
+    description: One case by its ID or number.
+    method: GET
+    path: "/api/v1/case/{{ input.case_id }}"
+    inputs: &case_id
+      - { name: case_id, label: "The case's ID (such as ~8192) or number", required: true }
+    output: *case
+  list_cases:
+    label: List cases
+    description: "The newest cases, or those of a status (New, InProgress, TruePositive ...), up to a number."
+    method: POST
+    path: /api/v1/query
+    inputs:
+      - { name: status, label: "Only of this status, such as InProgress" }
+      - { name: limit, label: "How many at most (100 by default)", kind: number }
+    send:
+      query: >-
+        {{ [{'_name': 'listCase'}]
+          + (has(input.status) && input.status != null ? [{'_name': 'filter', '_eq': {'_field': 'status', '_value': input.status} }] : [])
+          + [{'_name': 'sort', '_fields': [{'_createdAt': 'desc'}]},
+             {'_name': 'page', 'from': 0, 'to': has(input.limit) && input.limit != null ? int(input.limit) : 100}] }}
+    result: value
+    output: *case
+  update_case:
+    label: Change a case
+    description: "A case's status, assignee, severity, summary, impact or tags; closing it takes a closing status and a summary."
+    write: true
+    method: PATCH
+    path: "/api/v1/case/{{ input.case_id }}"
+    inputs:
+      - { name: case_id, label: "The case's ID (such as ~8192) or number", required: true }
+      - { name: status, label: "Its status, such as InProgress, TruePositive or FalsePositive" }
+      - { name: assignee, label: "Who handles it (their login)" }
+      - { name: severity, label: "1 low, 2 medium, 3 high, 4 critical", kind: number }
+      - { name: summary, label: What was found }
+      - { name: impact_status, label: "NoImpact, WithImpact or NotApplicable" }
+      - { name: add_tags, label: Tags to add, kind: list }
+    send:
+      status: "{{ input.status }}"
+      assignee: "{{ input.assignee }}"
+      severity: "{{ input.severity }}"
+      summary: "{{ input.summary }}"
+      impactStatus: "{{ input.impact_status }}"
+      addTags: "{{ input.add_tags }}"
+    result: "{'updated': true}"
+    output: { updated: boolean }
+  delete_case:
+    label: Delete a case
+    description: "Deletes a case for good."
+    write: true
+    method: DELETE
+    path: "/api/v1/case/{{ input.case_id }}"
+    inputs: *case_id
+    result: "{'deleted': true}"
+    output: { deleted: boolean }
+  add_observable:
+    label: Add an observable to a case
+    description: "An IP address, domain, URL, hash, email ... seen in a case, marked as an indicator if it is one."
+    write: true
+    method: POST
+    path: "/api/v1/case/{{ input.case_id }}/observable"
+    inputs: &observable
+      - { name: case_id, label: "The case's ID (such as ~8192) or number", required: true }
+      - { name: data_type, label: "Its kind: ip, domain, url, hash, mail, filename, fqdn, other ...", required: true }
+      - { name: data, label: The value, required: true }
+      - { name: message, label: A note about it }
+      - { name: tags, label: Tags, kind: list }
+      - { name: ioc, label: "It is an indicator of compromise", kind: boolean }
+      - { name: sighted, label: "It was seen in your systems", kind: boolean }
+    send:
+      dataType: "{{ input.data_type }}"
+      data: "{{ input.data }}"
+      message: "{{ input.message }}"
+      tags: "{{ input.tags }}"
+      ioc: "{{ input.ioc }}"
+      sighted: "{{ input.sighted }}"
+    # TheHive answers a list: one observable for each value.
+    result: value[0]
+    output: &obs
+      _id: text
+      _createdAt: number
+      dataType: text
+      data: text
+      message: text
+      tags: list
+      tlp: number
+      ioc: boolean
+      sighted: boolean
+  add_observable_to_alert:
+    label: Add an observable to an alert
+    description: "An IP address, domain, URL, hash, email ... seen in an alert."
+    write: true
+    method: POST
+    path: "/api/v1/alert/{{ input.alert_id }}/observable"
+    inputs:
+      - { name: alert_id, label: "The alert's ID (such as ~4096)", required: true }
+      - { name: data_type, label: "Its kind: ip, domain, url, hash, mail, filename, fqdn, other ...", required: true }
+      - { name: data, label: The value, required: true }
+      - { name: message, label: A note about it }
+      - { name: tags, label: Tags, kind: list }
+      - { name: ioc, label: "It is an indicator of compromise", kind: boolean }
+    send:
+      dataType: "{{ input.data_type }}"
+      data: "{{ input.data }}"
+      message: "{{ input.message }}"
+      tags: "{{ input.tags }}"
+      ioc: "{{ input.ioc }}"
+    result: value[0]
+    output: *obs
+  list_case_observables:
+    label: "List a case's observables"
+    description: "The observables of a case, up to a number."
+    method: POST
+    path: /api/v1/query
+    inputs:
+      - { name: case_id, label: "The case's ID (such as ~8192) or number", required: true }
+      - { name: limit, label: "How many at most (100 by default)", kind: number }
+    send:
+      query: >-
+        {{ [{'_name': 'getCase', 'idOrName': input.case_id}, {'_name': 'observables'},
+            {'_name': 'page', 'from': 0, 'to': has(input.limit) && input.limit != null ? int(input.limit) : 100}] }}
+    result: value
+    output: *obs
+  create_task:
+    label: Add a task to a case
+    description: "A task in a case, in a group, for someone, with a due date if given."
+    write: true
+    method: POST
+    path: "/api/v1/case/{{ input.case_id }}/task"
+    inputs:
+      - { name: case_id, label: "The case's ID (such as ~8192) or number", required: true }
+      - { name: title, label: Title, required: true }
+      - { name: description, label: "What to do (Markdown)" }
+      - { name: group, label: "Its group, such as Containment" }
+      - { name: assignee, label: "Who does it (their login)" }
+      - { name: due_date, label: "Due (such as 2026-12-01T17:00:00Z)" }
+      - { name: mandatory, label: "Must be done before the case closes", kind: boolean }
+    send:
+      title: "{{ input.title }}"
+      description: "{{ input.description }}"
+      group: "{{ input.group }}"
+      assignee: "{{ input.assignee }}"
+      dueDate: "{{ has(input.due_date) && input.due_date != null ? int(timestamp(input.due_date)) * 1000 : null }}"
+      mandatory: "{{ input.mandatory }}"
+    output: &task
+      _id: text
+      _createdAt: number
+      title: text
+      group: text
+      description: text
+      status: text
+      flag: boolean
+      startDate: number
+      endDate: number
+      assignee: text
+      dueDate: number
+      mandatory: boolean
+  update_task:
+    label: Change a task
+    description: "A task's status (Waiting, InProgress, Completed, Cancel), who does it, or its title."
+    write: true
+    method: PATCH
+    path: "/api/v1/task/{{ input.task_id }}"
+    inputs:
+      - { name: task_id, label: "The task's ID (such as ~12288)", required: true }
+      - { name: status, label: "Waiting, InProgress, Completed or Cancel" }
+      - { name: assignee, label: "Who does it (their login)" }
+      - { name: title, label: Title }
+    send: { status: "{{ input.status }}", assignee: "{{ input.assignee }}", title: "{{ input.title }}" }
+    result: "{'updated': true}"
+    output: { updated: boolean }
+  list_case_tasks:
+    label: "List a case's tasks"
+    description: "The tasks of a case, up to a number."
+    method: POST
+    path: /api/v1/query
+    inputs:
+      - { name: case_id, label: "The case's ID (such as ~8192) or number", required: true }
+      - { name: limit, label: "How many at most (100 by default)", kind: number }
+    send:
+      query: >-
+        {{ [{'_name': 'getCase', 'idOrName': input.case_id}, {'_name': 'tasks'},
+            {'_name': 'page', 'from': 0, 'to': has(input.limit) && input.limit != null ? int(input.limit) : 100}] }}
+    result: value
+    output: *task
+  add_task_log:
+    label: Log work on a task
+    description: "A log entry on a task: what was done or found."
+    write: true
+    method: POST
+    path: "/api/v1/task/{{ input.task_id }}/log"
+    inputs:
+      - { name: task_id, label: "The task's ID (such as ~12288)", required: true }
+      - { name: message, label: "What was done (Markdown)", required: true }
+    send: { message: "{{ input.message }}" }
+    output: { _id: text, _createdAt: number, message: text, date: number, owner: text, attachments: list }
+  comment_on_case:
+    label: Comment on a case
+    description: A comment on a case, for the team.
+    write: true
+    method: POST
+    path: "/api/v1/case/{{ input.case_id }}/comment"
+    inputs:
+      - { name: case_id, label: "The case's ID (such as ~8192) or number", required: true }
+      - { name: message, label: "The comment (Markdown)", required: true }
+    send: { message: "{{ input.message }}" }
+    output: *comment
+  get_current_user:
+    label: Get who the key belongs to
+    description: "The user the API key acts as: their login, name, organization and profile."
+    method: GET
+    path: /api/v1/user/current
+    output: { _id: text, login: text, name: text, email: text, profile: text, organisation: text, permissions: list, locked: boolean }
+triggers:
+  new_alert:
+    label: A new alert
+    description: "Each alert raised, the newest asked for every few minutes."
+    poll:
+      method: POST
+      path: /api/v1/query
+      send:
+        query:
+          - { _name: listAlert }
+          - { _name: sort, _fields: [{ _createdAt: desc }] }
+          - { _name: page, from: 0, to: 100 }
+      items: value
+      newest_first: true
+      id: item._id
+  new_case:
+    label: A new case
+    description: "Each case opened, the newest asked for every few minutes."
+    poll:
+      method: POST
+      path: /api/v1/query
+      send:
+        query:
+          - { _name: listCase }
+          - { _name: sort, _fields: [{ _createdAt: desc }] }
+          - { _name: page, from: 0, to: 100 }
+      items: value
+      newest_first: true
+      id: item._id
+  updated_case:
+    label: A case changed
+    description: "Each case opened or changed (its status, assignee ...), the last changed asked for every few minutes."
+    poll:
+      method: POST
+      path: /api/v1/query
+      send:
+        query:
+          - { _name: listCase }
+          - { _name: sort, _fields: [{ _updatedAt: desc }] }
+          - { _name: page, from: 0, to: 100 }
+      items: value
+      newest_first: true
+      id: item._id
+      version: item._updatedAt

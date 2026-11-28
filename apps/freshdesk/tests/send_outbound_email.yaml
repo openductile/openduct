@@ -1,0 +1,63 @@
+description: An email to a customer, kept as a closed ticket
+action: send_outbound_email
+credential:
+  domain: acme
+  api_key: test-key
+input:
+  email: pat@example.com
+  subject: Your order
+  description: Your order has shipped.
+  email_config_id: 17
+exchanges:
+- sent:
+    method: POST
+    url: https://acme.freshdesk.com/api/v2/tickets/outbound_email
+    headers:
+      authorization: Basic dGVzdC1rZXk6WA==
+    body:
+      email: pat@example.com
+      subject: Your order
+      description: Your order has shipped.
+      email_config_id: 17
+      priority: 1
+      status: 5
+  answer:
+    status: 201
+    body:
+      id: 21
+      subject: Your order
+      description_text: The lid of my mug is cracked.
+      status: 5
+      priority: 1
+      source: 10
+      type: null
+      requester_id: 5001
+      responder_id: null
+      group_id: null
+      company_id: null
+      tags: []
+      cc_emails: []
+      custom_fields: {}
+      due_by: '2026-11-20T11:30:00Z'
+      fr_due_by: '2026-11-18T11:30:00Z'
+      created_at: '2026-11-17T12:02:50Z'
+      updated_at: '2026-11-17T12:02:51Z'
+result:
+  id: 21
+  subject: Your order
+  description_text: The lid of my mug is cracked.
+  status: 5
+  priority: 1
+  source: 10
+  type: null
+  requester_id: 5001
+  responder_id: null
+  group_id: null
+  company_id: null
+  tags: []
+  cc_emails: []
+  custom_fields: {}
+  due_by: '2026-11-20T11:30:00Z'
+  fr_due_by: '2026-11-18T11:30:00Z'
+  created_at: '2026-11-17T12:02:50Z'
+  updated_at: '2026-11-17T12:02:51Z'

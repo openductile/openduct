@@ -1,0 +1,65 @@
+# Copyright 2026 Ductile AI, Inc
+# SPDX-License-Identifier: Apache-2.0
+# uProc: written by hand from uProc's external API reference, https://docs.uproc.io/api/ (fetched 2026-11-27): its
+# data-process tools (the catalogue, a tool's description, and running one). Labels and descriptions are our own words.
+app: uproc
+name: uProc
+category: data
+description: uProc's data tools, which check, clean and fill in data - a company found by its name, a card number checked.
+docs: https://docs.uproc.io/api/
+hosts: [api.uproc.io]
+base_url: https://api.uproc.io/api/v1/external
+sign_in:
+  - id: uproc
+    label: A user API key
+    fields:
+      - { name: api_key, label: "Your uProc user API key", secret: true }
+    headers: { Authorization: "Bearer {{ credential.api_key }}" }
+  - id: uproc_customer
+    label: A customer API key
+    fields:
+      - { name: api_key, label: "The customer API key", secret: true }
+      - { name: customer_domain, label: "The customer's domain in uProc" }
+      - { name: user_email, label: "The email of the uProc user it acts as" }
+    headers:
+      x-api-key: "{{ credential.api_key }}"
+      x-customer-domain: "{{ credential.customer_domain }}"
+      x-user-email: "{{ credential.user_email }}"
+# uProc answers {success, message, data}; success false is a refusal even when the status is 200.
+error: "has(value.success) && value.success == false ? value.message : (status >= 400 && has(value.message) ? value.message : null)"
+default_action: run_tool
+actions:
+  run_tool:
+    label: Run a data tool
+    description: One of uProc's data tools run on the values given - such as a credit card number checked, or a company found by its name; List data tools and Look up a data tool say which there are and what each takes.
+    write: true
+    method: POST
+    path: /modules/data-process/actions/execute
+    inputs:
+      - { name: tool, label: "The tool's key, such as check-creditcard-checksum or get-company-by-name", required: true }
+      - { name: params, label: "Its values, by name, such as {\"name\": \"Northwind Example\"}", required: true, kind: record }
+    send: { processor: "{{ input.tool }}", params: "{{ input.params }}" }
+    # The answer as uProc gives it: {success, message, data}, data holding what the tool found.
+    output: { success: boolean, message: text, data: record }
+  list_tools:
+    label: List data tools
+    description: The catalogue of uProc's data tools, each with its key, what it does and the values it takes (listing costs nothing).
+    method: GET
+    path: /modules/data-process/tools
+    items: value.data.rows
+    output: { key: text, name: text, description: text, params: list }
+  get_tool:
+    label: Look up a data tool
+    description: One tool in full - the values it takes and their forms, what it gives, and what it costs.
+    method: GET
+    path: "/modules/data-process/tools/{{ input.tool }}"
+    inputs: [{ name: tool, label: "The tool's key, such as get-company-by-name", required: true }]
+    result: value.data
+    output: { key: text, name: text, description: text, extended_description: text, cost: number, params: list, output: list }
+  get_profile:
+    label: Look up your profile
+    description: The uProc user the key belongs to - to check a credential works.
+    method: GET
+    path: /profile
+    result: value.data
+    output: { id: number, first_name: text, last_name: text, email: text, language: text, default_app: text }

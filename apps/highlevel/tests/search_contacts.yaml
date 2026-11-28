@@ -1,0 +1,12 @@
+description: "Search contacts"
+action: search_contacts
+credential: { token: test-token }
+input: { body: {} }
+exchanges:
+  - sent:
+      method: POST
+      url: "https://services.leadconnectorhq.com/contacts/search"
+      query: {}
+      headers: { authorization: "Bearer test-token", version: "2021-07-28" }
+      body: {}
+    answer: { status: 200 }

@@ -1,0 +1,7 @@
+action: get_message
+credential: { workspace: acme, user_id: uAbC123, token: rc_test_1 }
+input: { message_id: mSg001 }
+exchanges:
+  - sent: { method: GET, url: https://acme.rocket.chat/api/v1/chat.getMessage, query: { msgId: mSg001 } }
+    answer: { body: { message: { _id: mSg001, rid: rSales1, msg: "New order from ann@example.com" }, success: true } }
+result: { _id: mSg001, rid: rSales1, msg: "New order from ann@example.com" }

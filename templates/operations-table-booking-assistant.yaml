@@ -1,0 +1,108 @@
+name: A booking assistant for your restaurant's tables
+description: >-
+  Guests ask for a table on a form; an AI agent reads the Bookings sheet, books the table when the time has room
+  (40 covers each half hour, by default), or offers the nearest free time, and answers the guest by Gmail. A party of
+  nine or more waits for the manager's approval first - asked on Telegram, answered within six hours or declined
+  kindly. The manager is told on Telegram what was done. Needs: model, google_sheets, gmail, telegram.
+category: Operations
+trigger:
+  form:
+    title: Book a table
+    description: We answer by e-mail within a few minutes.
+    fields:
+      - { name: name, label: Your name, type: text, required: true, max_length: 80 }
+      - { name: email, label: Your e-mail, type: email, required: true }
+      - { name: date, label: Day, type: date, required: true }
+      - { name: time, label: Time, type: dropdown, required: true, options: ["17:30", "18:00", "18:30", "19:00", "19:30", "20:00", "20:30", "21:00"] }
+      - { name: party, label: How many, type: number, min: 1, max: 20, required: true }
+      - { name: notes, label: Anything we should know, type: long_text, max_length: 500 }
+    thanks: Thank you - you will have our answer by e-mail in a few minutes.
+# What a test runs on: an answer as the form gives it.
+sample:
+  name: Theo Brandt
+  email: theo.brandt@example.com
+  date: "2026-12-12"
+  time: "19:30"
+  party: 10
+  notes: A birthday - one guest uses a wheelchair.
+steps:
+  - name: big_party
+    if:
+      when: value.party >= 9
+      then:
+        - name: ask_manager
+          telegram:
+            action: send
+            credential: telegram
+            # The manager's chat with the bot.
+            chat_id: "123456789"
+            text: >-
+              A party of {{ value.party }} asks for {{ value.date }} at {{ value.time }} ({{ value.name }}):
+              {{ value.notes }} - approve or decline here: {{ links.approve }}
+          retry: { attempts: 3, wait: 10s }
+        - name: approve
+          approval:
+            title: "A party of {{ value.party }} on {{ value.date }} at {{ value.time }}?"
+            description: "{{ value.name }} ({{ value.email }}): {{ value.notes }}"
+            approve: Take the booking
+            reject: Decline
+            comment: true
+            timeout: 6h
+            on_timeout: continue
+        - name: declined
+          if:
+            when: "!steps.approve.approved"
+            then:
+              - name: sorry
+                gmail:
+                  action: send_email
+                  credential: gmail
+                  to: "{{ value.email }}"
+                  subject: "Your table on {{ value.date }}"
+                  text: >-
+                    Hello {{ value.name }}, thank you for thinking of us. We cannot seat a party of {{ value.party }}
+                    on {{ value.date }} at {{ value.time }}. Reply to this e-mail and we will gladly find another day.
+              - stop: {}
+  - name: assistant
+    agent:
+      credential: model
+      instructions: >-
+        You take table bookings for a restaurant. Read the bookings first. Each half hour holds at most 40 guests:
+        add up the party sizes already booked at the asked time on the asked day. If the party fits, add the booking
+        (date, time, name, email, party, notes) and e-mail the guest a warm confirmation. If it does not fit, do not
+        book: e-mail the guest the nearest times that day that do fit, and ask them to reply. Keep e-mails to four
+        sentences. End by saying in one line what you did.
+      input: >-
+        Booking request: {{ value.name }} <{{ value.email }}>, {{ value.party }} guests, {{ value.date }} at
+        {{ value.time }}. Notes: {{ value.notes }}
+      tools:
+        - name: read_bookings
+          description: Every booking in the sheet, one row each - date, time, name, email, party, notes - after a header row.
+          google_sheets:
+            action: read_rows
+            credential: google_sheets
+            spreadsheet_id: your-spreadsheet-id
+            range: Bookings
+        - name: add_booking
+          description: Adds one booking as a row - date, time, name, email, party, notes - in that order.
+          google_sheets:
+            action: add_row
+            credential: google_sheets
+            spreadsheet_id: your-spreadsheet-id
+            sheet: Bookings
+        - name: email_guest
+          description: Sends the guest an e-mail.
+          gmail:
+            action: send_email
+            credential: gmail
+            to: "{{ value.email }}"
+      allow: [read_bookings, add_booking, email_guest]
+      max_turns: 6
+      max_tool_calls: 5
+  - name: tell_manager
+    telegram:
+      action: send
+      credential: telegram
+      chat_id: "123456789"
+      text: "{{ value.name }}, {{ value.party }} on {{ value.date }} at {{ value.time }}: {{ steps.assistant.text }}"
+    retry: { attempts: 3, wait: 10s }

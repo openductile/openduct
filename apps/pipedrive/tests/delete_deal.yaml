@@ -1,0 +1,12 @@
+description: "Remove a deal"
+action: delete_deal
+credential: { api_key: test-key }
+input: { id: 1 }
+exchanges:
+  - sent:
+      method: DELETE
+      url: "https://api.pipedrive.com/api/v2/deals/1"
+      query: {}
+      headers: { x-api-token: test-key }
+    answer: { status: 200, body: { success: true, data: { id: 1 } } }
+result: {id: 1}

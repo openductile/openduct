@@ -1,0 +1,11 @@
+description: "uProc refuses when asked too often, in its words"
+action: get_tool
+credential: {"api_key": "up-test-key"}
+input: {"tool": "get-company-by-name"}
+exchanges:
+  - sent:
+      method: GET
+      url: "https://api.uproc.io/api/v1/external/modules/data-process/tools/get-company-by-name"
+      headers: {"authorization": "Bearer up-test-key"}
+    answer: {"status": 429, "body": {"success": false, "message": "rate.limit.exceeded", "data": {"limit": 30, "window": "minute"}}}
+error: "rate.limit.exceeded"

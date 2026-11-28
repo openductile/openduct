@@ -1,0 +1,62 @@
+# Made by `openduct app from-openapi`: Change a contact.
+description: "Change a contact, made from the API description's schemas"
+action: update_contact
+credential: { access_token: test-access-token }
+input: { contact_id: contact_1 }
+exchanges:
+  - sent:
+      method: PATCH
+      url: "https://api.keap.com/crm/rest/v2/contacts/contact_1"
+      query: {}
+      headers: { authorization: "Bearer test-access-token" }
+      body: {}
+    answer:
+      status: 200
+      body:
+        id: 1001
+        links: [{ id: 1, linked_contact_id: 2001, link_type_id: 1, link_type_name: Spouse }]
+        addresses:
+          - country: example
+            line1: 123
+            line2: example
+            locality: Phoenix
+            region: Arizona
+            field: ADDRESS_FIELD_UNSPECIFIED
+            country_code: USA
+            postal_code: 85001
+            region_code: US-AZ
+            zip_code: 85001
+            zip_four: 1234
+        company: { id: 100, company_name: Thryv }
+        origin: { date: example, ip_address: example }
+        prefix: Dr.
+        suffix: Jr
+        website: example
+        groups: example
+        update_time: "2024-03-15T10:30:00Z"
+        create_time: "2024-01-10T08:00:00Z"
+        score_value: 85
+result:
+  id: 1001
+  links: [{ id: 1, linked_contact_id: 2001, link_type_id: 1, link_type_name: Spouse }]
+  addresses:
+    - country: example
+      line1: 123
+      line2: example
+      locality: Phoenix
+      region: Arizona
+      field: ADDRESS_FIELD_UNSPECIFIED
+      country_code: USA
+      postal_code: 85001
+      region_code: US-AZ
+      zip_code: 85001
+      zip_four: 1234
+  company: { id: 100, company_name: Thryv }
+  origin: { date: example, ip_address: example }
+  prefix: Dr.
+  suffix: Jr
+  website: example
+  groups: example
+  update_time: "2024-03-15T10:30:00Z"
+  create_time: "2024-01-10T08:00:00Z"
+  score_value: 85

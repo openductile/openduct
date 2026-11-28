@@ -23,6 +23,12 @@ pub(crate) struct StartArgs {
     /// repeated. A request naming any other is refused, so no other site can reach the studio through its own name.
     #[arg(long = "studio-host", env = "OPENDUCT_STUDIO_HOSTS", value_delimiter = ',')]
     studio_hosts: Vec<String>,
+    /// The address people and other systems reach the studio by (https://flows.example.com): the one-time addresses
+    /// of runs that wait for a form, an approval or a call start with it. Default: the first --studio-host, or the
+    /// studio's own address.
+    // forms-and-resume
+    #[arg(long = "studio-url", env = "OPENDUCT_STUDIO_URL")]
+    studio_url: Option<String>,
     /// Mark session cookies Secure: the studio is reached over HTTPS, through a proxy that ends TLS.
     #[arg(long, env = "OPENDUCT_STUDIO_SECURE_COOKIES")]
     studio_secure_cookies: bool,
@@ -34,6 +40,11 @@ pub(crate) struct StartArgs {
     /// A folder of apps of your own (`<dir>/<id>/app.yaml`, see docs/apps.md), beside those OpenDuct comes with.
     #[arg(long, env = "OPENDUCT_APPS_DIR")]
     apps_dir: Option<std::path::PathBuf>,
+    /// A folder of this machine workflows' storage steps may read and write, named: invoices=/srv/invoices.
+    /// Repeated or comma-separated for several; none by default. Every workspace may use every folder given here, and
+    /// nothing outside them. // storage
+    #[arg(long = "files-root", env = "OPENDUCT_FILES_ROOTS", value_delimiter = ',')]
+    files_roots: Vec<String>,
 }
 
 pub(crate) async fn run(args: StartArgs) -> Result<(), String> {
@@ -41,6 +52,14 @@ pub(crate) async fn run(args: StartArgs) -> Result<(), String> {
     if let Some(dir) = &args.apps_dir {
         let added = openduct_flow::app_files::add_dir(dir)?;
         tracing::info!(apps = added.len(), dir = %dir.display(), "apps of your own added");
+    }
+    // storage: the folders allowed are checked before anything starts.
+    let files_roots = std::sync::Arc::new(openduct_flow::storage::Roots::parse(&args.files_roots)?);
+    if !files_roots.names().is_empty() {
+        tracing::info!(
+            folders = files_roots.names().join(", "),
+            "folders workflows may reach"
+        );
     }
     let first_node = args.serve.first_node();
     let (stop, stopping) = watch::channel(false);
@@ -84,6 +103,9 @@ pub(crate) async fn run(args: StartArgs) -> Result<(), String> {
         log_dir: crate::otel_log::dir(),
         pipelines: pipeline_runner(&reachable(listening).to_string()),
         runs_connector_sources: first_node,
+        // forms-and-resume
+        public_url: args.studio_url,
+        files_roots, // storage
     })
     .await;
     let studio = match studio {

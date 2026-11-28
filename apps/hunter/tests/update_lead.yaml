@@ -1,0 +1,11 @@
+description: A lead's position changed - Hunter answers 204
+action: update_lead
+credential: { api_key: hunter-test-key }
+input: { lead_id: "103", position: Founder }
+exchanges:
+  - sent:
+      method: PUT
+      url: https://api.hunter.io/v2/leads/103
+      body: { position: Founder }
+    answer: { status: 204 }
+result: { updated: true }

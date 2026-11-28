@@ -1,0 +1,11 @@
+description: "A tag taken off every bookmark"
+action: remove_tags
+credential: { token: test-token }
+input: { tags: [old] }
+exchanges:
+  - sent:
+      method: DELETE
+      url: https://api.raindrop.io/rest/v1/tags
+      body: { tags: [old] }
+    answer: { body: { result: true } }
+result: { removed: true }

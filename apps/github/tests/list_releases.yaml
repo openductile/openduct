@@ -1,0 +1,9 @@
+action: list_releases
+credential: { token: test-token-1 }
+input: { owner: example-shop, repo: website }
+exchanges:
+  - sent:
+      url: https://api.github.com/repos/example-shop/website/releases
+      query: { per_page: "100" }
+    answer: { body: [{ tag_name: v1.2.0, name: Winter }] }
+result: [{ tag_name: v1.2.0, name: Winter }]

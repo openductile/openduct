@@ -1,0 +1,30 @@
+description: With no fields named, the usual ones are asked for
+action: get_employee
+credential:
+  company_domain: acme
+  api_key: test-key
+input:
+  employee_id: '101'
+exchanges:
+- sent:
+    method: GET
+    url: https://acme.bamboohr.com/api/v1/employees/101
+    query:
+      fields: firstName,lastName,preferredName,workEmail,jobTitle,department,division,location,hireDate,status,supervisor
+    headers:
+      authorization: Basic dGVzdC1rZXk6eA==
+      accept: application/json
+  answer:
+    status: 200
+    body:
+      id: '101'
+      firstName: Ada
+      lastName: Sample
+      jobTitle: Store Manager
+      status: Active
+result:
+  id: '101'
+  firstName: Ada
+  lastName: Sample
+  jobTitle: Store Manager
+  status: Active

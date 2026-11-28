@@ -1,0 +1,12 @@
+description: "Mailgun refuses a message with no body, in its words"
+action: send_email
+credential: {"api_key": "key-test", "domain": "mg.example.com"}
+input: {"from": "orders@mg.example.com", "to": "ann@example.com", "subject": "Hello"}
+exchanges:
+  - sent:
+      method: POST
+      url: "https://api.mailgun.net/v3/mg.example.com/messages"
+      headers: {"authorization": "Basic YXBpOmtleS10ZXN0"}
+      body: {"from": "orders@mg.example.com", "to": "ann@example.com", "subject": "Hello"}
+    answer: {"status": 400, "body": {"message": "Need at least one of 'text', 'html' or 'template' parameters specified"}}
+error: "Need at least one of 'text', 'html' or 'template' parameters specified"

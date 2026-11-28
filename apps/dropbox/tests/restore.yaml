@@ -1,0 +1,8 @@
+description: A file brought back to an earlier version
+action: restore
+credential: { access_token: sl.test-token }
+input: { path: /Price list.xlsx, rev: a1c10ce0dd70 }
+exchanges:
+  - sent: { url: https://api.dropboxapi.com/2/files/restore, body: { path: /Price list.xlsx, rev: a1c10ce0dd70 } }
+    answer: { body: { name: Price list.xlsx, id: "id:a4ayc_80_OEAAAAAAAAAZg", rev: a1c10ce0dd7a, size: 8875, path_display: /Price list.xlsx } }
+result: { name: Price list.xlsx, id: "id:a4ayc_80_OEAAAAAAAAAZg", rev: a1c10ce0dd7a, size: 8875, path_display: /Price list.xlsx }

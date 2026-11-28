@@ -1,0 +1,11 @@
+description: "The user the client's token belongs to"
+action: get_current_user
+sign_in: gotify_client
+credential: { base_url: "https://gotify.example.com", token: CzyoeNS.D4iJLVb }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://gotify.example.com/current/user"
+    answer:
+      body: { id: 1, name: admin, admin: true, createdAt: "2026-11-01T09:00:00Z" }
+result: { id: 1, name: admin, admin: true, createdAt: "2026-11-01T09:00:00Z" }

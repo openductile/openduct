@@ -1,0 +1,12 @@
+description: Rows with a value, and another condition
+action: list_rows
+credential: { project_url: "https://abcdefgh.supabase.co", api_key: sb_secret_test1 }
+input: { table: contacts, match: { status: active }, where: "total.gt.100", order: created_at.desc }
+exchanges:
+  - sent:
+      method: GET
+      url: https://abcdefgh.supabase.co/rest/v1/contacts
+      headers: { apikey: sb_secret_test1 }
+      query: { select: "*", and: '(status.eq."active",total.gt.100)', order: created_at.desc, limit: "1000" }
+    answer: { body: [{ id: 7, name: Ann Example, status: active, total: 120 }] }
+result: [{ id: 7, name: Ann Example, status: active, total: 120 }]

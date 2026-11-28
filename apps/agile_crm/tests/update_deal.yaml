@@ -1,0 +1,43 @@
+description: A deal won
+action: update_deal
+credential: {domain: shopexample, email: dana@shop.example, api_key: agile-test-key}
+input: {deal_id: '5717827835133952', milestone: Won, probability: 100}
+exchanges:
+- sent:
+    method: PUT
+    url: https://shopexample.agilecrm.com/dev/api/opportunity/partial-update
+    headers: {authorization: Basic ZGFuYUBzaG9wLmV4YW1wbGU6YWdpbGUtdGVzdC1rZXk=, accept: application/json}
+    query: {}
+    body: {id: '5717827835133952', milestone: Won, probability: 100}
+  answer:
+    status: 200
+    body:
+      id: '5717827835133952'
+      name: Ten seats
+      description: ''
+      expected_value: 600.0
+      probability: 100
+      milestone: Won
+      pipeline_id: '5730082031140864'
+      close_date: 1798675200
+      created_time: 1764237600
+      owner_id: '6263975862861824'
+      contact_ids: &id001 ['5629585249009664']
+      contacts: &id002 []
+      custom_data: &id003 []
+      archived: false
+result:
+  id: '5717827835133952'
+  name: Ten seats
+  description: ''
+  expected_value: 600.0
+  probability: 100
+  milestone: Won
+  pipeline_id: '5730082031140864'
+  close_date: 1798675200
+  created_time: 1764237600
+  owner_id: '6263975862861824'
+  contact_ids: *id001
+  contacts: *id002
+  custom_data: *id003
+  archived: false

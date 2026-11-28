@@ -1,0 +1,13 @@
+description: A monitor down with a new incident runs; one already seen down in the same incident does not
+trigger: monitor_down
+credential: { api_key: ur_test_1 }
+seen: { items: [["802:inc_1111", ""]] }
+exchanges:
+  - sent: { method: GET, url: https://api.uptimerobot.com/v3/monitors, query: { status: DOWN, limit: "200" } }
+    answer:
+      body:
+        nextLink: null
+        data:
+          - { id: 801, friendlyName: Shop, status: DOWN, lastIncidentId: inc_7f3a }
+          - { id: 802, friendlyName: Blog, status: DOWN, lastIncidentId: inc_1111 }
+ids: ["801:inc_7f3a"]

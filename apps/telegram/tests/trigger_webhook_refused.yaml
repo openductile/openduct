@@ -1,0 +1,9 @@
+description: A delivery with another secret is refused, and runs nothing
+trigger: message
+workflow: wf1
+credential: { bot_token: "123:abc", "webhook_secret@wf1": s3cr3t }
+delivery:
+  headers: { x-telegram-bot-api-secret-token: guessed }
+  body: '{"update_id": 901, "message": {"message_id": 6, "text": "let me in"}}'
+  at: 1700000000
+refused: "401 the delivery's token is wrong"

@@ -1,0 +1,95 @@
+name: Notes and next steps from a sales call's recording
+description: >-
+  Run it with a call's recording address (from your phone system or meeting tool), the customer and who looks after
+  them. AssemblyAI transcribes it, telling the speakers apart, and calls the run back when it is done - the run waits
+  for that, up to two hours; a model writes the notes - what was agreed, objections, next steps with dates - a row
+  goes to your Calls sheet in Google Sheets, and the account manager gets the notes from Gmail. Needs: an AssemblyAI
+  API key as a header credential named authorization (assemblyai), an AI credential (model), Google Sheets (sheets)
+  and Gmail (gmail).
+category: Sales
+trigger: manual
+# What a test runs on: the input a run by hand is given.
+sample:
+  recording_url: https://recordings.example.com/calls/2026-11-27-northwind.mp3
+  customer: Northwind Bikes
+  account_manager: sam@example.com
+steps:
+  - name: start
+    http:
+      method: POST
+      credential: assemblyai
+      url: https://api.assemblyai.com/v2/transcript
+      json:
+        audio_url: "{{ value.recording_url }}"
+        speaker_labels: true
+        # AssemblyAI calls this one-time address when the transcript is ready.
+        webhook_url: "{{ links.done }}"
+      sample: { id: 5551f2d0-0000-4000-8000-000000000001, status: queued }
+    retry: { attempts: 3, wait: 20s }
+  - name: done
+    wait: { webhook: true, timeout: 2h, on_timeout: continue }
+  - name: transcript
+    http:
+      credential: assemblyai
+      url: "https://api.assemblyai.com/v2/transcript/{{ steps.start.body.id }}"
+      sample:
+        id: 5551f2d0-0000-4000-8000-000000000001
+        status: completed
+        audio_duration: 1260
+        utterances:
+          - { speaker: A, text: "Thanks for making time. Last time you said deliveries were the pain point." }
+          - { speaker: B, text: "Yes. We need the cargo bikes serviced within two days, or the bakery loses a morning." }
+          - { speaker: A, text: "Our plan covers next-day service. I can send a quote for twelve bikes by Friday." }
+          - { speaker: B, text: "Good. The price has to be under our current lease, about 2,400 a month." }
+    retry: { attempts: 3, wait: 20s }
+  - name: ready
+    if:
+      when: steps.transcript.body.status != 'completed'
+      then:
+        - stop: { error: "the transcript is not ready: {{ steps.transcript.body.status }} {{ steps.transcript.body.error }}" }
+  - name: notes
+    ai:
+      credential: model
+      system: >-
+        You write a salesperson's notes from a call transcript. Keep to what was said. Next steps name who does what
+        and by when, only when said.
+      prompt: >-
+        Call with {{ value.customer }}, {{ int(steps.transcript.body.audio_duration / 60) }} minutes. Speaker A is our side.
+        {{ steps.transcript.body.utterances.map(u, u.speaker + ': ' + u.text).join('\n') }}
+      max_tokens: 900
+      schema:
+        type: object
+        properties:
+          summary: { type: string, description: "The call in three sentences" }
+          agreed: { type: array, items: { type: string } }
+          objections: { type: array, items: { type: string } }
+          next_steps: { type: array, items: { type: string }, description: "Who does what, by when" }
+          mood: { type: string, enum: [keen, open, unsure, cold] }
+        required: [summary, agreed, objections, next_steps, mood]
+  - name: lists
+    set:
+      agreed: "steps.notes.json.agreed == null ? '' : steps.notes.json.agreed.map(x, '- ' + x).join('\\n')"
+      objections: "steps.notes.json.objections == null ? '' : steps.notes.json.objections.map(x, '- ' + x).join('\\n')"
+      next_steps: "steps.notes.json.next_steps == null ? '' : steps.notes.json.next_steps.map(x, '- ' + x).join('\\n')"
+  - name: log
+    google_sheets:
+      action: add_row
+      credential: sheets
+      spreadsheet_id: your-sheet-id
+      sheet: Calls
+      values:
+        - "{{ value.customer }}"
+        - "{{ value.account_manager }}"
+        - "{{ steps.notes.json.mood }}"
+        - "{{ steps.notes.json.summary }}"
+        - "{{ steps.lists.next_steps }}"
+        - "{{ value.recording_url }}"
+    retry: { attempts: 3, wait: 30s }
+  - name: send
+    gmail:
+      action: send_email
+      credential: gmail
+      to: "{{ value.account_manager }}"
+      subject: "Call notes: {{ value.customer }}"
+      text: "{{ steps.notes.json.summary }}\n\nAgreed:\n{{ steps.lists.agreed }}\n\nObjections:\n{{ steps.lists.objections }}\n\nNext steps:\n{{ steps.lists.next_steps }}\n\nRecording: {{ value.recording_url }}"
+    retry: { attempts: 3, wait: 30s }

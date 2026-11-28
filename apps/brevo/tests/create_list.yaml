@@ -1,0 +1,7 @@
+action: create_list
+credential: { api_key: xkeysib-test-1 }
+input: { name: Workshop sign-ups, folder_id: 1 }
+exchanges:
+  - sent: { method: POST, url: https://api.brevo.com/v3/contacts/lists, body: { name: Workshop sign-ups, folderId: 1 } }
+    answer: { status: 201, body: { id: 9 } }
+result: { id: 9 }

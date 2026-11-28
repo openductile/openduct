@@ -1,0 +1,12 @@
+description: "A plain post: no button, no photo"
+action: create_post
+credential: {"access_token": "ya29.test"}
+input: {"account_id": "1001", "location_id": "2002", "summary": "Closed on the 1st."}
+exchanges:
+  - sent:
+      method: POST
+      url: "https://mybusiness.googleapis.com/v4/accounts/1001/locations/2002/localPosts"
+      headers: {"authorization": "Bearer ya29.test"}
+      body: {"topicType": "STANDARD", "summary": "Closed on the 1st."}
+    answer: {"status": 200, "body": {"name": "accounts/1001/locations/2002/localPosts/lp3", "summary": "Closed on the 1st.", "state": "PROCESSING", "topicType": "STANDARD"}}
+result: {"name": "accounts/1001/locations/2002/localPosts/lp3", "summary": "Closed on the 1st.", "state": "PROCESSING", "topicType": "STANDARD"}

@@ -1,0 +1,7 @@
+description: "Raindrop.io refuses a collection that is not there: the step fails in its words"
+action: get_collection
+credential: { token: test-token }
+input: { collection_id: 999 }
+exchanges:
+  - answer: { status: 404, body: { result: false, error: not_found, errorMessage: "Collection not found" } }
+error: "Raindrop.io answered 404: Collection not found"

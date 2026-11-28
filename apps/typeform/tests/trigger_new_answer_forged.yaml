@@ -1,0 +1,10 @@
+description: An answer signed with another secret is refused
+trigger: new_answer
+workflow: wf1
+credential: { token: tfp_1, "webhook_secret@wf1": a1b2c3d4e5 }
+input: { form_id: abc123 }
+delivery:
+  headers: { typeform-signature: "sha256=ayTlJbTaakk8d6+jPCPzMcS7lBO+FKr6jzLQhjr6K/4=" }
+  body: '{"event_id":"01HXYZ","event_type":"form_response","form_response":{"form_id":"abc123","token":"r1","submitted_at":"2026-11-27T10:00:00Z","answers":[{"type":"email","email":"ann@example.com","field":{"ref":"email"}}]}}'
+  at: 1700000000
+refused: "signature does not match"

@@ -1,0 +1,28 @@
+description: A new channel message and a reply, as Graph tells them - each runs with the ids to read it by
+trigger: new_message
+workflow: wf1
+sign_in: teams
+credential: { access_token: eyJ0.teams, "client_state@wf1": s3cr3t }
+input: { team_id: fbe2bf47-16c8-47cf-b4a5-4b9b187c508b, channel_id: "19:4a95f7d8db4c4e7fae857bcebe0623e6@thread.tacv2" }
+delivery:
+  body: '{"value":[{"subscriptionId":"9f9d1ed0-c9cc-42e7-8d80-a7fc4b0cda3c","changeType":"created","tenantId":"84bd8158-6d4d-4958-8b9f-9d6445542f95","clientState":"s3cr3t","subscriptionExpirationDateTime":"2026-11-23T11:26:41.0537895-08:00","resource":"teams(''fbe2bf47-16c8-47cf-b4a5-4b9b187c508b'')/channels(''19:4a95f7d8db4c4e7fae857bcebe0623e6@thread.tacv2'')/messages(''1612293113399'')","resourceData":{"id":"1612293113399","@odata.type":"#Microsoft.Graph.chatMessage"}},{"subscriptionId":"9f9d1ed0-c9cc-42e7-8d80-a7fc4b0cda3c","changeType":"created","tenantId":"84bd8158-6d4d-4958-8b9f-9d6445542f95","clientState":"s3cr3t","resource":"teams(''fbe2bf47-16c8-47cf-b4a5-4b9b187c508b'')/channels(''19:4a95f7d8db4c4e7fae857bcebe0623e6@thread.tacv2'')/messages(''1612293113399'')/replies(''1612293113400'')","resourceData":{"id":"1612293113400"}}]}'
+  at: 1700000000
+runs:
+  - kind: channel
+    team_id: fbe2bf47-16c8-47cf-b4a5-4b9b187c508b
+    channel_id: "19:4a95f7d8db4c4e7fae857bcebe0623e6@thread.tacv2"
+    chat_id: ""
+    message_id: "1612293113399"
+    reply_id: ""
+    resource: "teams('fbe2bf47-16c8-47cf-b4a5-4b9b187c508b')/channels('19:4a95f7d8db4c4e7fae857bcebe0623e6@thread.tacv2')/messages('1612293113399')"
+    subscription_id: 9f9d1ed0-c9cc-42e7-8d80-a7fc4b0cda3c
+    tenant_id: 84bd8158-6d4d-4958-8b9f-9d6445542f95
+  - kind: channel
+    team_id: fbe2bf47-16c8-47cf-b4a5-4b9b187c508b
+    channel_id: "19:4a95f7d8db4c4e7fae857bcebe0623e6@thread.tacv2"
+    chat_id: ""
+    message_id: "1612293113399"
+    reply_id: "1612293113400"
+    resource: "teams('fbe2bf47-16c8-47cf-b4a5-4b9b187c508b')/channels('19:4a95f7d8db4c4e7fae857bcebe0623e6@thread.tacv2')/messages('1612293113399')/replies('1612293113400')"
+    subscription_id: 9f9d1ed0-c9cc-42e7-8d80-a7fc4b0cda3c
+    tenant_id: 84bd8158-6d4d-4958-8b9f-9d6445542f95

@@ -1,0 +1,102 @@
+name: The key terms of each signed contract, with its notice deadline
+description: >-
+  When your e-signature or document system posts a signed contract to this workflow's webhook ({"document_id",
+  "name", "uploaded_by", "pdf_base64"}), the PDF is read, a model pulls out the parties, the start, the term, the
+  renewal and notice terms, the fees and the liability cap, and a short script works out the day the term ends and
+  the last day to give notice. A row goes into your Contracts sheet, legal gets the summary from Gmail, and the
+  caller is answered with the notice deadline. Needs: model (ai), sheets (google_sheets), mail (gmail).
+category: Documents
+trigger:
+  # Left empty here: each workflow made from the template is given a token of its own.
+  webhook: { token: "" }
+# What a test runs on: an event as this trigger gives it, with a short made-up contract.
+sample:
+  document_id: DOC-7741
+  name: MSA-Quillfield-Analytics.pdf
+  uploaded_by: dana.okoro@example.com
+  pdf_base64: JVBERi0xLjQKMSAwIG9iago8PCAvVHlwZSAvQ2F0YWxvZyAvUGFnZXMgMiAwIFIgPj4KZW5kb2JqCjIgMCBvYmoKPDwgL1R5cGUgL1BhZ2VzIC9LaWRzIFszIDAgUl0gL0NvdW50IDEgPj4KZW5kb2JqCjMgMCBvYmoKPDwgL1R5cGUgL1BhZ2UgL1BhcmVudCAyIDAgUiAvTWVkaWFCb3ggWzAgMCA1OTUgODQyXSAvUmVzb3VyY2VzIDw8IC9Gb250IDw8IC9GMSA1IDAgUiA+PiA+PiAvQ29udGVudHMgNCAwIFIgPj4KZW5kb2JqCjQgMCBvYmoKPDwgL0xlbmd0aCA1MTcgPj4Kc3RyZWFtCkJUCi9GMSAxMSBUZgo1MCA3ODAgVGQKMTQgVEwKKE1BU1RFUiBTRVJWSUNFUyBBR1JFRU1FTlQpIFRqClQqIChCZXR3ZWVuIFF1aWxsZmllbGQgQW5hbHl0aWNzIEluYy4gXChQcm92aWRlclwpIGFuZCBIYXJib3IgJiBQaW5lIE91dGZpdHRlcnMgTExDIFwoQ3VzdG9tZXJcKS4pIFRqClQqIChFZmZlY3RpdmUgZGF0ZTogMjAyNi0wMS0xNS4gSW5pdGlhbCB0ZXJtOiAyNCBtb250aHMuKSBUagpUKiAoUmVuZXdzIGF1dG9tYXRpY2FsbHkgZm9yIDEyLW1vbnRoIHRlcm1zIHVubGVzcyBlaXRoZXIgcGFydHkgZ2l2ZXMgNjAgZGF5cyB3cml0dGVuIG5vdGljZS4pIFRqClQqIChGZWVzOiA0LDgwMCBVU0QgYSBtb250aCwgaW52b2ljZWQgbW9udGhseSwgbmV0IDMwLikgVGoKVCogKExpYWJpbGl0eSBpcyBjYXBwZWQgYXQgdGhlIGZlZXMgcGFpZCBpbiB0aGUgMTIgbW9udGhzIGJlZm9yZSB0aGUgY2xhaW0uKSBUagpUKiAoR292ZXJuZWQgYnkgdGhlIGxhd3Mgb2YgdGhlIFN0YXRlIG9mIERlbGF3YXJlLikgVGoKRVQKZW5kc3RyZWFtCmVuZG9iago1IDAgb2JqCjw8IC9UeXBlIC9Gb250IC9TdWJ0eXBlIC9UeXBlMSAvQmFzZUZvbnQgL0hlbHZldGljYSA+PgplbmRvYmoKeHJlZgowIDYKMDAwMDAwMDAwMCA2NTUzNSBmIAowMDAwMDAwMDA5IDAwMDAwIG4gCjAwMDAwMDAwNTggMDAwMDAgbiAKMDAwMDAwMDExNSAwMDAwMCBuIAowMDAwMDAwMjQxIDAwMDAwIG4gCjAwMDAwMDA4MDkgMDAwMDAgbiAKdHJhaWxlcgo8PCAvU2l6ZSA2IC9Sb290IDEgMCBSID4+CnN0YXJ0eHJlZgo4NzkKJSVFT0YK
+steps:
+  - where: value.pdf_base64 != null && value.pdf_base64 != ''
+  - name: file
+    convert: { format: base64, base64: value.pdf_base64, name: "{{ value.name }}" }
+  - name: pdf
+    extract_file: { file: steps.file, format: pdf }
+  - name: terms
+    ai:
+      credential: model
+      system: >-
+        You read contracts for a legal team and pull out their key terms exactly as written. Days as YYYY-MM-DD. If
+        the contract does not say something, leave it empty (0 for numbers); never guess.
+      prompt: "{{ steps.pdf.text.substring(0, math.least(size(steps.pdf.text), 150000)) }}"
+      schema:
+        type: object
+        properties:
+          parties: { type: array, items: { type: string } }
+          start: { type: string, description: "the effective date, YYYY-MM-DD" }
+          term_months: { type: integer, minimum: 0 }
+          auto_renews: { type: boolean }
+          renewal_months: { type: integer, minimum: 0 }
+          notice_days: { type: integer, minimum: 0, description: "the notice needed to stop it renewing" }
+          fees: { type: string }
+          liability_cap: { type: string }
+          governing_law: { type: string }
+          unusual: { type: array, items: { type: string }, description: "terms a lawyer would want to look at" }
+        required: [parties, start, term_months, auto_renews, notice_days, fees, liability_cap, governing_law, unusual]
+      max_tokens: 800
+  - name: dates
+    javascript: |
+      // The day the current term ends, and the last day notice can be given (that many days before it).
+      const t = steps.terms.json || {};
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(t.start || "") || !t.term_months) return { ends: "", notice_by: "" };
+      const [y, m, d] = t.start.split("-").map(Number);
+      // Months added on the calendar: 2026-01-31 plus one month is 2026-02-28, not March.
+      const addMonths = (months) => {
+        const target = new Date(Date.UTC(y, m - 1 + months, 1));
+        const last = new Date(Date.UTC(target.getUTCFullYear(), target.getUTCMonth() + 1, 0)).getUTCDate();
+        return new Date(Date.UTC(target.getUTCFullYear(), target.getUTCMonth(), Math.min(d, last)));
+      };
+      const end = addMonths(t.term_months);
+      end.setUTCDate(end.getUTCDate() - 1);
+      const notice = new Date(end);
+      notice.setUTCDate(notice.getUTCDate() - (t.notice_days || 0));
+      const iso = (x) => x.toISOString().slice(0, 10);
+      return { ends: iso(end), notice_by: t.auto_renews && t.notice_days ? iso(notice) : "" };
+  - name: row
+    google_sheets:
+      action: add_row
+      credential: sheets
+      spreadsheet_id: your-spreadsheet-id
+      sheet: Contracts
+      values:
+        - "{{ value.document_id }}"
+        - "{{ has(steps.terms.json.parties) && steps.terms.json.parties != null ? steps.terms.json.parties.join('; ') : '' }}"
+        - "{{ steps.terms.json.start }}"
+        - "{{ steps.dates.ends }}"
+        - "{{ steps.terms.json.auto_renews }}"
+        - "{{ steps.dates.notice_by }}"
+        - "{{ steps.terms.json.fees }}"
+        - "{{ steps.terms.json.liability_cap }}"
+        - "{{ steps.terms.json.governing_law }}"
+        - "{{ value.name }}"
+    retry: { attempts: 3, wait: 30s }
+  - name: legal
+    gmail:
+      action: send_email
+      credential: mail
+      to: legal@example.com
+      subject: "Signed: {{ value.name }}{{ steps.dates.notice_by != '' ? ' - notice by ' + steps.dates.notice_by : '' }}"
+      text: |-
+        Parties: {{ has(steps.terms.json.parties) && steps.terms.json.parties != null ? steps.terms.json.parties.join('; ') : '' }}
+        From {{ steps.terms.json.start }} for {{ steps.terms.json.term_months }} months, ending {{ steps.dates.ends }}.
+        Renews on its own: {{ steps.terms.json.auto_renews }}. Notice: {{ steps.terms.json.notice_days }} days - give it by {{ steps.dates.notice_by }}.
+        Fees: {{ steps.terms.json.fees }}
+        Liability cap: {{ steps.terms.json.liability_cap }}
+        Law: {{ steps.terms.json.governing_law }}
+        To look at: {{ has(steps.terms.json.unusual) && steps.terms.json.unusual != null && size(steps.terms.json.unusual) > 0 ? steps.terms.json.unusual.join('; ') : 'nothing noted' }}
+
+        Uploaded by {{ value.uploaded_by }} ({{ value.document_id }}).
+    retry: { attempts: 3, wait: 10s }
+  - name: answer
+    respond:
+      status: 200
+      body: { document_id: "{{ value.document_id }}", ends: "{{ steps.dates.ends }}", notice_by: "{{ steps.dates.notice_by }}" }

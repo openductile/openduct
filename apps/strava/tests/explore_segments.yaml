@@ -1,0 +1,7 @@
+action: explore_segments
+credential: { access_token: st_test_1 }
+input: { bounds: "51.44,-2.62,51.47,-2.57", activity_type: running }
+exchanges:
+  - sent: { method: GET, url: https://www.strava.com/api/v3/segments/explore, query: { bounds: "51.44,-2.62,51.47,-2.57", activity_type: running } }
+    answer: { body: { segments: [{ id: 6002, name: Quay sprint, climb_category: 0, avg_grade: 0.2, distance: 400.0 }] } }
+result: [{ id: 6002, name: Quay sprint, climb_category: 0, avg_grade: 0.2, distance: 400.0 }]

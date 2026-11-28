@@ -1,0 +1,20 @@
+description: Turning the workflow off deletes the address it gave
+trigger: email_event
+unregister: true
+workflow: wf1
+input:
+  event: open
+credential:
+  api_key: test-key
+  secret_key: test-secret
+  webhook_secret@wf1: Basic b3BlbmR1Y3Q6d2hzLXRlc3QtMQ==
+  webhook_id@wf1: '301'
+exchanges:
+- sent:
+    method: DELETE
+    url: https://api.mailjet.com/v3/REST/eventcallbackurl/301
+  answer:
+    status: 204
+kept:
+  webhook_secret: ''
+  webhook_id: ''

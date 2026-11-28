@@ -1,0 +1,21 @@
+description: 'Vonage refuses: the step fails in its words, parameter by parameter'
+action: send_sms
+credential:
+  api_key: abcd1234
+  api_secret: test-secret
+input:
+  to: '0'
+  from: '14155550199'
+  text: Hello
+exchanges:
+- answer:
+    status: 422
+    body:
+      type: https://developer.vonage.com/api-errors/messages#1150
+      title: Invalid params
+      detail: The value of one or more parameters is invalid.
+      instance: bf0ca0bf927b3b52e3cb03217e1a1ddf
+      invalid_parameters:
+      - name: to
+        reason: Number must be in E.164 format
+error: 'Vonage answered 422: Invalid params: to - Number must be in E.164 format'

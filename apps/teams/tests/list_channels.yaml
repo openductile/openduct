@@ -1,0 +1,12 @@
+description: A team's channels, without the slow email property
+action: list_channels
+sign_in: teams
+credential: { access_token: eyJ0.teams }
+input: { team_id: 893075dd-2487-4122-925f-022c42e20265 }
+exchanges:
+  - sent:
+      method: GET
+      url: https://graph.microsoft.com/v1.0/teams/893075dd-2487-4122-925f-022c42e20265/channels
+      query: { "$select": "id,displayName,description,membershipType,webUrl" }
+    answer: { body: { value: [{ id: "19:561fbdbbfca848a484f0a6f00ce9dbbd@thread.tacv2", displayName: General, description: Everyone, membershipType: standard }] } }
+result: [{ id: "19:561fbdbbfca848a484f0a6f00ce9dbbd@thread.tacv2", displayName: General, description: Everyone, membershipType: standard }]

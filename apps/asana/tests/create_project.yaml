@@ -1,0 +1,11 @@
+description: A project in a team, shown as a board
+action: create_project
+credential: { token: "2/1200000000000001/1209999999999999:0a1b2c3d4e5f" }
+input: { name: Spring launch, workspace: "1200000000000099", team: "1208000000000001", default_view: board }
+exchanges:
+  - sent:
+      method: POST
+      url: https://app.asana.com/api/1.0/projects
+      body: { data: { name: Spring launch, workspace: "1200000000000099", team: "1208000000000001", default_view: board } }
+    answer: { status: 201, body: { data: { gid: "1201000000000003", name: Spring launch, archived: false, team: { gid: "1208000000000001", name: Office } } } }
+result: { gid: "1201000000000003", name: Spring launch, archived: false, team: { gid: "1208000000000001", name: Office } }

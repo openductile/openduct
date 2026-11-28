@@ -1,0 +1,18 @@
+description: Companies that fit a description in plain words
+action: discover_companies
+credential: { api_key: hunter-test-key }
+input: { query: Bakeries in Ohio with fewer than 50 people, limit: 2 }
+exchanges:
+  - sent:
+      method: POST
+      url: https://api.hunter.io/v2/discover
+      body: { query: Bakeries in Ohio with fewer than 50 people, limit: 2 }
+    answer:
+      body:
+        data:
+          - { domain: bakery.example, organization: Example Bakery, emails_count: { personal: 3, generic: 1, total: 4 } }
+          - { domain: bread.example, organization: Example Bread Co, emails_count: { personal: 5, generic: 2, total: 7 } }
+        meta: { results: 2, limit: 2, offset: 0 }
+result:
+  - { domain: bakery.example, organization: Example Bakery, emails_count: { personal: 3, generic: 1, total: 4 } }
+  - { domain: bread.example, organization: Example Bread Co, emails_count: { personal: 5, generic: 2, total: 7 } }

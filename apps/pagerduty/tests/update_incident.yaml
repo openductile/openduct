@@ -1,0 +1,12 @@
+description: An incident resolved
+action: update_incident
+credential: { api_key: pd_test_1 }
+input: { id: PINC001, from: ann@example.com, status: resolved, resolution: Payment provider fixed it }
+exchanges:
+  - sent:
+      method: PUT
+      url: https://api.pagerduty.com/incidents/PINC001
+      headers: { from: ann@example.com }
+      body: { incident: { type: incident_reference, status: resolved, resolution: Payment provider fixed it } }
+    answer: { body: { incident: { id: PINC001, incident_number: 42, title: Checkout is down, status: resolved } } }
+result: { id: PINC001, incident_number: 42, title: Checkout is down, status: resolved }

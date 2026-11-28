@@ -1,0 +1,6 @@
+action: get_quotas
+credential: { api_key: us_test_1 }
+exchanges:
+  - sent: { method: GET, url: https://urlscan.io/api/v1/quotas }
+    answer: { body: { scope: user, limits: { public: { day: { limit: 5000, used: 12, remaining: 4988, percent: 0.24 } } } } }
+result: { scope: user, limits: { public: { day: { limit: 5000, used: 12, remaining: 4988, percent: 0.24 } } } }

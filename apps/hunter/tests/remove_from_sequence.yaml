@@ -1,0 +1,15 @@
+description: An address taken off a sequence, what was left to send canceled
+action: remove_from_sequence
+credential: { api_key: hunter-test-key }
+input: { sequence_id: "31", emails: bo@example.com }
+exchanges:
+  - sent:
+      method: DELETE
+      url: https://api.hunter.io/v2/campaigns/31/recipients
+      body: { emails: [bo@example.com] }
+    answer:
+      status: 201
+      body:
+        data: { recipients_removed: 1, recipients_canceled: 0, messages_canceled: 2, skipped_recipients: null }
+        meta: { params: { campaign_id: 31 } }
+result: { recipients_removed: 1, recipients_canceled: 0, messages_canceled: 2, skipped_recipients: null }

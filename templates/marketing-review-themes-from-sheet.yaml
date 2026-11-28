@@ -1,0 +1,68 @@
+name: What your reviews say, sorted into themes
+description: >-
+  Run it by hand at the end of a month: it reads the customer reviews you collect in a Google Sheet (one a row), has a
+  model sort them into themes - what people praise, what they complain about, what they ask for - with how often each
+  comes up and a short quote, and writes the themes to a second sheet, ready for the next marketing meeting. Needs:
+  Google Sheets (sheets) and an AI credential (model).
+category: Marketing
+trigger: manual
+# What a test runs on: the input a run by hand is given.
+sample:
+  period: November 2026
+steps:
+  - name: reviews
+    google_sheets:
+      action: read_rows
+      credential: sheets
+      spreadsheet_id: your-sheet-id
+      # The reviews: a header row, then one review a row (date, stars, text, product...).
+      range: Reviews!A1:F2000
+    retry: { attempts: 3, wait: 30s }
+  - where: size(steps.reviews) > 1
+  - name: themes
+    ai:
+      credential: model
+      system: >-
+        You read a small company's customer reviews and sort them into at most eight themes. Each theme is praise,
+        a complaint or a request; its share is the part of the reviews that raise it, from 0 to 100; its quote is a
+        few words copied from one review, never invented. Plain words.
+      prompt: >-
+        {{ size(steps.reviews) - 1 }} reviews for {{ value.period }}; the first line names the columns:
+        {{ steps.reviews.map(r, r.join(' | ')).join('\n') }}
+      max_tokens: 1500
+      schema:
+        type: object
+        properties:
+          headline: { type: string, description: "The reviews in one sentence" }
+          themes:
+            type: array
+            maxItems: 8
+            items:
+              type: object
+              properties:
+                theme: { type: string }
+                kind: { type: string, enum: [praise, complaint, request] }
+                share: { type: number, minimum: 0, maximum: 100 }
+                quote: { type: string }
+              required: [theme, kind, share, quote]
+        required: [headline, themes]
+  - name: each
+    for_each:
+      items: "steps.themes.json.themes == null ? [] : steps.themes.json.themes"
+      steps:
+        - name: row
+          google_sheets:
+            action: add_row
+            credential: sheets
+            spreadsheet_id: your-sheet-id
+            sheet: Review themes
+            values: ["{{ value.period }}", "{{ item.kind }}", "{{ item.theme }}", "{{ item.share }}", "{{ item.quote }}"]
+          retry: { attempts: 3, wait: 30s }
+  - name: headline
+    google_sheets:
+      action: add_row
+      credential: sheets
+      spreadsheet_id: your-sheet-id
+      sheet: Review themes
+      values: ["{{ value.period }}", "summary", "{{ steps.themes.json.headline }}", "{{ size(steps.reviews) - 1 }} reviews", ""]
+    retry: { attempts: 3, wait: 30s }

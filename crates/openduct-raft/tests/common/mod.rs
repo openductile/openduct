@@ -145,6 +145,9 @@ pub struct Cluster {
     pub levels: BTreeMap<u64, u32>,
     /// The size a partition's segment closes at, when a test needs many small ones.
     pub segment_bytes: Option<u64>,
+    /// Brokers are started with a person's word that the surviving copies are to be taken.
+    pub accept_surviving_copies: Option<String>,
+    pub start_empty_where_none_survived: Option<String>,
 }
 
 impl Cluster {
@@ -173,6 +176,8 @@ impl Cluster {
             tier: None,
             levels: BTreeMap::new(),
             segment_bytes: None,
+            accept_surviving_copies: None,
+            start_empty_where_none_survived: None,
         }
     }
 
@@ -196,9 +201,15 @@ impl Cluster {
             heartbeat: Duration::from_millis(50),
             election_min: Duration::from_millis(300),
             election_max: Duration::from_millis(600),
+            // Several elections long, as in a real broker (thirty seconds against three), and short enough to drill.
+            empty_start_wait: Duration::from_secs(5),
+            // Short enough for a drill to see a restarted broker get its partitions back.
+            hand_back_after: Duration::from_secs(4),
         };
         config.replication_factor = self.replication_factor;
         config.snapshot_every = self.snapshot_every;
+        config.accept_surviving_copies = self.accept_surviving_copies.clone();
+        config.start_empty_where_none_survived = self.start_empty_where_none_survived.clone();
         if let Some(level) = self.levels.get(&id) {
             config.supported_level = *level;
         }
@@ -237,10 +248,9 @@ impl Cluster {
 
     pub async fn stop(&mut self, id: u64) {
         if let Some(r) = self.running.remove(&id) {
+            // Returns once its listener has gone: the port is free for a start again.
             r.shutdown().await;
         }
-        // The port is free again once the listener's task has gone.
-        tokio::time::sleep(Duration::from_millis(200)).await;
     }
 
     pub async fn stop_all(&mut self) {

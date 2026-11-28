@@ -1,0 +1,408 @@
+# Copyright 2026 Ductile AI, Inc
+# SPDX-License-Identifier: Apache-2.0
+# Webflow: made by `openduct app from-openapi` from
+# https://github.com/webflow/openapi-spec/blob/f6db607359a4/openapi/v2.yml (MIT licence), then finished by hand.
+app: webflow
+name: Webflow
+category: websites
+description: Sites, CMS items, form answers and store orders in Webflow.
+docs: https://developers.webflow.com/data/reference/rest-introduction
+hosts: [api.webflow.com]
+base_url: https://api.webflow.com/v2
+sign_in:
+  - id: webflow
+    label: A site token
+    fields:
+      - { name: token, label: "The site's API token (Site settings, Apps & integrations, API access)", secret: true }
+    headers: { Authorization: "Bearer {{ credential.token }}" }
+  - id: webflow_oauth
+    label: Sign in with Webflow
+    oauth2:
+      authorize: https://webflow.com/oauth/authorize
+      token: https://api.webflow.com/oauth/token
+      scopes: ["sites:read", "sites:write", "pages:read", "cms:read", "cms:write", "forms:read", "ecommerce:read", "ecommerce:write"]
+    headers: { Authorization: "Bearer {{ credential.access_token }}" }
+error: value.message
+actions:
+  list_sites:
+    label: List sites
+    description: Every site the token may reach.
+    method: GET
+    path: /sites
+    items: value.sites
+    output: { id: text, workspaceId: text, displayName: text, shortName: text, previewUrl: text, timeZone: text, lastPublished: text, lastUpdated: text, createdOn: text, customDomains: list, locales: record }
+  get_site:
+    label: Look up a site
+    description: One site, with its domains and languages.
+    method: GET
+    path: "/sites/{{ input.site_id }}"
+    inputs: [{ name: site_id, label: "The site's id", required: true }]
+    output: { id: text, workspaceId: text, displayName: text, shortName: text, previewUrl: text, timeZone: text, lastPublished: text, lastUpdated: text, createdOn: text, customDomains: list, locales: record }
+  publish_site:
+    label: Publish a site
+    description: The site, or one of its pages, published to its Webflow address or to its own domains.
+    write: true
+    method: POST
+    path: "/sites/{{ input.site_id }}/publish"
+    inputs:
+      - { name: site_id, label: "The site's id", required: true }
+      - { name: custom_domains, label: "Its own domains to publish to (their ids)", kind: list }
+      - { name: publish_to_webflow_subdomain, label: "Publish to its webflow.io address too", kind: boolean }
+      - { name: page_id, label: "Only this page (its id)" }
+    send:
+      customDomains: "{{ input.custom_domains }}"
+      publishToWebflowSubdomain: "{{ input.publish_to_webflow_subdomain }}"
+      pageId: "{{ input.page_id }}"
+    output: { customDomains: list, publishToWebflowSubdomain: boolean, publishScope: text }
+  list_pages:
+    label: List pages
+    description: Every page of a site, with its title, address and search settings.
+    method: GET
+    path: "/sites/{{ input.site_id }}/pages"
+    inputs:
+      - { name: site_id, label: "The site's id", required: true }
+      - { name: locale_id, label: "In this language (its locale id)" }
+    query: { localeId: "{{ input.locale_id }}", limit: "100" }
+    items: value.pages
+    next: "int(value.pagination.offset) + size(value.pages) < int(value.pagination.total) ? {'offset': int(value.pagination.offset) + size(value.pages)} : null"
+    output: { id: text, siteId: text, title: text, slug: text, parentId: text, collectionId: text, createdOn: text, lastUpdated: text, archived: boolean, draft: boolean, seo: record, openGraph: record, localeId: text, publishedPath: text }
+  list_collections:
+    label: List collections
+    description: The CMS collections of a site (blog posts, team members, products and the like).
+    method: GET
+    path: "/sites/{{ input.site_id }}/collections"
+    inputs: [{ name: site_id, label: "The site's id", required: true }]
+    items: value.collections
+    output: { id: text, displayName: text, singularName: text, slug: text, createdOn: text, lastUpdated: text }
+  get_collection:
+    label: Look up a collection
+    description: One collection, with the fields its items have.
+    method: GET
+    path: "/collections/{{ input.collection_id }}"
+    inputs: [{ name: collection_id, label: "The collection's id", required: true }]
+    output: { id: text, displayName: text, singularName: text, slug: text, createdOn: text, lastUpdated: text, fields: list }
+  list_items:
+    label: List items
+    description: The items of a collection as they are being edited (drafts included), every page.
+    method: GET
+    path: "/collections/{{ input.collection_id }}/items"
+    inputs:
+      - { name: collection_id, label: "The collection's id", required: true }
+      - { name: name, label: "Only the item with this name" }
+      - { name: slug, label: "Only the item with this slug" }
+      - { name: sort_by, label: "Sorted by: createdOn, lastPublished, lastUpdated, name or slug" }
+      - { name: sort_order, label: "In this order: asc or desc" }
+      - { name: cms_locale_id, label: "In this language (its CMS locale id)" }
+    query:
+      name: "{{ input.name }}"
+      slug: "{{ input.slug }}"
+      sortBy: "{{ input.sort_by }}"
+      sortOrder: "{{ input.sort_order }}"
+      cmsLocaleId: "{{ input.cms_locale_id }}"
+      limit: "100"
+    items: value.items
+    next: "int(value.pagination.offset) + size(value.items) < int(value.pagination.total) ? {'offset': int(value.pagination.offset) + size(value.items)} : null"
+    output: { id: text, cmsLocaleId: text, lastPublished: text, lastUpdated: text, createdOn: text, isArchived: boolean, isDraft: boolean, fieldData: record }
+  get_item:
+    label: Look up an item
+    description: One item of a collection, with its fields.
+    method: GET
+    path: "/collections/{{ input.collection_id }}/items/{{ input.item_id }}"
+    inputs:
+      - { name: collection_id, label: "The collection's id", required: true }
+      - { name: item_id, label: "The item's id", required: true }
+      - { name: cms_locale_id, label: "In this language (its CMS locale id)" }
+    query: { cmsLocaleId: "{{ input.cms_locale_id }}" }
+    output: { id: text, cmsLocaleId: text, lastPublished: text, lastUpdated: text, createdOn: text, isArchived: boolean, isDraft: boolean, fieldData: record }
+  create_item:
+    label: Add an item
+    description: A new item in a collection, as a draft unless it is to go out with the next publish.
+    write: true
+    method: POST
+    path: "/collections/{{ input.collection_id }}/items"
+    inputs:
+      - { name: collection_id, label: "The collection's id", required: true }
+      - { name: field_data, label: "Its fields, by their slugs: name and slug at least", required: true, kind: record }
+      - { name: is_draft, label: "Keep it a draft", kind: boolean }
+      - { name: is_archived, label: "Archive it", kind: boolean }
+      - { name: cms_locale_id, label: "In this language (its CMS locale id)" }
+    send:
+      fieldData: "{{ input.field_data }}"
+      isDraft: "{{ input.is_draft }}"
+      isArchived: "{{ input.is_archived }}"
+      cmsLocaleId: "{{ input.cms_locale_id }}"
+    output: { id: text, cmsLocaleId: text, lastPublished: text, lastUpdated: text, createdOn: text, isArchived: boolean, isDraft: boolean, fieldData: record }
+  update_item:
+    label: Change an item
+    description: Fields of an item changed; those not given stay as they are.
+    write: true
+    method: PATCH
+    path: "/collections/{{ input.collection_id }}/items/{{ input.item_id }}"
+    inputs:
+      - { name: collection_id, label: "The collection's id", required: true }
+      - { name: item_id, label: "The item's id", required: true }
+      - { name: field_data, label: "The fields to change, by their slugs", kind: record }
+      - { name: is_draft, label: "Make it a draft", kind: boolean }
+      - { name: is_archived, label: "Archive it", kind: boolean }
+      - { name: cms_locale_id, label: "In this language (its CMS locale id)" }
+    send:
+      fieldData: "{{ input.field_data }}"
+      isDraft: "{{ input.is_draft }}"
+      isArchived: "{{ input.is_archived }}"
+      cmsLocaleId: "{{ input.cms_locale_id }}"
+    output: { id: text, cmsLocaleId: text, lastPublished: text, lastUpdated: text, createdOn: text, isArchived: boolean, isDraft: boolean, fieldData: record }
+  delete_item:
+    label: Delete an item
+    description: An item taken out of a collection.
+    write: true
+    method: DELETE
+    path: "/collections/{{ input.collection_id }}/items/{{ input.item_id }}"
+    inputs:
+      - { name: collection_id, label: "The collection's id", required: true }
+      - { name: item_id, label: "The item's id", required: true }
+      - { name: cms_locale_id, label: "Only in this language (its CMS locale id)" }
+    query: { cmsLocaleId: "{{ input.cms_locale_id }}" }
+    result: "{'deleted': true}"
+    output: { deleted: boolean }
+  publish_items:
+    label: Publish items
+    description: Items of a collection put live on the site, without publishing the rest of it.
+    write: true
+    method: POST
+    path: "/collections/{{ input.collection_id }}/items/publish"
+    inputs:
+      - { name: collection_id, label: "The collection's id", required: true }
+      - { name: item_ids, label: "The items' ids", required: true, kind: list }
+    send: { itemIds: "{{ input.item_ids }}" }
+    output: { publishedItemIds: list, errors: list }
+  create_live_item:
+    label: Add an item, live
+    description: A new item in a collection, put live on the site at once.
+    write: true
+    method: POST
+    path: "/collections/{{ input.collection_id }}/items/live"
+    inputs:
+      - { name: collection_id, label: "The collection's id", required: true }
+      - { name: field_data, label: "Its fields, by their slugs: name and slug at least", required: true, kind: record }
+      - { name: cms_locale_id, label: "In this language (its CMS locale id)" }
+    send:
+      fieldData: "{{ input.field_data }}"
+      isDraft: false
+      cmsLocaleId: "{{ input.cms_locale_id }}"
+    output: { id: text, cmsLocaleId: text, lastPublished: text, lastUpdated: text, createdOn: text, isArchived: boolean, isDraft: boolean, fieldData: record }
+  update_live_item:
+    label: Change a live item
+    description: Fields of an item changed on the live site at once.
+    write: true
+    method: PATCH
+    path: "/collections/{{ input.collection_id }}/items/{{ input.item_id }}/live"
+    inputs:
+      - { name: collection_id, label: "The collection's id", required: true }
+      - { name: item_id, label: "The item's id", required: true }
+      - { name: field_data, label: "The fields to change, by their slugs", kind: record }
+      - { name: is_archived, label: "Archive it", kind: boolean }
+      - { name: cms_locale_id, label: "In this language (its CMS locale id)" }
+    send:
+      fieldData: "{{ input.field_data }}"
+      isArchived: "{{ input.is_archived }}"
+      cmsLocaleId: "{{ input.cms_locale_id }}"
+    output: { id: text, cmsLocaleId: text, lastPublished: text, lastUpdated: text, createdOn: text, isArchived: boolean, isDraft: boolean, fieldData: record }
+  list_forms:
+    label: List forms
+    description: The forms on a site, with their fields.
+    method: GET
+    path: "/sites/{{ input.site_id }}/forms"
+    inputs: [{ name: site_id, label: "The site's id", required: true }]
+    query: { limit: "100" }
+    items: value.forms
+    next: "int(value.pagination.offset) + size(value.forms) < int(value.pagination.total) ? {'offset': int(value.pagination.offset) + size(value.forms)} : null"
+    output: { id: text, displayName: text, siteId: text, pageId: text, pageName: text, formElementId: text, fields: record, createdOn: text, lastUpdated: text }
+  list_form_submissions:
+    label: List form answers
+    description: What people sent through the site's forms, or through one form.
+    method: GET
+    path: "/sites/{{ input.site_id }}/form_submissions"
+    inputs:
+      - { name: site_id, label: "The site's id", required: true }
+      - { name: element_id, label: "Only this form (its element id)" }
+    query: { elementId: "{{ input.element_id }}", limit: "100" }
+    items: value.formSubmissions
+    next: "int(value.pagination.offset) + size(value.formSubmissions) < int(value.pagination.total) ? {'offset': int(value.pagination.offset) + size(value.formSubmissions)} : null"
+    output: { id: text, displayName: text, siteId: text, workspaceId: text, dateSubmitted: text, formResponse: record, localeId: text }
+  get_form_submission:
+    label: Look up a form answer
+    description: One answer sent through a form.
+    method: GET
+    path: "/sites/{{ input.site_id }}/form_submissions/{{ input.form_submission_id }}"
+    inputs:
+      - { name: site_id, label: "The site's id", required: true }
+      - { name: form_submission_id, label: "The answer's id", required: true }
+    output: { id: text, displayName: text, siteId: text, workspaceId: text, dateSubmitted: text, formResponse: record, localeId: text }
+  list_products:
+    label: List products
+    description: The store's products, each with its variants (SKUs).
+    method: GET
+    path: "/sites/{{ input.site_id }}/products"
+    inputs: [{ name: site_id, label: "The site's id", required: true }]
+    query: { limit: "100" }
+    items: value.items
+    next: "int(value.pagination.offset) + size(value.items) < int(value.pagination.total) ? {'offset': int(value.pagination.offset) + size(value.items)} : null"
+    output: { product: record, skus: list }
+  get_product:
+    label: Look up a product
+    description: One product, with its variants (SKUs).
+    method: GET
+    path: "/sites/{{ input.site_id }}/products/{{ input.product_id }}"
+    inputs:
+      - { name: site_id, label: "The site's id", required: true }
+      - { name: product_id, label: "The product's id", required: true }
+    output: { product: record, skus: list }
+  create_product:
+    label: Add a product
+    description: A new product and its first variant (SKU), staged or live.
+    write: true
+    method: POST
+    path: "/sites/{{ input.site_id }}/products"
+    inputs:
+      - { name: site_id, label: "The site's id", required: true }
+      - { name: product, label: "The product: its fieldData (name, slug, description...)", required: true, kind: record }
+      - { name: sku, label: "Its first variant: its fieldData (name, slug, price...)", required: true, kind: record }
+      - { name: publish_status, label: "staging (the default) or live" }
+    send:
+      publishStatus: "{{ input.publish_status }}"
+      product: "{{ input.product }}"
+      sku: "{{ input.sku }}"
+    output: { product: record, skus: list }
+  update_product:
+    label: Change a product
+    description: A product's fields, or its variant's, changed.
+    write: true
+    method: PATCH
+    path: "/sites/{{ input.site_id }}/products/{{ input.product_id }}"
+    inputs:
+      - { name: site_id, label: "The site's id", required: true }
+      - { name: product_id, label: "The product's id", required: true }
+      - { name: product, label: "The product's fields to change: its fieldData", kind: record }
+      - { name: sku, label: "Its variant's fields to change: its fieldData", kind: record }
+      - { name: publish_status, label: "staging or live" }
+    send:
+      publishStatus: "{{ input.publish_status }}"
+      product: "{{ input.product }}"
+      sku: "{{ input.sku }}"
+    # The API description says the answer is the product as a CMS item.
+    output: { id: text, lastPublished: text, lastUpdated: text, createdOn: text, isArchived: boolean, isDraft: boolean, fieldData: record }
+  list_orders:
+    label: List orders
+    description: The store's orders, or those of one status.
+    method: GET
+    path: "/sites/{{ input.site_id }}/orders"
+    inputs:
+      - { name: site_id, label: "The site's id", required: true }
+      - { name: status, label: "Only: pending, unfulfilled, fulfilled, disputed, dispute-lost or refunded" }
+    query: { status: "{{ input.status }}", limit: "100" }
+    items: value.orders
+    next: "int(value.pagination.offset) + size(value.orders) < int(value.pagination.total) ? {'offset': int(value.pagination.offset) + size(value.orders)} : null"
+    output: &order { orderId: text, status: text, comment: text, orderComment: text, acceptedOn: text, fulfilledOn: text, refundedOn: text, customerPaid: record, netAmount: record, shippingAddress: record, billingAddress: record, shippingProvider: text, shippingTracking: text, shippingTrackingURL: text, customerInfo: record, purchasedItems: list, purchasedItemsCount: number, isShippingRequired: boolean, totals: record }
+  get_order:
+    label: Look up an order
+    description: One order, with what was bought, by whom and where it goes.
+    method: GET
+    path: "/sites/{{ input.site_id }}/orders/{{ input.order_id }}"
+    inputs:
+      - { name: site_id, label: "The site's id", required: true }
+      - { name: order_id, label: "The order's id", required: true }
+    output: *order
+  update_order:
+    label: Change an order
+    description: An order's note, or how it was shipped and its tracking.
+    write: true
+    method: PATCH
+    path: "/sites/{{ input.site_id }}/orders/{{ input.order_id }}"
+    inputs:
+      - { name: site_id, label: "The site's id", required: true }
+      - { name: order_id, label: "The order's id", required: true }
+      - { name: comment, label: "A note on the order, for your records" }
+      - { name: shipping_provider, label: "Who ships it" }
+      - { name: shipping_tracking, label: "Its tracking number" }
+      - { name: shipping_tracking_url, label: "Where to track it (an address)" }
+    send:
+      comment: "{{ input.comment }}"
+      shippingProvider: "{{ input.shipping_provider }}"
+      shippingTracking: "{{ input.shipping_tracking }}"
+      shippingTrackingURL: "{{ input.shipping_tracking_url }}"
+    output: *order
+  fulfill_order:
+    label: Mark an order fulfilled
+    description: An order marked fulfilled, with or without the email that tells the customer.
+    write: true
+    method: POST
+    path: "/sites/{{ input.site_id }}/orders/{{ input.order_id }}/fulfill"
+    inputs:
+      - { name: site_id, label: "The site's id", required: true }
+      - { name: order_id, label: "The order's id", required: true }
+      - { name: send_order_fulfilled_email, label: "Email the customer that it is on its way", kind: boolean }
+    send: { sendOrderFulfilledEmail: "{{ input.send_order_fulfilled_email }}" }
+    output: *order
+triggers:
+  new_form_submission:
+    label: A form answered
+    description: >-
+      Each answer sent through the site's forms, or through one form, as Webflow sends it, signed. Turning the
+      workflow on adds a webhook to the site, and turning it off removes it.
+    inputs:
+      - { name: site_id, label: "The site's id", required: true }
+      - { name: form_name, label: "Only the form with this name" }
+    webhook:
+      signature: { header: x-webflow-signature, time_header: x-webflow-timestamp, time_unit: milliseconds, signed: "{time}:{body}", encoding: hex, tolerance: 5m }
+      secret: webhook_secret
+      id: value.payload.id
+      only: "value.triggerType == 'form_submission'"
+      event: value.payload
+      register:
+        - method: POST
+          path: "/sites/{{ input.site_id }}/webhooks"
+          send: { triggerType: form_submission, url: "{{ input.address }}", filter: { name: "{{ input.form_name }}" } }
+      keep: { webhook_secret: "has(value.secretKey) ? value.secretKey : ''", webhook_id: value.id }
+      unregister:
+        - { method: DELETE, path: "/webhooks/{{ input.registered.webhook_id }}" }
+  new_order:
+    label: A new order
+    description: >-
+      Each order placed in the store, as Webflow sends it, signed. Turning the workflow on adds a webhook to the
+      site, and turning it off removes it.
+    inputs:
+      - { name: site_id, label: "The site's id", required: true }
+    webhook:
+      signature: { header: x-webflow-signature, time_header: x-webflow-timestamp, time_unit: milliseconds, signed: "{time}:{body}", encoding: hex, tolerance: 5m }
+      secret: webhook_secret
+      id: value.payload.orderId
+      only: "value.triggerType == 'ecomm_new_order'"
+      event: value.payload
+      register:
+        - method: POST
+          path: "/sites/{{ input.site_id }}/webhooks"
+          send: { triggerType: ecomm_new_order, url: "{{ input.address }}" }
+      keep: { webhook_secret: "has(value.secretKey) ? value.secretKey : ''", webhook_id: value.id }
+      unregister:
+        - { method: DELETE, path: "/webhooks/{{ input.registered.webhook_id }}" }
+  new_item:
+    label: A new item
+    description: >-
+      Each item added to the site's collections, or to one collection, as Webflow sends it, signed. Turning the
+      workflow on adds a webhook to the site, and turning it off removes it.
+    inputs:
+      - { name: site_id, label: "The site's id", required: true }
+      - { name: collection_id, label: "Only in this collection (its id)" }
+    webhook:
+      signature: { header: x-webflow-signature, time_header: x-webflow-timestamp, time_unit: milliseconds, signed: "{time}:{body}", encoding: hex, tolerance: 5m }
+      secret: webhook_secret
+      id: value.payload.id
+      only: "value.triggerType == 'collection_item_created' && (input.collection_id == null || value.payload.collectionId == input.collection_id)"
+      event: value.payload
+      register:
+        - method: POST
+          path: "/sites/{{ input.site_id }}/webhooks"
+          send: { triggerType: collection_item_created, url: "{{ input.address }}" }
+      keep: { webhook_secret: "has(value.secretKey) ? value.secretKey : ''", webhook_id: value.id }
+      unregister:
+        - { method: DELETE, path: "/webhooks/{{ input.registered.webhook_id }}" }

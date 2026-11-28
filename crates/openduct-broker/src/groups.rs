@@ -631,7 +631,10 @@ impl Coordinator {
         if generation != current {
             return codes::ILLEGAL_GENERATION;
         }
-        if phase == Phase::PreparingRebalance {
+        // As Kafka does: while members are (re)joining, a member of the current generation still commits - it holds
+        // its partitions until the round ends, and a member stopping commits its last runs then. Once the round has
+        // ended and the assignment is being handed out, a commit waits for it.
+        if phase == Phase::CompletingRebalance {
             return codes::REBALANCE_IN_PROGRESS;
         }
         codes::NONE
@@ -847,7 +850,41 @@ mod tests {
         let a = c.join(join("g", "", &["range"])).await.member_id;
         c.join(join("g", &a, &["range"])).await;
         assert_eq!(c.check_commit("g", "", -1), codes::ILLEGAL_GENERATION);
+        assert_eq!(
+            c.check_commit("g", &a, 1),
+            codes::REBALANCE_IN_PROGRESS,
+            "joined, its assignment not handed out yet"
+        );
+        c.sync("g", &a, 1, Vec::new()).await;
         assert_eq!(c.check_commit("g", &a, 1), codes::NONE);
         assert_eq!(c.check_commit("g", &a, 7), codes::ILLEGAL_GENERATION);
+    }
+
+    #[tokio::test]
+    async fn a_member_still_commits_while_another_joins_or_leaves() {
+        let c = coordinator();
+        let a = c.join(join("g", "", &["range"])).await.member_id;
+        c.join(join("g", &a, &["range"])).await;
+        c.sync("g", &a, 1, Vec::new()).await;
+        let b = c.join(join("g", "", &["range"])).await.member_id;
+        let c2 = c.clone();
+        let b2 = b.clone();
+        let b_join = tokio::spawn(async move { c2.join(join("g", &b2, &["range"])).await });
+        tokio::time::sleep(Duration::from_millis(50)).await;
+        assert_eq!(c.heartbeat("g", &a, 1), codes::REBALANCE_IN_PROGRESS);
+        assert_eq!(
+            c.check_commit("g", &a, 1),
+            codes::NONE,
+            "A holds its partitions until the round ends: what it finished is kept"
+        );
+        let a_join = c.join(join("g", &a, &["range"])).await;
+        let b_join = b_join.await.unwrap();
+        assert_eq!((a_join.generation, b_join.generation), (2, 2));
+        assert_eq!(
+            c.check_commit("g", &a, 1),
+            codes::ILLEGAL_GENERATION,
+            "the generation before"
+        );
+        assert_eq!(c.check_commit("g", &a, 2), codes::REBALANCE_IN_PROGRESS);
     }
 }

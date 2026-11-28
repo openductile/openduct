@@ -1,0 +1,10 @@
+description: Two records changed
+action: update_records
+credential: { address: "https://mycompany.example.com", api_key: 6578616d706c65206b6579 }
+input: { model: crm.lead, ids: "12,13", values: { priority: "2" } }
+exchanges:
+  - sent:
+      url: https://mycompany.example.com/json/2/crm.lead/write
+      body: { ids: [12, 13], vals: { priority: "2" } }
+    answer: { body: true }
+result: { updated: true }

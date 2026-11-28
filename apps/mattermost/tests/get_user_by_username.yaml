@@ -1,0 +1,11 @@
+description: A user by their user name
+action: get_user_by_username
+credential: { server_url: "https://chat.example.com", token: testmmtoken0000000000000000 }
+input: { username: ann.example }
+exchanges:
+  - sent:
+      method: GET
+      url: https://chat.example.com/api/v4/users/username/ann.example
+      headers: { authorization: Bearer testmmtoken0000000000000000 }
+    answer: { body: { id: u1aaaaaaaaaaaaaaaaaaaaaaaa, username: ann.example, first_name: Ann, last_name: Example, email: ann@example.com, roles: system_user } }
+result: { id: u1aaaaaaaaaaaaaaaaaaaaaaaa, username: ann.example, first_name: Ann, last_name: Example, email: ann@example.com, roles: system_user }

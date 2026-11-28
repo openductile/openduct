@@ -1,0 +1,49 @@
+description: An employee's folders and files
+action: list_employee_files
+credential:
+  company_domain: acme
+  api_key: test-key
+input:
+  employee_id: '101'
+exchanges:
+- sent:
+    method: GET
+    url: https://acme.bamboohr.com/api/v1/employees/101/files/view
+    headers:
+      authorization: Basic dGVzdC1rZXk6eA==
+      accept: application/json
+  answer:
+    status: 200
+    body:
+      employee:
+        id: 101
+      categories:
+      - id: 12
+        name: Signed documents
+        canRenameCategory: 'no'
+        canDeleteCategory: 'no'
+        canUploadFiles: 'yes'
+        displayIfEmpty: 'yes'
+        files:
+        - id: 450
+          name: Handbook acknowledgement
+          originalFileName: handbook.pdf
+          size: 48213
+          dateCreated: '2026-03-02 16:01:12'
+          createdBy: Ben Tester
+          shareWithEmployee: 'yes'
+result:
+- id: 12
+  name: Signed documents
+  canRenameCategory: 'no'
+  canDeleteCategory: 'no'
+  canUploadFiles: 'yes'
+  displayIfEmpty: 'yes'
+  files:
+  - id: 450
+    name: Handbook acknowledgement
+    originalFileName: handbook.pdf
+    size: 48213
+    dateCreated: '2026-03-02 16:01:12'
+    createdBy: Ben Tester
+    shareWithEmployee: 'yes'

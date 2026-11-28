@@ -1,0 +1,6 @@
+action: exchange_rates
+credential: { api_key: CG-test1 }
+exchanges:
+  - sent: { method: GET, url: https://api.coingecko.com/api/v3/exchange_rates }
+    answer: { body: { rates: { btc: { name: Bitcoin, unit: BTC, value: 1.0, type: crypto }, usd: { name: US Dollar, unit: "$", value: 76975.0, type: fiat } } } }
+result: { btc: { name: Bitcoin, unit: BTC, value: 1.0, type: crypto }, usd: { name: US Dollar, unit: "$", value: 76975.0, type: fiat } }

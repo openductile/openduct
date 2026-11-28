@@ -1,0 +1,11 @@
+description: A board without the usual lists
+action: create_board
+credential: { api_key: testkey0123456789, token: ATTAtesttoken0123 }
+input: { name: Orders, default_lists: false }
+exchanges:
+  - sent:
+      method: POST
+      url: https://api.trello.com/1/boards/
+      query: { key: testkey0123456789, token: ATTAtesttoken0123, name: Orders, defaultLists: "false" }
+    answer: { body: { id: 6567a1b2c3d4e5f6000000b1, name: Orders, desc: "", closed: false, url: "https://trello.com/b/XyZ12345/orders", shortUrl: "https://trello.com/b/XyZ12345" } }
+result: { id: 6567a1b2c3d4e5f6000000b1, name: Orders, desc: "", closed: false, url: "https://trello.com/b/XyZ12345/orders", shortUrl: "https://trello.com/b/XyZ12345" }

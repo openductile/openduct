@@ -1,0 +1,7 @@
+description: A meeting that is not there is refused in Zoom's words
+action: get_meeting
+credential: { access_token: zoom-test-token }
+input: { meeting_id: "85799999999" }
+exchanges:
+  - answer: { status: 404, body: { code: 3001, message: "Meeting does not exist: 85799999999." } }
+error: "Zoom answered 404: Meeting does not exist: 85799999999."

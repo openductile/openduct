@@ -1,0 +1,47 @@
+# Made by `openduct app from-openapi`: Get Collection Details.
+description: "Get Collection Details, made from the API description's schemas"
+action: get_collection
+credential: { token: test-token }
+input: { collection_id: collection_1 }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://api.webflow.com/v2/collections/collection_1"
+      query: {}
+      headers: { authorization: "Bearer test-token" }
+    answer:
+      status: 200
+      body:
+        id: "562ac0395358780a1f5e6fbd"
+        displayName: example
+        singularName: example
+        slug: blog-posts
+        createdOn: "2022-12-07T16:51:37.571Z"
+        lastUpdated: "2022-12-07T16:51:37.571Z"
+        fields:
+          - id: id_1
+            isRequired: true
+            isEditable: true
+            type: Color
+            slug: example
+            displayName: example
+            helpText: example
+            validations: {}
+        fieldGroups: [{ displayName: example, fieldIds: [example], description: example }]
+result:
+  id: "562ac0395358780a1f5e6fbd"
+  displayName: example
+  singularName: example
+  slug: blog-posts
+  createdOn: "2022-12-07T16:51:37.571Z"
+  lastUpdated: "2022-12-07T16:51:37.571Z"
+  fields:
+    - id: id_1
+      isRequired: true
+      isEditable: true
+      type: Color
+      slug: example
+      displayName: example
+      helpText: example
+      validations: {}
+  fieldGroups: [{ displayName: example, fieldIds: [example], description: example }]

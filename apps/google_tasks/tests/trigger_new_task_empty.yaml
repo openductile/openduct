@@ -1,0 +1,8 @@
+description: An empty list starts nothing
+trigger: new_task
+credential: { access_token: ya29.test }
+input: { list_id: "@default" }
+seen: { items: [] }
+exchanges:
+  - answer: { body: { kind: tasks#tasks } }
+runs: []

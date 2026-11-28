@@ -1,0 +1,55 @@
+description: "List pipelines"
+action: list_pipelines
+credential: { api_key: test-key }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://api.pipedrive.com/api/v2/pipelines"
+      query: { limit: "100" }
+      headers: { x-api-token: test-key }
+    answer:
+      status: 200
+      body:
+        success: true
+        data:
+          - id: 1
+            name: example
+            order_nr: 1
+            is_deleted: true
+            is_deal_probability_enabled: true
+            add_time: example
+            update_time: example
+        additional_data: { next_cursor: token_2 }
+  - sent:
+      method: GET
+      url: "https://api.pipedrive.com/api/v2/pipelines"
+      query: { limit: "100", cursor: token_2 }
+      headers: { x-api-token: test-key }
+    answer:
+      status: 200
+      body:
+        success: true
+        data:
+          - id: id_2
+            name: example
+            order_nr: 1
+            is_deleted: true
+            is_deal_probability_enabled: true
+            add_time: example
+            update_time: example
+        additional_data: { next_cursor: null }
+result:
+  - id: 1
+    name: example
+    order_nr: 1
+    is_deleted: true
+    is_deal_probability_enabled: true
+    add_time: example
+    update_time: example
+  - id: id_2
+    name: example
+    order_nr: 1
+    is_deleted: true
+    is_deal_probability_enabled: true
+    add_time: example
+    update_time: example

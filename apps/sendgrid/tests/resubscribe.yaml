@@ -1,0 +1,8 @@
+description: An address that may be sent email again
+action: resubscribe
+credential: { token: SG.test-key }
+input: { email: ann@example.com }
+exchanges:
+  - sent: { method: DELETE, url: https://api.sendgrid.com/v3/asm/suppressions/global/ann@example.com }
+    answer: { status: 204 }
+result: { removed: true }

@@ -1,0 +1,103 @@
+name: Captions and pictures for today's social posts
+description: >-
+  For small marketing teams planning posts in a Google Sheet (the day in column A, the topic in B): every weekday at
+  10:00, each of today's posts that has no picture yet gets a caption written by a model and a picture made from it by
+  an image model, kept in your S3 bucket (or Cloudflare R2, MinIO and others through their S3 address), with a link that
+  works for a week written into the sheet beside the caption, marked "to review" - and your Discord channel is told how
+  many are waiting. Nothing is posted anywhere: people review first. Needs: a Google Sheets sign-in called sheets, an AI
+  credential called model, an OpenAI key as a bearer credential called openai, an s3 credential called media_s3, and a
+  Discord webhook credential called discord.
+category: Marketing
+trigger:
+  schedule: { every: weekday, at: "10:00", timezone: Europe/Madrid }
+# What a test runs on: an event as this trigger gives it.
+sample:
+  scheduled_at: "2026-11-27T09:00:00Z"
+steps:
+  - name: settings
+    set:
+      # Change these to your own: the spreadsheet, and the brand's voice for the captions.
+      spreadsheet: "'your-spreadsheet-id'"
+      voice: "'friendly and plain, no hashtags in the text, at most two emoji'"
+  - name: plan
+    google_sheets:
+      credential: sheets
+      action: read_rows
+      spreadsheet_id: "{{ steps.settings.spreadsheet }}"
+      range: Posts!A2:E
+    retry: { attempts: 3, wait: 10s }
+  - name: todays
+    javascript: |
+      // Today's posts (A holds the day, as 2026-11-27) with no picture yet (D empty), each with its row in the sheet.
+      const today = value.scheduled_at.slice(0, 10);
+      return (steps.plan || [])
+        .map((r, i) => ({ row: i + 2, day: String(r[0] || "").trim(), topic: String(r[1] || "").trim(), picture: String(r[3] || "").trim() }))
+        .filter(p => p.day === today && p.topic && !p.picture);
+  - where: size(steps.todays) > 0
+  - name: each_post
+    for_each:
+      items: steps.todays
+      steps:
+        - name: words
+          ai:
+            credential: model
+            system: >-
+              You write one social media post for a small business, {{ steps.settings.voice }}: a caption of at most
+              three short sentences, and a description of a picture to go with it (a photo-like scene, no text or
+              logos in it). Answer as JSON.
+            prompt: "The post is about: {{ item.topic }}"
+            schema:
+              type: object
+              properties:
+                caption: { type: string }
+                picture: { type: string }
+              required: [caption, picture]
+            max_tokens: 400
+        - name: image
+          http:
+            method: POST
+            url: https://api.openai.com/v1/images/generations
+            credential: openai
+            json:
+              model: gpt-image-1
+              prompt: "{{ steps.words.json.picture != null ? steps.words.json.picture : item.topic }}"
+              size: 1024x1024
+              n: 1
+            timeout: 120s
+            fail_on_status: true
+            sample:
+              data:
+                - b64_json: iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==
+          retry: { attempts: 2, wait: 20s }
+        - name: png
+          convert:
+            format: base64
+            base64: steps.image.body.data[0].b64_json
+            name: "post-{{ item.day }}-row{{ item.row }}.png"
+        - name: keep
+          storage:
+            action: write
+            credential: media_s3
+            path: "social/{{ item.day }}/row{{ item.row }}.png"
+            file: steps.png
+            overwrite: true
+          retry: { attempts: 3, wait: 10s }
+        - name: link
+          storage:
+            action: presign
+            credential: media_s3
+            path: "social/{{ item.day }}/row{{ item.row }}.png"
+            expires: 7d
+        - name: write
+          google_sheets:
+            credential: sheets
+            action: set_rows
+            spreadsheet_id: "{{ steps.settings.spreadsheet }}"
+            range: "Posts!C{{ item.row }}:E{{ item.row }}"
+            rows: "[[steps.words.json.caption != null ? steps.words.json.caption : steps.words.text, steps.link.url, 'to review']]"
+          retry: { attempts: 3, wait: 10s }
+  - name: tell
+    discord:
+      credential: discord
+      text: "{{ size(steps.todays) }} posts for today have a caption and a picture, waiting for review in the Posts sheet."
+    retry: { attempts: 3, wait: 10s }

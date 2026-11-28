@@ -1,0 +1,7 @@
+description: A token without the module's permission is refused in Zoho's words
+action: get_record
+credential: { access_token: 1000.test.token }
+input: { module: Leads, id: "1000000000000000101" }
+exchanges:
+  - answer: { status: 401, body: { code: OAUTH_SCOPE_MISMATCH, details: {}, message: invalid oauth scope to access this URL, status: error } }
+error: "Zoho CRM answered 401: OAUTH_SCOPE_MISMATCH: invalid oauth scope to access this URL"

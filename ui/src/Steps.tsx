@@ -10,7 +10,20 @@ import { Icon } from "./flow/Icon";
 import { FAMILY } from "./flow/look";
 import { MORE_KINDS, MoreBody } from "./StepsMore";
 import { AppBody, appStep, catalogApp, remember } from "./StepsApps";
+import { AI_STEP_KINDS, AiStepBody, SchemaField, freshAi } from "./StepsAi"; // G7 more AI steps
+import { aiInnerLists } from "./flow/aiBranches"; // G7 more AI steps
+import { McpBody } from "./StepsMcp"; // MCP
+import { RETRIEVAL_KINDS, RetrievalBody, retrievalStep } from "./StepsRetrieval"; // retrieval
+import { TABLE_KINDS, TableStepBody } from "./StepsTables"; // data tables
+import { Attachments, FILE_KINDS, FilesBody, HttpFiles, freshFile } from "./StepsFiles"; // G6 files
+import { STORAGE_KINDS, StorageBody, freshStorage } from "./StepsStorage"; // storage
+import { WebBody, freshWeb } from "./StepsWeb"; // web
+import { MailboxBody, freshMailbox } from "./StepsMailbox"; // messaging
 import type { AppInfo } from "./api";
+import { AgentBody, agentStep } from "./StepsAgent"; // G2 AI agents
+import { DATABASE_KINDS, DatabaseBody, DatabaseLimits, freshDatabase } from "./StepsDatabases"; // sql databases
+// forms-and-resume
+import { FormStepBody, WaitBody } from "./FormBuilder";
 
 /** The workspace's credentials, for the steps that name one. */
 export const CredentialsContext = createContext<CredentialSummary[]>([]);
@@ -19,6 +32,11 @@ export const CredentialsContext = createContext<CredentialSummary[]>([]);
 export const TAKES: Record<string, string[]> = {
   ai: ["ai"],
   embed: ["ai"],
+  classify: ["ai"], // G7 more AI steps
+  sentiment: ["ai"],
+  extract: ["ai"],
+  summarise: ["ai"],
+  agent: ["ai"], // G2 AI agents
   telegram: ["telegram"],
   slack: ["slack", "slack_webhook"],
   discord: ["discord_webhook"],
@@ -27,7 +45,13 @@ export const TAKES: Record<string, string[]> = {
   whatsapp: ["whatsapp"],
   http: ["bearer", "header", "basic"],
   postgres: ["postgres"],
+  mysql: ["mysql"], // sql databases
+  sqlserver: ["sqlserver"], // sql databases
   email: ["smtp"],
+  mcp: ["bearer", "header", "basic"], // MCP
+  storage: ["sftp", "ftp", "s3", "azure_blob", "gcs", "dropbox", "box", "box_token", "microsoft_365", "google_drive"], // storage, storage places
+  redis: ["redis"], // storage
+  mailbox: ["imap"], // messaging
 };
 
 export const KINDS: { kind: string; label: string; hint: string }[] = [
@@ -42,12 +66,26 @@ export const KINDS: { kind: string; label: string; hint: string }[] = [
   { kind: "datetime", label: "Date and time", hint: "Read, move and write a time, in a time zone" },
   { kind: "ai", label: "Ask AI", hint: "A model's answer, the same form whatever the model" },
   { kind: "embed", label: "Embed text", hint: "Vectors for search and retrieval" },
+  // G7 more AI steps
+  { kind: "classify", label: "Classify text", hint: "Sort a text into your categories; each category's steps run" },
+  { kind: "sentiment", label: "Sentiment", hint: "Positive, neutral or negative (or your labels), with a score" },
+  { kind: "extract", label: "Extract fields", hint: "Named fields with types pulled out of a text, checked" },
+  { kind: "summarise", label: "Summarise", hint: "A text, or many, to a length and a style; long ones in pieces" },
+  { kind: "agent", label: "AI agent", hint: "A model that uses tools over several turns to reach a goal, with memory" }, // G2 AI agents
+  { kind: "split_text", label: "Split text", hint: "Cut documents into pieces for search" }, // retrieval
+  { kind: "vector_store", label: "Vector store", hint: "Keep pieces with their vectors in Postgres or a vector database; find the nearest" }, // retrieval, vector stores
+  { kind: "ask_documents", label: "Ask your documents", hint: "An answer from your documents, with its sources" }, // retrieval
   { kind: "lookup", label: "Look up a file", hint: "Find rows in a lookup file" },
+  { kind: "table", label: "Data table", hint: "Get, add, update or delete rows of a table" }, // data tables
+  { kind: "state", label: "Keep between runs", hint: "Values this workflow keeps from one run to the next" }, // data tables
   { kind: "postgres", label: "Query a database", hint: "SQL on Postgres; with pgvector, the texts nearest a question" },
+  { kind: "mysql", label: "MySQL", hint: "SQL on MySQL or MariaDB, its values beside it" }, // sql databases
+  { kind: "sqlserver", label: "SQL Server", hint: "SQL on SQL Server or Azure SQL, its values beside it" }, // sql databases
   { kind: "email", label: "Send an e-mail", hint: "Through your own mail server" },
   { kind: "javascript", label: "Code: JavaScript", hint: "A snippet of your own: return the result" },
   { kind: "python", label: "Code: Python", hint: "A snippet of your own: set result" },
   { kind: "http", label: "HTTP request", hint: "Call any API" },
+  { kind: "mcp", label: "MCP tool", hint: "Call a tool of an MCP server, or list its tools" }, // MCP
   { kind: "telegram", label: "Telegram", hint: "Send a Telegram message" },
   { kind: "slack", label: "Slack", hint: "Post to a Slack channel" },
   { kind: "discord", label: "Discord", hint: "Post to a Discord channel" },
@@ -57,8 +95,21 @@ export const KINDS: { kind: string; label: string; hint: string }[] = [
   { kind: "topic", label: "Write to a topic", hint: "Keep a message for other workflows and apps" },
   { kind: "respond", label: "Respond to webhook", hint: "Answer the webhook's caller with a status and a body" },
   { kind: "run_workflow", label: "Run a workflow", hint: "Run another workflow of this workspace and use its result" },
-  { kind: "wait", label: "Wait", hint: "Pause the run for a while" },
+  { kind: "wait", label: "Wait", hint: "Pause the run for a while, until a time, or for a call to its address" },
+  // forms-and-resume
+  { kind: "form", label: "Ask with a form", hint: "The run waits for a form to be filled in: its link goes out in a step before" },
+  { kind: "approval", label: "Ask for approval", hint: "The run waits for someone to approve or reject" },
   { kind: "stop", label: "Stop", hint: "End the run, or fail it with a reason" },
+  // G6 files
+  { kind: "extract_file", label: "Extract from a file", hint: "Rows, a value or text from CSV, JSON, a spreadsheet, a web page or a PDF" },
+  { kind: "convert", label: "Convert to a file", hint: "A CSV, JSON, XLSX or text file made of rows or fields" },
+  { kind: "file_details", label: "File details", hint: "A file's name, type and size; rename it" },
+  // storage
+  { kind: "storage", label: "Files on a server or a folder", hint: "List, read, write, move, copy or delete files: SFTP, FTP, S3, Azure, Google Cloud, Dropbox, Box, OneDrive, Google Drive, or a folder here" }, // storage places
+  { kind: "compress", label: "Zip and unzip", hint: "Pack files into a ZIP, gzip or tar archive, or unpack one" },
+  { kind: "redis", label: "Redis", hint: "Get and set values, count, use lists as queues, publish to a channel" },
+  { kind: "web", label: "Read a web page", hint: "A page's text, fields picked by CSS selectors, a site crawled, a sitemap or a feed" }, // web
+  { kind: "mailbox", label: "Mailbox (IMAP)", hint: "List, search and read emails of any mailbox, their attachments as files; mark, move or delete them" }, // messaging
 ];
 
 /**
@@ -87,6 +138,12 @@ export function fresh(kind: string, taken: Set<string>): Step {
   let n = 1;
   while (taken.has(`${kind}_${n}`)) n++;
   const name = `${kind}_${n}`;
+  if (AI_STEP_KINDS.includes(kind)) return freshAi(kind, name); // G7 more AI steps
+  if (FILE_KINDS.includes(kind)) return freshFile(kind, name); // G6 files
+  if (DATABASE_KINDS.includes(kind)) return freshDatabase(kind, name); // sql databases
+  if (STORAGE_KINDS.includes(kind)) return freshStorage(kind, name); // storage
+  if (kind === "web") return freshWeb(name); // web
+  if (kind === "mailbox") return freshMailbox(name); // messaging
   switch (kind) {
     case "set":
       return { name, set: { field: "value.id" } };
@@ -131,8 +188,14 @@ export function fresh(kind: string, taken: Set<string>): Step {
       return { name, ai: { credential: "", model: "", system: "You are a helpful assistant.", prompt: "{{ value.text }}" } };
     case "embed":
       return { name, embed: { credential: "", model: "", input: "{{ value.text }}" } };
+    case "agent": // G2 AI agents
+      return agentStep(name);
     case "lookup":
       return { name, lookup: { file: "/rates.csv", where: { currency: "{{ value.currency }}" } } };
+    case "table": // data tables
+      return { name, table: { name: "", action: "get", where: { email: "{{ value.email }}" }, limit: 10 } };
+    case "state": // data tables
+      return { name, state: { set: { last_seen: "{{ value.id }}" } } };
     case "postgres":
       return { name, postgres: { credential: "", sql: "SELECT * FROM orders WHERE id = $1", params: ["value.id"] } };
     case "telegram":
@@ -149,6 +212,17 @@ export function fresh(kind: string, taken: Set<string>): Step {
       return { name, topic: { name: "results", value: "{{ value }}" } };
     case "wait":
       return { name, wait: "10s" };
+    case "mcp": // MCP
+      return { name, mcp: { url: "https://tools.example.com/mcp" } };
+    case "split_text": // retrieval
+    case "vector_store": // retrieval
+    case "ask_documents": // retrieval
+      return retrievalStep(kind, name);
+    // forms-and-resume
+    case "form":
+      return { name, form: { title: "A few details", fields: [{ name: "answer", label: "Your answer", type: "text", required: true }], timeout: "7d" } };
+    case "approval":
+      return { name, approval: { title: "Approve {{ value.id }}?", comment: true, timeout: "3d", on_timeout: "continue" } };
     default: {
       const app = catalogApp(kind);
       return app ? appStep(app, name) : { name, stop: {} };
@@ -161,7 +235,7 @@ export function innerLists(step: Step): Step[][] {
   const branch = step.if as { then?: Step[]; else?: Step[] } | undefined;
   const loop = step.for_each as { steps?: Step[] } | undefined;
   const choice = step.switch as { cases?: { steps?: Step[] }[]; default?: Step[] } | undefined;
-  return [branch?.then, branch?.else, ...(choice?.cases ?? []).map((c) => c.steps), choice?.default, loop?.steps].filter(
+  return [branch?.then, branch?.else, ...(choice?.cases ?? []).map((c) => c.steps), choice?.default, loop?.steps, ...aiInnerLists(step) /* G7 */].filter(
     (l): l is Step[] => Array.isArray(l),
   );
 }
@@ -263,6 +337,14 @@ function Body({ kind, body, setBody }: BodyProps) {
   const fields = (body ?? {}) as Record<string, unknown>;
   const set = (name: string, value: unknown) => setBody({ ...fields, [name]: value });
   if (MORE_KINDS.includes(kind)) return <MoreBody kind={kind} fields={fields} set={set} setBody={setBody} />;
+  if (AI_STEP_KINDS.includes(kind)) return <AiStepBody kind={kind} fields={fields} set={set} setBody={setBody} />; // G7 more AI steps
+  if (RETRIEVAL_KINDS.includes(kind)) return <RetrievalBody kind={kind} fields={fields} set={set} setBody={setBody} />; // retrieval
+  if (TABLE_KINDS.includes(kind)) return <TableStepBody kind={kind} fields={fields} set={set} setBody={setBody} />; // data tables
+  if (FILE_KINDS.includes(kind)) return <FilesBody kind={kind} fields={fields} set={set} setBody={setBody} />; // G6 files
+  if (DATABASE_KINDS.includes(kind)) return <DatabaseBody kind={kind} fields={fields} set={set} setBody={setBody} />; // sql databases
+  if (STORAGE_KINDS.includes(kind)) return <StorageBody kind={kind} fields={fields} set={set} setBody={setBody} />; // storage
+  if (kind === "web") return <WebBody fields={fields} set={set} setBody={setBody} />; // web
+  if (kind === "mailbox") return <MailboxBody fields={fields} set={set} setBody={setBody} />; // messaging
   const app = catalogApp(kind);
   if (app) return <AppBody app={app} fields={fields} set={set} setBody={setBody} />;
   switch (kind) {
@@ -292,10 +374,13 @@ function Body({ kind, body, setBody }: BodyProps) {
         <>
           <CredentialPicker kind="http" value={String(fields.credential ?? "")} onChange={(v) => set("credential", v || undefined)} optional />
           <HttpBody fields={fields} setBody={setBody} />
+          <JsonField label="Sample answer (optional: a test run answers with it, sending nothing)" value={fields.sample} onChange={(v) => set("sample", v ?? undefined)} /> {/* test runs */}
         </>
       );
     case "ai":
       return <AiBody fields={fields} set={set} />;
+    case "agent": // G2 AI agents
+      return <AgentBody fields={fields} set={set} setBody={setBody} />;
     case "embed":
       return (
         <>
@@ -331,6 +416,7 @@ function Body({ kind, body, setBody }: BodyProps) {
           <Text label="Subject" value={String(fields.subject ?? "")} onChange={(v) => set("subject", v)} wide />
           <Area label="Text" hint="with {{ }} for values" value={String(fields.text ?? "")} onChange={(v) => set("text", v || undefined)} />
           <Area label="HTML" hint="optional: sent beside the text" value={String(fields.html ?? "")} onChange={(v) => set("html", v || undefined)} />
+          <Attachments value={fields.attachments} onChange={(v) => set("attachments", v)} /> {/* G6 files */}
         </>
       );
     case "telegram":
@@ -350,8 +436,15 @@ function Body({ kind, body, setBody }: BodyProps) {
           <JsonField label="Message" value={fields.value ?? "{{ value }}"} onChange={(v) => set("value", v)} />
         </>
       );
+    // forms-and-resume: a wait for a while, until a time, or for a call; a form; an approval.
     case "wait":
       return <Text label="Wait for" value={String(body ?? "")} onChange={setBody} placeholder="10s, 5m, 1h" />;
+    case "mcp": // MCP
+      return <McpBody fields={fields} set={set} setBody={setBody} />;
+      return <WaitBody body={body} setBody={setBody} />;
+    case "form":
+    case "approval":
+      return <FormStepBody kind={kind === "form" ? "form" : "approval"} fields={fields} setBody={setBody} />;
     default:
       return (
         <Text
@@ -382,7 +475,7 @@ export function CredentialPicker(props: { kind: string; value: string; onChange:
 }
 
 /** The models the credential's service offers, asked of it; or a name typed, when it lists none. */
-function ModelPicker(props: { credential: string; value: string; onChange: (v: string) => void }) {
+export function ModelPicker(props: { credential: string; value: string; onChange: (v: string) => void }) {
   const [models, setModels] = useState<{ id: string; name: string | null }[] | null>(null);
   const [trouble, setTrouble] = useState("");
   const [typing, setTyping] = useState(false);
@@ -459,6 +552,7 @@ function AiBody({ fields, set }: { fields: Record<string, unknown>; set: (name: 
           Answer as JSON
         </label>
       </div>
+      <SchemaField fields={fields} set={set} /> {/* G7 more AI steps */}
     </>
   );
 }
@@ -489,8 +583,11 @@ function ScriptBody(props: { kind: string; body: unknown; setBody: (b: unknown) 
   const fields = typeof props.body === "object" && props.body !== null ? (props.body as Record<string, unknown>) : { code: props.body };
   const code = String(fields.code ?? "");
   const timeout = String(fields.timeout ?? "");
-  const keep = (next: { code: string; timeout: string }) =>
-    props.setBody(next.timeout ? { code: next.code, timeout: next.timeout } : next.code);
+  const state = fields.state === true; // data tables
+  const keep = (next: { code: string; timeout: string; state?: boolean }) => {
+    const kept = next.state ?? state;
+    props.setBody(next.timeout || kept ? { code: next.code, ...(next.timeout ? { timeout: next.timeout } : {}), ...(kept ? { state: true } : {}) } : next.code);
+  };
   return (
     <>
       <label>
@@ -509,6 +606,11 @@ function ScriptBody(props: { kind: string; body: unknown; setBody: (b: unknown) 
         </label>
         <p className="hint">It runs on its own, with no files, network or programs: it only works out its answer.</p>
       </div>
+      {/* data tables */}
+      <label className="check">
+        <input type="checkbox" checked={state} onChange={(e) => keep({ code, timeout, state: e.target.checked })} />
+        Give it the workflow's state (state): what it leaves there is kept for the next run
+      </label>
     </>
   );
 }
@@ -519,6 +621,7 @@ function PostgresBody({ fields, set }: { fields: Record<string, unknown>; set: (
   return (
     <>
       <CredentialPicker kind="postgres" value={String(fields.credential ?? "")} onChange={(v) => set("credential", v)} />
+      <DatabaseLimits fields={fields} set={set} /> {/* sql databases */}
       <Area
         label="SQL"
         hint="values go in as $1, $2 ... - never written into the SQL"
@@ -560,14 +663,20 @@ function HttpBody({ fields, setBody }: { fields: Record<string, unknown>; setBod
     setBody(next);
   };
   const bodyKind = "json" in fields ? "json" : "body" in fields ? "text" : "form" in fields ? "form" : "none";
+  // G6 files: a file, or a form with files, as the body.
+  const kind = "file" in fields ? "file" : "multipart" in fields ? "multipart" : bodyKind;
   const setBodyKind = (k: string) => {
     const next: Record<string, unknown> = { ...fields };
     delete next.json;
     delete next.body;
     delete next.form;
+    delete next.file; // G6 files
+    delete next.multipart; // G6 files
     if (k === "json") next.json = {};
     if (k === "text") next.body = "";
     if (k === "form") next.form = {};
+    if (k === "file") next.file = ""; // G6 files
+    if (k === "multipart") next.multipart = {}; // G6 files
     setBody(next);
   };
   return (
@@ -590,13 +699,16 @@ function HttpBody({ fields, setBody }: { fields: Record<string, unknown>; setBod
       </details>
       <label>
         Body
-        <select value={bodyKind} onChange={(e) => setBodyKind(e.target.value)}>
+        <select value={kind} onChange={(e) => setBodyKind(e.target.value)}>
           <option value="none">none</option>
           <option value="json">JSON</option>
           <option value="text">text</option>
           <option value="form">form</option>
+          <option value="file">a file</option> {/* G6 files */}
+          <option value="multipart">a form with files</option> {/* G6 files */}
         </select>
       </label>
+      <HttpFiles fields={fields} set={set} bodyKind={kind} /> {/* G6 files */}
       {bodyKind === "json" && <JsonField label="JSON" value={fields.json} onChange={(v) => set("json", v)} />}
       {bodyKind === "text" && <Area label="Text" value={String(fields.body ?? "")} onChange={(v) => set("body", v)} />}
       {bodyKind === "form" && (

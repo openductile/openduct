@@ -125,6 +125,8 @@ export function triggerShape(trigger: unknown): Record<string, unknown> {
       return { trigger: "schedule", at, slot: at };
     case "topic":
       return { trigger: "topic", topic: "orders", partition: 0, offset: 42, key: "A-100" };
+    case "chat": // chat trigger (G8)
+      return { trigger: "chat", session: "8f14e45fceea167a5a36dedd4bea2543", at, reply: "0190c7e2-0000-7000-8000-000000000000" };
     default:
       return { trigger: "manual", by: "you@example.com", at };
   }

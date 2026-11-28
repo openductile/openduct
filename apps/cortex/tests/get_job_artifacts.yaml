@@ -1,0 +1,13 @@
+description: "The observables a job extracted"
+action: get_job_artifacts
+credential: { base_url: "https://cortex.example.com:9001", api_key: test-key }
+input: { job_id: AWNei4vH3rJ8unegCPB9 }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://cortex.example.com:9001/api/job/AWNei4vH3rJ8unegCPB9/artifacts"
+    answer:
+      body:
+        - { dataType: mail, createdBy: analyst, data: abuse@isp.example, tlp: 1, createdAt: 1764237603400, id: AWMq4tvLjidKq_asiwcl }
+result:
+  - { dataType: mail, createdBy: analyst, data: abuse@isp.example, tlp: 1, createdAt: 1764237603400, id: AWMq4tvLjidKq_asiwcl }

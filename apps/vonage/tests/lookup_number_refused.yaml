@@ -1,0 +1,14 @@
+description: Number Insight says no with a 200 and a status of its own
+action: lookup_number
+credential:
+  api_key: abcd1234
+  api_secret: test-secret
+input:
+  number: '1234'
+exchanges:
+- answer:
+    status: 200
+    body:
+      status: 3
+      status_message: 'Invalid request :: Number is invalid'
+error: 'Vonage refused it: Invalid request :: Number is invalid'

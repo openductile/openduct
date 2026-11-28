@@ -1,0 +1,36 @@
+description: Two fields of an order changed, the order added if missing
+action: update_document
+credential: {url: 'https://search.example.com:9200', api_key: VnVhQ2ZHY0JDZGJrUW0tZTVhT3g6dWkybHAyYXhUTm1zeWFrdzl0dk5udw==}
+input:
+  index: orders
+  id: o-1001
+  fields: {status: shipped}
+  add_if_missing: true
+  retry_on_conflict: 3
+exchanges:
+- sent:
+    method: POST
+    url: https://search.example.com:9200/orders/_update/o-1001
+    query: {retry_on_conflict: '3'}
+    headers: {authorization: ApiKey VnVhQ2ZHY0JDZGJrUW0tZTVhT3g6dWkybHAyYXhUTm1zeWFrdzl0dk5udw==}
+    body:
+      doc: {status: shipped}
+      doc_as_upsert: true
+  answer:
+    status: 200
+    body:
+      _index: orders
+      _id: o-1001
+      _version: 3
+      result: updated
+      _seq_no: 2
+      _primary_term: 1
+      _shards: &id001 {total: 2, successful: 1, failed: 0}
+result:
+  _index: orders
+  _id: o-1001
+  _version: 3
+  result: updated
+  _seq_no: 2
+  _primary_term: 1
+  _shards: *id001

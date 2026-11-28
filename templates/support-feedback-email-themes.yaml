@@ -1,0 +1,107 @@
+name: Customer feedback by e-mail, sorted and counted
+description: >-
+  Each e-mail to your feedback address is read by a model - a one-line summary, its topic and the customer's mood -
+  and compared by meaning with the feedback kept before, so you see how many customers said much the same thing. Every
+  one is logged in a Google Sheet; an unhappy customer, or a theme raised three times or more, is posted to Slack.
+  Kept in PostgreSQL with pgvector (the table is made the first time). Needs: gmail, model (an AI credential that
+  makes embeddings too), feedback_db (postgres), google_sheets, slack.
+category: Support
+trigger:
+  gmail: { when: new_email, credential: gmail, q: "to:feedback@example.com", every: 5m }
+# What a test runs on: an email as this trigger gives it.
+sample:
+  id: 18c3a0b1c2d3e4f5
+  thread_id: 18c3a0b1c2d3e4f5
+  from: Rosa Diaz <rosa.diaz@example.com>
+  to: feedback@example.com
+  subject: The new app keeps logging me out
+  date: "Fri, 27 Nov 2026 09:12:00 +0000"
+  snippet: Since the update last week the app logs me out every time I switch to another app.
+  labels: [INBOX, UNREAD]
+  message:
+    payload:
+      mimeType: text/plain
+      body:
+        data: U2luY2UgdGhlIHVwZGF0ZSBsYXN0IHdlZWsgdGhlIGFwcCBsb2dzIG1lIG91dCBldmVyeSB0aW1lIEkgc3dpdGNoIHRvIGFub3RoZXIgYXBwLiBJdCBpcyBnZXR0aW5nIGFubm95aW5nLg
+steps:
+  # The e-mail's own text: its plain-text part (Gmail sends it in URL-safe Base64), else the snippet.
+  - name: mail
+    set:
+      text: >-
+        cel.bind(p, value.message.payload,
+          cel.bind(parts, has(p.parts) ? p.parts.filter(x, x.mimeType == 'text/plain') : [p],
+            size(parts) > 0 && has(parts[0].body) && has(parts[0].body.data)
+              ? string(base64.decode(parts[0].body.data.replace('-', '+').replace('_', '/')))
+              : value.snippet))
+  - name: read
+    ai:
+      credential: model
+      system: You read customer feedback for a product team. Answer with JSON only.
+      prompt: "Subject: {{ value.subject }}\n\n{{ steps.mail.text }}"
+      schema:
+        type: object
+        properties:
+          summary: { type: string, description: "What the customer says, in one plain sentence" }
+          topic: { type: string, enum: [product, delivery, billing, service, website, other] }
+          mood: { type: string, enum: [happy, neutral, unhappy] }
+        required: [summary, topic, mood]
+      max_tokens: 300
+  - name: about
+    set:
+      summary: "steps.read.json.summary != null ? steps.read.json.summary : value.subject"
+      topic: "steps.read.json.topic != null ? steps.read.json.topic : 'other'"
+      mood: "steps.read.json.mood != null ? steps.read.json.mood : 'neutral'"
+  # Feedback kept before that means much the same. The very first time there is no table yet: the run goes on.
+  - name: similar
+    vector_store:
+      action: search
+      credential: feedback_db
+      table: feedback_pieces
+      embed_with: model
+      query: "{{ steps.about.summary }}"
+      top_k: 10
+      min_score: 0.85
+    on_error: continue
+  - name: piece
+    split_text:
+      text: "{{ steps.about.summary }}"
+      source: "{{ value.id }}"
+      metadata:
+        topic: "{{ steps.about.topic }}"
+        mood: "{{ steps.about.mood }}"
+  - name: keep
+    vector_store:
+      action: add
+      credential: feedback_db
+      table: feedback_pieces
+      create: true
+      embed_with: model
+      pieces: steps.piece.pieces
+  - name: counted
+    set:
+      earlier: "has(steps.similar.matches) ? size(steps.similar.matches) : 0"
+  - name: log
+    google_sheets:
+      action: add_row
+      credential: google_sheets
+      spreadsheet_id: your-spreadsheet-id
+      sheet: Feedback
+      values:
+        - "{{ value.date }}"
+        - "{{ value.from }}"
+        - "{{ steps.about.topic }}"
+        - "{{ steps.about.mood }}"
+        - "{{ steps.about.summary }}"
+        - "{{ steps.counted.earlier }}"
+    retry: { attempts: 3, wait: 10s }
+  - name: tell
+    if:
+      when: steps.about.mood == 'unhappy' || steps.counted.earlier >= 2
+      then:
+        - slack:
+            credential: slack
+            channel: "#customer-care"
+            text: >-
+              {{ steps.about.mood == 'unhappy' ? 'Unhappy customer' : 'A theme that keeps coming back' }}
+              ({{ steps.about.topic }}, said {{ steps.counted.earlier + 1 }} times): {{ steps.about.summary }}
+              - from {{ value.from }}

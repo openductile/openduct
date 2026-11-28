@@ -1,0 +1,26 @@
+description: A status set by its label
+action: set_column_value
+credential:
+  token: monday-test-token
+input:
+  board_id: '1234567890'
+  item_id: '9876543210'
+  column_id: status
+  value: Done
+exchanges:
+- sent:
+    body:
+      query: 'mutation ($board: ID!, $item: ID, $column: String!, $value: String, $labels: Boolean) { change_simple_column_value(board_id:
+        $board, item_id: $item, column_id: $column, value: $value, create_labels_if_missing: $labels) { id } }'
+      variables:
+        board: '1234567890'
+        item: '9876543210'
+        column: status
+        value: Done
+  answer:
+    body:
+      data:
+        change_simple_column_value:
+          id: '9876543210'
+result:
+  id: '9876543210'

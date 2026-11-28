@@ -1,0 +1,10 @@
+description: "Every message removed"
+action: delete_all_messages
+sign_in: gotify_client
+credential: { base_url: "https://gotify.example.com", token: CzyoeNS.D4iJLVb }
+exchanges:
+  - sent:
+      method: DELETE
+      url: "https://gotify.example.com/message"
+    answer: { status: 200 }
+result: { removed: true }

@@ -1,0 +1,20 @@
+description: One sensor's reading
+action: get_state
+credential: { url: "http://home.example:8123", token: ha-test-token }
+input: { entity_id: sensor.kitchen_temperature }
+exchanges:
+  - sent: { method: GET, url: "http://home.example:8123/api/states/sensor.kitchen_temperature" }
+    answer:
+      status: 200
+      body:
+        entity_id: sensor.kitchen_temperature
+        state: "21.5"
+        attributes: { unit_of_measurement: "°C", friendly_name: Kitchen temperature }
+        last_changed: "2026-11-27T08:10:00+00:00"
+        last_updated: "2026-11-27T08:10:00+00:00"
+result:
+  entity_id: sensor.kitchen_temperature
+  state: "21.5"
+  attributes: { unit_of_measurement: "°C", friendly_name: Kitchen temperature }
+  last_changed: "2026-11-27T08:10:00+00:00"
+  last_updated: "2026-11-27T08:10:00+00:00"

@@ -1,0 +1,27 @@
+description: The teams
+action: list_teams
+credential:
+  api_key: test-key
+exchanges:
+- sent:
+    method: GET
+    url: https://onfleet.com/api/v2/teams
+    headers:
+      authorization: Basic dGVzdC1rZXk6
+  answer:
+    status: 200
+    body:
+    - &id001
+      id: R4P7jhuzaIZ4cHHZE1ghmTtB
+      timeCreated: 1794500000000
+      timeLastModified: 1795161600000
+      name: Downtown
+      workers:
+      - h*wSb*apKlDkUFnuLTtjPke7
+      managers:
+      - 9ZGGl3R~T7lXxZOuOkZwuaPf
+      hub: null
+      tasks:
+      - 11z1BbsQUZFHD1XAd~emDDeK
+result:
+- *id001

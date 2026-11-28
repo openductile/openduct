@@ -1,0 +1,83 @@
+name: Work anniversaries in Slack, probation reviews to managers
+description: >-
+  Each weekday at 9:00 (Chicago time), read your People sheet (name, e-mail, manager's e-mail, start date, birthday as
+  MM-DD, and whether they want birthdays shared). A short script finds today's work anniversaries and birthdays - on a
+  Monday, the weekend's too - and the probation periods (90 days) ending in a week. The celebrations are posted to your
+  team channel in Slack, and each manager gets a Gmail reminder to hold the probation review. Needs: sheets
+  (google_sheets), team (slack), mail (gmail).
+category: HR
+trigger:
+  schedule: { every: weekday, at: "09:00", timezone: America/Chicago }
+# What a test runs on: an event as this trigger gives it (a Monday).
+sample:
+  scheduled_at: '2026-11-30T15:00:00Z'
+steps:
+  - name: people
+    google_sheets:
+      action: read_rows
+      credential: sheets
+      spreadsheet_id: your-spreadsheet-id
+      range: People!A1:F1000
+    retry: { attempts: 3, wait: 30s }
+  - name: today
+    javascript: |
+      // Columns: Name, Email, Manager email, Start date (YYYY-MM-DD), Birthday (MM-DD), Share birthday (yes/no).
+      const PROBATION_DAYS = 90;
+      const NOTICE_DAYS = 7;
+      const day = (iso) => new Date(iso + "T00:00:00Z");
+      const iso = (d) => d.toISOString().slice(0, 10);
+      const run = day(value.scheduled_at.slice(0, 10));
+      // On a Monday, Saturday and Sunday count too: nobody's day is missed over the weekend.
+      const days = [run];
+      if (run.getUTCDay() === 1) days.push(new Date(run - 864e5), new Date(run - 2 * 864e5));
+      const monthDays = days.map((d) => iso(d).slice(5));
+
+      const [head = [], ...rows] = steps.people || [];
+      const at = (name) => head.map((h) => String(h).trim().toLowerCase()).indexOf(name);
+      const get = (row, name) => String(row[at(name)] ?? "").trim();
+      const celebrations = [];
+      const reviews = [];
+      for (const row of rows) {
+        const name = get(row, "name");
+        const start = get(row, "start date");
+        if (!name) continue;
+        if (/^\d{4}-\d{2}-\d{2}$/.test(start)) {
+          // The day it falls on this time (a weekend day may be in the year before, on a Monday the 1st or 2nd).
+          const on = days.find((d) => iso(d).slice(5) === start.slice(5));
+          const years = on ? on.getUTCFullYear() - Number(start.slice(0, 4)) : 0;
+          if (years > 0) {
+            celebrations.push(`${name}: ${years} year${years === 1 ? "" : "s"} with us`);
+          }
+          const ends = new Date(day(start).getTime() + PROBATION_DAYS * 864e5);
+          const inDays = Math.round((ends - run) / 864e5);
+          // A week's notice; on a Monday, also the notices Saturday and Sunday would have given.
+          if (inDays === NOTICE_DAYS || (run.getUTCDay() === 1 && inDays >= NOTICE_DAYS - 2 && inDays <= NOTICE_DAYS)) {
+            reviews.push({ name, manager: get(row, "manager email"), ends: iso(ends) });
+          }
+        }
+        const share = ["yes", "y", "true"].includes(get(row, "share birthday").toLowerCase());
+        if (share && monthDays.includes(get(row, "birthday"))) celebrations.push(`${name}: happy birthday`);
+      }
+      return { celebrations, reviews };
+  - name: celebrate
+    if:
+      when: size(steps.today.celebrations) > 0
+      then:
+        - name: post
+          slack:
+            credential: team
+            channel: "#team"
+            text: "Today we celebrate:\n- {{ steps.today.celebrations.join('\\n- ') }}"
+          retry: { attempts: 3, wait: 10s }
+  - name: reviews
+    for_each:
+      items: steps.today.reviews.filter(r, r.manager.contains('@'))
+      steps:
+        - name: remind
+          gmail:
+            action: send_email
+            credential: mail
+            to: "{{ item.manager }}"
+            subject: "Probation review for {{ item.name }} by {{ item.ends }}"
+            text: "{{ item.name }}'s probation ends on {{ item.ends }}. Please hold the review before then and tell HR how it went."
+          retry: { attempts: 3, wait: 10s }

@@ -1,0 +1,34 @@
+description: The sender addresses
+action: list_senders
+credential:
+  api_key: test-key
+  secret_key: test-secret
+exchanges:
+- sent:
+    method: GET
+    url: https://api.mailjet.com/v3/REST/sender
+    query:
+      Limit: '1000'
+    headers:
+      authorization: Basic dGVzdC1rZXk6dGVzdC1zZWNyZXQ=
+  answer:
+    status: 200
+    body:
+      Count: 1
+      Data:
+      - ID: 11
+        Email: news@example.com
+        Name: Sample Shop
+        Status: Active
+        EmailType: bulk
+        IsDefaultSender: true
+        CreatedAt: '2026-01-01T10:00:00Z'
+      Total: 1
+result:
+- ID: 11
+  Email: news@example.com
+  Name: Sample Shop
+  Status: Active
+  EmailType: bulk
+  IsDefaultSender: true
+  CreatedAt: '2026-01-01T10:00:00Z'

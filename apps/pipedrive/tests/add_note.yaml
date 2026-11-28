@@ -1,0 +1,41 @@
+description: "Add a note"
+action: add_note
+credential: { api_key: test-key }
+input: { content: example }
+exchanges:
+  - sent:
+      method: POST
+      url: "https://api.pipedrive.com/v1/notes"
+      query: {}
+      headers: { x-api-token: test-key }
+      body: { content: example }
+    answer:
+      status: 200
+      body:
+        success: true
+        data:
+          id: 1
+          active_flag: true
+          add_time: example
+          content: example
+          deal: { title: example }
+          lead_id: "00000000-0000-4000-8000-000000000001"
+          deal_id: 1
+          last_update_user_id: 1
+          org_id: 1
+          organization: { name: example }
+          person: { name: example }
+          person_id: 1
+result:
+  id: 1
+  active_flag: true
+  add_time: example
+  content: example
+  deal: {title: example}
+  lead_id: 00000000-0000-4000-8000-000000000001
+  deal_id: 1
+  last_update_user_id: 1
+  org_id: 1
+  organization: {name: example}
+  person: {name: example}
+  person_id: 1

@@ -1,0 +1,53 @@
+description: The company directory
+action: list_employees
+credential:
+  company_domain: acme
+  api_key: test-key
+exchanges:
+- sent:
+    method: GET
+    url: https://acme.bamboohr.com/api/v1/employees/directory
+    query: {}
+    headers:
+      authorization: Basic dGVzdC1rZXk6eA==
+      accept: application/json
+  answer:
+    status: 200
+    body:
+      fields:
+      - id: displayName
+        type: text
+        name: Display name
+      - id: jobTitle
+        type: list
+        name: Job title
+      employees: &id001
+      - id: '101'
+        displayName: Ada Sample
+        firstName: Ada
+        lastName: Sample
+        preferredName: null
+        jobTitle: Store Manager
+        workEmail: ada@example.com
+        workPhone: 555-0100
+        mobilePhone: null
+        department: Operations
+        division: East
+        location: Denver
+        supervisor: Ben Tester
+        photoUrl: https://acme.bamboohr.com/images/photo_placeholder.gif
+      - id: '102'
+        displayName: Ben Tester
+        firstName: Ben
+        lastName: Tester
+        preferredName: Benny
+        jobTitle: Director
+        workEmail: ben@example.com
+        workPhone: 555-0101
+        mobilePhone: 555-0199
+        department: Operations
+        division: East
+        location: Denver
+        supervisor: null
+        photoUrl: https://acme.bamboohr.com/images/photo_placeholder.gif
+result: *id001

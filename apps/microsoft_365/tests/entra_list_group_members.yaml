@@ -1,0 +1,19 @@
+description: A group's members
+action: list_group_members
+sign_in: microsoft_entra_admin
+credential: {access_token: eyJ0-admin}
+input: {group_id: 45b7d2e7-b882-4a80-ba97-10b7a63b8fa4}
+exchanges:
+- sent:
+    method: GET
+    url: https://graph.microsoft.com/v1.0/groups/45b7d2e7-b882-4a80-ba97-10b7a63b8fa4/members
+    headers: {authorization: Bearer eyJ0-admin}
+    query: {$top: '999'}
+  answer:
+    status: 200
+    body:
+      value:
+      - &id001 {'@odata.type': '#microsoft.graph.user', id: 6ea91a8d-e32e-41a1-b7bd-d2d185eed0e0, displayName: Ann Example,
+        mail: ann@contoso.example, userPrincipalName: ann@contoso.example, jobTitle: Office Manager}
+result:
+- *id001

@@ -1,0 +1,10 @@
+action: remove_from_playlist
+credential: { access_token: ya29.a0 }
+input: { playlist_item_id: pi2 }
+exchanges:
+  - sent:
+      method: DELETE
+      url: https://www.googleapis.com/youtube/v3/playlistItems
+      query: { id: pi2 }
+    answer: { status: 204, body: "" }
+result: { removed: true }

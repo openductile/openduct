@@ -1,0 +1,10 @@
+description: A file moved to the trash
+action: delete_file
+credential: { url: "https://cloud.example.com", username: ann, password: app-pass-1 }
+input: { path: Drafts/old-menu.txt }
+exchanges:
+  - sent:
+      method: DELETE
+      url: "https://cloud.example.com/remote.php/dav/files/ann/Drafts/old-menu.txt"
+    answer: { status: 204 }
+result: null

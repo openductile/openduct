@@ -1,0 +1,105 @@
+name: Supplier invoices dropped in S3, read into a sheet
+description: >-
+  Every ten minutes, look for new PDF invoices in the inbox folder of an S3 bucket (or any store that speaks S3:
+  Cloudflare R2, MinIO, Google Cloud Storage's interoperability). Each one is read, a model pulls out the supplier,
+  number, days and amounts, a short script checks that subtotal and tax add up to the total and that the due day comes
+  after the invoice day, and a row goes into your Invoices sheet. Checked invoices move to done/, the others to check/
+  with an e-mail to accounts saying what is wrong. Needs: invoices_bucket (s3), model (ai), sheets (google_sheets),
+  mail (smtp).
+category: Documents
+trigger:
+  storage: { credential: invoices_bucket, folder: inbox, pattern: "*.pdf", every: 10m }
+# What a test runs on: a new file as this trigger gives it.
+sample:
+  name: inv-88213.pdf
+  path: inbox/inv-88213.pdf
+  kind: file
+  size: 48211
+  modified: '2026-11-27T09:12:00Z'
+  change: new
+steps:
+  - name: file
+    storage: { action: read, credential: invoices_bucket, path: "{{ value.path }}" }
+    retry: { attempts: 3, wait: 20s }
+  # A file of no bytes (an upload that broke off) is set aside rather than read.
+  - name: empty
+    if:
+      when: steps.file.size == 0
+      then:
+        - name: aside
+          storage: { action: move, credential: invoices_bucket, path: "{{ value.path }}", to: "check/{{ value.name }}", overwrite: true }
+        - name: say_empty
+          email:
+            credential: mail
+            to: accounts@example.com
+            subject: "An empty invoice file: {{ value.name }}"
+            text: "{{ value.name }} arrived with no content and was moved to check/. Ask the supplier to send it again."
+        - stop: {}
+  - name: pdf
+    extract_file: { file: steps.file, format: pdf }
+  - name: invoice
+    extract:
+      credential: model
+      text: "{{ steps.pdf.text }}"
+      instructions: The text is a supplier's invoice. Amounts as plain numbers, without currency signs.
+      fields:
+        - { name: supplier, type: string }
+        - { name: invoice_number, type: string }
+        - { name: invoice_date, type: date }
+        - { name: due_date, type: date }
+        - { name: currency, type: string, description: "as USD, EUR or GBP" }
+        - { name: subtotal, type: number }
+        - { name: tax, type: number }
+        - { name: total, type: number }
+        - { name: po_number, type: string, description: "our purchase order number, if given" }
+  - name: checked
+    javascript: |
+      // Plain checks a person would make: the fields are there, the sums add up to the cent, the days make sense.
+      const i = steps.invoice.json || {};
+      const problems = [];
+      for (const f of ["supplier", "invoice_number", "invoice_date", "total"]) {
+        if (i[f] === null || i[f] === undefined || i[f] === "") problems.push(`no ${f.replace("_", " ")}`);
+      }
+      const cents = (n) => Math.round(Number(n) * 100);
+      if (i.subtotal != null && i.tax != null && i.total != null && cents(i.subtotal) + cents(i.tax) !== cents(i.total)) {
+        problems.push(`subtotal ${i.subtotal} + tax ${i.tax} is not the total ${i.total}`);
+      }
+      if (i.invoice_date && i.due_date && i.due_date < i.invoice_date) problems.push("due before the invoice day");
+      if (i.total != null && Number(i.total) <= 0) problems.push("a total of zero or less");
+      return { ok: problems.length === 0, problems };
+  - name: row
+    google_sheets:
+      action: add_row
+      credential: sheets
+      spreadsheet_id: your-spreadsheet-id
+      sheet: Invoices
+      values:
+        - "{{ steps.invoice.json.supplier }}"
+        - "{{ steps.invoice.json.invoice_number }}"
+        - "{{ steps.invoice.json.invoice_date }}"
+        - "{{ steps.invoice.json.due_date }}"
+        - "{{ steps.invoice.json.currency }}"
+        - "{{ steps.invoice.json.subtotal }}"
+        - "{{ steps.invoice.json.tax }}"
+        - "{{ steps.invoice.json.total }}"
+        - "{{ steps.invoice.json.po_number }}"
+        - "{{ steps.checked.ok ? 'checked' : 'to check: ' + steps.checked.problems.join('; ') }}"
+        - "{{ value.name }}"
+    retry: { attempts: 3, wait: 30s }
+  - name: file_it
+    storage:
+      action: move
+      credential: invoices_bucket
+      path: "{{ value.path }}"
+      to: "{{ steps.checked.ok ? 'done/' : 'check/' }}{{ value.name }}"
+      overwrite: true
+  - name: problems
+    if:
+      when: "!steps.checked.ok"
+      then:
+        - name: tell_accounts
+          email:
+            credential: mail
+            to: accounts@example.com
+            subject: "Invoice to check: {{ value.name }}"
+            text: "{{ value.name }} ({{ steps.invoice.json.supplier }}, {{ steps.invoice.json.invoice_number }}) needs a look: {{ steps.checked.problems.join('; ') }}. It is in check/ and in the Invoices sheet."

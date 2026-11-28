@@ -1,0 +1,13 @@
+description: "Set a task's custom field"
+action: set_custom_field
+credential: { api_key: test-key }
+input: { task_id: "9hv", field_id: b955c4dc, body: { value: example } }
+exchanges:
+  - sent:
+      method: POST
+      url: "https://api.clickup.com/api/v2/task/9hv/field/b955c4dc"
+      query: {}
+      headers: { authorization: test-key }
+      body: { value: example }
+    answer: { status: 200, body: {} }
+result: { set: true }

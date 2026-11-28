@@ -1,0 +1,86 @@
+name: Launch posts, written, approved, then scheduled on Mastodon
+description: >-
+  Fill in a form about a launch - the product, what is new, the day: a model writes three posts in your voice (the
+  announcement, a how-it-helps post two days later, a reminder on day four), the launch's assets folder in Google
+  Drive is found for the images, and your marketing lead gets the posts by e-mail to approve. Once approved (within
+  two days), the posts are scheduled on your Mastodon account for 15:00 UTC on their days; declined, nothing is
+  posted. Needs: model, google_drive, mail, mastodon (an access token with write:statuses, sent as a bearer token).
+category: Marketing
+trigger:
+  form:
+    title: Launch posts
+    fields:
+      - { name: product, label: The product, type: text, required: true, max_length: 80 }
+      - { name: news, label: "What is new, and for whom", type: long_text, required: true, max_length: 2000 }
+      - { name: link, label: The page to send people to, type: text, required: true, max_length: 300 }
+      - { name: launch, label: Launch day, type: date, required: true }
+    thanks: Thank you - the posts are with your marketing lead for approval.
+# What a test runs on: an answer as the form gives it.
+sample:
+  product: Trailhead planner
+  news: Now plans multi-day hikes with water stops and offline maps, for weekend hikers who hate spreadsheets.
+  link: https://www.example.com/planner
+  launch: "2026-12-08"
+steps:
+  - name: posts
+    ai:
+      credential: model
+      system: >-
+        You write social posts for a small outdoor brand: friendly, concrete, no hype words, at most one emoji and
+        two hashtags each, each under 450 characters including the link. Write three: the launch announcement, a post
+        on how it helps (two days later), and a short reminder (two days after that).
+      prompt: "Product: {{ value.product }}\nWhat is new: {{ value.news }}\nLink: {{ value.link }}"
+      schema:
+        type: object
+        properties:
+          posts: { type: array, items: { type: string, maxLength: 480 }, minItems: 3, maxItems: 3 }
+        required: [posts]
+      max_tokens: 700
+  - name: assets
+    google_drive:
+      action: find_files
+      credential: google_drive
+      q: "name contains 'Launch - {{ value.product.replace(\"'\", \"\") }}' and mimeType = 'application/vnd.google-apps.folder' and trashed = false"
+    retry: { attempts: 3, wait: 10s }
+  - name: ask
+    email:
+      credential: mail
+      to: marketing-lead@example.com
+      subject: "Approve the launch posts for {{ value.product }} ({{ value.launch }})?"
+      text: >-
+        Three posts for {{ value.product }}, to go out at 15:00 UTC on {{ value.launch }} and the days after:
+
+
+        {{ has(steps.posts.json.posts) && steps.posts.json.posts != null ? steps.posts.json.posts.join('\n\n---\n\n') : '' }}
+
+
+        Images: {{ size(steps.assets) > 0 && has(steps.assets[0].webViewLink) ? steps.assets[0].webViewLink : 'no assets folder found' }}
+
+        Approve or decline here (the link works once): {{ links.decision }}
+  - name: decision
+    approval:
+      title: "Schedule the {{ value.product }} launch posts?"
+      description: "Three posts from {{ value.launch }}, at 15:00 UTC."
+      approve: Schedule them
+      reject: Do not post
+      comment: true
+      timeout: 2d
+      on_timeout: continue
+  - where: steps.decision.approved == true
+  - name: schedule
+    for_each:
+      items: "has(steps.posts.json.posts) && steps.posts.json.posts != null ? steps.posts.json.posts : []"
+      steps:
+        - name: post
+          http:
+            method: POST
+            # Your Mastodon server.
+            url: https://mastodon.social/api/v1/statuses
+            credential: mastodon
+            headers: { idempotency-key: "{{ value.product }}-{{ value.launch }}-{{ index }}" }
+            json:
+              status: "{{ item }}"
+              visibility: public
+              scheduled_at: "{{ string(timestamp(value.launch + 'T15:00:00Z') + duration(string(index * 48) + 'h')) }}"
+            sample: { id: "1123456789012345", scheduled_at: "2026-12-08T15:00:00.000Z" }
+          retry: { attempts: 3, wait: 15s }

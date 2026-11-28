@@ -1,0 +1,12 @@
+description: Two records added at once, as NocoDB sends them with the workflow's secret; each is a run
+trigger: record_event
+workflow: wf1
+credential: { api_token: test-nocodb-token, "webhook_secret@wf1": s3cret-token-1 }
+input: { base_id: pexample0001, table_id: mexample0001 }
+delivery:
+  headers: { x-webhook-token: s3cret-token-1 }
+  body: '{"type":"records.after.insert","id":"0698517a-0000-4e72-bf7a-000000000001","version":"v3","data":{"table_id":"mexample0001","table_name":"Customers","rows":[{"Id":1,"Name":"Ann Example"},{"Id":2,"Name":"Bo Example"}]}}'
+  at: 1764235200
+runs:
+  - { event: records.after.insert, table_id: mexample0001, table_name: Customers, record: { Id: 1, Name: Ann Example } }
+  - { event: records.after.insert, table_id: mexample0001, table_name: Customers, record: { Id: 2, Name: Bo Example } }

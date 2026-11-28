@@ -1,0 +1,9 @@
+description: The first look at the front page notes its stories and runs none
+trigger: front_page_story
+credential: {}
+exchanges:
+  - sent:
+      url: "https://hn.algolia.com/api/v1/search"
+      query: { tags: front_page, hitsPerPage: "50" }
+    answer: { body: { hits: [{ objectID: "46100001", title: "Show HN: A plant watering timer" }], nbPages: 1 } }
+runs: []

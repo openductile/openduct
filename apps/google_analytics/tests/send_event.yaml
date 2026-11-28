@@ -1,0 +1,15 @@
+description: An order taken by phone, sent with the stream's Measurement Protocol secret
+action: send_event
+sign_in: google_analytics_events
+credential: { measurement_id: G-TEST12345, api_secret: test-secret-1 }
+input: { client_id: "1234567890.1700000000", event: purchase, params: { currency: USD, value: 120, transaction_id: T-1001 } }
+exchanges:
+  - sent:
+      method: POST
+      url: https://www.google-analytics.com/mp/collect
+      query: { measurement_id: G-TEST12345, api_secret: test-secret-1 }
+      body:
+        client_id: "1234567890.1700000000"
+        events: [{ name: purchase, params: { currency: USD, value: 120, transaction_id: T-1001 } }]
+    answer: { status: 204 }
+result: { sent: true }

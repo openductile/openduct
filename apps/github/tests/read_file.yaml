@@ -1,0 +1,23 @@
+description: A text file, out of GitHub's Base64 in lines
+action: read_file
+credential: { token: test-token-1 }
+input: { owner: example-shop, repo: website, path: docs/prices.md }
+exchanges:
+  - sent:
+      method: GET
+      url: https://api.github.com/repos/example-shop/website/contents/docs/prices.md
+    answer:
+      body:
+        type: file
+        encoding: base64
+        size: 24
+        path: docs/prices.md
+        sha: 3d21ec53a331a6f037a91c368710b99387d012c1
+        html_url: "https://github.com/example-shop/website/blob/main/docs/prices.md"
+        content: "IyBQcmljZXMKCkEgdG90ZSBpcyAy\nNC4K\n"
+result:
+  path: docs/prices.md
+  sha: 3d21ec53a331a6f037a91c368710b99387d012c1
+  size: 24
+  url: "https://github.com/example-shop/website/blob/main/docs/prices.md"
+  text: "# Prices\n\nA tote is 24.\n"

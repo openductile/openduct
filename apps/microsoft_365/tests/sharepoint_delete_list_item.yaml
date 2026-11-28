@@ -1,0 +1,8 @@
+description: An item removed; Graph answers 204
+action: delete_list_item
+credential: { access_token: eyJ0 }
+input: { site_id: "example.sharepoint.com,da60e844-ba1d-49bc-b4d4-d5e36bae9019,712a596e-90a1-49e3-9b48-bfa80bee8740", list_id: Orders, item_id: "20" }
+exchanges:
+  - sent: { method: DELETE, url: "https://graph.microsoft.com/v1.0/sites/example.sharepoint.com,da60e844-ba1d-49bc-b4d4-d5e36bae9019,712a596e-90a1-49e3-9b48-bfa80bee8740/lists/Orders/items/20" }
+    answer: { status: 204 }
+result: { deleted: true }

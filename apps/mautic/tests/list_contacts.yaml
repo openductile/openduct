@@ -1,0 +1,17 @@
+description: "Contacts a search finds, page after page (Mautic gives them by id)"
+action: list_contacts
+credential: {"site_url": "https://mautic.example.com", "username": "admin", "password": "pw-test"}
+input: {"search": "tag:customer"}
+exchanges:
+  - sent:
+      method: GET
+      url: "https://mautic.example.com/api/contacts"
+      query: {"search": "tag:customer", "orderBy": "id", "orderByDir": "desc", "limit": "100"}
+      headers: {"authorization": "Basic YWRtaW46cHctdGVzdA=="}
+    answer: {"status": 200, "body": {"total": "2", "contacts": {"47": {"id": 47, "isPublished": true, "dateAdded": "2026-11-25T09:00:00+00:00", "dateModified": "2026-11-27T10:00:00+00:00", "points": 10, "tags": [{"tag": "customer"}], "fields": {"core": {"firstname": {"alias": "firstname", "value": "Ann"}}, "all": {"id": 47, "firstname": "Ann", "lastname": "Lee", "email": "ann@example.com", "company": "Northwind Example", "phone": null}}}}}}
+  - sent:
+      method: GET
+      url: "https://mautic.example.com/api/contacts"
+      query: {"search": "tag:customer", "orderBy": "id", "orderByDir": "desc", "limit": "100", "start": "1"}
+    answer: {"status": 200, "body": {"total": "2", "contacts": {"46": {"id": 46, "isPublished": true, "dateAdded": "2026-11-24T09:00:00+00:00", "dateModified": "2026-11-27T10:00:00+00:00", "points": 0, "tags": [], "fields": {"core": {"firstname": {"alias": "firstname", "value": "Bo"}}, "all": {"id": 46, "firstname": "Bo", "lastname": "Chen", "email": "bo@example.com", "company": "", "phone": null}}}}}}
+result: [{"id": 47, "email": "ann@example.com", "first_name": "Ann", "last_name": "Lee", "company": "Northwind Example", "phone": null, "points": 10, "tags": ["customer"], "date_added": "2026-11-25T09:00:00+00:00", "date_modified": "2026-11-27T10:00:00+00:00", "fields": {"id": 47, "firstname": "Ann", "lastname": "Lee", "email": "ann@example.com", "company": "Northwind Example", "phone": null}}, {"id": 46, "email": "bo@example.com", "first_name": "Bo", "last_name": "Chen", "company": "", "phone": null, "points": 0, "tags": [], "date_added": "2026-11-24T09:00:00+00:00", "date_modified": "2026-11-27T10:00:00+00:00", "fields": {"id": 46, "firstname": "Bo", "lastname": "Chen", "email": "bo@example.com", "company": "", "phone": null}}]

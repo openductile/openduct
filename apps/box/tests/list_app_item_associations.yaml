@@ -1,0 +1,47 @@
+# Made by `openduct app from-openapi`: List file app item associations.
+description: "List file app item associations, made from the API description's schemas"
+action: list_app_item_associations
+credential: { access_token: test-access-token }
+input: { file_id: file_1 }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://api.box.com/2.0/files/file_1/app_item_associations"
+      query: { limit: "100" }
+      headers: { authorization: "Bearer test-access-token" }
+    answer:
+      status: 200
+      body:
+        limit: 1000
+        next_marker: token_2
+        prev_marker: JV9IRGZmieiBasejOG9yDCRNgd2ymoZIbjsxbJMjIs3kioVih
+        entries:
+          - id: "12345678"
+            type: app_item_association
+            app_item: { id: "12345678", type: app_item, application_type: hubs }
+            item: { id: "12345", etag: "1", type: file }
+  - sent:
+      method: GET
+      url: "https://api.box.com/2.0/files/file_1/app_item_associations"
+      query: { limit: "100", marker: token_2 }
+      headers: { authorization: "Bearer test-access-token" }
+    answer:
+      status: 200
+      body:
+        limit: 1000
+        next_marker: null
+        prev_marker: JV9IRGZmieiBasejOG9yDCRNgd2ymoZIbjsxbJMjIs3kioVih
+        entries:
+          - id: id_2
+            type: app_item_association
+            app_item: { id: "12345678", type: app_item, application_type: hubs }
+            item: { id: "12345", etag: "1", type: file }
+result:
+  - id: "12345678"
+    type: app_item_association
+    app_item: { id: "12345678", type: app_item, application_type: hubs }
+    item: { id: "12345", etag: "1", type: file }
+  - id: id_2
+    type: app_item_association
+    app_item: { id: "12345678", type: app_item, application_type: hubs }
+    item: { id: "12345", etag: "1", type: file }

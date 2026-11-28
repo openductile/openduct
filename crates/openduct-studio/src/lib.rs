@@ -23,25 +23,43 @@ use tokio::net::TcpListener;
 pub use pipelines::{PipelineRun, PipelineRunner};
 mod alerts;
 mod api;
+mod api_tokens; // developer CI/CD
 mod app_catalog;
+mod app_hooks; // G3 app triggers
 mod assets;
 mod auth;
+mod chat; // chat trigger (G8)
+mod cicd; // developer CI/CD
 mod credentials;
+mod custom_apps; // app generator: a workspace's own apps
 mod dashboard;
 mod files;
+// forms-and-resume
+mod form_page;
+mod forms;
 mod history;
 mod hooks;
 mod http;
 mod keys;
 mod logs;
 mod manager;
+mod mcp; // MCP
+mod messaging; // messaging
 mod model;
 mod oauth;
 mod pipeline_secrets;
 mod pipelines;
 mod records;
+// cron-schedules: a schedule's next times, for the trigger's window.
+mod run_files; // G6 files
+mod schedules;
 mod scripts;
+mod storage; // storage
+mod tables; // data tables
 mod templates;
+// developer CI/CD
+/// Workflows as files in a folder: what the command line's pull, diff and push and Git sync read and write.
+pub mod workflow_files;
 mod workflows;
 mod workspaces;
 
@@ -69,6 +87,12 @@ pub struct Config {
     pub pipelines: Option<Arc<dyn PipelineRunner>>,
     /// Whether this node runs pipelines that read a connector: one node of a cluster does, so none is read twice.
     pub runs_connector_sources: bool,
+    /// The address people and other systems reach the studio by (`https://flows.example.com`): what the one-time
+    /// addresses of runs that wait start with. `None`: the first studio host, or the address it listens on.
+    // forms-and-resume
+    pub public_url: Option<String>,
+    /// The folders of this machine workflows' storage steps may reach (`--files-root name=path`). // storage
+    pub files_roots: Arc<openduct_flow::storage::Roots>,
 }
 
 #[derive(Debug)]
@@ -89,8 +113,21 @@ pub(crate) struct State {
     /// The node's connections to the cluster, shared by every workflow on it: a few, however many workflows run.
     shared: Arc<openduct_broker::client::Shared>,
     manager: manager::Manager,
-    client: tokio::sync::Mutex<Option<openduct_broker::client::Routed>>,
     scripts: Arc<scripts::Scripts>,
+    /// Agents' memories, on the broker: one store for the node, each workspace's under its own keys. // G2 AI agents
+    memory: Arc<openduct_flow::LogMemory>,
+    /// MCP: each token's requests a minute, the calls running in each workspace, wrong tokens by address.
+    mcp: mcp::Limits,
+    /// Chats' conversations and limits on this node. // chat trigger (G8)
+    chat: chat::Chats,
+    /// API tokens, workspaces' delivery settings, versions' sources. // developer CI/CD
+    cicd: cicd::Store,
+    // forms-and-resume: the runs that wait, and what guards forms and one-time addresses.
+    waits: Arc<openduct_flow::waits::Waits>,
+    forms: forms::Guard,
+    tables: Arc<tables::Store>, // data tables
+    // storage
+    files_roots: Arc<openduct_flow::storage::Roots>,
 }
 
 /// Lookup files read from a folder of this machine, as the studio reads its own: for `openduct workflow test`.
@@ -117,13 +154,21 @@ impl State {
             environment: model::PRODUCTION.to_owned(),
         };
         let files = files::Files::new(Arc::clone(&self.model), &self.broker, workspace);
+        // G6 files: its runs' files, kept in the workspace's own topic.
+        let run_files = Arc::new(run_files::Store::new(Arc::clone(&self.shared), workspace));
         let live = openduct_flow::Live::new(&self.broker, self.allow_private_network)?
             .with_shared(Arc::clone(&self.shared))
             .in_workspace(workspace)
             .with_secrets(Arc::new(secrets))
             .with_files(Arc::new(files))
             .with_scripts(Arc::clone(&self.scripts) as Arc<dyn openduct_flow::Scripts>)
-            .with_workflows(self.workflows_for(workspace));
+            .with_workflows(self.workflows_for(workspace))
+            .with_memory(Arc::clone(&self.memory) as Arc<dyn openduct_flow::Memory>) // G2 AI agents
+            // forms-and-resume
+            .with_waits(Arc::clone(&self.waits))
+            .with_tables(self.tables_for(workspace)) // data tables
+            .with_file_store(run_files) // G6 files
+            .with_storage_roots(Arc::clone(&self.files_roots)); // storage
         Ok(Arc::new(live))
     }
 
@@ -131,6 +176,14 @@ impl State {
     pub(crate) fn workflows_for(&self, workspace: &str) -> Arc<dyn openduct_flow::Workflows> {
         Arc::new(workflows::Definitions {
             model: Arc::clone(&self.model),
+            workspace: workspace.to_owned(),
+        })
+    }
+
+    /// A workspace's data tables and its workflows' state, and no other workspace's. // data tables
+    pub(crate) fn tables_for(&self, workspace: &str) -> Arc<dyn openduct_flow::tables::Tables> {
+        Arc::new(tables::WorkspaceTables {
+            store: Arc::clone(&self.tables),
             workspace: workspace.to_owned(),
         })
     }
@@ -153,25 +206,40 @@ impl State {
 type Using<'c, T> = std::pin::Pin<Box<dyn Future<Output = Result<T, String>> + Send + 'c>>;
 
 impl State {
-    /// Runs `f` with the studio's own connection to the broker, made again after a failure.
+    /// Runs `f` with one of the node's connections to the broker.
     pub(crate) async fn with_client<T>(
         &self,
         f: impl for<'c> FnOnce(&'c mut openduct_broker::client::Routed) -> Using<'c, T>,
     ) -> Result<T, String> {
-        let mut held = self.client.lock().await;
-        if held.is_none() {
-            let client =
-                openduct_broker::client::Routed::connect(&self.broker, std::time::Duration::from_secs(10))
-                    .await
-                    .map_err(|e| format!("cannot reach the broker: {e}"))?;
-            *held = Some(client);
-        }
-        let client = held.as_mut().ok_or("no connection to the broker")?;
-        let outcome = f(client).await;
-        if outcome.is_err() {
-            *held = None;
-        }
-        outcome
+        // One of the node's shared connections (a few, lent out and given back): requests of the studio's page and
+        // deliveries to webhooks do not wait in line behind one another on a single connection.
+        let mut client = self
+            .shared
+            .lend()
+            .await
+            .map_err(|e| format!("cannot reach the broker: {e}"))?;
+        f(&mut client).await
+    }
+}
+
+/// What the one-time addresses of runs that wait start with: the address given, else the first studio host (over
+/// HTTPS when cookies are marked Secure), else the address the studio listens on.
+// forms-and-resume
+fn public_url(config: &Config, addr: SocketAddr) -> String {
+    if let Some(url) = config.public_url.as_deref().filter(|u| !u.trim().is_empty()) {
+        return url.trim().trim_end_matches('/').to_owned();
+    }
+    if let Some(host) = config.hosts.first() {
+        return if config.secure_cookies {
+            format!("https://{host}")
+        } else {
+            format!("http://{host}:{}", addr.port())
+        };
+    }
+    if addr.ip().is_unspecified() {
+        format!("http://localhost:{}", addr.port())
+    } else {
+        format!("http://{addr}")
     }
 }
 
@@ -209,6 +277,11 @@ impl Studio {
         };
         let vault = Arc::new(vault);
         vault.refresh(&model).await;
+        // forms-and-resume
+        let waits =
+            Arc::new(openduct_flow::waits::Waits::open(&config.broker, &public_url(&config, addr)).await?);
+        let tables = Arc::new(tables::Store::open(&config.broker).await?); // data tables
+        let cicd = cicd::Store::open(&config.broker).await?; // developer CI/CD
         let state = State {
             log_dir: config.log_dir.clone(),
             pipeline_runner: config.pipelines.clone(),
@@ -229,8 +302,16 @@ impl Studio {
                 &openduct_broker::client::ClientSecurity::default(),
             )),
             manager: manager::Manager::default(),
-            client: tokio::sync::Mutex::new(None),
             scripts: Arc::new(scripts::Scripts::of_this_program()),
+            memory: Arc::new(openduct_flow::LogMemory::new(&config.broker)), // G2 AI agents
+            mcp: mcp::Limits::default(),                                     // MCP
+            chat: chat::Chats::default(),                                    // chat trigger (G8)
+            cicd,                                                            // developer CI/CD
+            waits,
+            forms: forms::Guard::default(),
+            tables, // data tables
+            // storage
+            files_roots: Arc::clone(&config.files_roots),
         };
         Ok(Self {
             listener,
@@ -263,9 +344,17 @@ impl Studio {
         });
         // Each workspace's new alerts, to the messengers its admins chose.
         let alerting = tokio::spawn(alerts::keep_alerting(Arc::clone(&self.state)));
+        // forms-and-resume: waits whose time has come are answered, on every node (the log says who was first).
+        let (stop_sweeping, sweeping_stop) = tokio::sync::watch::channel(false);
+        let sweeping = tokio::spawn(openduct_flow::waits::keep_sweeping(
+            Arc::clone(&self.state.waits),
+            sweeping_stop,
+        ));
         http::serve(self.listener, Arc::clone(&self.state), stop).await;
         syncing.abort();
         alerting.abort();
+        let _ = stop_sweeping.send(true);
+        sweeping.abort();
         self.state.manager.stop_all().await;
         self.state.pipes.stop_all().await;
     }

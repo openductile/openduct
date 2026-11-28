@@ -1,0 +1,33 @@
+description: "Add a note to a contact"
+action: add_note
+credential: { token: test-token }
+input: { contact_id: sx6wyHhbFdRXh302LLNR, body: example }
+exchanges:
+  - sent:
+      method: POST
+      url: "https://services.leadconnectorhq.com/contacts/sx6wyHhbFdRXh302LLNR/notes"
+      query: {}
+      headers: { authorization: "Bearer test-token", version: "2021-07-28" }
+      body: { body: example }
+    answer:
+      status: 201
+      body:
+        note:
+          id: HGPcayliwcdoUFzvbTok
+          body: example
+          userId: TUcmRxWrjqzJS8EjkxNK
+          dateAdded: "2021-07-08T12:02:11.285Z"
+          contactId: TUcmRxWrjqzJS8EjkxNK
+          title: example
+          color: example
+          pinned: false
+result:
+  note:
+    id: HGPcayliwcdoUFzvbTok
+    body: example
+    userId: TUcmRxWrjqzJS8EjkxNK
+    dateAdded: "2021-07-08T12:02:11.285Z"
+    contactId: TUcmRxWrjqzJS8EjkxNK
+    title: example
+    color: example
+    pinned: false

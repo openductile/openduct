@@ -1,0 +1,15 @@
+description: The signed-in person's teams; the next page is the whole address Graph gives
+action: list_teams
+sign_in: teams
+credential: { access_token: eyJ0.teams }
+exchanges:
+  - sent: { method: GET, url: https://graph.microsoft.com/v1.0/me/joinedTeams }
+    answer:
+      body:
+        value: [{ id: 172b0cce-e65d-44ce-9a49-91d9f2e8493a, displayName: Contoso Team, description: The whole shop, isArchived: false }]
+        "@odata.nextLink": "https://graph.microsoft.com/v1.0/me/joinedTeams?$skiptoken=s2"
+  - sent: { url: "https://graph.microsoft.com/v1.0/me/joinedTeams?$skiptoken=s2", query: {} }
+    answer: { body: { value: [{ id: 2a1b0cce-e65d-44ce-9a49-91d9f2e8493b, displayName: Warehouse, description: Stock, isArchived: false }] } }
+result:
+  - { id: 172b0cce-e65d-44ce-9a49-91d9f2e8493a, displayName: Contoso Team, description: The whole shop, isArchived: false }
+  - { id: 2a1b0cce-e65d-44ce-9a49-91d9f2e8493b, displayName: Warehouse, description: Stock, isArchived: false }

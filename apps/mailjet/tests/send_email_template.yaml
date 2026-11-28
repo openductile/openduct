@@ -1,0 +1,49 @@
+description: An email from a template, its blanks filled, replies to another address
+action: send_email
+credential:
+  api_key: test-key
+  secret_key: test-secret
+input:
+  from_email: orders@example.com
+  to: pat@example.com
+  template_id: 2101
+  variables:
+    order: A-100
+  reply_to: help@example.com
+exchanges:
+- sent:
+    method: POST
+    url: https://api.mailjet.com/v3.1/send
+    headers:
+      authorization: Basic dGVzdC1rZXk6dGVzdC1zZWNyZXQ=
+    body:
+      Messages:
+      - From:
+          Email: orders@example.com
+        To:
+        - Email: pat@example.com
+        TemplateID: 2101
+        TemplateLanguage: true
+        Variables:
+          order: A-100
+        ReplyTo:
+          Email: help@example.com
+  answer:
+    status: 200
+    body:
+      Messages:
+      - Status: success
+        CustomID: ''
+        To: &id001
+        - Email: pat@example.com
+          MessageUUID: 123e4567-e89b-12d3-a456-426614174000
+          MessageID: 288230376151711744
+          MessageHref: https://api.mailjet.com/v3/REST/message/288230376151711744
+        Cc: &id002 []
+        Bcc: &id003 []
+result:
+  Status: success
+  CustomID: ''
+  To: *id001
+  Cc: *id002
+  Bcc: *id003

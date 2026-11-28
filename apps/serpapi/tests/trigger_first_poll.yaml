@@ -1,0 +1,7 @@
+description: The first poll notes the articles there are and runs none
+trigger: new_news_article
+credential: { api_key: serp_test_key_1 }
+input: { q: Example Coffee }
+exchanges:
+  - answer: { body: { news_results: [{ position: 1, title: Example Coffee opens, link: "https://news.example/old" }] } }
+runs: []

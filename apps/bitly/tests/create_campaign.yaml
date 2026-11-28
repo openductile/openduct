@@ -1,0 +1,31 @@
+# Made by `openduct app from-openapi`: Create Campaign.
+description: "Create Campaign, made from the API description's schemas"
+action: create_campaign
+credential: { token: test-token }
+exchanges:
+  - sent:
+      method: POST
+      url: "https://api-ssl.bitly.com/v4/campaigns"
+      query: {}
+      headers: { authorization: "Bearer test-token" }
+      body: {}
+    answer:
+      status: 200
+      body:
+        references: {}
+        guid: guid_1
+        group_guid: group_guid_1
+        created_by: example
+        name: example
+        description: example
+        created: example
+        modified: example
+result:
+  references: {}
+  guid: guid_1
+  group_guid: group_guid_1
+  created_by: example
+  name: example
+  description: example
+  created: example
+  modified: example

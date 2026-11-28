@@ -1,0 +1,15 @@
+description: Turning the workflow on adds a webhook for the events chosen, with a secret of its own; its id comes in a header
+trigger: conversation_event
+register: true
+workflow: wf1
+address: https://studio.example/hooks/h1
+credential: {access_token: hs-test-token}
+input: {events: 'convo.created,convo.customer.reply.created', mailboxes: '85,86'}
+exchanges:
+- sent:
+    method: POST
+    url: https://api.helpscout.net/v2/webhooks
+    headers: {authorization: Bearer hs-test-token}
+  answer:
+    status: 201
+    headers: {Resource-ID: '10', Location: 'https://api.helpscout.net/v2/webhooks/10'}

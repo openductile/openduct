@@ -1,0 +1,6 @@
+description: A key that is wrong
+action: account
+credential: { api_key: wrong-key }
+exchanges:
+  - answer: { status: 401, body: { errors: [{ id: authentication_failed, code: 401, details: "No user found for the API key supplied" }] } }
+error: "Hunter answered 401: No user found for the API key supplied"

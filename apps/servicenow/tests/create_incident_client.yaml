@@ -1,0 +1,14 @@
+description: With an OAuth client, its token is a bearer token; names given as people see them
+action: create_incident
+sign_in: servicenow_client
+credential: { instance: acme, client_id: cid-1, client_secret: cs-1, access_token: tok-1, expires_at: "4102444800" }
+input: { short_description: Printer jam on floor 2, caller_id: Ann Example, display_values: true }
+exchanges:
+  - sent:
+      method: POST
+      url: "https://acme.service-now.com/api/now/table/incident"
+      query: { sysparm_input_display_value: "true", sysparm_exclude_reference_link: "true" }
+      headers: { authorization: Bearer tok-1 }
+      body: { short_description: Printer jam on floor 2, caller_id: Ann Example }
+    answer: { status: 201, body: { result: { sys_id: a1b2c3d4e5f60718293a4b5c6d7e8f90, number: INC0010003, short_description: Printer jam on floor 2, caller_id: 6816f79cc0a8016401c5a33be04be441 } } }
+result: { sys_id: a1b2c3d4e5f60718293a4b5c6d7e8f90, number: INC0010003, short_description: Printer jam on floor 2, caller_id: 6816f79cc0a8016401c5a33be04be441 }

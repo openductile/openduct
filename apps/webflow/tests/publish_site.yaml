@@ -1,0 +1,26 @@
+# Made by `openduct app from-openapi`: Publish Site.
+description: "Publish Site, made from the API description's schemas"
+action: publish_site
+credential: { token: test-token }
+input: { site_id: site_1 }
+exchanges:
+  - sent:
+      method: POST
+      url: "https://api.webflow.com/v2/sites/site_1/publish"
+      query: {}
+      headers: { authorization: "Bearer test-token" }
+      body: {}
+    answer:
+      status: 202
+      body:
+        customDomains:
+          - id: "589a331aa51e760df7ccb89d"
+            url: test-api-domain.com
+            lastPublished: "2022-12-07T16:51:37.571Z"
+        publishToWebflowSubdomain: true
+        publishScope: site
+result:
+  customDomains:
+    - { id: "589a331aa51e760df7ccb89d", url: test-api-domain.com, lastPublished: "2022-12-07T16:51:37.571Z" }
+  publishToWebflowSubdomain: true
+  publishScope: site

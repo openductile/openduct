@@ -1,0 +1,60 @@
+name: Product descriptions written from the photo
+description: >-
+  For shops and marketplaces sellers listing many items: add a row to a Listings sheet with the item's title, a link to
+  its photo and a few notes of your own, and within minutes an AI agent looks at the photo through Google Cloud Vision
+  (what is in it, colours, any text or brand on it), writes a description of 60 to 90 words that sticks to what it can
+  see and what your notes say, and writes it into the row's description column. Needs: a Google Sheets sign-in called
+  sheets, a Google Cloud Vision API key as a header credential called vision (x-goog-api-key), and an AI credential
+  called model.
+category: E-commerce
+trigger:
+  # The sheet's header row: title, photo, notes, description (the description is written by this workflow).
+  google_sheets: { when: new_row, credential: sheets, spreadsheet_id: your-spreadsheet-id, sheet: Listings, every: 5m }
+# What a test runs on: an event as this trigger gives it (a row, by the header's names).
+sample:
+  title: Linen apron, sage green
+  photo: https://images.example.com/listings/apron-sage.jpg
+  notes: "One size, adjustable neck strap, two front pockets, washable at 40"
+  description: ""
+  row_number: 14
+steps:
+  - where: has(value.photo) && value.photo.startsWith('https://') && (!has(value.description) || value.description == '')
+  - name: writer
+    agent:
+      credential: model
+      instructions: >-
+        You write product descriptions for an online shop: 60 to 90 words, warm and plain, no superlatives, no claims
+        you cannot see in the photo or read in the seller's notes (never invent sizes, materials or care). Look at the
+        photo first with the tool. End with one line of the practical facts from the notes.
+      input: "Title: {{ value.title }}\nPhoto: {{ value.photo }}\nSeller's notes: {{ has(value.notes) ? value.notes : '' }}"
+      tools:
+        - name: look_at_photo
+          description: What a photo shows - objects, labels with how sure, main colours, and any text on it.
+          parameters:
+            type: object
+            properties:
+              url: { type: string, description: "The photo's address" }
+            required: [url]
+          http:
+            method: POST
+            url: https://vision.googleapis.com/v1/images:annotate
+            credential: vision
+            json:
+              requests:
+                - image: { source: { imageUri: "{{ args.url }}" } }
+                  features:
+                    - { type: LABEL_DETECTION, maxResults: 10 }
+                    - { type: OBJECT_LOCALIZATION, maxResults: 5 }
+                    - { type: IMAGE_PROPERTIES }
+                    - { type: TEXT_DETECTION, maxResults: 3 }
+      allow: [look_at_photo]
+      max_turns: 4
+      max_tool_calls: 2
+  - name: write
+    google_sheets:
+      credential: sheets
+      action: set_rows
+      spreadsheet_id: your-spreadsheet-id
+      range: "Listings!D{{ value.row_number }}"
+      rows: "[[steps.writer.text]]"
+    retry: { attempts: 3, wait: 10s }

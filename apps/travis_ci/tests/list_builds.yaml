@@ -1,0 +1,27 @@
+description: "A branch's failed builds, over two pages by offset"
+action: list_builds
+credential: { token: test-token }
+input: { repo: shop-example/storefront, branch: main, state: failed }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://api.travis-ci.com/repo/shop-example%2Fstorefront/builds"
+      query: { branch.name: main, build.state: failed, limit: "100" }
+    answer:
+      body:
+        "@type": builds
+        "@pagination": { limit: 100, offset: 0, count: 101, is_first: true, is_last: false, next: { "@href": "/repo/891/builds?limit=100&offset=100", offset: 100, limit: 100 } }
+        builds:
+          - { id: 86601346, number: "212", state: failed, previous_state: passed, duration: 301, event_type: push, branch: { name: main } }
+  - sent:
+      url: "https://api.travis-ci.com/repo/shop-example%2Fstorefront/builds"
+      query: { branch.name: main, build.state: failed, limit: "100", offset: "100" }
+    answer:
+      body:
+        "@type": builds
+        "@pagination": { limit: 100, offset: 100, count: 101, is_first: false, is_last: true, next: null }
+        builds:
+          - { id: 86500001, number: "111", state: failed, previous_state: failed, duration: 280, event_type: push, branch: { name: main } }
+result:
+  - { id: 86601346, number: "212", state: failed, previous_state: passed, duration: 301, event_type: push, branch: { name: main } }
+  - { id: 86500001, number: "111", state: failed, previous_state: failed, duration: 280, event_type: push, branch: { name: main } }

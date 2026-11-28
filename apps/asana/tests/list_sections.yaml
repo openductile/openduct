@@ -1,0 +1,8 @@
+description: The sections of a project
+action: list_sections
+credential: { token: "2/1200000000000001/1209999999999999:0a1b2c3d4e5f" }
+input: { project_id: "1201000000000001" }
+exchanges:
+  - sent: { method: GET, url: https://app.asana.com/api/1.0/projects/1201000000000001/sections, query: { limit: "100" } }
+    answer: { body: { data: [{ gid: "1205000000000001", name: To do, resource_type: section }, { gid: "1205000000000002", name: Done, resource_type: section }], next_page: null } }
+result: [{ gid: "1205000000000001", name: To do, resource_type: section }, { gid: "1205000000000002", name: Done, resource_type: section }]

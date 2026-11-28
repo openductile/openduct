@@ -1,0 +1,30 @@
+description: "Change an opportunity"
+action: update_opportunity
+credential: { token: test-token }
+input: { id: yWQobCRIhRguQtD2llvk }
+exchanges:
+  - sent:
+      method: PUT
+      url: "https://services.leadconnectorhq.com/opportunities/yWQobCRIhRguQtD2llvk"
+      query: {}
+      headers: { authorization: "Bearer test-token", version: "2021-07-28" }
+      body: {}
+    answer:
+      status: 200
+      body:
+        opportunity:
+          id: yWQobCRIhRguQtD2llvk
+          name: testing
+          monetaryValue: 500
+          pipelineId: VDm7RPYC2GLUvdpKmBfC
+          pipelineStageId: e93ba61a-53b3-45e7-985a-c7732dbcdb69
+          assignedTo: zT46WSCPbudrq4zhWMk6
+          status: open
+          source: example
+          lastStatusChangeAt: "2021-08-03T04:55:17.355Z"
+          lastStageChangeAt: "2021-08-03T04:55:17.355Z"
+          lastActionDate: "2021-08-03T04:55:17.355Z"
+          indexVersion: 1
+result: {id: yWQobCRIhRguQtD2llvk, name: testing, monetaryValue: 500, pipelineId: VDm7RPYC2GLUvdpKmBfC, pipelineStageId: e93ba61a-53b3-45e7-985a-c7732dbcdb69,
+  assignedTo: zT46WSCPbudrq4zhWMk6, status: open, source: example, lastStatusChangeAt: '2021-08-03T04:55:17.355Z', lastStageChangeAt: '2021-08-03T04:55:17.355Z',
+  lastActionDate: '2021-08-03T04:55:17.355Z', indexVersion: 1}

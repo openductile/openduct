@@ -1,0 +1,6 @@
+action: me
+credential: { access_token: BQ-test-token }
+exchanges:
+  - sent: { method: GET, url: https://api.spotify.com/v1/me, headers: { authorization: Bearer BQ-test-token } }
+    answer: { body: { id: example-shop, display_name: Example Shop, country: US, product: premium, type: user, uri: "spotify:user:example-shop" } }
+result: { id: example-shop, display_name: Example Shop, country: US, product: premium, type: user, uri: "spotify:user:example-shop" }

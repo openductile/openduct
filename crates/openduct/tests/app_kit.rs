@@ -102,7 +102,8 @@ fn a_new_app_checks_and_tests_and_its_mistakes_are_found() {
     // The apps OpenDuct comes with are listed, and their recordings hold.
     let (ok, out) = app(d, &["list"]);
     assert!(
-        ok && out.contains("slack (Slack): 1 action, signs in as slack or slack_webhook"),
+        // messaging: Slack's most used methods
+        ok && out.contains("slack (Slack): 10 actions, 2 triggers, signs in as slack or slack_webhook"),
         "{out}"
     );
     let repo = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");

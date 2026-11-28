@@ -1,0 +1,93 @@
+name: Yesterday's uptime, in Slack and a sheet
+description: >-
+  For whoever answers for the website and the apps: every morning at 8:00, read your Better Stack monitors and
+  yesterday's incidents, work out how long each service was down and what is still down now, have a model write it up in
+  three lines for the team's Slack channel, and add a row to an Uptime sheet - one a day - so the month's figures are
+  there when someone asks. Needs: a Better Stack API token as a bearer credential called betterstack, an AI credential
+  called model, a Google Sheets sign-in called sheets, and a Slack credential called slack.
+category: Operations
+trigger:
+  schedule: { every: day, at: "08:00", timezone: America/Denver }
+# What a test runs on: an event as this trigger gives it.
+sample:
+  scheduled_at: "2026-11-27T15:00:00Z"
+steps:
+  - name: settings
+    set:
+      # Change these to your own.
+      spreadsheet: "'your-spreadsheet-id'"
+      channel: "'#ops'"
+      day: string(timestamp(value.scheduled_at) - duration('24h')).substring(0, 10)
+  - name: monitors
+    http:
+      method: GET
+      url: https://uptime.betterstack.com/api/v2/monitors
+      credential: betterstack
+      query: { per_page: "250" }
+      fail_on_status: true
+      sample:
+        data:
+          - { id: "101", type: monitor, attributes: { pronounceable_name: Shop website, url: "https://shop.example.com", status: up } }
+          - { id: "102", type: monitor, attributes: { pronounceable_name: Checkout API, url: "https://api.example.com/health", status: up } }
+          - { id: "103", type: monitor, attributes: { pronounceable_name: Booking page, url: "https://book.example.com", status: down } }
+    retry: { attempts: 3, wait: 30s }
+  - name: incidents
+    http:
+      method: GET
+      url: https://uptime.betterstack.com/api/v3/incidents
+      credential: betterstack
+      query: { from: "{{ steps.settings.day }}", to: "{{ steps.settings.day }}", per_page: "100" }
+      fail_on_status: true
+      sample:
+        data:
+          - { id: "9001", attributes: { name: Checkout API, url: "https://api.example.com/health", cause: Status 503, started_at: "2026-11-26T14:02:10Z", resolved_at: "2026-11-26T14:19:40Z" } }
+          - { id: "9002", attributes: { name: Booking page, url: "https://book.example.com", cause: Timeout, started_at: "2026-11-26T22:45:00Z", resolved_at: null } }
+    retry: { attempts: 3, wait: 30s }
+  - name: figures
+    javascript: |
+      // How long each incident lasted on the day (one still open counts until the end of the day), and what is down now.
+      const dayStart = Date.parse(steps.settings.day + "T00:00:00Z");
+      const dayEnd = dayStart + 24 * 3600 * 1000;
+      const monitors = (steps.monitors.body.data || []).map(m => m.attributes);
+      const downNow = monitors.filter(m => m.status === "down").map(m => m.pronounceable_name || m.url);
+      const incidents = (steps.incidents.body.data || []).map(i => {
+        const a = i.attributes;
+        const from = Math.max(Date.parse(a.started_at), dayStart);
+        const to = Math.min(a.resolved_at ? Date.parse(a.resolved_at) : dayEnd, dayEnd);
+        return { name: a.name || a.url, cause: a.cause || "", minutes: Math.max(0, Math.round((to - from) / 60000)), open: !a.resolved_at };
+      });
+      const downtime = incidents.reduce((s, i) => s + i.minutes, 0);
+      const longest = incidents.slice().sort((a, b) => b.minutes - a.minutes)[0] || null;
+      const lines = incidents.map(i => `${i.name}: ${i.minutes} min (${i.cause})${i.open ? ", not over" : ""}`);
+      return { monitors: monitors.length, down_now: downNow, incidents: incidents.length, downtime, longest, lines };
+  - name: words
+    ai:
+      credential: model
+      system: >-
+        You write the morning uptime note for a small team: three short lines at most - how yesterday went, what was
+        worst, and what is still down now (if anything). Figures as given, plain words.
+      prompt: >-
+        Day: {{ steps.settings.day }}. Monitors: {{ steps.figures.monitors }}. Incidents: {{ steps.figures.incidents }},
+        {{ steps.figures.downtime }} minutes in all. Each: {{ steps.figures.lines.join('; ') }}.
+        Down now: {{ size(steps.figures.down_now) > 0 ? steps.figures.down_now.join(', ') : 'nothing' }}.
+      max_tokens: 200
+  - name: log
+    google_sheets:
+      credential: sheets
+      action: add_row
+      spreadsheet_id: "{{ steps.settings.spreadsheet }}"
+      sheet: Uptime
+      values:
+        - "{{ steps.settings.day }}"
+        - "{{ steps.figures.monitors }}"
+        - "{{ steps.figures.incidents }}"
+        - "{{ steps.figures.downtime }}"
+        - "{{ steps.figures.longest == null ? '' : steps.figures.longest.name }}"
+        - "{{ steps.figures.down_now.join(', ') }}"
+    retry: { attempts: 3, wait: 10s }
+  - name: post
+    slack:
+      credential: slack
+      channel: "{{ steps.settings.channel }}"
+      text: "Uptime {{ steps.settings.day }}: {{ steps.words.text }}"
+    retry: { attempts: 3, wait: 10s }

@@ -1,0 +1,8 @@
+description: A record removed
+action: delete_record
+credential: { access_token: "00D000000000001!AQ.test", instance: examplecorp.my.salesforce.com }
+input: { object: Task, id: 00T5e00000TaSkAAAV }
+exchanges:
+  - sent: { method: DELETE, url: https://examplecorp.my.salesforce.com/services/data/v67.0/sobjects/Task/00T5e00000TaSkAAAV }
+    answer: { status: 204 }
+result: { removed: true }

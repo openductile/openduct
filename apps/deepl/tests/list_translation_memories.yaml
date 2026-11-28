@@ -1,0 +1,28 @@
+description: The account's translation memories
+action: list_translation_memories
+credential: { api_key: 0f6a2c1e-5b7d-4e2a-9c3f-1a2b3c4d5e6f }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://api.deepl.com/v3/translation_memories"
+      query: { page_size: "100" }
+    answer:
+      status: 200
+      body:
+        translation_memories:
+          - translation_memory_id: a74d88fb-ed2a-4943-a664-a4512398b994
+            name: Legal
+            source_language: en
+            target_languages: [de, fr]
+            segment_count: 34
+            creation_time: "2026-04-01T16:34:25.223Z"
+            updated_time: "2026-04-01T16:34:25.264Z"
+        total_count: 1
+result:
+  - translation_memory_id: a74d88fb-ed2a-4943-a664-a4512398b994
+    name: Legal
+    source_language: en
+    target_languages: [de, fr]
+    segment_count: 34
+    creation_time: "2026-04-01T16:34:25.223Z"
+    updated_time: "2026-04-01T16:34:25.264Z"

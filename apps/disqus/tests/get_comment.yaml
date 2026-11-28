@@ -1,0 +1,32 @@
+description: One comment
+action: get_comment
+credential: {api_key: pubkey-test-1, api_secret: secret-test-1, access_token: token-test-1}
+input: {post: '6001'}
+exchanges:
+- sent:
+    method: GET
+    url: https://disqus.com/api/3.0/posts/details.json
+    query: {api_key: pubkey-test-1, api_secret: secret-test-1, access_token: token-test-1, post: '6001'}
+  answer:
+    status: 200
+    body:
+      code: 0
+      response: &id001
+        id: '6001'
+        forum: shop-example
+        thread: '7001'
+        parent: null
+        author: {username: ann_example, name: Ann Example, id: '101', isAnonymous: false, profileUrl: 'https://disqus.com/by/ann_example/'}
+        message: <p>Great guide, thanks!</p>
+        raw_message: Great guide, thanks!
+        createdAt: '2026-11-27T10:00:00'
+        isApproved: true
+        isSpam: false
+        isDeleted: false
+        isFlagged: false
+        isHighlighted: false
+        isEdited: false
+        likes: 2
+        dislikes: 0
+        points: 2
+result: *id001

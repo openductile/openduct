@@ -1,0 +1,9 @@
+action: update_issue
+credential: { api_key: lin_api_test1 }
+input: { issue: ENG-101, status_id: st-2, assignee_id: u-1 }
+exchanges:
+  - sent:
+      url: https://api.linear.app/graphql
+      body: { query: "mutation($id: String!, $input: IssueUpdateInput!) { issueUpdate(id: $id, input: $input) { success issue { id identifier title url priorityLabel state { name } assignee { name } } } }", variables: { id: ENG-101, input: { stateId: st-2, assigneeId: u-1 } } }
+    answer: { body: { data: { issueUpdate: { success: true, issue: { id: 0b1e6a52-0000-4000-8000-000000000001, identifier: ENG-101, title: Checkout button does nothing, state: { name: Done }, assignee: { name: Ann Lee } } } } } }
+result: { id: 0b1e6a52-0000-4000-8000-000000000001, identifier: ENG-101, title: Checkout button does nothing, state: { name: Done }, assignee: { name: Ann Lee } }

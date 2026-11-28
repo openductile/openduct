@@ -1,0 +1,52 @@
+# Made by `openduct app from-openapi`: Update Object Schema.
+description: "Update Object Schema, made from the API description's schemas"
+action: update_object_schema
+credential: { api_key: test-key }
+input: { id: "01K61DKJ7EKJ0ES9VE456XF5JG", id_2: "01K61DKJ7EKJ0ES9VE456XF5JG" }
+exchanges:
+  - sent:
+      method: PATCH
+      url: "https://a.klaviyo.com/api/object-schemas/01K61DKJ7EKJ0ES9VE456XF5JG"
+      query: {}
+      headers: { authorization: test-key, revision: "2026-10-15" }
+      body: { data: { type: object-schema, id: "01K61DKJ7EKJ0ES9VE456XF5JG" } }
+    answer:
+      status: 200
+      body:
+        data:
+          type: object-schema
+          id: "01K61DKJ7EKJ0ES9VE456XF5JG"
+          attributes:
+            title: example
+            description: example
+            status: active
+            properties: [{}]
+            required: [example]
+            published_at: "2026-01-15T09:30:00Z"
+            visibility: private
+          relationships:
+            source-mapping: { data: {}, links: {} }
+            object-schemas: { data: [null], links: {} }
+            profile-object-schemas: { data: [null], links: {} }
+          links: { self: "https://example.com/1" }
+        links: { self: "https://example.com/1" }
+        meta: { agent_hints: { next_steps: [example] } }
+result:
+  data:
+    type: object-schema
+    id: "01K61DKJ7EKJ0ES9VE456XF5JG"
+    attributes:
+      title: example
+      description: example
+      status: active
+      properties: [{}]
+      required: [example]
+      published_at: "2026-01-15T09:30:00Z"
+      visibility: private
+    relationships:
+      source-mapping: { data: {}, links: {} }
+      object-schemas: { data: [null], links: {} }
+      profile-object-schemas: { data: [null], links: {} }
+    links: { self: "https://example.com/1" }
+  links: { self: "https://example.com/1" }
+  meta: { agent_hints: { next_steps: [example] } }

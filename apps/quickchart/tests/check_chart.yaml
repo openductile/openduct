@@ -1,0 +1,24 @@
+description: A chart QuickChart can draw - no errors, one warning
+action: check_chart
+credential: { api_key: "" }
+input:
+  chart: { type: bar, data: { labels: [A, B], datasets: [{ data: [1, 2] }] } }
+exchanges:
+  - sent:
+      method: POST
+      url: https://quickchart.io/api/validate-chart
+      body: { chart: { type: bar, data: { labels: [A, B], datasets: [{ data: [1, 2] }] } } }
+    answer:
+      status: 200
+      body:
+        success: true
+        errors: []
+        warnings: ["The dataset has no label: the legend will show undefined."]
+        normalized: { width: 500, height: 300, version: "2" }
+        renderCheck: { contentType: image/png, bytes: 10422 }
+result:
+  success: true
+  errors: []
+  warnings: ["The dataset has no label: the legend will show undefined."]
+  normalized: { width: 500, height: 300, version: "2" }
+  renderCheck: { contentType: image/png, bytes: 10422 }

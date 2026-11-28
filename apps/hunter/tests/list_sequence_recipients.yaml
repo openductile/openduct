@@ -1,0 +1,11 @@
+description: Who a sequence is sent to, and where each is
+action: list_sequence_recipients
+credential: { api_key: hunter-test-key }
+input: { sequence_id: "31" }
+exchanges:
+  - sent: { method: GET, url: https://api.hunter.io/v2/campaigns/31/recipients, query: { limit: "100" } }
+    answer:
+      body:
+        data: { recipients: [{ email: ann.example@example.com, first_name: Ann, last_name: Example, sending_status: opened, lead_id: 101 }] }
+        meta: { limit: 100, offset: 0 }
+result: [{ email: ann.example@example.com, first_name: Ann, last_name: Example, sending_status: opened, lead_id: 101 }]

@@ -1,0 +1,29 @@
+description: "One job, without its report"
+action: get_job
+credential: { base_url: "https://cortex.example.com:9001", api_key: test-key }
+input: { job_id: AWNei4vH3rJ8unegCPB9 }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://cortex.example.com:9001/api/job/AWNei4vH3rJ8unegCPB9"
+    answer:
+      body:
+        id: AWNei4vH3rJ8unegCPB9
+        analyzerId: 220483fde9608c580fb6a2508ff3d2d3
+        analyzerName: Abuse_Finder_3_0
+        status: Success
+        data: 203.0.113.7
+        dataType: ip
+        tlp: 1
+        startDate: 1764237600200
+        endDate: 1764237603300
+result:
+  id: AWNei4vH3rJ8unegCPB9
+  analyzerId: 220483fde9608c580fb6a2508ff3d2d3
+  analyzerName: Abuse_Finder_3_0
+  status: Success
+  data: 203.0.113.7
+  dataType: ip
+  tlp: 1
+  startDate: 1764237600200
+  endDate: 1764237603300

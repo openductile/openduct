@@ -1,0 +1,8 @@
+description: A file by its path
+action: get_metadata
+credential: { access_token: sl.test-token }
+input: { path: /Invoices/INV-1042.pdf }
+exchanges:
+  - sent: { url: https://api.dropboxapi.com/2/files/get_metadata, body: { path: /Invoices/INV-1042.pdf } }
+    answer: { body: { ".tag": file, id: "id:a4ayc_80_OEAAAAAAAAAXw", name: INV-1042.pdf, path_display: /Invoices/INV-1042.pdf, size: 48211, rev: a1c10ce0dd78 } }
+result: { ".tag": file, id: "id:a4ayc_80_OEAAAAAAAAAXw", name: INV-1042.pdf, path_display: /Invoices/INV-1042.pdf, size: 48211, rev: a1c10ce0dd78 }

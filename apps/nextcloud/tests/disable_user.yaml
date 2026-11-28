@@ -1,0 +1,10 @@
+description: A user turned off
+action: disable_user
+credential: { url: "https://cloud.example.com", username: admin, password: app-pass-2 }
+input: { userid: carol }
+exchanges:
+  - sent:
+      method: PUT
+      url: "https://cloud.example.com/ocs/v2.php/cloud/users/carol/disable"
+    answer: { status: 200, body: { ocs: { meta: { status: ok, statuscode: 200, message: OK }, data: [] } } }
+result: { status: ok, statuscode: 200, message: OK }

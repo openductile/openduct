@@ -1,0 +1,11 @@
+description: A comment on a card
+action: comment_on_card
+credential: { api_key: testkey0123456789, token: ATTAtesttoken0123 }
+input: { card_id: 6567a1b2c3d4e5f600000001, text: Called - they ship Friday. }
+exchanges:
+  - sent:
+      method: POST
+      url: https://api.trello.com/1/cards/6567a1b2c3d4e5f600000001/actions/comments
+      query: { key: testkey0123456789, token: ATTAtesttoken0123, text: Called - they ship Friday. }
+    answer: { body: { id: 6567a1b2c3d4e5f600000c01, idMemberCreator: 6567a1b2c3d4e5f600000m01, type: commentCard, date: "2026-11-27T10:00:00.000Z", data: { text: Called - they ship Friday., card: { id: 6567a1b2c3d4e5f600000001, name: Call the supplier } } } }
+result: { id: 6567a1b2c3d4e5f600000c01, idMemberCreator: 6567a1b2c3d4e5f600000m01, type: commentCard, date: "2026-11-27T10:00:00.000Z", data: { text: Called - they ship Friday., card: { id: 6567a1b2c3d4e5f600000001, name: Call the supplier } } }

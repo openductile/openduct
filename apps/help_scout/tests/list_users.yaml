@@ -1,0 +1,21 @@
+description: The users of an inbox
+action: list_users
+credential: {access_token: hs-test-token}
+input: {mailbox: '85'}
+exchanges:
+- sent:
+    method: GET
+    url: https://api.helpscout.net/v2/users
+    query: {mailbox: '85'}
+    headers: {authorization: Bearer hs-test-token}
+  answer:
+    status: 200
+    body:
+      _embedded:
+        users:
+        - &id001 {id: 4, firstName: Dana, lastName: Example, email: dana@shop.example, role: owner, timezone: America/New_York,
+          type: user}
+      _links:
+        self: {href: 'https://api.helpscout.net/v2/x'}
+result:
+- *id001

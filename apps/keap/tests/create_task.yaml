@@ -1,0 +1,40 @@
+# Made by `openduct app from-openapi`: Create a task.
+description: "Create a task, made from the API description's schemas"
+action: create_task
+credential: { access_token: test-access-token }
+input: { assigned_to_user_id: "456" }
+exchanges:
+  - sent:
+      method: POST
+      url: "https://api.keap.com/crm/rest/v2/tasks"
+      query: {}
+      headers: { authorization: "Bearer test-access-token" }
+      body: { assigned_to_user_id: "456" }
+    answer:
+      status: 201
+      body:
+        id: 123
+        title: example
+        description: example
+        type: CALL
+        priority: CRITICAL
+        completed: false
+        create_time: "2024-01-10T08:00:00Z"
+        modification_time: "2024-03-15T10:30:00Z"
+        completion_time: "2024-03-20T14:00:00Z"
+        due_time: "2024-03-18T17:00:00Z"
+        remind_time_mins: "5"
+        assigned_to_user_id: 456
+result:
+  id: 123
+  title: example
+  description: example
+  type: CALL
+  priority: CRITICAL
+  completed: false
+  create_time: "2024-01-10T08:00:00Z"
+  modification_time: "2024-03-15T10:30:00Z"
+  completion_time: "2024-03-20T14:00:00Z"
+  due_time: "2024-03-18T17:00:00Z"
+  remind_time_mins: "5"
+  assigned_to_user_id: 456

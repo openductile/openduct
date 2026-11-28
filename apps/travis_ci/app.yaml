@@ -1,0 +1,380 @@
+# Copyright 2026 Ductile AI, Inc
+# SPDX-License-Identifier: Apache-2.0
+# Travis CI: written by hand from its API v3 reference, https://developer.travis-ci.com (read 2026-11-27), and
+# https://docs.travis-ci.com/user/triggering-builds/.
+app: travis_ci
+name: Travis CI
+category: developer
+description: Builds on Travis CI - started, followed, cancelled and restarted - with their jobs, logs, branches and settings.
+docs: https://developer.travis-ci.com
+hosts: [api.travis-ci.com]
+base_url: https://api.travis-ci.com
+sign_in:
+  - id: travis_ci
+    label: An API token
+    fields:
+      - { name: token, label: "Your API token (on your Settings page at travis-ci.com)", secret: true }
+    headers:
+      Authorization: "token {{ credential.token }}"
+      Travis-API-Version: "3"
+error: "status >= 400 ? value.error_message : null"
+actions:
+  trigger_build:
+    label: Start a build
+    description: Asks Travis CI to build a branch of a repository now, with a message and changes to its configuration if given.
+    write: true
+    method: POST
+    path: "/repo/{{ string(input.repo).replace('/', '%2F') }}/requests"
+    inputs:
+      - { name: repo, label: "The repository: owner/name (or its Travis CI id)", required: true }
+      - { name: branch, label: "The branch to build (the default branch if not given)" }
+      - { name: message, label: "What the build shows as its message" }
+      - { name: sha, label: "A commit to build, in place of the branch's newest" }
+      - { name: config, label: "Changes to the .travis.yml configuration (as JSON)", kind: record }
+      - { name: merge_mode, label: "How they join the file's: deep_merge_append (the default), deep_merge_prepend, deep_merge, merge or replace" }
+    send:
+      request:
+        branch: "{{ input.branch }}"
+        message: "{{ input.message }}"
+        sha: "{{ input.sha }}"
+        config: "{{ input.config }}"
+        merge_mode: "{{ input.merge_mode }}"
+    output: { "@type": text, remaining_requests: number, repository: record, request: record, resource_type: text }
+  list_requests:
+    label: List a repository's build requests
+    description: The requests to build a repository, the newest first, each with the builds it made.
+    method: GET
+    path: "/repo/{{ string(input.repo).replace('/', '%2F') }}/requests"
+    inputs:
+      - { name: repo, label: "The repository: owner/name (or its Travis CI id)", required: true }
+    query: { limit: "25" }
+    items: value.requests
+    output:
+      id: number
+      state: text
+      result: text
+      message: text
+      branch_name: text
+      event_type: text
+      created_at: text
+      builds: list
+      commit: record
+      repository: record
+      config: record
+  get_request:
+    label: Get a build request
+    description: One request to build a repository - whether it was taken, and the builds it made.
+    method: GET
+    path: "/repo/{{ string(input.repo).replace('/', '%2F') }}/request/{{ input.request_id }}"
+    inputs:
+      - { name: repo, label: "The repository: owner/name (or its Travis CI id)", required: true }
+      - { name: request_id, label: "The request's id (Start a build gives it)", required: true, kind: number }
+    output:
+      id: number
+      state: text
+      result: text
+      message: text
+      branch_name: text
+      event_type: text
+      created_at: text
+      builds: list
+      commit: record
+      repository: record
+      config: record
+  list_builds:
+    label: List a repository's builds
+    description: A repository's builds, the newest first - of one branch, state or kind of event if given; up to 500.
+    method: GET
+    path: "/repo/{{ string(input.repo).replace('/', '%2F') }}/builds"
+    inputs:
+      - { name: repo, label: "The repository: owner/name (or its Travis CI id)", required: true }
+      - { name: branch, label: "Only builds of this branch" }
+      - { name: state, label: "Only builds in this state: created, started, passed, failed, errored or canceled" }
+      - { name: event_type, label: "Only builds started by: push, pull_request, api or cron" }
+    query:
+      branch.name: "{{ input.branch }}"
+      build.state: "{{ input.state }}"
+      build.event_type: "{{ input.event_type }}"
+      limit: "100"
+    items: value.builds
+    next: "value['@pagination'].next == null ? null : {'offset': string(value['@pagination'].next.offset)}"
+    max_pages: 5
+    output:
+      id: number
+      number: text
+      state: text
+      previous_state: text
+      duration: number
+      event_type: text
+      pull_request_title: text
+      pull_request_number: number
+      started_at: text
+      finished_at: text
+      updated_at: text
+      private: boolean
+      branch: record
+      tag: record
+      commit: record
+      repository: record
+      created_by: record
+      jobs: list
+      stages: list
+  list_my_builds:
+    label: List my builds
+    description: The builds of every repository of the signed-in user, the newest first; up to 500.
+    method: GET
+    path: /builds
+    query: { limit: "100" }
+    items: value.builds
+    next: "value['@pagination'].next == null ? null : {'offset': string(value['@pagination'].next.offset)}"
+    max_pages: 5
+    output:
+      id: number
+      number: text
+      state: text
+      previous_state: text
+      duration: number
+      event_type: text
+      pull_request_title: text
+      pull_request_number: number
+      started_at: text
+      finished_at: text
+      updated_at: text
+      private: boolean
+      branch: record
+      tag: record
+      commit: record
+      repository: record
+      created_by: record
+      jobs: list
+      stages: list
+  get_build:
+    label: Get a build
+    description: One build - its state, how long it took, its branch, commit and jobs.
+    method: GET
+    path: "/build/{{ input.build_id }}"
+    inputs:
+      - { name: build_id, label: "The build's id", required: true, kind: number }
+    output:
+      id: number
+      number: text
+      state: text
+      previous_state: text
+      duration: number
+      event_type: text
+      pull_request_title: text
+      pull_request_number: number
+      started_at: text
+      finished_at: text
+      updated_at: text
+      private: boolean
+      branch: record
+      tag: record
+      commit: record
+      repository: record
+      created_by: record
+      jobs: list
+      stages: list
+  cancel_build:
+    label: Cancel a build
+    description: Stops a build that is waiting or running.
+    write: true
+    method: POST
+    path: "/build/{{ input.build_id }}/cancel"
+    inputs:
+      - { name: build_id, label: "The build's id", required: true, kind: number }
+    output: { "@type": text, build: record, state_change: text, resource_type: text }
+  restart_build:
+    label: Restart a build
+    description: Runs a build again, every job of it.
+    write: true
+    method: POST
+    path: "/build/{{ input.build_id }}/restart"
+    inputs:
+      - { name: build_id, label: "The build's id", required: true, kind: number }
+    output: { "@type": text, build: record, state_change: text, resource_type: text }
+  list_build_jobs:
+    label: List a build's jobs
+    description: The jobs a build is made of, each with its state.
+    method: GET
+    path: "/build/{{ input.build_id }}/jobs"
+    inputs:
+      - { name: build_id, label: "The build's id", required: true, kind: number }
+    items: value.jobs
+    output:
+      id: number
+      number: text
+      state: text
+      allow_failure: boolean
+      started_at: text
+      finished_at: text
+      created_at: text
+      updated_at: text
+      queue: text
+      build: record
+      commit: record
+      repository: record
+      stage: record
+  get_job:
+    label: Get a job
+    description: One job of a build, and its state.
+    method: GET
+    path: "/job/{{ input.job_id }}"
+    inputs:
+      - { name: job_id, label: "The job's id", required: true, kind: number }
+    output:
+      id: number
+      number: text
+      state: text
+      allow_failure: boolean
+      started_at: text
+      finished_at: text
+      created_at: text
+      updated_at: text
+      queue: text
+      build: record
+      commit: record
+      repository: record
+      stage: record
+  cancel_job:
+    label: Cancel a job
+    description: Stops one job of a build.
+    write: true
+    method: POST
+    path: "/job/{{ input.job_id }}/cancel"
+    inputs:
+      - { name: job_id, label: "The job's id", required: true, kind: number }
+    output: { "@type": text, job: record, state_change: text, resource_type: text }
+  restart_job:
+    label: Restart a job
+    description: Runs one job of a build again.
+    write: true
+    method: POST
+    path: "/job/{{ input.job_id }}/restart"
+    inputs:
+      - { name: job_id, label: "The job's id", required: true, kind: number }
+    output: { "@type": text, job: record, state_change: text, resource_type: text }
+  get_job_log:
+    label: Get a job's log
+    description: What a job printed as it ran.
+    method: GET
+    path: "/job/{{ input.job_id }}/log"
+    inputs:
+      - { name: job_id, label: "The job's id", required: true, kind: number }
+    output: { id: number, content: text, log_parts: list }
+  list_repos:
+    label: List my repositories
+    description: The repositories the signed-in user may see on Travis CI, active ones or all; up to 500.
+    method: GET
+    path: /repos
+    inputs:
+      - { name: active, label: "Only those Travis CI builds", kind: boolean }
+    query: { active: "{{ input.active }}", limit: "100" }
+    items: value.repositories
+    next: "value['@pagination'].next == null ? null : {'offset': string(value['@pagination'].next.offset)}"
+    max_pages: 5
+    output:
+      id: number
+      name: text
+      slug: text
+      description: text
+      active: boolean
+      private: boolean
+      starred: boolean
+      github_language: text
+      default_branch: record
+      owner: record
+  get_repo:
+    label: Get a repository
+    description: One repository - whether Travis CI builds it, and its default branch.
+    method: GET
+    path: "/repo/{{ string(input.repo).replace('/', '%2F') }}"
+    inputs:
+      - { name: repo, label: "The repository: owner/name (or its Travis CI id)", required: true }
+    output:
+      id: number
+      name: text
+      slug: text
+      description: text
+      active: boolean
+      private: boolean
+      starred: boolean
+      github_language: text
+      default_branch: record
+      owner: record
+  list_branches:
+    label: List a repository's branches
+    description: A repository's branches Travis CI knows, each with its last build.
+    method: GET
+    path: "/repo/{{ string(input.repo).replace('/', '%2F') }}/branches"
+    inputs:
+      - { name: repo, label: "The repository: owner/name (or its Travis CI id)", required: true }
+    query: { exists_on_github: "true", limit: "100" }
+    items: value.branches
+    next: "value['@pagination'].next == null ? null : {'offset': string(value['@pagination'].next.offset)}"
+    max_pages: 5
+    output: { name: text, default_branch: boolean, exists_on_github: boolean, last_build: record, repository: record }
+  list_env_vars:
+    label: List a repository's environment variables
+    description: The environment variables a repository's builds get (the values of private ones are not shown).
+    method: GET
+    path: "/repo/{{ string(input.repo).replace('/', '%2F') }}/env_vars"
+    inputs:
+      - { name: repo, label: "The repository: owner/name (or its Travis CI id)", required: true }
+    items: value.env_vars
+    output:
+      id: text
+      name: text
+      value: text
+      public: boolean
+      branch: text
+      created_at: text
+      updated_at: text
+  add_env_var:
+    label: Add an environment variable
+    description: Gives a repository's builds a new environment variable, on every branch or one.
+    write: true
+    method: POST
+    path: "/repo/{{ string(input.repo).replace('/', '%2F') }}/env_vars"
+    inputs:
+      - { name: repo, label: "The repository: owner/name (or its Travis CI id)", required: true }
+      - { name: name, label: "Its name, such as DEPLOY_TARGET", required: true }
+      - { name: value, label: "Its value", required: true }
+      - { name: public, label: "Shown in build logs (private if not given)", kind: boolean }
+      - { name: branch, label: "Only for builds of this branch" }
+    send:
+      env_var.name: "{{ input.name }}"
+      env_var.value: "{{ input.value }}"
+      env_var.public: "{{ has(input.public) && input.public != null ? input.public : false }}"
+      env_var.branch: "{{ input.branch }}"
+    output:
+      id: text
+      name: text
+      value: text
+      public: boolean
+      branch: text
+      created_at: text
+      updated_at: text
+  get_user:
+    label: Get the signed-in user
+    description: The account the token belongs to.
+    method: GET
+    path: /user
+    output: { id: number, login: text, name: text, github_id: number, avatar_url: text, is_syncing: boolean, synced_at: text }
+triggers:
+  build_finished:
+    label: A build ended
+    description: Each build of a repository that ends in the state chosen - failed by default - asked for every few minutes.
+    inputs:
+      - { name: repo, label: "The repository: owner/name (or its Travis CI id)", required: true }
+      - { name: state, label: "Builds that ended so: failed (the default), passed, errored or canceled" }
+      - { name: branch, label: "Only builds of this branch" }
+    poll:
+      action: list_builds
+      input:
+        repo: "{{ input.repo }}"
+        branch: "{{ input.branch }}"
+        state: "{{ has(input.state) && input.state != null ? input.state : 'failed' }}"
+      id: string(item.id)
+      newest_first: true
+      every: 5m

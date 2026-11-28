@@ -1,0 +1,39 @@
+description: A case's observables
+action: list_case_observables
+credential:
+  url: https://thehive.example.com
+  api_key: test-key
+input:
+  case_id: ~8192
+exchanges:
+- sent:
+    method: POST
+    url: https://thehive.example.com/api/v1/query
+    headers:
+      authorization: Bearer test-key
+    body:
+      query:
+      - _name: getCase
+        idOrName: ~8192
+      - _name: observables
+      - _name: page
+        from: 0
+        to: 100
+  answer:
+    status: 200
+    body:
+    - &id001
+      _id: ~20480
+      _type: Observable
+      _createdAt: 1795161600000
+      dataType: domain
+      data: login-reset.example
+      message: Link in the email
+      tags:
+      - phishing
+      tlp: 2
+      pap: 2
+      ioc: true
+      sighted: false
+result:
+- *id001

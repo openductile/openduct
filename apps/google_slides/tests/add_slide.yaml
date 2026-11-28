@@ -1,0 +1,9 @@
+description: A slide with a title and body, at the end
+action: add_slide
+credential: { access_token: ya29.test }
+input: { presentation: 1CoPyOfTheTemplate0123456789abcdefg }
+exchanges:
+  - sent:
+      body: { requests: [{ createSlide: { slideLayoutReference: { predefinedLayout: TITLE_AND_BODY } } }] }
+    answer: { body: { presentationId: 1CoPyOfTheTemplate0123456789abcdefg, replies: [{ createSlide: { objectId: SLIDES_API1234567_0 } }] } }
+result: { id: 1CoPyOfTheTemplate0123456789abcdefg, slide_id: SLIDES_API1234567_0 }

@@ -1,0 +1,8 @@
+description: A delivery without the webhook's token is refused
+trigger: rows_created
+credential: { token: br-test-token, webhook_secret: wh-token-5f2c }
+delivery:
+  headers: { x-openduct-token: guessed }
+  at: 1700000000
+  body: '{"table_id": 1203, "event_id": "x", "event_type": "rows.created", "items": [{"id": 99}]}'
+refused: token is wrong

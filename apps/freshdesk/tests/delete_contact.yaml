@@ -1,0 +1,17 @@
+description: A contact deleted
+action: delete_contact
+credential:
+  domain: acme
+  api_key: test-key
+input:
+  contact_id: '5001'
+exchanges:
+- sent:
+    method: DELETE
+    url: https://acme.freshdesk.com/api/v2/contacts/5001
+    headers:
+      authorization: Basic dGVzdC1rZXk6WA==
+  answer:
+    status: 204
+result:
+  deleted: true

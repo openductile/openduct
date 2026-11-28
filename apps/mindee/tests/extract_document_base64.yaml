@@ -1,0 +1,11 @@
+description: A file sent in Base64, its result sent to a webhook of the model
+action: extract_document
+credential: { api_key: md_test_1 }
+input: { model_id: 9a1d6f3e-0000-4000-8000-0000000000c1, file_base64: JVBERi0xLjQKJcfsj6IKMSAwIG9iago=, filename: receipt.pdf, webhook_ids: 4d8e2b1a-0000-4000-8000-0000000000d1 }
+exchanges:
+  - sent:
+      method: POST
+      url: https://api-v2.mindee.net/v2/products/extraction/enqueue
+      body: { model_id: 9a1d6f3e-0000-4000-8000-0000000000c1, file_base64: JVBERi0xLjQKJcfsj6IKMSAwIG9iago=, filename: receipt.pdf, webhook_ids: [4d8e2b1a-0000-4000-8000-0000000000d1] }
+    answer: { status: 202, body: { job: { id: 2c8f4d3e-0000-4000-8000-0000000000b2, status: Processing, filename: receipt.pdf } } }
+result: { id: 2c8f4d3e-0000-4000-8000-0000000000b2, status: Processing, filename: receipt.pdf }

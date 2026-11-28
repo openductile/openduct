@@ -1,0 +1,19 @@
+description: Stories with the words given posted since the last poll, the newest asked for, run oldest first
+trigger: new_story
+credential: {}
+input: { query: examplecoffee }
+seen: { items: [["46090000", ""]] }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://hn.algolia.com/api/v1/search_by_date"
+      query: { query: examplecoffee, tags: story, hitsPerPage: "100" }
+    answer:
+      body:
+        hits:
+          - { objectID: "46100010", title: "Examplecoffee raises prices", author: ann_example, points: 3, created_at_i: 1795600900 }
+          - { objectID: "46100005", title: "Ask HN: Is examplecoffee any good?", author: bob_example, points: 1, created_at_i: 1795600300 }
+          - { objectID: "46090000", title: "Examplecoffee opens a shop", author: ann_example, points: 40, created_at_i: 1795400000 }
+        page: 0
+        nbPages: 1
+ids: ["46100005", "46100010"]

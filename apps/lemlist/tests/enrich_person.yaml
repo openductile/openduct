@@ -1,0 +1,12 @@
+description: "A person's email looked for"
+action: enrich_person
+credential: {"api_key": "test-key"}
+input: {"first_name": "Ann", "last_name": "Lee", "company_domain": "northwind.example", "find_email": true}
+exchanges:
+  - sent:
+      method: POST
+      url: "https://api.lemlist.com/api/enrich"
+      query: {"firstName": "Ann", "lastName": "Lee", "companyDomain": "northwind.example", "findEmail": "true"}
+      headers: {"authorization": "Basic OnRlc3Qta2V5"}
+    answer: {"status": 200, "body": {"id": "enr_E1"}}
+result: {"id": "enr_E1"}

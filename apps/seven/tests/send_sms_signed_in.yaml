@@ -1,0 +1,15 @@
+description: "An SMS sent by an account connected through seven's sign-in"
+action: send_sms
+sign_in: seven_oauth
+credential: { access_token: oauth-test-token }
+input: { to: "+4915112345678", text: "See you at 10." }
+exchanges:
+  - sent:
+      method: POST
+      url: "https://gateway.seven.io/api/sms"
+      headers: { authorization: "Bearer oauth-test-token" }
+      body: { to: "+4915112345678", text: "See you at 10." }
+    answer:
+      status: 200
+      body: { success: "100", total_price: 0.075, balance: 42.425, debug: "false", sms_type: direct, messages: [{ id: "77229319", recipient: "4915112345678", success: true }] }
+result: { success: "100", total_price: 0.075, balance: 42.425, debug: "false", sms_type: direct, messages: [{ id: "77229319", recipient: "4915112345678", success: true }] }

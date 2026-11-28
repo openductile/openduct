@@ -1,0 +1,28 @@
+# Made by `openduct app from-openapi`: List Collections.
+description: "List Collections, made from the API description's schemas"
+action: list_collections
+credential: { token: test-token }
+input: { site_id: site_1 }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://api.webflow.com/v2/sites/site_1/collections"
+      query: {}
+      headers: { authorization: "Bearer test-token" }
+    answer:
+      status: 200
+      body:
+        collections:
+          - id: "562ac0395358780a1f5e6fbd"
+            displayName: example
+            singularName: example
+            slug: blog-posts
+            createdOn: "2022-12-07T16:51:37.571Z"
+            lastUpdated: "2022-12-07T16:51:37.571Z"
+result:
+  - id: "562ac0395358780a1f5e6fbd"
+    displayName: example
+    singularName: example
+    slug: blog-posts
+    createdOn: "2022-12-07T16:51:37.571Z"
+    lastUpdated: "2022-12-07T16:51:37.571Z"

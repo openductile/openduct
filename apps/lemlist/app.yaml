@@ -1,0 +1,391 @@
+# Copyright 2026 Ductile AI, Inc
+# SPDX-License-Identifier: Apache-2.0
+# lemlist: hosts, paths and fields from lemlist's API description,
+# https://developer.lemlist.com/api-reference/openapi/v2.json (fetched 2026-11-27; it states no licence, so the
+# labels and descriptions here are our own words). Made with `openduct app from-openapi --choose`, then by hand.
+app: lemlist
+name: lemlist
+category: email
+description: Outreach campaigns in lemlist - their leads, what happened to them, and who asked not to be written to.
+docs: https://developer.lemlist.com/api-reference/getting-started/overview
+hosts: [api.lemlist.com]
+base_url: https://api.lemlist.com/api
+sign_in:
+  - id: lemlist
+    label: An API key
+    fields:
+      - { name: api_key, label: "The API key (lemlist: Settings, Integrations, API)", secret: true }
+    # lemlist takes HTTP basic with an empty user name and the key as the password.
+    basic: { username: "", password: "{{ credential.api_key }}" }
+# lemlist mostly answers a refusal in plain text; some in JSON.
+error: "status < 400 ? null : (type(value) == string ? value : (has(value.error) ? string(value.error) : (has(value.message) ? string(value.message) : null)))"
+actions:
+  list_campaigns:
+    label: List campaigns
+    description: The team's campaigns, newest first, or those of one status.
+    method: GET
+    path: /campaigns
+    inputs:
+      - { name: status, label: "Only: running, draft, archived, ended, paused or errors" }
+      - { name: created_by, label: "Only those made by this user (usr_...)" }
+    query: { version: v2, status: "{{ input.status }}", createdBy: "{{ input.created_by }}", sortBy: createdAt, sortOrder: desc, limit: "100" }
+    items: value
+    next: "size(value) < 100 ? null : {'offset': (page == null ? 0 : int(page['offset'])) + size(value)}"
+    output: { _id: text, name: text, status: text, createdAt: text, createdBy: text, sequenceId: text, timezone: text, labels: list, hasError: boolean, errors: list, senders: list }
+  get_campaign:
+    label: Look up a campaign
+    description: One campaign, with its status, sequence and senders.
+    method: GET
+    path: "/campaigns/{{ input.campaign_id }}"
+    inputs: [{ name: campaign_id, label: "The campaign's id (cam_...)", required: true }]
+    output: { _id: text, name: text, status: text, createdAt: text, createdBy: text, sequenceId: text, scheduleIds: list, timezone: text, labels: list, hasError: boolean, errors: list, senders: list }
+  start_campaign:
+    label: Start a campaign
+    description: A campaign set running, so its leads start getting its steps.
+    write: true
+    method: POST
+    path: "/campaigns/{{ input.campaign_id }}/start"
+    body: none
+    inputs: [{ name: campaign_id, label: "The campaign's id (cam_...)", required: true }]
+    output: { _id: text, state: text }
+  pause_campaign:
+    label: Pause a campaign
+    description: A running campaign stopped for now; nothing more is sent until it starts again.
+    write: true
+    method: POST
+    path: "/campaigns/{{ input.campaign_id }}/pause"
+    body: none
+    inputs: [{ name: campaign_id, label: "The campaign's id (cam_...)", required: true }]
+    output: { _id: text, state: text }
+  list_campaign_leads:
+    label: List a campaign's leads
+    description: The leads of a campaign, with where each one stands.
+    method: GET
+    path: "/campaigns/{{ input.campaign_id }}/leads/"
+    inputs:
+      - { name: campaign_id, label: "The campaign's id (cam_...)", required: true }
+      - { name: state, label: "Only leads in this state, such as contacted, interested or notInterested" }
+    query: { state: "{{ input.state }}", limit: "100" }
+    items: value
+    next: "size(value) < 100 ? null : {'offset': (page == null ? 0 : int(page['offset'])) + size(value)}"
+    output: { _id: text, contactId: text, state: text, createdAt: text }
+  add_lead:
+    label: Add a lead to a campaign
+    description: A new person in a campaign, who then gets its steps; one already in the campaign is refused.
+    write: true
+    method: POST
+    path: "/campaigns/{{ input.campaign_id }}/leads/"
+    inputs:
+      - { name: campaign_id, label: "The campaign's id (cam_...)", required: true }
+      - { name: email, label: Email }
+      - { name: first_name, label: First name }
+      - { name: last_name, label: Last name }
+      - { name: company_name, label: Company }
+      - { name: company_domain, label: "The company's web domain" }
+      - { name: job_title, label: Job title }
+      - { name: phone, label: Phone }
+      - { name: linkedin_url, label: "LinkedIn profile address" }
+      - { name: icebreaker, label: "A first line written for this person" }
+      - { name: timezone, label: "Their time zone, such as America/New_York" }
+      - { name: deduplicate, label: "Refuse a person already in another campaign", kind: boolean }
+      - { name: find_email, label: "Find their email (uses credits)", kind: boolean }
+      - { name: verify_email, label: "Check their email can be delivered (uses credits)", kind: boolean }
+      - { name: find_phone, label: "Find their phone number (uses credits)", kind: boolean }
+    query:
+      deduplicate: "{{ input.deduplicate }}"
+      findEmail: "{{ input.find_email }}"
+      verifyEmail: "{{ input.verify_email }}"
+      findPhone: "{{ input.find_phone }}"
+    send:
+      email: "{{ input.email }}"
+      firstName: "{{ input.first_name }}"
+      lastName: "{{ input.last_name }}"
+      companyName: "{{ input.company_name }}"
+      companyDomain: "{{ input.company_domain }}"
+      jobTitle: "{{ input.job_title }}"
+      phone: "{{ input.phone }}"
+      linkedinUrl: "{{ input.linkedin_url }}"
+      icebreaker: "{{ input.icebreaker }}"
+      timezone: "{{ input.timezone }}"
+    output: { _id: text, campaignId: text, campaignName: text, contactId: text, email: text, firstName: text, lastName: text, companyName: text, companyDomain: text, jobTitle: text, isPaused: boolean, warnings: list }
+  get_lead:
+    label: Look up a lead by email
+    description: The person's leads, one for each campaign they are in, with where each stands.
+    method: GET
+    path: "/leads/{{ input.email }}"
+    inputs: [{ name: email, label: "Their email", required: true }]
+    query: { version: v2 }
+    output: { _id: text, contactId: text, state: text, status: text, isPaused: boolean, source: text, variables: record, campaign: record, createdAt: text, updatedAt: text }
+  update_lead:
+    label: Change a lead
+    description: A lead's name, company or job title changed in a campaign.
+    write: true
+    method: PATCH
+    path: "/campaigns/{{ input.campaign_id }}/leads/{{ input.lead_id }}"
+    inputs:
+      - { name: campaign_id, label: "The campaign's id (cam_...)", required: true }
+      - { name: lead_id, label: "The lead's id (lea_...)", required: true }
+      - { name: first_name, label: First name }
+      - { name: last_name, label: Last name }
+      - { name: company_name, label: Company }
+      - { name: job_title, label: Job title }
+      - { name: preferred_contact_method, label: "Reach them by: email or linkedIn" }
+    send:
+      firstName: "{{ input.first_name }}"
+      lastName: "{{ input.last_name }}"
+      companyName: "{{ input.company_name }}"
+      jobTitle: "{{ input.job_title }}"
+      preferredContactMethod: "{{ input.preferred_contact_method }}"
+    output: { _id: text, campaignId: text, campaignName: text, contactId: text, email: text, firstName: text, lastName: text, companyName: text, jobTitle: text, isPaused: boolean, warnings: list }
+  remove_lead:
+    label: Take a lead out of a campaign
+    description: The lead unsubscribed from the campaign, or with remove, deleted from it.
+    write: true
+    method: DELETE
+    path: "/campaigns/{{ input.campaign_id }}/leads/{{ input.lead_id }}"
+    inputs:
+      - { name: campaign_id, label: "The campaign's id (cam_...)", required: true }
+      - { name: lead_id, label: "The lead's id (lea_...)", required: true }
+      - { name: delete, label: "Delete it rather than unsubscribe it", kind: boolean }
+    query: { action: "{{ input.delete == true ? 'remove' : null }}" }
+    output: { _id: text, campaignId: text, contactId: text, email: text, firstName: text, lastName: text, isPaused: boolean }
+  pause_lead:
+    label: Pause a lead
+    description: Nothing more is sent to the person, in one campaign or in all of them, until they are resumed.
+    write: true
+    method: POST
+    path: "/leads/pause/{{ input.lead_id }}"
+    body: none
+    inputs:
+      - { name: lead_id, label: "The lead's id (lea_...)", required: true }
+      - { name: campaign_id, label: "Only in this campaign (cam_...)" }
+    query: { campaignId: "{{ input.campaign_id }}" }
+    output: { _id: text, campaignId: text, contactId: text, email: text, firstName: text, lastName: text, isPaused: boolean, emailStatus: text }
+  resume_lead:
+    label: Resume a lead
+    description: A paused person picks up their campaigns again.
+    write: true
+    method: POST
+    path: "/leads/start/{{ input.lead_id }}"
+    body: none
+    inputs: [{ name: lead_id, label: "The lead's id (lea_...)", required: true }]
+    output: { _id: text, campaignId: text, contactId: text, email: text, firstName: text, lastName: text, isPaused: boolean, emailStatus: text }
+  mark_interested:
+    label: Mark a lead interested
+    description: The person marked as interested, which ends their campaign steps.
+    write: true
+    method: POST
+    path: "/leads/interested/{{ input.lead }}"
+    body: none
+    inputs: [{ name: lead, label: "The lead's id (lea_...) or email", required: true }]
+    output: { _id: text, campaignId: text, contactId: text, email: text, firstName: text, lastName: text, isPaused: boolean, emailStatus: text }
+  mark_not_interested:
+    label: Mark a lead not interested
+    description: The person marked as not interested, which ends their campaign steps.
+    write: true
+    method: POST
+    path: "/leads/notinterested/{{ input.lead }}"
+    body: none
+    inputs: [{ name: lead, label: "The lead's id (lea_...) or email", required: true }]
+    output: { _id: text, campaignId: text, contactId: text, email: text, firstName: text, lastName: text, isPaused: boolean, emailStatus: text }
+  list_activities:
+    label: List activities
+    description: What happened, newest first - emails sent, opened, clicked, replied, LinkedIn steps and more.
+    method: GET
+    path: /activities
+    inputs:
+      - { name: type, label: "Only this kind, such as emailsReplied, emailsOpened or linkedinReplied" }
+      - { name: campaign_id, label: "Only in this campaign (cam_...)" }
+      - { name: lead_id, label: "Only for this lead (lea_...)" }
+      - { name: min_date, label: "Only since (ISO 8601, such as 2026-11-01T00:00:00Z)" }
+      - { name: max_date, label: "Only until (ISO 8601)" }
+    query:
+      version: v2
+      type: "{{ input.type }}"
+      campaignId: "{{ input.campaign_id }}"
+      leadId: "{{ input.lead_id }}"
+      minDate: "{{ input.min_date }}"
+      maxDate: "{{ input.max_date }}"
+      limit: "100"
+    items: value
+    next: "size(value) < 100 ? null : {'offset': (page == null ? 0 : int(page['offset'])) + size(value)}"
+    max_pages: 20
+    output: { _id: text, type: text, createdAt: text, campaignId: text, campaignName: text, leadId: text, contactId: text, leadEmail: text, leadFirstName: text, leadLastName: text, leadCompanyName: text, sequenceStep: number, lead: record }
+  list_unsubscribes:
+    label: List unsubscribes
+    description: Every email, domain, LinkedIn address or phone number no campaign may write to.
+    method: GET
+    path: /v2/unsubscribes/variables
+    query: { limit: "100" }
+    items: value
+    next: "size(value) < 100 ? null : {'offset': (page == null ? 0 : int(page['offset'])) + size(value)}"
+    output: { _id: text, value: text, source: text, createdAt: text }
+  add_unsubscribe:
+    label: Add an unsubscribe
+    description: An email, domain, LinkedIn address or phone number that no campaign may write to again.
+    write: true
+    method: POST
+    path: "/v2/unsubscribes/variables/{{ input.value }}"
+    body: none
+    inputs: [{ name: value, label: "The email, domain, LinkedIn address or phone number", required: true }]
+    output: { _id: text, value: text, variable: text, source: text }
+  remove_unsubscribe:
+    label: Remove an unsubscribe
+    description: An email, domain, LinkedIn address or phone number that campaigns may write to again.
+    write: true
+    method: DELETE
+    path: "/v2/unsubscribes/variables/{{ input.value }}"
+    inputs: [{ name: value, label: "The email, domain, LinkedIn address or phone number", required: true }]
+    # lemlist answers in words ("Variable subscribed").
+    result: "{'answer': value}"
+    output: { answer: text }
+  list_contacts:
+    label: Find contacts
+    description: The team's contacts, by words they hold, an exact email, a list or a company, newest first.
+    method: GET
+    path: /v2/contacts
+    inputs:
+      - { name: search, label: "Words in their name, email, phone, job title or location" }
+      - { name: email, label: "Exactly this email" }
+      - { name: list_id, label: "Only in this contact list (clt_...)" }
+      - { name: company_domain, label: "Only at the company with this web domain" }
+      - { name: not_in_any_campaign, label: "Only those in no campaign", kind: boolean }
+    query:
+      search: "{{ input.search }}"
+      email: "{{ input.email }}"
+      listId: "{{ input.list_id }}"
+      companyDomain: "{{ input.company_domain }}"
+      notInAnyCampaign: "{{ input.not_in_any_campaign }}"
+      limit: "100"
+    items: value.data
+    next: "int(value.offset) + size(value.data) < int(value.total) ? {'offset': int(value.offset) + size(value.data)} : null"
+    output: { _id: text, fullName: text, email: text, firstName: text, lastName: text, phone: text, jobTitle: text, linkedinUrl: text, companyId: text, ownerId: text, createdAt: text, unsubscribed: boolean, campaignCount: number }
+  get_contact:
+    label: Look up a contact
+    description: One contact, by id or email, with their fields and campaigns.
+    method: GET
+    path: "/contacts/{{ input.contact }}"
+    inputs: [{ name: contact, label: "The contact's id (ctc_...) or email", required: true }]
+    output: { _id: text, fullName: text, email: text, fields: record, campaigns: list, linkedinUrl: text, ownerId: text, createdAt: text, unsubscribed: boolean }
+  save_contact:
+    label: Add or change a contact
+    description: A contact made, or changed when one with the same id, email or LinkedIn address is there.
+    write: true
+    method: POST
+    path: /contacts
+    inputs:
+      - { name: email, label: Email }
+      - { name: contact_id, label: "Change this contact (ctc_...)" }
+      - { name: first_name, label: First name }
+      - { name: last_name, label: Last name }
+      - { name: phone, label: Phone }
+      - { name: job_title, label: Job title }
+      - { name: linkedin_url, label: "LinkedIn profile address" }
+      - { name: location, label: Where they are }
+      - { name: company_domain, label: "Link them to the company with this web domain (already in lemlist)" }
+    send:
+      email: "{{ input.email }}"
+      contactId: "{{ input.contact_id }}"
+      firstName: "{{ input.first_name }}"
+      lastName: "{{ input.last_name }}"
+      phone: "{{ input.phone }}"
+      jobTitle: "{{ input.job_title }}"
+      linkedinUrl: "{{ input.linkedin_url }}"
+      location: "{{ input.location }}"
+      companyDomain: "{{ input.company_domain }}"
+    output: { success: boolean, data: record, warnings: list }
+  send_email:
+    label: Send an email
+    description: An email to a contact from one of the team's mailboxes, as from lemlist's inbox, or a reply in a thread.
+    write: true
+    method: POST
+    path: /inbox/email
+    inputs:
+      - { name: send_user_id, label: "The sender's user id (usr_...)", required: true }
+      - { name: send_user_email, label: "The address it is sent from", required: true }
+      - { name: send_user_mailbox_id, label: "The sender's mailbox id", required: true }
+      - { name: contact_id, label: "To this contact (ctc_...)" }
+      - { name: lead_id, label: "Or to this lead (lea_...)" }
+      - { name: subject, label: Subject }
+      - { name: message, label: "The message (HTML)", required: true }
+      - { name: cc, label: "Copies to (addresses)", kind: list }
+      - { name: reply_to_activity_id, label: "As a reply to this email activity" }
+    send:
+      sendUserId: "{{ input.send_user_id }}"
+      sendUserEmail: "{{ input.send_user_email }}"
+      sendUserMailboxId: "{{ input.send_user_mailbox_id }}"
+      contactId: "{{ input.contact_id }}"
+      leadId: "{{ input.lead_id }}"
+      subject: "{{ input.subject }}"
+      message: "{{ input.message }}"
+      cc: "{{ input.cc }}"
+      replyToActivityId: "{{ input.reply_to_activity_id }}"
+    output: { ok: boolean, contactId: text }
+  enrich_person:
+    label: Find a person's email or phone
+    description: Starts finding or checking a person's email, phone or LinkedIn details (uses credits); its result is read with Get an enrichment's result.
+    write: true
+    method: POST
+    path: /enrich
+    body: none
+    inputs:
+      - { name: first_name, label: First name }
+      - { name: last_name, label: Last name }
+      - { name: company_name, label: Company }
+      - { name: company_domain, label: "The company's web domain" }
+      - { name: email, label: "Their email, to check it" }
+      - { name: linkedin_url, label: "LinkedIn profile address" }
+      - { name: find_email, label: "Find their email", kind: boolean }
+      - { name: verify_email, label: "Check their email can be delivered", kind: boolean }
+      - { name: find_phone, label: "Find their phone number", kind: boolean }
+      - { name: linkedin_enrichment, label: "Read their LinkedIn profile", kind: boolean }
+    query:
+      firstName: "{{ input.first_name }}"
+      lastName: "{{ input.last_name }}"
+      companyName: "{{ input.company_name }}"
+      companyDomain: "{{ input.company_domain }}"
+      email: "{{ input.email }}"
+      linkedinUrl: "{{ input.linkedin_url }}"
+      findEmail: "{{ input.find_email }}"
+      verifyEmail: "{{ input.verify_email }}"
+      findPhone: "{{ input.find_phone }}"
+      linkedinEnrichment: "{{ input.linkedin_enrichment }}"
+    output: { id: text }
+  get_enrichment:
+    label: Get an enrichment's result
+    description: What was found for a person, once the search is done.
+    method: GET
+    path: "/enrich/{{ input.enrich_id }}"
+    inputs: [{ name: enrich_id, label: "The id the search gave", required: true }]
+    output: { enrichmentId: text, enrichmentStatus: text, input: record, data: record, failedWorkflows: list }
+  get_team:
+    label: Look up the team
+    description: The team the key belongs to, with its members.
+    method: GET
+    path: /team
+    query: { version: v2 }
+    output: { _id: text, name: text, userIds: list, createdBy: text, createdAt: text, users: list }
+  get_credits:
+    label: Look up the credits left
+    description: How many credits the team has left for finding and checking details.
+    method: GET
+    path: /team/credits
+    output: { credits: number, details: record }
+triggers:
+  new_activity:
+    label: A new activity
+    description: >-
+      Each new activity of the team - a reply, an open, a click, a bounce, a LinkedIn step - or of one kind or one
+      campaign, asked for every few minutes.
+    inputs:
+      - { name: type, label: "Only this kind, such as emailsReplied, emailsBounced or linkedinInviteAccepted" }
+      - { name: campaign_id, label: "Only in this campaign (cam_...)" }
+    poll:
+      method: GET
+      path: /activities
+      query: { version: v2, type: "{{ input.type }}", campaignId: "{{ input.campaign_id }}", limit: "100" }
+      items: value
+      next: "size(value) < 100 ? null : {'offset': (page == null ? 0 : int(page['offset'])) + size(value)}"
+      newest_first: true
+      id: item._id
+      every: 5m

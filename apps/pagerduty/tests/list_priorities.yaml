@@ -1,0 +1,6 @@
+action: list_priorities
+credential: { api_key: pd_test_1 }
+exchanges:
+  - sent: { method: GET, url: https://api.pagerduty.com/priorities, query: { limit: "100" } }
+    answer: { body: { offset: 0, limit: 100, more: false, priorities: [{ id: PPRI001, name: P1, description: Everyone affected }, { id: PPRI002, name: P2, description: Some affected }] } }
+result: [{ id: PPRI001, name: P1, description: Everyone affected }, { id: PPRI002, name: P2, description: Some affected }]

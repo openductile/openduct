@@ -1,0 +1,8 @@
+description: One task
+action: get_task
+credential: { access_token: ya29.test }
+input: { list_id: "@default", task_id: dGFzazE }
+exchanges:
+  - sent: { method: GET, url: https://tasks.googleapis.com/tasks/v1/lists/@default/tasks/dGFzazE }
+    answer: { body: { kind: tasks#task, id: dGFzazE, title: Order more boxes, notes: 200 small ones, status: needsAction, due: "2026-12-01T00:00:00.000Z", webViewLink: "https://tasks.google.com/task/dGFzazE" } }
+result: { kind: tasks#task, id: dGFzazE, title: Order more boxes, notes: 200 small ones, status: needsAction, due: "2026-12-01T00:00:00.000Z", webViewLink: "https://tasks.google.com/task/dGFzazE" }

@@ -1,0 +1,254 @@
+# Copyright 2026 Ductile AI, Inc
+# SPDX-License-Identifier: Apache-2.0
+# DeepL: made by `openduct app from-openapi` from https://github.com/DeepLcom/openapi/blob/2b5e50f83888/openapi.yaml
+# (MIT licence) (DeepL API Documentation 3.14.0, OpenAPI 3.0), then finished by hand.
+app: deepl
+name: DeepL
+category: ai
+description: Translate text, correct and improve writing, and keep glossaries, with DeepL.
+docs: "https://developers.deepl.com/api-reference"
+hosts: [api.deepl.com, api-free.deepl.com]
+# A key of DeepL API Free ends in ":fx" and is taken only at api-free.deepl.com; every other key at api.deepl.com.
+base_url: "https://{{ credential.api_key.endsWith(':fx') ? 'api-free' : 'api' }}.deepl.com"
+sign_in:
+  - id: deepl
+    label: "An API key"
+    fields:
+      - name: api_key
+        label: "The API key (DeepL account, API Keys; a Free plan's ends in :fx)"
+        secret: true
+    headers: { Authorization: "DeepL-Auth-Key {{ credential.api_key }}" }
+default_action: translate_text
+error: value.message
+actions:
+  translate_text:
+    label: "Translate text"
+    description: "Translates one text, or a list of them, into the language asked for."
+    method: POST
+    path: "/v2/translate"
+    inputs:
+      - { name: text, label: "The text to translate (or a list of texts)", required: true }
+      - { name: target_lang, label: "Into this language, such as DE, FR, EN-US or PT-BR", required: true }
+      - { name: source_lang, label: "From this language, such as EN (found by DeepL when not given)" }
+      - name: formality
+        label: "Formal or not: default, more, less, prefer_more or prefer_less"
+      - { name: context, label: "Words about the text that help translate it (not translated, not charged)" }
+      - { name: glossary_id, label: "Use this glossary (source_lang is then needed)" }
+      - name: model_type
+        label: "Which model: quality_optimized, prefer_quality_optimized or latency_optimized"
+      - { name: preserve_formatting, label: "Keep the text's own formatting", kind: boolean }
+      - { name: split_sentences, label: "Split into sentences: 1 (yes), 0 (no) or nonewlines" }
+      - { name: tag_handling, label: "The text is markup: html or xml" }
+      - { name: ignore_tags, label: "Markup tags whose text is not translated", kind: list }
+      - { name: style_id, label: "Use this style rule list" }
+      - { name: custom_instructions, label: "Instructions for the translation (at most 10)", kind: list }
+      - { name: translation_memory_id, label: "Use this translation memory" }
+      - { name: show_billed_characters, label: "Say how many characters were charged", kind: boolean }
+      - { name: reporting_tag, label: "A tag the account's usage reports group this request by" }
+    headers: { X-DeepL-Reporting-Tag: "{{ input.reporting_tag }}" }
+    send:
+      text: "{{ type(input.text) == list ? input.text : [input.text] }}"
+      target_lang: "{{ input.target_lang }}"
+      source_lang: "{{ input.source_lang }}"
+      formality: "{{ input.formality }}"
+      context: "{{ input.context }}"
+      glossary_id: "{{ input.glossary_id }}"
+      model_type: "{{ input.model_type }}"
+      preserve_formatting: "{{ input.preserve_formatting }}"
+      split_sentences: "{{ input.split_sentences }}"
+      tag_handling: "{{ input.tag_handling }}"
+      ignore_tags: "{{ input.ignore_tags }}"
+      style_id: "{{ input.style_id }}"
+      custom_instructions: "{{ input.custom_instructions }}"
+      translation_memory_id: "{{ input.translation_memory_id }}"
+      show_billed_characters: "{{ input.show_billed_characters }}"
+    output: { translations: list }
+  improve_text:
+    label: "Improve writing"
+    description: "Rewrites a text, or a list of them, to read better, in a style or tone if asked."
+    method: POST
+    path: "/v2/write/rephrase"
+    inputs:
+      - { name: text, label: "The text to improve (or a list of texts)", required: true }
+      - { name: target_lang, label: "In this language, such as en-US, de or fr (the text's own when not given)" }
+      - name: writing_style
+        label: "A style: simple, business, academic or casual (prefer_ before one: if the language has it)"
+      - name: tone
+        label: "A tone: enthusiastic, friendly, confident or diplomatic (prefer_ before one: if the language has it)"
+    send:
+      text: "{{ type(input.text) == list ? input.text : [input.text] }}"
+      target_lang: "{{ input.target_lang }}"
+      writing_style: "{{ input.writing_style }}"
+      tone: "{{ input.tone }}"
+    output: { improvements: list }
+  correct_text:
+    label: "Correct spelling and grammar"
+    description: "Fixes the spelling and grammar of a text, or a list of them."
+    method: POST
+    path: "/v2/write/correct"
+    inputs:
+      - { name: text, label: "The text to correct (or a list of texts)", required: true }
+      - { name: target_lang, label: "In this language, such as en-US or de (the text's own when not given)" }
+    send:
+      text: "{{ type(input.text) == list ? input.text : [input.text] }}"
+      target_lang: "{{ input.target_lang }}"
+    output: { improvements: list }
+  get_usage:
+    label: "Check usage and limits"
+    description: "How many characters the account has used this billing period, and its limits."
+    method: GET
+    path: "/v2/usage"
+    output:
+      character_count: number
+      character_limit: number
+      document_count: number
+      document_limit: number
+      api_key_character_count: number
+      api_key_character_limit: number
+      products: list
+  get_languages:
+    label: "List languages"
+    description: "The languages DeepL offers for translating text, documents, glossaries or writing."
+    method: GET
+    path: "/v3/languages"
+    inputs:
+      - name: resource
+        label: "For what: translate_text, translate_document, glossary, voice, write, style_rules or translation_memory"
+    query: { resource: "{{ has(input.resource) && input.resource != null ? input.resource : 'translate_text' }}" }
+    items: value
+    output:
+      lang: text
+      name: text
+      usable_as_source: boolean
+      usable_as_target: boolean
+      status: text
+      features: record
+  list_glossaries:
+    label: "List glossaries"
+    description: "Every glossary of the account, with its language pairs but not its entries."
+    method: GET
+    path: "/v3/glossaries"
+    items: value.glossaries
+    output: { glossary_id: text, name: text, dictionaries: list, creation_time: text }
+  get_glossary:
+    label: "Look up a glossary"
+    description: "A glossary's name and language pairs, without its entries."
+    method: GET
+    path: "/v3/glossaries/{{ input.glossary_id }}"
+    inputs: [{ name: glossary_id, label: "The glossary's id", required: true }]
+    output: { glossary_id: text, name: text, dictionaries: list, creation_time: text }
+  get_glossary_entries:
+    label: "Get a glossary's entries"
+    description: "The entries of one language pair of a glossary, as tab-separated lines."
+    method: GET
+    path: "/v3/glossaries/{{ input.glossary_id }}/entries"
+    inputs:
+      - { name: glossary_id, label: "The glossary's id", required: true }
+      - { name: source_lang, label: "From this language, such as en", required: true }
+      - { name: target_lang, label: "Into this language, such as de", required: true }
+    query: { source_lang: "{{ input.source_lang }}", target_lang: "{{ input.target_lang }}" }
+    items: value.dictionaries
+    output: { source_lang: text, target_lang: text, entries: text, entries_format: text }
+  create_glossary:
+    label: "Create a glossary"
+    description: "Creates a glossary with one or more language pairs, each with its entries."
+    write: true
+    method: POST
+    path: "/v3/glossaries"
+    inputs:
+      - { name: name, label: "The glossary's name", required: true }
+      - name: dictionaries
+        label: "Its language pairs: each {source_lang, target_lang, entries, entries_format: tsv or csv}"
+        required: true
+        kind: list
+    send: { name: "{{ input.name }}", dictionaries: "{{ input.dictionaries }}" }
+    output: { glossary_id: text, name: text, dictionaries: list, creation_time: text }
+  update_glossary:
+    label: "Change a glossary"
+    description: "Renames a glossary, or adds to or changes the entries of its language pairs."
+    write: true
+    method: PATCH
+    path: "/v3/glossaries/{{ input.glossary_id }}"
+    inputs:
+      - { name: glossary_id, label: "The glossary's id", required: true }
+      - { name: name, label: "A new name" }
+      - name: dictionaries
+        label: "Language pairs to change: each {source_lang, target_lang, entries, entries_format}"
+        kind: list
+    send: { name: "{{ input.name }}", dictionaries: "{{ input.dictionaries }}" }
+    output: { glossary_id: text, name: text, dictionaries: list, creation_time: text }
+  replace_glossary_entries:
+    label: "Replace a glossary's entries"
+    description: "Replaces every entry of one language pair of a glossary, or adds the pair."
+    write: true
+    method: PUT
+    path: "/v3/glossaries/{{ input.glossary_id }}/dictionaries"
+    inputs:
+      - { name: glossary_id, label: "The glossary's id", required: true }
+      - { name: source_lang, label: "From this language, such as en", required: true }
+      - { name: target_lang, label: "Into this language, such as de", required: true }
+      - { name: entries, label: "The entries: one a line, the two words apart by a tab (or a comma, for csv)", required: true }
+      - { name: entries_format, label: "How the entries are written: tsv (by default) or csv" }
+    send:
+      source_lang: "{{ input.source_lang }}"
+      target_lang: "{{ input.target_lang }}"
+      entries: "{{ input.entries }}"
+      entries_format: "{{ has(input.entries_format) && input.entries_format != null ? input.entries_format : 'tsv' }}"
+    output: { source_lang: text, target_lang: text, entry_count: number }
+  delete_glossary:
+    label: "Remove a glossary"
+    description: "Removes a glossary and all its entries."
+    write: true
+    method: DELETE
+    path: "/v3/glossaries/{{ input.glossary_id }}"
+    inputs: [{ name: glossary_id, label: "The glossary's id", required: true }]
+  get_document_status:
+    label: "Check a document's translation"
+    description: "Whether a document sent for translation is queued, translating, done or failed."
+    method: POST
+    path: "/v2/document/{{ input.document_id }}"
+    inputs:
+      - { name: document_id, label: "The document's id, given when it was sent", required: true }
+      - { name: document_key, label: "The document's key, given when it was sent", required: true }
+    send: { document_key: "{{ input.document_key }}" }
+    output:
+      document_id: text
+      status: text
+      seconds_remaining: number
+      billed_characters: number
+      error_message: text
+  list_style_rules:
+    label: "List style rule lists"
+    description: "The account's style rule lists, which keep translations to a house style."
+    method: GET
+    path: "/v3/style_rules"
+    inputs:
+      - { name: detailed, label: "With each list's rules and instructions", kind: boolean }
+    query: { detailed: "{{ input.detailed }}", page_size: "25" }
+    items: value.style_rules
+    next: "size(value.style_rules) < 25 ? null : {'page': (page == null ? 0 : int(page['page'])) + 1}"
+    output:
+      style_id: text
+      name: text
+      creation_time: text
+      updated_time: text
+      language: text
+      version: number
+      configured_rules: record
+      custom_instructions: list
+  list_translation_memories:
+    label: "List translation memories"
+    description: "The account's translation memories, with their languages and how many segments each holds."
+    method: GET
+    path: "/v3/translation_memories"
+    query: { page_size: "100" }
+    items: value.translation_memories
+    next: "size(value.translation_memories) < 100 ? null : {'page': (page == null ? 0 : int(page['page'])) + 1}"
+    output:
+      translation_memory_id: text
+      name: text
+      source_language: text
+      target_languages: list
+      segment_count: number
+      creation_time: text
+      updated_time: text

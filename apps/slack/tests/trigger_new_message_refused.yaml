@@ -1,0 +1,8 @@
+description: Slack answers 200 with ok false when it refuses - the poll fails in its words
+trigger: new_message
+credential: { bot_token: xoxb-1 }
+input: { channel: C1 }
+seen: { items: [] }
+exchanges:
+  - answer: { body: { ok: false, error: not_in_channel } }
+refused: "Slack refused it: not_in_channel"

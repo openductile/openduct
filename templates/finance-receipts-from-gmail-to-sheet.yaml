@@ -1,0 +1,72 @@
+name: Receipts from Gmail into an expenses sheet
+description: >-
+  Every ten minutes, Gmail is asked for new receipts and invoices sent to you - mail with "receipt" or "invoice" in its
+  subject and a file attached. A model reads who it is from, the total, the currency, the day and what kind of cost it
+  is, and a row goes into the Expenses sheet of your Google Sheets spreadsheet with a link back to the e-mail. Mail it
+  cannot find a total in is left out. Needs: gmail, model (an AI credential), google_sheets.
+category: Finance
+trigger:
+  gmail:
+    when: new_email
+    credential: gmail
+    q: "has:attachment (subject:receipt OR subject:invoice) -from:me"
+    every: 10m
+# What a test runs on: an email as this trigger gives it.
+sample:
+  id: 18c4b1c2d3e4f5a6
+  thread_id: 18c4b1c2d3e4f5a6
+  from: Hillside Office Supply <billing@hillside-supply.example>
+  to: ana@example.com
+  subject: Your receipt for order 58213
+  date: "Thu, 26 Nov 2026 16:40:00 +0000"
+  snippet: "Thank you for your order. Order 58213, paid on November 26, 2026. Total: $86.40 (USD). Printer paper x4, toner x1."
+  labels: [INBOX, UNREAD]
+  message:
+    payload:
+      mimeType: multipart/mixed
+      parts:
+        - mimeType: text/plain
+          body:
+            data: VGhhbmsgeW91IGZvciB5b3VyIG9yZGVyLiBPcmRlciA1ODIxMywgcGFpZCBvbiBOb3ZlbWJlciAyNiwgMjAyNi4gVG90YWw6ICQ4Ni40MCAoVVNEKS4gUHJpbnRlciBwYXBlciB4NCwgdG9uZXIgeDEu
+        - mimeType: application/pdf
+          filename: receipt-58213.pdf
+          body: { attachmentId: ANGjdJ_example, size: 48211 }
+steps:
+  # The e-mail's own text: its plain-text part (Gmail sends it in URL-safe Base64), else the snippet.
+  - name: mail
+    set:
+      text: >-
+        cel.bind(p, value.message.payload,
+          cel.bind(parts, has(p.parts) ? p.parts.filter(x, x.mimeType == 'text/plain') : [p],
+            size(parts) > 0 && has(parts[0].body) && has(parts[0].body.data)
+              ? string(base64.decode(parts[0].body.data.replace('-', '+').replace('_', '/')))
+              : value.snippet))
+  - name: receipt
+    extract:
+      credential: model
+      text: "From: {{ value.from }}\nSubject: {{ value.subject }}\n\n{{ steps.mail.text }}"
+      fields:
+        - { name: vendor, type: string, description: "who was paid, as a business name" }
+        - { name: total, type: number, description: "the total paid, tax included" }
+        - { name: currency, type: string, description: "the currency's three-letter code, as USD" }
+        - { name: day, type: date, description: the day it was paid or issued }
+        - { name: kind, type: string, description: "one of: office, travel, software, meals, equipment, other" }
+  - name: found
+    if:
+      when: steps.receipt.json.total != null
+      then:
+        - name: row
+          google_sheets:
+            action: add_row
+            credential: google_sheets
+            spreadsheet_id: your-spreadsheet-id
+            sheet: Expenses
+            values:
+              - "{{ steps.receipt.json.day }}"
+              - "{{ steps.receipt.json.vendor }}"
+              - "{{ steps.receipt.json.kind }}"
+              - "{{ steps.receipt.json.total }}"
+              - "{{ steps.receipt.json.currency }}"
+              - "{{ value.subject }}"
+              - "https://mail.google.com/mail/u/0/#all/{{ value.id }}"
+          retry: { attempts: 3, wait: 10s }

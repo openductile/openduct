@@ -1,0 +1,22 @@
+description: The collections under a document
+action: list_collections
+credential:
+  access_token: ya29.test
+input:
+  project_id: sample-shop
+  document: orders/A-100
+exchanges:
+- sent:
+    method: POST
+    url: https://firestore.googleapis.com/v1/projects/sample-shop/databases/(default)/documents/orders/A-100:listCollectionIds
+    headers:
+      authorization: Bearer ya29.test
+    body:
+      pageSize: 300
+  answer:
+    status: 200
+    body:
+      collectionIds:
+      - lines
+result:
+- id: lines

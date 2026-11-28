@@ -48,6 +48,7 @@ fn trigger_of(record: &WorkflowRecord, workflow: &Workflow, last_tick: Option<i6
     let (hook, every_ms, topic) = match &workflow.trigger {
         Trigger::Webhook { .. } => (Some(format!("/hooks/{}", record.hook)), None, None),
         Trigger::Every(every) => (None, u64::try_from(every.as_millis()).ok(), None),
+        Trigger::Calendar(_) => (None, None, None), // cron-schedules
         // Shown as its workspace writes it: `orders`, not the broker's `w.<workspace>.orders`.
         Trigger::Topic { name, .. } => (
             None,
@@ -59,11 +60,28 @@ fn trigger_of(record: &WorkflowRecord, workflow: &Workflow, last_tick: Option<i6
             ),
         ),
         Trigger::Manual => (None, None, None),
+        Trigger::Chat(_) => (Some(format!("/chat/{}", record.hook)), None, None), // chat trigger (G8)
+        // forms-and-resume
+        Trigger::Form(_) => (Some(format!("/forms/{}", record.hook)), None, None),
         Trigger::Failed { workflow } => (
             None,
             None,
             Some(openduct_flow::runner::Topics::of(workflow).failed),
         ),
+        // G3 app triggers: how often a poll asks, or the address an app sends its deliveries to.
+        Trigger::App(t) => match t.every {
+            Some(every) => (None, u64::try_from(every.as_millis()).ok(), None),
+            None => (Some(format!("/hooks/{}", record.hook)), None, None),
+        },
+        Trigger::Rows(t) => (None, u64::try_from(t.every.as_millis()).ok(), None), // sql databases
+        // storage: how often a folder is polled; a channel's messages come as they are published.
+        Trigger::Storage(w) => (
+            None,
+            w.every().and_then(|e| u64::try_from(e.as_millis()).ok()),
+            None,
+        ),
+        Trigger::Feed(t) => (None, u64::try_from(t.every().as_millis()).ok(), None), // web: how often a feed is asked
+        Trigger::Mailbox(w) => (None, u64::try_from(w.every.as_millis()).ok(), None), // messaging
     };
     TriggerRecord {
         schema: SCHEMA,
@@ -86,6 +104,7 @@ impl Manager {
             tracing::warn!(error = e, "cannot read the studio's records");
             return;
         }
+        crate::custom_apps::sync(state).await; // app generator: the custom apps, before the workflows that use them
         let mut wanted: HashMap<String, (WorkflowRecord, Workflow)> = HashMap::new();
         for (id, record) in state.model.workflows.all().await {
             if !record.active || record.deleted.is_some() {
@@ -96,7 +115,8 @@ impl Manager {
                 .definition(&record.workspace, &record.hash)
                 .await
                 .unwrap_or(Value::Null);
-            match Workflow::from_json(&definition, Some(&id)) {
+            // app generator: read with the workspace's custom apps in reach.
+            match crate::custom_apps::workflow(&record.workspace, &definition, Some(&id)) {
                 Ok(mut w) => {
                     // A workflow reads its own workspace's topics, and watches only its own workspace's workflows.
                     match &mut w.trigger {
@@ -154,12 +174,56 @@ impl Manager {
             };
             let (stop, stopping) = watch::channel(false);
             let workflow = Arc::new(workflow);
+            // storage: a folder's polls are queued as a schedule's times are; a channel is listened to on one node.
+            let storage = crate::storage::tasks(&id, &workflow, state, &effects, &stopping);
+            let messaging = crate::messaging::tasks(&id, &workflow, state, &effects, &stopping); // messaging
             let mut tasks = vec![tokio::spawn(keep_running(
                 Arc::clone(&workflow),
                 Arc::clone(&state.shared),
                 effects,
                 stopping.clone(),
             ))];
+            tasks.extend(storage); // storage
+            tasks.extend(messaging); // messaging
+            // cron-schedules: set times, queued by every node and claimed once.
+            if let Trigger::Calendar(calendar) = &workflow.trigger {
+                tasks.push(tokio::spawn(openduct_flow::calendar::schedule(
+                    id.clone(),
+                    calendar.clone(),
+                    Arc::clone(&state.shared),
+                    stopping.clone(),
+                )));
+            }
+            // G3 app triggers: a poll's times are queued as a schedule's are, and its runner polls at each.
+            if let Trigger::App(t) = &workflow.trigger
+                && let Some(every) = t.every
+            {
+                tasks.push(tokio::spawn(keep_scheduling(
+                    id.clone(),
+                    every,
+                    Arc::clone(&state.shared),
+                    stopping.clone(),
+                )));
+            }
+            // web: a feed's polls are queued as a schedule's times are, and its runner polls at each.
+            if let Trigger::Feed(t) = &workflow.trigger {
+                let (id, shared) = (id.clone(), Arc::clone(&state.shared));
+                tasks.push(tokio::spawn(keep_scheduling(
+                    id,
+                    t.every(),
+                    shared,
+                    stopping.clone(),
+                )));
+            }
+            // sql databases: a table's polls are queued as a schedule's times are, and its runner polls at each.
+            if let Trigger::Rows(t) = &workflow.trigger {
+                tasks.push(tokio::spawn(keep_scheduling(
+                    id.clone(),
+                    t.every,
+                    Arc::clone(&state.shared),
+                    stopping.clone(),
+                )));
+            }
             if let Trigger::Every(every) = workflow.trigger {
                 tasks.push(tokio::spawn(keep_scheduling(
                     id.clone(),
@@ -293,7 +357,7 @@ async fn keep_running(
     }
 }
 
-async fn keep_scheduling(
+pub(crate) async fn keep_scheduling(
     id: String,
     every: Duration,
     shared: Arc<openduct_broker::client::Shared>,

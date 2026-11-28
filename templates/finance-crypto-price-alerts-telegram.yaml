@@ -1,0 +1,71 @@
+name: Crypto price alerts in Telegram
+description: >-
+  For anyone holding or accepting crypto: every 15 minutes, read the prices of the coins you watch from CoinGecko and
+  send a Telegram message when one crosses a price you set, or moves more than you allow in a day. Each alert is sent
+  once, and again only after the price has gone back and crossed once more, so a price hovering at a line does not flood
+  the chat. It only tells you; it buys and sells nothing. Needs: a CoinGecko demo API key as a header credential called
+  coingecko (x-cg-demo-api-key), and a Telegram bot credential called bot.
+category: Finance
+trigger:
+  schedule: { every: 15m }
+# What a test runs on: an event as this trigger gives it.
+sample:
+  scheduled_at: "2026-11-27T14:15:00Z"
+steps:
+  - name: settings
+    set:
+      # The coins (CoinGecko's ids), the lines that matter to you, in US dollars, and the largest daily move in %.
+      watch: >-
+        [{'coin': 'bitcoin', 'below': 80000, 'above': 120000, 'move': 8},
+         {'coin': 'ethereum', 'below': 2500, 'above': 5000, 'move': 10}]
+      # The chat to tell: your own chat's id with the bot, or a group's.
+      chat: "'123456789'"
+  - name: prices
+    http:
+      method: GET
+      url: https://api.coingecko.com/api/v3/simple/price
+      credential: coingecko
+      query:
+        ids: "{{ steps.settings.watch.map(w, w.coin).join(',') }}"
+        vs_currencies: usd
+        include_24hr_change: "true"
+      fail_on_status: true
+      sample:
+        bitcoin: { usd: 78950.12, usd_24h_change: -4.31 }
+        ethereum: { usd: 3120.55, usd_24h_change: 10.8 }
+    retry: { attempts: 3, wait: 20s }
+  - name: alerts
+    javascript:
+      state: true
+      code: |
+        // Which lines are crossed now; an alert is sent when a line becomes crossed, not while it stays so.
+        const was = state.crossed || {};
+        const now = {};
+        const messages = [];
+        // $78,950.12: two decimals, a comma every three digits.
+        const usd = n => "$" + n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+        for (const w of steps.settings.watch) {
+          const p = steps.prices.body[w.coin];
+          if (!p || typeof p.usd !== "number") continue;
+          const change = p.usd_24h_change || 0;
+          const checks = [
+            [`${w.coin}:below`, p.usd < w.below, `${w.coin} is below ${usd(w.below)}: ${usd(p.usd)}`],
+            [`${w.coin}:above`, p.usd > w.above, `${w.coin} is above ${usd(w.above)}: ${usd(p.usd)}`],
+            [`${w.coin}:move`, Math.abs(change) > w.move, `${w.coin} moved ${change.toFixed(1)}% in a day: ${usd(p.usd)}`],
+          ];
+          for (const [key, crossed, text] of checks) {
+            if (crossed) { now[key] = true; if (!was[key]) messages.push(text); }
+          }
+        }
+        state.crossed = now;
+        return { messages, count: messages.length };
+  - name: tell
+    if:
+      when: steps.alerts.count > 0
+      then:
+        - name: send
+          telegram:
+            credential: bot
+            chat_id: "{{ steps.settings.chat }}"
+            text: "{{ steps.alerts.messages.join('\\n') }}"
+          retry: { attempts: 3, wait: 10s }

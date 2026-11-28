@@ -1,0 +1,368 @@
+# Copyright 2026 Ductile AI, Inc
+# SPDX-License-Identifier: Apache-2.0
+# Bannerbear: written by hand from Bannerbear's V5 OpenAPI 3.1 description, https://api.bannerbear.com/v5/openapi.json,
+# and its API reference, https://developers.bannerbear.com (fetched 2026-11-27; no licence stated, so every label here
+# is in our own words).
+app: bannerbear
+name: Bannerbear
+category: design
+description: Images, videos and PDFs made from Bannerbear templates - social cards, banners, certificates - and its design tools.
+docs: "https://developers.bannerbear.com"
+hosts: [api.bannerbear.com, sync.api.bannerbear.com]
+base_url: "https://api.bannerbear.com/v5"
+sign_in:
+  - id: bannerbear
+    label: "An API key"
+    fields: [{ name: api_key, label: "A V5 API key (bb_ak_v5_...)", secret: true }]
+    headers: { Authorization: "Bearer {{ credential.api_key }}" }
+error: value.message
+actions:
+  get_account:
+    label: "Account and quota"
+    description: "The workspace, its plan, the API and AI credits used and left this month, and what the key may do."
+    method: GET
+    path: "/account"
+    output: { uid: text, workspace: text, plan: text, quota: record, ai_quota: record, api_key: record, created_at: text }
+  list_image_templates:
+    label: "List image templates"
+    description: "The workspace's image templates, with their sizes, previews and layers (up to 200)."
+    method: GET
+    path: "/image_templates"
+    items: value
+    # 25 a page, the reference says: a shorter page is the last.
+    next: "size(value) < 25 ? null : {'page': (page == null ? 1 : int(page['page'])) + 1}"
+    max_pages: 8
+    output:
+      uid: text
+      name: text
+      description: text
+      tags: list
+      width: number
+      height: number
+      responsive: boolean
+      preview: text
+      config: record
+      created_at: text
+  get_image_template:
+    label: "Look up an image template"
+    description: "One template, with the layers its modifications can change."
+    method: GET
+    path: "/image_templates/{{ input.template }}"
+    inputs: [{ name: template, label: "The template's uid", required: true }]
+    output:
+      uid: text
+      name: text
+      description: text
+      tags: list
+      width: number
+      height: number
+      responsive: boolean
+      preview: text
+      config: record
+      created_at: text
+  create_image:
+    label: "Make an image"
+    description: >-
+      Starts making an image from a template, with each layer's text, picture or color changed; it comes back pending,
+      and Look up an image (or Make an image and wait) gives the finished file.
+    write: true
+    method: POST
+    path: "/images"
+    inputs:
+      - { name: template, label: "The template's uid", required: true }
+      - name: objects
+        label: "The layers to change, as [{name: title, text: Hello}, {name: photo, image_url: https://...}]"
+        required: true
+        kind: list
+      - { name: template_changes, label: "The template itself: {width, height, transparent}", kind: record }
+      - { name: formats, label: "File kinds, such as [png, jpg, webp, pdf] (png if left out)", kind: list }
+      - { name: scale, label: "Bigger output: 2 for twice the size", kind: number }
+      - { name: metadata, label: "Your own text kept with the image, such as an order number" }
+    send:
+      template: "{{ input.template }}"
+      modifications: { objects: "{{ input.objects }}", template: "{{ input.template_changes }}" }
+      formats: "{{ input.formats }}"
+      scale: "{{ input.scale }}"
+      metadata: "{{ input.metadata }}"
+    output:
+      uid: text
+      status: text
+      template: text
+      files: record
+      metadata: text
+      error: text
+      self: text
+      created_at: text
+      completed_at: text
+  create_image_and_wait:
+    label: "Make an image and wait"
+    description: >-
+      Makes an image from a template and waits for the finished file (Bannerbear allows 10 seconds; a longer one is
+      refused with 408 - use Make an image then).
+    write: true
+    method: POST
+    path: "/images"
+    by:
+      bannerbear: { url: "https://sync.api.bannerbear.com/v5/images" }
+    timeout: 20
+    inputs:
+      - { name: template, label: "The template's uid", required: true }
+      - name: objects
+        label: "The layers to change, as [{name: title, text: Hello}, {name: photo, image_url: https://...}]"
+        required: true
+        kind: list
+      - { name: template_changes, label: "The template itself: {width, height, transparent}", kind: record }
+      - { name: formats, label: "File kinds, such as [png, jpg, webp, pdf] (png if left out)", kind: list }
+      - { name: scale, label: "Bigger output: 2 for twice the size", kind: number }
+      - { name: metadata, label: "Your own text kept with the image, such as an order number" }
+    send:
+      template: "{{ input.template }}"
+      modifications: { objects: "{{ input.objects }}", template: "{{ input.template_changes }}" }
+      formats: "{{ input.formats }}"
+      scale: "{{ input.scale }}"
+      metadata: "{{ input.metadata }}"
+    output:
+      uid: text
+      status: text
+      template: text
+      files: record
+      metadata: text
+      error: text
+      self: text
+      created_at: text
+      completed_at: text
+  get_image:
+    label: "Look up an image"
+    description: "One image: pending, completed (with its files' addresses) or failed (with why)."
+    method: GET
+    path: "/images/{{ input.image }}"
+    inputs: [{ name: image, label: "The image's uid", required: true }]
+    output:
+      uid: text
+      status: text
+      template: text
+      files: record
+      metadata: text
+      error: text
+      self: text
+      created_at: text
+      completed_at: text
+  list_images:
+    label: "List images"
+    description: "Images made in the workspace, with their status and files (up to 100)."
+    method: GET
+    path: "/images"
+    items: value
+    next: "size(value) < 25 ? null : {'page': (page == null ? 1 : int(page['page'])) + 1}"
+    max_pages: 4
+    output:
+      uid: text
+      status: text
+      template: text
+      files: record
+      metadata: text
+      error: text
+      self: text
+      created_at: text
+      completed_at: text
+  create_batch:
+    label: "Make many images"
+    description: "Starts making up to 100 images at once, each as Make an image takes it; Look up a batch follows it."
+    write: true
+    method: POST
+    path: "/batches"
+    inputs:
+      - name: items
+        label: "The images, as [{template: ..., modifications: {objects: [...]}}, ...] (at most 100)"
+        required: true
+        kind: list
+    send: { type: images, items: "{{ input.items }}" }
+    output:
+      uid: text
+      type: text
+      status: text
+      total: number
+      counts: record
+      errors: list
+      items: list
+      self: text
+      created_at: text
+      completed_at: text
+  get_batch:
+    label: "Look up a batch"
+    description: "How far a batch has got - how many done, failed and waiting - and its images."
+    method: GET
+    path: "/batches/{{ input.batch }}"
+    inputs: [{ name: batch, label: "The batch's uid", required: true }]
+    output:
+      uid: text
+      type: text
+      status: text
+      total: number
+      counts: record
+      errors: list
+      items: list
+      self: text
+      created_at: text
+      completed_at: text
+  create_animation:
+    label: "Make a video"
+    description: "Starts making an animated video (MP4) from an animation template; Look up a video gives the file."
+    write: true
+    method: POST
+    path: "/animations"
+    inputs:
+      - { name: template, label: "The animation template's uid", required: true }
+      - name: objects
+        label: "The layers to change, as [{name: title, text: Hello}]"
+        required: true
+        kind: list
+      - { name: metadata, label: "Your own text kept with the video" }
+    send:
+      template: "{{ input.template }}"
+      modifications: { objects: "{{ input.objects }}" }
+      metadata: "{{ input.metadata }}"
+    output:
+      uid: text
+      status: text
+      template: text
+      files: record
+      progress: number
+      metadata: text
+      error: text
+      self: text
+      created_at: text
+      completed_at: text
+  get_animation:
+    label: "Look up a video"
+    description: "One video: its progress, and its file once finished."
+    method: GET
+    path: "/animations/{{ input.animation }}"
+    inputs: [{ name: animation, label: "The video's uid", required: true }]
+    output:
+      uid: text
+      status: text
+      template: text
+      files: record
+      progress: number
+      metadata: text
+      error: text
+      self: text
+      created_at: text
+      completed_at: text
+  list_workflows:
+    label: "List Bannerbear workflows"
+    description: "The workflows made in Bannerbear, with the inputs each takes (up to 200)."
+    method: GET
+    path: "/workflows"
+    items: value
+    next: "size(value) < 25 ? null : {'page': (page == null ? 1 : int(page['page'])) + 1}"
+    max_pages: 8
+    output: { uid: text, name: text, description: text, tags: list, inputs: record, steps: list, outputs: list, created_at: text }
+  run_workflow:
+    label: "Run a Bannerbear workflow"
+    description: "Starts one of the workflows made in Bannerbear with its inputs; Look up a workflow run gives its outputs."
+    write: true
+    method: POST
+    path: "/workflow_runs"
+    inputs:
+      - { name: workflow, label: "The Bannerbear workflow's uid", required: true }
+      - { name: inputs, label: "Its inputs, by name", kind: record }
+      - { name: metadata, label: "Your own text kept with the run" }
+    send: { workflow: "{{ input.workflow }}", inputs: "{{ input.inputs }}", metadata: "{{ input.metadata }}" }
+    output:
+      uid: text
+      status: text
+      workflow: text
+      progress: number
+      inputs: record
+      outputs: record
+      result: list
+      metadata: text
+      steps: list
+      error: text
+      self: text
+      created_at: text
+      completed_at: text
+  get_workflow_run:
+    label: "Look up a workflow run"
+    description: "A Bannerbear workflow run's status, each step's progress, and its outputs once done."
+    method: GET
+    path: "/workflow_runs/{{ input.run }}"
+    inputs: [{ name: run, label: "The run's uid", required: true }]
+    output:
+      uid: text
+      status: text
+      workflow: text
+      progress: number
+      inputs: record
+      outputs: record
+      result: list
+      metadata: text
+      steps: list
+      error: text
+      self: text
+      created_at: text
+      completed_at: text
+  remove_background:
+    label: "Remove a picture's background"
+    description: "Starts cutting the subject of a PNG or JPG out onto a see-through background; Look up a tool job gives the file."
+    write: true
+    method: POST
+    path: "/tools/remove_bg"
+    inputs:
+      - { name: image_url, label: "The picture's address (PNG or JPG)", required: true }
+      - { name: metadata, label: "Your own text kept with the job" }
+    send: { image_url: "{{ input.image_url }}", metadata: "{{ input.metadata }}" }
+    output:
+      uid: text
+      tool: text
+      status: text
+      progress: number
+      inputs: record
+      outputs: record
+      metadata: text
+      self: text
+      created_at: text
+      completed_at: text
+      error_message: text
+  create_pdf:
+    label: "Join files into one PDF"
+    description: "Starts joining JPGs, PNGs and PDFs, in order, into one PDF of many pages; Look up a tool job gives the file."
+    write: true
+    method: POST
+    path: "/tools/create_pdf"
+    inputs:
+      - { name: urls, label: "The files' addresses, in page order", required: true, kind: list }
+      - { name: metadata, label: "Your own text kept with the job" }
+    send: { urls: "{{ input.urls }}", metadata: "{{ input.metadata }}" }
+    output:
+      uid: text
+      tool: text
+      status: text
+      progress: number
+      inputs: record
+      outputs: record
+      metadata: text
+      self: text
+      created_at: text
+      completed_at: text
+      error_message: text
+  get_tool_job:
+    label: "Look up a tool job"
+    description: "A design tool's job: its progress, and the finished files' addresses under outputs."
+    method: GET
+    path: "/tool_jobs/{{ input.job }}"
+    inputs: [{ name: job, label: "The job's uid", required: true }]
+    output:
+      uid: text
+      tool: text
+      status: text
+      progress: number
+      inputs: record
+      outputs: record
+      metadata: text
+      self: text
+      created_at: text
+      completed_at: text
+      error_message: text

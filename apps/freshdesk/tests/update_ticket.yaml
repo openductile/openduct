@@ -1,0 +1,58 @@
+description: A ticket resolved and given to an agent
+action: update_ticket
+credential:
+  domain: acme
+  api_key: test-key
+input:
+  ticket_id: '20'
+  status: resolved
+  responder_id: 11
+exchanges:
+- sent:
+    method: PUT
+    url: https://acme.freshdesk.com/api/v2/tickets/20
+    headers:
+      authorization: Basic dGVzdC1rZXk6WA==
+    body:
+      status: 4
+      responder_id: 11
+  answer:
+    status: 200
+    body:
+      id: 20
+      subject: Cracked lid
+      description_text: The lid of my mug is cracked.
+      status: 4
+      priority: 1
+      source: 2
+      type: null
+      requester_id: 5001
+      responder_id: 11
+      group_id: null
+      company_id: null
+      tags: &id001 []
+      cc_emails: &id002 []
+      custom_fields: &id003 {}
+      due_by: '2026-11-20T11:30:00Z'
+      fr_due_by: '2026-11-18T11:30:00Z'
+      created_at: '2026-11-17T12:02:50Z'
+      updated_at: '2026-11-17T12:02:51Z'
+result:
+  id: 20
+  subject: Cracked lid
+  description_text: The lid of my mug is cracked.
+  status: 4
+  priority: 1
+  source: 2
+  type: null
+  requester_id: 5001
+  responder_id: 11
+  group_id: null
+  company_id: null
+  tags: *id001
+  cc_emails: *id002
+  custom_fields: *id003
+  due_by: '2026-11-20T11:30:00Z'
+  fr_due_by: '2026-11-18T11:30:00Z'
+  created_at: '2026-11-17T12:02:50Z'
+  updated_at: '2026-11-17T12:02:51Z'

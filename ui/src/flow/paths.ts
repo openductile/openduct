@@ -6,6 +6,7 @@
 // own steps.
 
 import type { Step } from "../api";
+import { aiBranchOf, aiWithBranch } from "./aiBranches"; // G7 more AI steps
 
 /** Which of a step's lists: an if's then or else, a switch's case (by its place) or default, a loop's steps. */
 export type Part = "then" | "else" | "steps" | "default" | `case${number}`;
@@ -20,6 +21,8 @@ type Choice = { cases?: Case[]; default?: Step[] } & Record<string, unknown>;
 const caseOf = (part: Part): number | null => (part.startsWith("case") ? Number(part.slice(4)) : null);
 
 const branchOf = (step: Step, part: Part): Step[] => {
+  const routed = aiBranchOf(step, part); // G7 more AI steps: a category's steps
+  if (routed) return routed;
   if (part === "steps") return ((step.for_each as { steps?: Step[] } | undefined)?.steps ?? []) as Step[];
   const n = caseOf(part);
   const choice = step.switch as Choice | undefined;
@@ -29,6 +32,8 @@ const branchOf = (step: Step, part: Part): Step[] => {
 };
 
 const withBranch = (step: Step, part: Part, steps: Step[]): Step => {
+  const routed = aiWithBranch(step, part, steps); // G7 more AI steps
+  if (routed) return routed;
   if (part === "steps") return { ...step, for_each: { ...(step.for_each as object), steps } };
   const n = caseOf(part);
   const choice = (step.switch ?? {}) as Choice;

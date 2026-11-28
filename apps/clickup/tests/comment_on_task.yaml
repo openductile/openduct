@@ -1,0 +1,13 @@
+description: "Comment on a task"
+action: comment_on_task
+credential: { api_key: test-key }
+input: { task_id: "9hz", comment_text: example, notify_all: true }
+exchanges:
+  - sent:
+      method: POST
+      url: "https://api.clickup.com/api/v2/task/9hz/comment"
+      query: {}
+      headers: { authorization: test-key }
+      body: { comment_text: example, notify_all: true }
+    answer: { status: 200, body: { id: id_1, hist_id: hist_1, date: 1 } }
+result: { id: id_1, hist_id: hist_1, date: 1 }

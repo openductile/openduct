@@ -1,0 +1,45 @@
+description: "Send a message"
+action: send_message
+credential: { token: test-token }
+input: { type: SMS, sub_type: Email, contact_id: abc123def456, status: delivered }
+exchanges:
+  - sent:
+      method: POST
+      url: "https://services.leadconnectorhq.com/conversations/messages"
+      query: {}
+      headers: { authorization: "Bearer test-token", version: "2021-04-15" }
+      body: { type: SMS, subType: Email, contactId: abc123def456, status: delivered }
+    answer:
+      status: 200
+      body:
+        conversationId: ABC12h2F6uBrIkfXYazb
+        emailMessageId: rnGyqh2F6uBrIkfhFo9A
+        messageId: t22c6DQcTDf3MjRhwf77
+        messageIds: [example]
+        msg: example
+        forwardData:
+          forwardWholeThread: false
+          messageId: t22c6DQcTDf3MjRhwf77
+          emailMessageId: rnGyqh2F6uBrIkfhFo9A
+          sourceContactId: ABC12h2F6uBrIkfXYazb
+          sourceConversationId: XYZ12h2F6uBrIkfXYacd
+          forwardToEmail: "ann@example.com"
+          recipientContactId: DEF56h2F6uBrIkfXYacd
+          recipientConversationId: GHI78h2F6uBrIkfXYefg
+        status: delivered
+result:
+  conversationId: ABC12h2F6uBrIkfXYazb
+  emailMessageId: rnGyqh2F6uBrIkfhFo9A
+  messageId: t22c6DQcTDf3MjRhwf77
+  messageIds: [example]
+  msg: example
+  forwardData:
+    forwardWholeThread: false
+    messageId: t22c6DQcTDf3MjRhwf77
+    emailMessageId: rnGyqh2F6uBrIkfhFo9A
+    sourceContactId: ABC12h2F6uBrIkfXYazb
+    sourceConversationId: XYZ12h2F6uBrIkfXYacd
+    forwardToEmail: "ann@example.com"
+    recipientContactId: DEF56h2F6uBrIkfXYacd
+    recipientConversationId: GHI78h2F6uBrIkfXYefg
+  status: delivered

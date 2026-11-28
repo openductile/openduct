@@ -1,0 +1,7 @@
+description: A row that is not there - Baserow's own words
+action: get_row
+credential: { token: br-test-token }
+input: { table_id: 1203, row_id: 999 }
+exchanges:
+  - answer: { status: 404, body: { error: ERROR_ROW_DOES_NOT_EXIST, detail: The row 999 does not exist. } }
+error: "Baserow answered 404: The row 999 does not exist."

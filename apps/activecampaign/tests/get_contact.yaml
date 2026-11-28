@@ -1,0 +1,28 @@
+description: One contact
+action: get_contact
+credential:
+  account: shopexample
+  api_key: test-key
+input:
+  contact_id: '113'
+exchanges:
+- sent:
+    method: GET
+    url: https://shopexample.api-us1.com/api/3/contacts/113
+    headers:
+      api-token: test-key
+  answer:
+    status: 200
+    body:
+      contactLists: []
+      fieldValues: []
+      contact: &id001
+        id: '113'
+        email: ann@example.com
+        firstName: Ann
+        lastName: Example
+        phone: '+15555550100'
+        cdate: '2026-11-27T10:00:00-06:00'
+        udate: '2026-11-27T10:00:00-06:00'
+        orgid: '0'
+result: *id001

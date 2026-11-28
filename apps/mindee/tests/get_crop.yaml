@@ -1,0 +1,7 @@
+action: get_crop
+credential: { api_key: md_test_1 }
+input: { inference_id: 9f5c5dbf-0000-4000-8000-0000000000a4 }
+exchanges:
+  - sent: { method: GET, url: https://api-v2.mindee.net/v2/products/crop/results/9f5c5dbf-0000-4000-8000-0000000000a4 }
+    answer: { body: { inference: { id: 9f5c5dbf-0000-4000-8000-0000000000a4, result: { crops: [{ object_type: receipt, location: { page: 0 } }] } } } }
+result: { id: 9f5c5dbf-0000-4000-8000-0000000000a4, result: { crops: [{ object_type: receipt, location: { page: 0 } }] } }

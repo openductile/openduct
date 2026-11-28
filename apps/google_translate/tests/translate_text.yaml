@@ -1,0 +1,12 @@
+description: "A text translated, its language told by Google"
+action: translate_text
+credential: {"api_key": "AIza-test"}
+input: {"text": "Your order is on its way.", "target": "fr"}
+exchanges:
+  - sent:
+      method: POST
+      url: "https://translation.googleapis.com/language/translate/v2"
+      query: {"key": "AIza-test"}
+      body: {"q": ["Your order is on its way."], "target": "fr", "format": "text"}
+    answer: {"status": 200, "body": {"data": {"translations": [{"translatedText": "Votre commande est en route.", "detectedSourceLanguage": "en"}]}}}
+result: {"text": "Votre commande est en route.", "detected_source_language": "en"}

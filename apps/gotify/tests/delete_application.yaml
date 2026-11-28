@@ -1,0 +1,11 @@
+description: "An application removed"
+action: delete_application
+sign_in: gotify_client
+credential: { base_url: "https://gotify.example.com", token: CzyoeNS.D4iJLVb }
+input: { app_id: 6 }
+exchanges:
+  - sent:
+      method: DELETE
+      url: "https://gotify.example.com/application/6"
+    answer: { status: 200 }
+result: { removed: true }

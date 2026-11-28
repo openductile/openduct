@@ -137,7 +137,72 @@ impl Effects for Preview {
         })
     }
 
+    /// SQL that only reads runs for real, to read only; SQL that writes is shown. // sql databases
+    fn database<'a>(&'a self, request: crate::databases::DatabaseRequest) -> Pending<'a> {
+        Box::pin(
+            async move { crate::databases::preview(self.live.as_ref(), request, &|t| self.hidden(t)).await },
+        )
+    }
+
     fn sleep<'a>(&'a self, _: Duration) -> Pin<Box<dyn Future<Output = ()> + Send + 'a>> {
         Box::pin(async {})
+    }
+
+    // G2 AI agents: an agent's memory is read (a read), and what it would keep only shown.
+    fn recall<'a>(&'a self, key: &'a str) -> Pending<'a> {
+        self.live.recall(key)
+    }
+
+    // vector stores: a memory in a store of the workflow's own is read under the live run's keys.
+    fn memory_prefix(&self) -> String {
+        self.live.memory_prefix()
+    }
+
+    // G2 AI agents: an agent's memory is read (a read), and what it would keep only shown.
+    fn remember<'a>(&'a self, key: &'a str, turns: Option<Value>, _: Duration) -> Pending<'a> {
+        Box::pin(async move { Ok(crate::agent::not_kept(key, turns.as_ref())) })
+    }
+    // storage: folders and servers are read for real; a write is shown. A credential's new fields (an SFTP server's
+    // key seen the first time) are kept, as a real run keeps them: that changes nothing outside.
+    fn storage(&self) -> crate::storage::Reach<'_> {
+        self.live.storage().read_only()
+    }
+
+    // web: a page, a site, a sitemap or a feed is only read: fetched for real.
+    fn web(&self) -> crate::web::Reach<'_> {
+        self.live.web()
+    }
+
+    // storage
+    fn keep_credential<'a>(
+        &'a self,
+        name: &'a str,
+        fields: std::collections::BTreeMap<String, String>,
+    ) -> Pending<'a> {
+        self.live.keep_credential(name, fields)
+    }
+
+    /// Tables are read for real; a change to one is worked out and shown, not written. // data tables
+    fn tables(&self) -> crate::tables::Access<'_> {
+        self.live.tables().read_only()
+    }
+
+    // G6 files: a read's answer as it came; a write only shown. Files it makes are held by the preview alone, and
+    // files kept by real runs (an upload the last event brought) are read.
+    fn http_bytes<'a>(
+        &'a self,
+        request: HttpRequest,
+    ) -> Pin<Box<dyn Future<Output = Result<crate::files::RawAnswer, String>> + Send + 'a>> {
+        if request.read {
+            return self.live.http_bytes(request);
+        }
+        Box::pin(async move { Ok(crate::files::raw_of(self.http(request).await?)) })
+    }
+
+    fn load_file<'a>(
+        &'a self,
+        place: &'a str,
+    ) -> Pin<Box<dyn Future<Output = Result<Vec<u8>, String>> + Send + 'a>> {
+        self.live.load_file(place)
     }
 }

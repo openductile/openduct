@@ -1,0 +1,12 @@
+description: "Look up a request's status"
+action: get_request_status
+credential: { token: test-token }
+input: { request_id: request_1 }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://api.airtop.ai/api/v1/requests/request_1/status"
+      query: {}
+      headers: { authorization: "Bearer test-token" }
+    answer: { status: 200, body: { error: example, response: example, status: example } }
+result: { error: example, response: example, status: example }

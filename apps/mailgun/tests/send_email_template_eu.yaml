@@ -1,0 +1,13 @@
+description: "An email made from a template, in test mode, from another domain, in the EU region"
+action: send_email
+sign_in: mailgun_eu
+credential: {"api_key": "key-test", "domain": "mg.example.com"}
+input: {"from": "news@mail.example.org", "to": "bo@example.com, cy@example.com", "template": "welcome", "template_variables": "{\"name\": \"Bo\"}", "test_mode": true, "domain": "mail.example.org"}
+exchanges:
+  - sent:
+      method: POST
+      url: "https://api.eu.mailgun.net/v3/mail.example.org/messages"
+      headers: {"authorization": "Basic YXBpOmtleS10ZXN0"}
+      body: {"from": "news@mail.example.org", "to": "bo@example.com, cy@example.com", "template": "welcome", "t:variables": "{\"name\": \"Bo\"}", "o:testmode": "yes"}
+    answer: {"status": 200, "body": {"id": "<20261127100000.1.ABC@mg.example.com>", "message": "Queued. Thank you."}}
+result: {"id": "<20261127100000.1.ABC@mg.example.com>", "message": "Queued. Thank you."}

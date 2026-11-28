@@ -1,0 +1,11 @@
+description: A list deleted, its contacts kept - SendGrid answers with nothing
+action: delete_list
+credential: { token: SG.test-key }
+input: { list_id: 1b2c3d4e-5f6a-4b7c-8d9e-0f1a2b3c4d5e }
+exchanges:
+  - sent:
+      method: DELETE
+      url: https://api.sendgrid.com/v3/marketing/lists/1b2c3d4e-5f6a-4b7c-8d9e-0f1a2b3c4d5e
+      query: {}
+    answer: { status: 204 }
+result: { deleted: true }

@@ -37,9 +37,9 @@ terms and prices before deciding.
 | Failed runs kept to run again | CatchErr | Replay (paid plans) | Incomplete executions | Error workflows, retry | Yes | Yes |
 | Code steps | Yes | Yes | Yes | Yes | Yes | Yes (DataWeave, scripts) |
 | AI step, any model | Yes, models on your machine too | Yes | Yes | Yes | Yes | Yes |
-| AI agents with tools and memory | No | Yes | Yes | Yes | Yes | Yes |
-| MCP | No | Yes | Yes | Yes | Yes | Yes |
-| Approvals and forms mid-run | No | Yes | Yes | Yes | Yes | Partly |
+| AI agents with tools and memory | Yes: tools are steps, other workflows and other agents; memory on the broker | Yes | Yes | Yes | Yes | Yes |
+| MCP | Yes: workflows as tools for AI assistants, any server's tools in a step | Yes | Yes | Yes | Yes | Yes |
+| Approvals and forms mid-run | Yes: forms, approvals, waits for a call or a time, kept on the log | Yes | Yes | Yes | Yes | Partly |
 | Single sign-on, audit log | No | Paid plans | Paid plans | Enterprise | Yes | Yes |
 | Speaks Kafka to your systems | It is the broker | Through an app | Through an app | Through a node | Through a connector | Through a connector |
 
@@ -53,7 +53,7 @@ EDI.
 what a chain of HTTP calls does not: a crash repeats a run rather than losing it, events with the same key stay in
 order while others run at once, failed events wait in CatchErr to run again, and other programs can read the same
 events with any Kafka client. It runs anywhere one binary runs, keeps data on your own machines, and has no per-task
-price. It is new: 26 apps, not thousands.
+price. It is new: 36 apps, not thousands.
 
 **Choose OpenDuct** when events must not be lost or reordered, when data has to stay on your machines, when the same
 events feed workflows and your own programs, or when per-task prices grow with volume. **Choose Zapier or Make** for
@@ -101,7 +101,10 @@ the Kafka protocol.
 LangGraph and LangChain are libraries: you write an agent in code - a graph of steps where a model chooses tools,
 keeps memory, waits for a person, and its state is checkpointed - and run it in your own program or the hosted
 platform of their makers. OpenDuct is not a library for agents: its AI step asks a model one question inside a
-workflow, the same form whatever the model, with the event, the retries and the history around it.
+workflow, the same form whatever the model, and its agent step lets a model choose among the workflow's own steps -
+HTTP requests, scripts, other workflows, apps' actions, other agents - over several turns, with memory, with the
+event, the retries and the history around it. It has no graph of its own to program, no checkpoints of a
+conversation in the middle, and no waiting for a person yet.
 
 They fit together. An agent built with LangGraph can read and write OpenDuct topics with any Kafka client, or be
 called from a workflow's HTTP step; OpenDuct gives it durable events in and out, ordering, retries and a record of
@@ -112,6 +115,7 @@ them, and for AI steps that run on every order, ticket or message without code.
 
 Temporal runs workflows written as code and keeps their state through crashes, for runs that last minutes or months,
 with signals and timers. OpenDuct's workflows are built in the studio, run on events from a durable log, and are
-short: a run waits for seconds or minutes, not months, and there are no signals into a running workflow. **Choose
+a run can wait for a form, an approval, a call or a time - up to 90 days, kept on the log - but nothing else reaches
+into a running workflow, and there are no workflows as code. **Choose
 Temporal** for long-lived processes written by developers. **Choose OpenDuct** for event-driven workflows that people
 build and watch in a browser.

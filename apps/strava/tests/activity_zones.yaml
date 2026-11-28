@@ -1,0 +1,7 @@
+action: activity_zones
+credential: { access_token: st_test_1 }
+input: { id: "99001" }
+exchanges:
+  - sent: { method: GET, url: https://www.strava.com/api/v3/activities/99001/zones }
+    answer: { body: [{ type: heartrate, score: 42, sensor_based: true, distribution_buckets: [{ min: 0, max: 120, time: 300 }, { min: 120, max: 150, time: 1500 }] }] }
+result: [{ type: heartrate, score: 42, sensor_based: true, distribution_buckets: [{ min: 0, max: 120, time: 300 }, { min: 120, max: 150, time: 1500 }] }]

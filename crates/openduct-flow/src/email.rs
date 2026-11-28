@@ -43,9 +43,16 @@ pub(crate) fn shown(test: &str, r: &EmailRequest) -> Value {
             "from": r.credential.fields.get("from"),
             "to": r.to, "cc": r.cc, "bcc": r.bcc, "reply_to": r.reply_to,
             "subject": r.subject, "text": r.text, "html": r.html,
+            // G6 files: what it carries, by name, type and size.
+            "attachments": r.attachments.iter()
+                .map(|a| json!({ "name": a.name, "type": a.media_type, "size": a.bytes.len() }))
+                .collect::<Vec<_>>(),
         },
     }))
 }
+
+/// The most a message's attachments hold, in all: most mail servers take messages of up to 25 MB. // G6 files
+pub(crate) const MAX_ATTACHED: usize = 20 * 1024 * 1024;
 
 /// Checks what every message needs, before one is sent or shown.
 pub(crate) fn check(r: &EmailRequest) -> Result<(), String> {
@@ -59,6 +66,11 @@ pub(crate) fn check(r: &EmailRequest) -> Result<(), String> {
     if size > MAX_BODY {
         return Err(format!("a body of at most {} KiB", MAX_BODY / 1024));
     }
+    // G6 files
+    if r.attachments.iter().map(|a| a.bytes.len()).sum::<usize>() > MAX_ATTACHED {
+        let most = MAX_ATTACHED / 1024 / 1024;
+        return Err(format!("attachments of at most {most} MiB in all"));
+    }
     if r.subject.contains(['\r', '\n']) {
         return Err("subject: one line".to_owned());
     }
@@ -71,6 +83,29 @@ pub(crate) fn check(r: &EmailRequest) -> Result<(), String> {
         mailbox(reply, "reply_to")?;
     }
     Ok(())
+}
+
+/// A message's body and its files, as one mixed message. // G6 files
+fn attached(
+    text: Option<String>,
+    html: Option<String>,
+    files: &[crate::files::FileData],
+) -> Result<MultiPart, String> {
+    use lettre::message::{Attachment, SinglePart};
+    let builder = MultiPart::mixed();
+    let mut message = match (text, html) {
+        (Some(text), Some(html)) => builder.multipart(MultiPart::alternative_plain_html(text, html)),
+        (Some(text), None) => builder.singlepart(SinglePart::plain(text)),
+        (None, Some(html)) => builder.singlepart(SinglePart::html(html)),
+        (None, None) => return Err("text, html or both".to_owned()),
+    };
+    for file in files {
+        let kind = ContentType::parse(&file.media_type)
+            .or_else(|_| ContentType::parse("application/octet-stream"))
+            .map_err(|e| format!("{}: {e}", file.name))?;
+        message = message.singlepart(Attachment::new(file.name.clone()).body(file.bytes.to_vec(), kind));
+    }
+    Ok(message)
 }
 
 /// Sends the message.
@@ -132,6 +167,8 @@ pub(crate) async fn send(r: EmailRequest, allow_private: bool) -> Result<Value, 
         builder = builder.reply_to(mailbox(reply, "reply_to")?);
     }
     let message = match (r.text.clone(), r.html.clone()) {
+        // G6 files: with attachments, the body and each file as parts of a mixed message.
+        (text, html) if !r.attachments.is_empty() => builder.multipart(attached(text, html, &r.attachments)?),
         (Some(text), Some(html)) => builder.multipart(MultiPart::alternative_plain_html(text, html)),
         (Some(text), None) => builder.header(ContentType::TEXT_PLAIN).body(text),
         (None, Some(html)) => builder.header(ContentType::TEXT_HTML).body(html),

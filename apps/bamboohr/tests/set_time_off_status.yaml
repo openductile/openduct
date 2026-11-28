@@ -1,0 +1,23 @@
+description: A request approved
+action: set_time_off_status
+credential:
+  company_domain: acme
+  api_key: test-key
+input:
+  request_id: '1348'
+  status: approved
+  note: Enjoy
+exchanges:
+- sent:
+    method: PUT
+    url: https://acme.bamboohr.com/api/v1/time_off/requests/1348/status
+    headers:
+      authorization: Basic dGVzdC1rZXk6eA==
+      accept: application/json
+    body:
+      status: approved
+      note: Enjoy
+  answer:
+    status: 200
+result:
+  updated: true

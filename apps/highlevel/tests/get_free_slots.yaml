@@ -1,0 +1,12 @@
+description: "List a calendar's free times"
+action: get_free_slots
+credential: { token: test-token }
+input: { calendar_id: ocQHyuzHvysMo5N5VsXc, start_date: 1548898600000, end_date: 1601490599999 }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://services.leadconnectorhq.com/calendars/ocQHyuzHvysMo5N5VsXc/free-slots"
+      query: { startDate: "1548898600000", endDate: "1601490599999" }
+      headers: { authorization: "Bearer test-token", version: "2021-04-15" }
+    answer: { status: 200, body: {} }
+result: {}

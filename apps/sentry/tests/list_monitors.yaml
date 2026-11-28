@@ -1,0 +1,99 @@
+# Made by `openduct app from-openapi`: List cron monitors.
+description: "List cron monitors, made from the API description's schemas"
+action: list_monitors
+credential: { token: test-token }
+input: { organization_id_or_slug: example }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://us.sentry.io/api/0/organizations/example/monitors/"
+      query: {}
+      headers: { authorization: "Bearer test-token" }
+    answer:
+      status: 200
+      body:
+        - id: id_1
+          name: example
+          slug: example
+          status: active
+          isMuted: true
+          isUpserting: true
+          config:
+            schedule_type: crontab
+            schedule: example
+            checkin_margin: 1
+            max_runtime: 1
+            timezone: example
+            failure_issue_threshold: 1
+            recovery_threshold: 1
+            alert_rule_id: 1
+          dateCreated: "2026-01-15T09:30:00Z"
+          project:
+            stats: [example]
+            transactionStats: [[1]]
+            sessionStats: { currentCrashFreeRate: 1, previousCrashFreeRate: 1, hasHealthData: true }
+            id: id_1
+            slug: example
+            name: example
+            platform: example
+            dateCreated: "2026-01-15T09:30:00Z"
+            isBookmarked: true
+            isMember: true
+            features: [example]
+            firstEvent: "2026-01-15T09:30:00Z"
+          environments:
+            - name: example
+              status: active
+              isMuted: true
+              dateCreated: "2026-01-15T09:30:00Z"
+              lastCheckIn: "2026-01-15T09:30:00Z"
+              nextCheckIn: "2026-01-15T09:30:00Z"
+              nextCheckInLatest: "2026-01-15T09:30:00Z"
+              activeIncident:
+                startingTimestamp: "2026-01-15T09:30:00Z"
+                resolvingTimestamp: "2026-01-15T09:30:00Z"
+                brokenNotice: {}
+          owner: { type: user, id: id_1, name: example, email: "ann@example.com" }
+result:
+  - id: id_1
+    name: example
+    slug: example
+    status: active
+    isMuted: true
+    isUpserting: true
+    config:
+      schedule_type: crontab
+      schedule: example
+      checkin_margin: 1
+      max_runtime: 1
+      timezone: example
+      failure_issue_threshold: 1
+      recovery_threshold: 1
+      alert_rule_id: 1
+    dateCreated: "2026-01-15T09:30:00Z"
+    project:
+      stats: [example]
+      transactionStats: [[1]]
+      sessionStats: { currentCrashFreeRate: 1, previousCrashFreeRate: 1, hasHealthData: true }
+      id: id_1
+      slug: example
+      name: example
+      platform: example
+      dateCreated: "2026-01-15T09:30:00Z"
+      isBookmarked: true
+      isMember: true
+      features: [example]
+      firstEvent: "2026-01-15T09:30:00Z"
+    environments:
+      - name: example
+        status: active
+        isMuted: true
+        dateCreated: "2026-01-15T09:30:00Z"
+        lastCheckIn: "2026-01-15T09:30:00Z"
+        nextCheckIn: "2026-01-15T09:30:00Z"
+        nextCheckInLatest: "2026-01-15T09:30:00Z"
+        activeIncident:
+          startingTimestamp: "2026-01-15T09:30:00Z"
+          resolvingTimestamp: "2026-01-15T09:30:00Z"
+          brokenNotice: {}
+    owner: { type: user, id: id_1, name: example, email: "ann@example.com" }

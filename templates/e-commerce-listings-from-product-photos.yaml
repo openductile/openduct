@@ -1,0 +1,75 @@
+name: Draft product listings from product photos
+description: >-
+  Press Run with a product's code, the addresses of its photos and a few notes: an AI agent looks at each photo
+  through Imagga's tagging and color APIs, then writes a listing - a title, three to five bullet points, a description
+  and search tags - keeping to what the photos and notes show. The draft is kept in your listings table, marked draft,
+  for a person to check before it goes live. Make the table listings under Tables (sku, title, bullets, description,
+  tags, color, status). Needs: model (ai), imagga (basic: your Imagga API key and secret).
+category: E-commerce
+trigger: manual
+# What a test runs on: what a person gives when they press Run.
+sample:
+  sku: MUG-0142
+  photos:
+    - https://cdn.example.com/products/mug-0142-front.jpg
+    - https://cdn.example.com/products/mug-0142-side.jpg
+  notes: 12 oz stoneware, dishwasher safe, made in Portugal.
+steps:
+  - where: size(value.photos) > 0
+  - name: writer
+    agent:
+      credential: model
+      instructions: >-
+        You write e-commerce listings. Look at every photo with photo_tags and photo_colors first. Then write the
+        listing from what the photos show and the notes say - never invent materials, sizes or claims. The title is
+        at most 80 characters; bullets are short and concrete.
+      input: "Product {{ value.sku }}. Photos: {{ value.photos.join(', ') }}. Notes: {{ value.notes }}"
+      tools:
+        - name: photo_tags
+          description: What a photo shows, as tags with how sure the service is (0 to 100), by the photo's address.
+          parameters:
+            type: object
+            properties:
+              url: { type: string, description: "The photo's address" }
+            required: [url]
+          http:
+            url: https://api.imagga.com/v2/tags
+            credential: imagga
+            query: { image_url: "{{ args.url }}", limit: "15", threshold: "25" }
+        - name: photo_colors
+          description: A photo's main colors, with their names, by the photo's address.
+          parameters:
+            type: object
+            properties:
+              url: { type: string, description: "The photo's address" }
+            required: [url]
+          http:
+            url: https://api.imagga.com/v2/colors
+            credential: imagga
+            query: { image_url: "{{ args.url }}", extract_object_colors: "1" }
+      allow: [photo_tags, photo_colors]
+      output:
+        schema:
+          type: object
+          properties:
+            title: { type: string, maxLength: 80 }
+            bullets: { type: array, items: { type: string }, minItems: 3, maxItems: 5 }
+            description: { type: string }
+            tags: { type: array, items: { type: string }, maxItems: 15 }
+            color: { type: string, description: "the product's main color, in plain words" }
+          required: [title, bullets, description, tags, color]
+      max_turns: 8
+      max_tool_calls: 12
+  - name: keep
+    table:
+      name: listings
+      action: upsert
+      key: sku
+      row:
+        sku: "{{ value.sku }}"
+        title: "{{ steps.writer.json.title }}"
+        bullets: "{{ steps.writer.json.bullets }}"
+        description: "{{ steps.writer.json.description }}"
+        tags: "{{ has(steps.writer.json.tags) ? steps.writer.json.tags.join(', ') : '' }}"
+        color: "{{ steps.writer.json.color }}"
+        status: draft

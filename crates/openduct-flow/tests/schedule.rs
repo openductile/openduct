@@ -3,7 +3,8 @@
 
 //! A schedule's times run once, across a takeover: the two ways a time ran twice when the member reading the
 //! schedule's partition was lost, each made to happen here on purpose. (studio_cluster proves the whole of it on three
-//! nodes, but reaches these only when a machine is slow enough.)
+//! nodes, but reaches these only when a machine is slow enough.) A schedule at set times (a cron expression), queued
+//! by two nodes at once, runs each of its times once too, across a takeover.
 
 // A test file: a failed step should stop the test where it failed.
 #![allow(
@@ -22,7 +23,7 @@ use openduct_broker::client::{ClientSecurity, Outgoing, Shared};
 use openduct_broker::{Broker, BrokerConfig};
 use openduct_expr::Value;
 use openduct_flow::runner::{Topics, envelope, iso, prepare, serve};
-use openduct_flow::{Credential, Effects, HttpRequest, Workflow};
+use openduct_flow::{Credential, Effects, HttpRequest, Trigger, Workflow};
 use openduct_storage::MemoryStore;
 use serde_json::json;
 use tokio::sync::watch;
@@ -30,6 +31,8 @@ use tokio::sync::watch;
 type Pending<'a> = Pin<Box<dyn Future<Output = Result<Value, String>> + Send + 'a>>;
 
 const TICK: &str = "name: tick\ntrigger:\n  schedule:\n    every: 2s\nsteps:\n  - name: call\n    http:\n      method: POST\n      url: 'http://127.0.0.1:9/{{ trigger.slot }}'\n";
+/// Every second, by a cron expression in a time zone: what each node of a cluster queues for itself.
+const EVERY_SECOND: &str = "name: seconds\ntrigger:\n  schedule:\n    cron: '* * * * * *'\n    timezone: Europe/Berlin\nsteps:\n  - name: call\n    http:\n      method: POST\n      url: 'http://127.0.0.1:9/{{ trigger.slot }}'\n";
 
 /// Each run's time, from the one step it has; and, when asked, where the group had committed the schedule's
 /// partition while that run was going.
@@ -95,6 +98,11 @@ impl Effects for Calls {
 
 /// A broker in memory, a client of it, and the tick workflow's topics made.
 async fn ready() -> (Broker, Arc<Shared>, Arc<Workflow>, Topics) {
+    ready_with(TICK).await
+}
+
+/// A broker in memory, a client of it, and the topics of the workflow `text` made.
+async fn ready_with(text: &str) -> (Broker, Arc<Shared>, Arc<Workflow>, Topics) {
     let broker = Broker::start(
         BrokerConfig::new("127.0.0.1:0".parse().unwrap()),
         Arc::new(MemoryStore::new()),
@@ -106,7 +114,7 @@ async fn ready() -> (Broker, Arc<Shared>, Arc<Workflow>, Topics) {
         Duration::from_secs(10),
         &ClientSecurity::default(),
     ));
-    let workflow = Arc::new(Workflow::parse(TICK).unwrap());
+    let workflow = Arc::new(Workflow::parse(text).unwrap());
     prepare(&mut shared.lend().await.unwrap(), &workflow.id)
         .await
         .unwrap();
@@ -212,4 +220,72 @@ async fn a_member_taking_the_schedule_over_does_not_run_a_time_again() {
     stop.send(true).unwrap();
     second.await.unwrap().unwrap();
     broker.shutdown().await;
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn set_times_queued_by_two_nodes_run_once_each_across_a_takeover() {
+    let (broker, shared, workflow, _) = ready_with(EVERY_SECOND).await;
+    let Trigger::Calendar(calendar) = &workflow.trigger else {
+        panic!("not set times: {:?}", workflow.trigger);
+    };
+    // Two nodes, each queueing every time the schedule names.
+    let (stop_nodes, nodes_stopped) = watch::channel(false);
+    let nodes: Vec<_> = (0..2)
+        .map(|_| {
+            tokio::spawn(openduct_flow::calendar::schedule(
+                workflow.id.clone(),
+                calendar.clone(),
+                Arc::clone(&shared),
+                nodes_stopped.clone(),
+            ))
+        })
+        .collect();
+    let calls = Arc::new(Calls::new(None));
+    let (stop, stopped) = watch::channel(false);
+    let first = tokio::spawn(serve(
+        Arc::clone(&workflow),
+        Arc::clone(&shared),
+        Arc::clone(&calls) as Arc<dyn Effects>,
+        stopped,
+    ));
+    until("three times run", || calls.ran().len() >= 3).await;
+    stop.send(true).unwrap();
+    first.await.unwrap().unwrap();
+
+    // The member reading the schedule is gone; another takes it over while both nodes go on queueing.
+    let before = calls.ran().len();
+    let (stop, stopped) = watch::channel(false);
+    let second = tokio::spawn(serve(
+        Arc::clone(&workflow),
+        Arc::clone(&shared),
+        Arc::clone(&calls) as Arc<dyn Effects>,
+        stopped,
+    ));
+    until("three more times, after the takeover", || {
+        calls.ran().len() >= before + 3
+    })
+    .await;
+    stop_nodes.send(true).unwrap();
+    for node in nodes {
+        node.await.unwrap();
+    }
+    // Room for a repeat to show itself, had there been one.
+    tokio::time::sleep(Duration::from_secs(2)).await;
+    stop.send(true).unwrap();
+    second.await.unwrap().unwrap();
+    broker.shutdown().await;
+
+    let ran = calls.ran_sorted();
+    let mut once = ran.clone();
+    once.dedup();
+    assert_eq!(once, ran, "a time ran twice");
+    for slot in &ran {
+        let at: i64 = slot.parse().unwrap();
+        assert_eq!(at % 1000, 0, "{slot} is not a whole second");
+        assert_eq!(
+            calendar.next_after(at - 1000),
+            Some(at),
+            "{slot} is not a time it names"
+        );
+    }
 }

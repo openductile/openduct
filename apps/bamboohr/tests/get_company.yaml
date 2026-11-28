@@ -1,0 +1,34 @@
+description: The company's details
+action: get_company
+credential:
+  company_domain: acme
+  api_key: test-key
+exchanges:
+- sent:
+    method: GET
+    url: https://acme.bamboohr.com/api/v1/company_information
+    headers:
+      authorization: Basic dGVzdC1rZXk6eA==
+      accept: application/json
+  answer:
+    status: 200
+    body:
+      legalName: Acme Coffee LLC
+      displayName: Acme Coffee
+      address:
+        line1: 100 Main St
+        line2: ''
+        city: Denver
+        state: CO
+        zip: '80202'
+      phone: 555-0100
+result:
+  legalName: Acme Coffee LLC
+  displayName: Acme Coffee
+  address:
+    line1: 100 Main St
+    line2: ''
+    city: Denver
+    state: CO
+    zip: '80202'
+  phone: 555-0100

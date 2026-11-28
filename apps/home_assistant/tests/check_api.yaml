@@ -1,0 +1,7 @@
+description: The API answers that it is running
+action: check_api
+credential: { url: "http://home.example:8123", token: ha-test-token }
+exchanges:
+  - sent: { method: GET, url: "http://home.example:8123/api/", headers: { authorization: Bearer ha-test-token } }
+    answer: { status: 200, body: { message: API running. } }
+result: { message: API running. }

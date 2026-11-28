@@ -1,0 +1,12 @@
+description: "An email to a contact from a team mailbox"
+action: send_email
+credential: {"api_key": "test-key"}
+input: {"send_user_id": "usr_U1", "send_user_email": "sales@northwind.example", "send_user_mailbox_id": "mbx_1", "contact_id": "ctc_C1", "subject": "Our call", "message": "<p>Thanks for your time today.</p>"}
+exchanges:
+  - sent:
+      method: POST
+      url: "https://api.lemlist.com/api/inbox/email"
+      headers: {"authorization": "Basic OnRlc3Qta2V5"}
+      body: {"sendUserId": "usr_U1", "sendUserEmail": "sales@northwind.example", "sendUserMailboxId": "mbx_1", "contactId": "ctc_C1", "subject": "Our call", "message": "<p>Thanks for your time today.</p>"}
+    answer: {"status": 200, "body": {"ok": true, "contactId": "ctc_C1"}}
+result: {"ok": true, "contactId": "ctc_C1"}

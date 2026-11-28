@@ -1,0 +1,15 @@
+description: The first poll notes what is there and runs nothing
+trigger: new_record
+credential: { access_token: "00D000000000001!AQ.test", instance: examplecorp.my.salesforce.com }
+input: { object: Opportunity }
+exchanges:
+  - sent:
+      method: GET
+      url: https://examplecorp.my.salesforce.com/services/data/v67.0/query
+      query: { q: "SELECT Id, CreatedDate FROM Opportunity ORDER BY CreatedDate DESC LIMIT 200" }
+    answer:
+      body:
+        done: true
+        records:
+          - { attributes: { type: Opportunity }, Id: 0065e00000OpPqRAAV, CreatedDate: "2026-11-27T09:00:00.000+0000" }
+runs: []

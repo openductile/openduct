@@ -1,0 +1,56 @@
+# Made by `openduct app from-openapi`: Get Object Type.
+description: "Get Object Type, made from the API description's schemas"
+action: get_object_type
+credential: { api_key: test-key }
+input: { id: "01K5YKKQKM819VVGCPZZKGE6D4" }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://a.klaviyo.com/api/object-types/01K5YKKQKM819VVGCPZZKGE6D4"
+      query: {}
+      headers: { authorization: test-key, revision: "2026-10-15" }
+    answer:
+      status: 200
+      body:
+        data:
+          type: object-type
+          id: "01JXKYCN9A5M3QPVR8T2WE4BLD"
+          attributes:
+            title: example
+            description: example
+            status: active
+            namespace: example
+            created_at: "2026-01-15T09:30:00Z"
+            updated_at: "2026-01-15T09:30:00Z"
+          relationships:
+            current-schema: { data: {}, links: {} }
+            draft-schema: { data: {}, links: {} }
+            schema-versions: { data: [null], links: {} }
+            object-types: { data: [null], links: {} }
+            profile-object-types: { data: [null], links: {} }
+          links: { self: "https://example.com/1" }
+        included:
+          - { type: object-type, id: "01JXKYCN9A5M3QPVR8T2WE4BLD:::subscription", links: {}, meta: {} }
+        links: { self: "https://example.com/1" }
+        meta: { agent_hints: { next_steps: [example] } }
+result:
+  data:
+    type: object-type
+    id: "01JXKYCN9A5M3QPVR8T2WE4BLD"
+    attributes:
+      title: example
+      description: example
+      status: active
+      namespace: example
+      created_at: "2026-01-15T09:30:00Z"
+      updated_at: "2026-01-15T09:30:00Z"
+    relationships:
+      current-schema: { data: {}, links: {} }
+      draft-schema: { data: {}, links: {} }
+      schema-versions: { data: [null], links: {} }
+      object-types: { data: [null], links: {} }
+      profile-object-types: { data: [null], links: {} }
+    links: { self: "https://example.com/1" }
+  included: [{ type: object-type, id: "01JXKYCN9A5M3QPVR8T2WE4BLD:::subscription", links: {}, meta: {} }]
+  links: { self: "https://example.com/1" }
+  meta: { agent_hints: { next_steps: [example] } }

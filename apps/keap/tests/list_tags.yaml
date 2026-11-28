@@ -1,0 +1,50 @@
+# Made by `openduct app from-openapi`: List tags.
+description: "List tags, made from the API description's schemas"
+action: list_tags
+credential: { access_token: test-access-token }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://api.keap.com/crm/rest/v2/tags"
+      query: { page_size: "100" }
+      headers: { authorization: "Bearer test-access-token" }
+    answer:
+      status: 200
+      body:
+        tags:
+          - id: 123
+            name: example
+            description: example
+            category: { id: 123 }
+            create_time: "2024-01-10T08:00:00Z"
+            update_time: "2024-03-15T10:30:00Z"
+        next_page_token: token_2
+  - sent:
+      method: GET
+      url: "https://api.keap.com/crm/rest/v2/tags"
+      query: { page_size: "100", page_token: token_2 }
+      headers: { authorization: "Bearer test-access-token" }
+    answer:
+      status: 200
+      body:
+        tags:
+          - id: id_2
+            name: example
+            description: example
+            category: { id: 123 }
+            create_time: "2024-01-10T08:00:00Z"
+            update_time: "2024-03-15T10:30:00Z"
+        next_page_token: null
+result:
+  - id: 123
+    name: example
+    description: example
+    category: { id: 123 }
+    create_time: "2024-01-10T08:00:00Z"
+    update_time: "2024-03-15T10:30:00Z"
+  - id: id_2
+    name: example
+    description: example
+    category: { id: 123 }
+    create_time: "2024-01-10T08:00:00Z"
+    update_time: "2024-03-15T10:30:00Z"

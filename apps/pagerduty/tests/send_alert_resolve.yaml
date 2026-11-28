@@ -1,0 +1,11 @@
+description: The same alert resolved by its de-duplication key
+action: send_alert
+credential: { api_key: pd_test_1 }
+input: { routing_key: R0UT1NGKEYEXAMPLE0000000000000000, event_action: resolve, dedup_key: db-1/disk }
+exchanges:
+  - sent:
+      method: POST
+      url: https://events.pagerduty.com/v2/enqueue
+      body: { routing_key: R0UT1NGKEYEXAMPLE0000000000000000, event_action: resolve, dedup_key: db-1/disk }
+    answer: { status: 202, body: { status: success, message: Event processed, dedup_key: db-1/disk } }
+result: { status: success, message: Event processed, dedup_key: db-1/disk }

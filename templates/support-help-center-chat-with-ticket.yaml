@@ -1,0 +1,86 @@
+name: A help center chat that answers from your docs, or opens a ticket
+description: >-
+  A chat for your product's help center. Each question is first rewritten by AI into one that stands on its own
+  ("and on Android?" becomes a full question), then an AI agent searches your help articles by meaning in PostgreSQL
+  with pgvector, answers only from what it finds and links the articles; when the docs do not cover it, it offers a
+  ticket and, once the person gives an e-mail, adds one to your tickets table. Load the articles with the template
+  "Keep documents for answers", with team set to support. Make the table tickets under Tables (session, email,
+  question, summary). Needs: model (ai, with an embedding model), docs-db (postgres).
+category: Support
+trigger:
+  chat:
+    texts:
+      title: Help center
+      welcome: Hi! Ask me anything about the app.
+      placeholder: Your question
+    # The sites that may show the chat (add yours), beside its own page.
+    origins: []
+    history: 10
+    limits: { message: 2000, per_session: 20, per_address: 60 }
+# What a test runs on: a message as this trigger gives it.
+sample:
+  message: and can I do that from the Android app too?
+  session: 7e1f0c2d9a8b4c3e5f6a7b8c9d0e1f2a
+  history:
+    - { role: user, content: "How do I export my invoices to a spreadsheet?" }
+    - { role: assistant, content: "In Billing, choose Export and pick CSV or Excel [Exporting invoices]." }
+  person: {}
+steps:
+  - name: question
+    ai:
+      credential: model
+      system: >-
+        Rewrite the user's last message as one question that stands on its own, using the conversation for what
+        "it", "that" or "too" refer to. Answer with the question only.
+      messages: "{{ value.history }}"
+      prompt: "{{ value.message }}"
+      max_tokens: 100
+  - name: helper
+    agent:
+      credential: model
+      instructions: >-
+        You answer users of a software product in its help center, in at most five sentences. Search the help
+        articles with search_docs first and answer only from the passages found, naming each article you used in
+        brackets, as [Exporting invoices]. If the passages do not answer it, say so and offer to open a ticket; when
+        the person gives an e-mail address and agrees, open it with open_ticket and give them its number.
+      input: "Question: {{ steps.question.text }}\n(As they wrote it: {{ value.message }})"
+      tools:
+        - name: search_docs
+          description: The passages of the help articles nearest a question, with their article and score.
+          parameters:
+            type: object
+            properties:
+              query: { type: string, description: "The question, in full" }
+            required: [query]
+          vector_store:
+            action: search
+            credential: docs-db
+            table: doc_pieces
+            embed_with: model
+            query: "{{ args.query }}"
+            filter: { team: support }
+            top_k: 5
+            min_score: 0.3
+        - name: open_ticket
+          description: Opens a support ticket for the team, by the person's e-mail and a one-line summary.
+          parameters:
+            type: object
+            properties:
+              email: { type: string, description: "The person's e-mail address, as they gave it" }
+              summary: { type: string, description: "What they need, in one line" }
+            required: [email, summary]
+          table:
+            name: tickets
+            action: insert
+            row:
+              session: "{{ value.session }}"
+              email: "{{ args.email }}"
+              question: "{{ steps.question.text }}"
+              summary: "{{ args.summary }}"
+      allow: [search_docs, open_ticket]
+      memory: { key: "{{ value.session }}", window: 10 }
+      max_turns: 5
+      max_tool_calls: 4
+  - name: reply
+    respond:
+      body: { text: "{{ steps.helper.text }}" }

@@ -1,0 +1,65 @@
+description: Contacts, the next page by the cursor in the last contact of a page
+action: list_contacts
+credential: {domain: shopexample, email: dana@shop.example, api_key: agile-test-key}
+exchanges:
+- sent:
+    method: GET
+    url: https://shopexample.agilecrm.com/dev/api/contacts
+    headers: &id001 {authorization: Basic ZGFuYUBzaG9wLmV4YW1wbGU6YWdpbGUtdGVzdC1rZXk=, accept: application/json}
+    query: {page_size: '100'}
+  answer:
+    status: 200
+    body:
+    - id: '5629585249009664'
+      type: PERSON
+      created_time: '1764237600'
+      updated_time: 1764237600
+      star_value: 4
+      lead_score: 10
+      tags: &id002 [Lead]
+      properties: &id005
+      - {type: SYSTEM, name: first_name, value: Ann}
+      - {type: SYSTEM, name: last_name, value: Example}
+      - {type: SYSTEM, name: email, value: ann@example.com, subtype: work}
+      contact_company_id: null
+      owner: &id003 {id: 6263975862861824, email: dana@shop.example, name: Dana Example}
+      campaignStatus: &id004 []
+      count: 2
+      cursor: E-ABAIICNGoRc35hZ2lsZS1jcm0tY2xvdWRy
+- sent:
+    method: GET
+    url: https://shopexample.agilecrm.com/dev/api/contacts
+    headers: *id001
+    query: {page_size: '100', cursor: E-ABAIICNGoRc35hZ2lsZS1jcm0tY2xvdWRy}
+  answer:
+    status: 200
+    body:
+    - &id006
+      id: '5629585249009665'
+      type: PERSON
+      created_time: '1764241200'
+      updated_time: 1764241200
+      star_value: 4
+      lead_score: 10
+      tags: *id002
+      properties:
+      - {type: SYSTEM, name: first_name, value: Bob}
+      - {type: SYSTEM, name: email, value: bob@example.com, subtype: work}
+      contact_company_id: null
+      owner: *id003
+      campaignStatus: *id004
+result:
+- id: '5629585249009664'
+  type: PERSON
+  created_time: '1764237600'
+  updated_time: 1764237600
+  star_value: 4
+  lead_score: 10
+  tags: *id002
+  properties: *id005
+  contact_company_id: null
+  owner: *id003
+  campaignStatus: *id004
+  count: 2
+  cursor: E-ABAIICNGoRc35hZ2lsZS1jcm0tY2xvdWRy
+- *id006

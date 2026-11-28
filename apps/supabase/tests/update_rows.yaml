@@ -1,0 +1,13 @@
+description: A row changed, found by its id
+action: update_rows
+credential: { project_url: "https://abcdefgh.supabase.co", api_key: sb_secret_test1 }
+input: { table: contacts, match: { id: 7 }, set: { status: closed } }
+exchanges:
+  - sent:
+      method: PATCH
+      url: https://abcdefgh.supabase.co/rest/v1/contacts
+      headers: { prefer: return=representation }
+      query: { and: '(id.eq."7")' }
+      body: { status: closed }
+    answer: { body: [{ id: 7, status: closed }] }
+result: [{ id: 7, status: closed }]

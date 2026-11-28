@@ -1,0 +1,12 @@
+description: "A link alone saved: no collection sent, so it goes to Unsorted"
+action: add_bookmark
+credential: { token: test-token }
+input: { link: "https://news.example/story" }
+exchanges:
+  - sent:
+      method: POST
+      url: https://api.raindrop.io/rest/v1/raindrop
+      body: { link: "https://news.example/story" }
+    answer:
+      body: { result: true, item: { _id: 1002, link: "https://news.example/story", collection: { $id: -1 } } }
+result: { _id: 1002, link: "https://news.example/story", collection: { $id: -1 } }

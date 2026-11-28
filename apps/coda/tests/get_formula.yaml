@@ -1,0 +1,37 @@
+# Made by `openduct app from-openapi`: Look up a named formula.
+description: "Look up a named formula, made from the API description's schemas"
+action: get_formula
+credential: { token: test-token }
+input: { doc_id: doc_1, formula_id_or_name: example }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://docs.superhuman.com/apis/v1/docs/doc_1/formulas/example"
+      query: {}
+      headers: { authorization: "Bearer test-token" }
+    answer:
+      status: 200
+      body:
+        id: f-fgHijkLm
+        type: formula
+        href: "https://example.com/1"
+        name: example
+        parent:
+          id: canvas-IjkLmnO
+          type: page
+          href: "https://example.com/1"
+          browserLink: "https://example.com/1"
+          name: example
+        value: example
+result:
+  id: f-fgHijkLm
+  type: formula
+  href: "https://example.com/1"
+  name: example
+  parent:
+    id: canvas-IjkLmnO
+    type: page
+    href: "https://example.com/1"
+    browserLink: "https://example.com/1"
+    name: example
+  value: example

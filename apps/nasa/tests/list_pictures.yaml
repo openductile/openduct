@@ -1,0 +1,19 @@
+description: The pictures of three days - dates sent as the feed's YYMMDD codes; fewer than 25 is the last page
+action: list_pictures
+credential: { api_key: nasa-test-key }
+input: { from: "2026-11-01", to: "2026-11-03" }
+exchanges:
+  - sent:
+      method: GET
+      url: https://science.nasa.gov/wp-json/wp/v2/apod-basic
+      query: { api_key: nasa-test-key, date_from: "261101", date_to: "261103", per_page: "25" }
+    answer:
+      status: 200
+      body:
+        - { date: "2026-11-03", post_id: 1300103, title: A comet's tail, media_type: image }
+        - { date: "2026-11-02", post_id: 1300102, title: Moonrise over hills, media_type: image }
+        - { date: "2026-11-01", post_id: 1300101, title: A star cluster, media_type: video }
+result:
+  - { date: "2026-11-03", post_id: 1300103, title: A comet's tail, media_type: image }
+  - { date: "2026-11-02", post_id: 1300102, title: Moonrise over hills, media_type: image }
+  - { date: "2026-11-01", post_id: 1300101, title: A star cluster, media_type: video }

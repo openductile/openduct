@@ -1,0 +1,8 @@
+description: A row the table refuses fails the step with BigQuery's reason
+action: add_rows
+credential: { access_token: ya29.bq-test }
+input: { project_id: example-shop-1, dataset_id: shop, table_id: orders, rows: [{ order_id: A-1004, colour: red }] }
+exchanges:
+  - sent: { body: { rows: [{ json: { order_id: A-1004, colour: red } }] } }
+    answer: { body: { kind: bigquery#tableDataInsertAllResponse, insertErrors: [{ index: 0, errors: [{ reason: invalid, location: colour, message: "no such field: colour." }] }] } }
+error: "row 0: no such field: colour."

@@ -1,0 +1,8 @@
+description: A task removed
+action: delete_task
+credential: { access_token: ya29.test }
+input: { list_id: "@default", task_id: dGFzazI }
+exchanges:
+  - sent: { method: DELETE, url: https://tasks.googleapis.com/tasks/v1/lists/@default/tasks/dGFzazI }
+    answer: { status: 204 }
+result: { deleted: true }

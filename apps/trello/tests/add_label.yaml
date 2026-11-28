@@ -1,0 +1,11 @@
+description: A label put on a card
+action: add_label
+credential: { api_key: testkey0123456789, token: ATTAtesttoken0123 }
+input: { card_id: 6567a1b2c3d4e5f600000001, label_id: 6567a1b2c3d4e5f600000l01 }
+exchanges:
+  - sent:
+      method: POST
+      url: https://api.trello.com/1/cards/6567a1b2c3d4e5f600000001/idLabels
+      query: { key: testkey0123456789, token: ATTAtesttoken0123, value: 6567a1b2c3d4e5f600000l01 }
+    answer: { body: [6567a1b2c3d4e5f600000l01] }
+result: { labels: [6567a1b2c3d4e5f600000l01] }

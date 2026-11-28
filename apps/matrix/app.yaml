@@ -1,0 +1,283 @@
+# Copyright 2026 Ductile AI, Inc
+# SPDX-License-Identifier: Apache-2.0
+# Matrix: started with `openduct app from-openapi` from the Client-Server API description,
+# https://spec.matrix.org/v1.19/client-server-api/api.json (v1.19, built from github.com/matrix-org/matrix-spec,
+# Apache 2.0), then finished by hand. Any homeserver: its address is given in the credential.
+app: matrix
+name: Matrix
+category: communication
+description: Messages and rooms on Matrix - send to a room, make and join rooms, invite and remove people - on any homeserver.
+docs: "https://spec.matrix.org/v1.19/client-server-api/"
+hosts: [matrix-client.matrix.org]
+base_url: "https://matrix-client.matrix.org"
+base_url_field: homeserver
+sign_in:
+  - id: matrix
+    label: "An access token"
+    fields:
+      - { name: homeserver, label: "The homeserver's address, such as https://matrix.example.org (matrix.org's if left empty)", optional: true }
+      - { name: token, label: "The account's access token", secret: true }
+    headers: { Authorization: "Bearer {{ credential.token }}" }
+error: "type(value) == map && has(value.error) ? value.error : null"
+actions:
+  send_message:
+    label: "Send a message"
+    description: >-
+      Posts a text message to a room the account is in - plain, or with HTML formatting too. Each message needs a
+      transaction id used once only: sending again with the same one does not post it twice.
+    write: true
+    method: PUT
+    path: "/_matrix/client/v3/rooms/{{ input.room_id }}/send/m.room.message/{{ input.transaction_id }}"
+    inputs:
+      - { name: room_id, label: "The room's id, such as !abc123:example.org", required: true }
+      - { name: text, label: "The message", required: true }
+      - { name: html, label: "The message with HTML formatting (the text is shown where HTML is not)" }
+      - { name: kind, label: "m.text (the default) or m.notice, for a bot's notices" }
+      - { name: transaction_id, label: "A value used for this message only, such as the run's or the event's id", required: true }
+    send:
+      msgtype: "{{ has(input.kind) && input.kind != null ? input.kind : 'm.text' }}"
+      body: "{{ input.text }}"
+      format: "{{ has(input.html) && input.html != null ? 'org.matrix.custom.html' : null }}"
+      formatted_body: "{{ input.html }}"
+    output: { event_id: text }
+  send_event:
+    label: "Send an event"
+    description: "Posts any kind of room event - a reaction, a file someone uploaded, an event of your own type - with its content."
+    write: true
+    method: PUT
+    path: "/_matrix/client/v3/rooms/{{ input.room_id }}/send/{{ input.event_type }}/{{ input.transaction_id }}"
+    inputs:
+      - { name: room_id, label: "The room's id", required: true }
+      - { name: event_type, label: "The event's type, such as m.reaction or m.room.message", required: true }
+      - { name: content, label: "Its content, as the Matrix specification gives it for the type", required: true, kind: record }
+      - { name: transaction_id, label: "A value used for this event only", required: true }
+    send: "{{ input.content }}"
+    output: { event_id: text }
+  remove_message:
+    label: "Remove a message"
+    description: "Takes a message (or another event) out of a room, leaving only the trace that one was there."
+    write: true
+    method: PUT
+    path: "/_matrix/client/v3/rooms/{{ input.room_id }}/redact/{{ input.event_id }}/{{ input.transaction_id }}"
+    inputs:
+      - { name: room_id, label: "The room's id", required: true }
+      - { name: event_id, label: "The message's event id", required: true }
+      - { name: reason, label: "Why" }
+      - { name: transaction_id, label: "A value used for this removal only", required: true }
+    send: { reason: "{{ input.reason }}" }
+    output: { event_id: text }
+  create_room:
+    label: "Make a room"
+    description: "A new room, with its name and topic, the people invited, and whether it is private, public or a direct chat."
+    write: true
+    method: POST
+    path: "/_matrix/client/v3/createRoom"
+    inputs:
+      - { name: name, label: "Name" }
+      - { name: topic, label: "Topic" }
+      - { name: invite, label: "The people to invite, as user ids such as [@ann:example.org]", kind: list }
+      - { name: preset, label: "private_chat, trusted_private_chat or public_chat" }
+      - { name: visibility, label: "public to list it in the homeserver's room directory, private not to (the default)" }
+      - { name: room_alias_name, label: "Its address's name, such as support (for #support:the.homeserver)" }
+      - { name: is_direct, label: "A direct chat with the people invited", kind: boolean }
+    send:
+      name: "{{ input.name }}"
+      topic: "{{ input.topic }}"
+      invite: "{{ input.invite }}"
+      preset: "{{ input.preset }}"
+      visibility: "{{ input.visibility }}"
+      room_alias_name: "{{ input.room_alias_name }}"
+      is_direct: "{{ input.is_direct }}"
+    output: { room_id: text }
+  join_room:
+    label: "Join a room"
+    description: "The account joins a room it was invited to, or a public one, by the room's id or address."
+    write: true
+    method: POST
+    path: "/_matrix/client/v3/join/{{ input.room.replace('#', '%23') }}"
+    inputs:
+      - { name: room, label: "The room's id or address, such as !abc123:example.org or #support:example.org", required: true }
+      - { name: reason, label: "Why" }
+    send: { reason: "{{ input.reason }}" }
+    output: { room_id: text }
+  leave_room:
+    label: "Leave a room"
+    description: "The account leaves a room (or turns down an invitation to it)."
+    write: true
+    method: POST
+    path: "/_matrix/client/v3/rooms/{{ input.room_id }}/leave"
+    inputs:
+      - { name: room_id, label: "The room's id", required: true }
+      - { name: reason, label: "Why" }
+    send: { reason: "{{ input.reason }}" }
+    result: "{'left': status < 300}"
+    output: { left: boolean }
+  invite_user:
+    label: "Invite someone to a room"
+    description: "Invites a person, by their Matrix user id, to a room the account is in."
+    write: true
+    method: POST
+    path: "/_matrix/client/v3/rooms/{{ input.room_id }}/invite"
+    inputs:
+      - { name: room_id, label: "The room's id", required: true }
+      - { name: user_id, label: "Their user id, such as @ann:example.org", required: true }
+      - { name: reason, label: "Why" }
+    send: { user_id: "{{ input.user_id }}", reason: "{{ input.reason }}" }
+    result: "{'invited': status < 300}"
+    output: { invited: boolean }
+  remove_user:
+    label: "Remove someone from a room"
+    description: "Takes a person out of a room (they may join again if they are let in)."
+    write: true
+    method: POST
+    path: "/_matrix/client/v3/rooms/{{ input.room_id }}/kick"
+    inputs:
+      - { name: room_id, label: "The room's id", required: true }
+      - { name: user_id, label: "Their user id", required: true }
+      - { name: reason, label: "Why" }
+    send: { user_id: "{{ input.user_id }}", reason: "{{ input.reason }}" }
+    result: "{'removed': status < 300}"
+    output: { removed: boolean }
+  ban_user:
+    label: "Ban someone from a room"
+    description: "Takes a person out of a room and keeps them out until they are let back in."
+    write: true
+    method: POST
+    path: "/_matrix/client/v3/rooms/{{ input.room_id }}/ban"
+    inputs:
+      - { name: room_id, label: "The room's id", required: true }
+      - { name: user_id, label: "Their user id", required: true }
+      - { name: reason, label: "Why" }
+    send: { user_id: "{{ input.user_id }}", reason: "{{ input.reason }}" }
+    result: "{'banned': status < 300}"
+    output: { banned: boolean }
+  unban_user:
+    label: "Let someone back into a room"
+    description: "Lifts a ban: the person may join again (they are not invited)."
+    write: true
+    method: POST
+    path: "/_matrix/client/v3/rooms/{{ input.room_id }}/unban"
+    inputs:
+      - { name: room_id, label: "The room's id", required: true }
+      - { name: user_id, label: "Their user id", required: true }
+      - { name: reason, label: "Why" }
+    send: { user_id: "{{ input.user_id }}", reason: "{{ input.reason }}" }
+    result: "{'unbanned': status < 300}"
+    output: { unbanned: boolean }
+  set_room_name:
+    label: "Rename a room"
+    description: "Changes a room's name, as everyone in it sees it."
+    write: true
+    method: PUT
+    path: "/_matrix/client/v3/rooms/{{ input.room_id }}/state/m.room.name/"
+    inputs:
+      - { name: room_id, label: "The room's id", required: true }
+      - { name: name, label: "The new name", required: true }
+    send: { name: "{{ input.name }}" }
+    output: { event_id: text }
+  set_room_topic:
+    label: "Change a room's topic"
+    description: "Changes the topic shown at the top of a room."
+    write: true
+    method: PUT
+    path: "/_matrix/client/v3/rooms/{{ input.room_id }}/state/m.room.topic/"
+    inputs:
+      - { name: room_id, label: "The room's id", required: true }
+      - { name: topic, label: "The new topic", required: true }
+    send: { topic: "{{ input.topic }}" }
+    output: { event_id: text }
+  list_joined_rooms:
+    label: "List my rooms"
+    description: "The ids of every room the account is in."
+    method: GET
+    path: "/_matrix/client/v3/joined_rooms"
+    output: { joined_rooms: list }
+  get_messages:
+    label: "Read a room's messages"
+    description: >-
+      The newest messages and other events of a room, up to the number asked for (newest first), with a token to read
+      on from.
+    method: GET
+    path: "/_matrix/client/v3/rooms/{{ input.room_id }}/messages"
+    inputs:
+      - { name: room_id, label: "The room's id", required: true }
+      - { name: limit, label: "How many (10 if left out)", kind: number }
+      - { name: from, label: "Read on from here: the end token an earlier read gave" }
+      - { name: messages_only, label: "Only messages, no other events", kind: boolean }
+    query:
+      dir: b
+      limit: "{{ input.limit }}"
+      from: "{{ input.from }}"
+      filter: "{{ input.messages_only == true ? '{\"types\":[\"m.room.message\"]}' : '' }}"
+    output: { chunk: list, start: text, end: text, state: list }
+  list_members:
+    label: "List a room's members"
+    description: "The people in a room now, each with their display name and picture, by user id."
+    method: GET
+    path: "/_matrix/client/v3/rooms/{{ input.room_id }}/joined_members"
+    inputs: [{ name: room_id, label: "The room's id", required: true }]
+    output: { joined: record }
+  get_event:
+    label: "Look up a message"
+    description: "One message or other event of a room, by its event id."
+    method: GET
+    path: "/_matrix/client/v3/rooms/{{ input.room_id }}/event/{{ input.event_id }}"
+    inputs:
+      - { name: room_id, label: "The room's id", required: true }
+      - { name: event_id, label: "The event's id", required: true }
+    output:
+      event_id: text
+      type: text
+      sender: text
+      content: record
+      origin_server_ts: number
+      room_id: text
+      state_key: text
+      unsigned: record
+  find_room:
+    label: "Find a room by its address"
+    description: "The room id behind an address such as #support:example.org."
+    method: GET
+    path: "/_matrix/client/v3/directory/room/{{ input.room_alias.replace('#', '%23') }}"
+    inputs: [{ name: room_alias, label: "The room's address, such as #support:example.org", required: true }]
+    output: { room_id: text, servers: list }
+  list_public_rooms:
+    label: "List public rooms"
+    description: "The rooms a homeserver lists in its public directory, a page at a time, with a token for the next."
+    method: GET
+    path: "/_matrix/client/v3/publicRooms"
+    inputs:
+      - { name: limit, label: "How many", kind: number }
+      - { name: since, label: "Read on from here: the next_batch an earlier page gave" }
+      - { name: server, label: "Another homeserver's directory, such as example.org" }
+    query: { limit: "{{ input.limit }}", since: "{{ input.since }}", server: "{{ input.server }}" }
+    output: { chunk: list, next_batch: text, prev_batch: text, total_room_count_estimate: number }
+  get_profile:
+    label: "Someone's profile"
+    description: "A person's display name and picture, by their user id."
+    method: GET
+    path: "/_matrix/client/v3/profile/{{ input.user_id }}"
+    inputs: [{ name: user_id, label: "Their user id, such as @ann:example.org", required: true }]
+    output: { displayname: text, avatar_url: text }
+  who_am_i:
+    label: "Who I am"
+    description: "The user id (and device) the access token belongs to."
+    method: GET
+    path: "/_matrix/client/v3/account/whoami"
+    output: { user_id: text, device_id: text, is_guest: boolean }
+triggers:
+  new_message:
+    label: A new message in a room
+    description: >-
+      Each message posted in a room the account is in, asked for every minute - including the account's own. The run
+      gets the event: sender, content (body, msgtype) and time.
+    inputs:
+      - { name: room_id, label: "The room's id, such as !abc123:example.org", required: true }
+    poll:
+      method: GET
+      path: "/_matrix/client/v3/rooms/{{ input.room_id }}/messages"
+      query: { dir: b, limit: "50", filter: '{"types":["m.room.message"]}' }
+      items: value.chunk
+      id: item.event_id
+      newest_first: true
+      every: 1m

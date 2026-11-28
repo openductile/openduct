@@ -1,0 +1,7 @@
+description: "A channel the token may not post in: the step fails in Mattermost's words, with its id"
+action: post_message
+credential: { server_url: "https://chat.example.com", token: testmmtoken0000000000000000 }
+input: { channel_id: c9aaaaaaaaaaaaaaaaaaaaaaaa, message: Hello }
+exchanges:
+  - answer: { status: 403, body: { id: api.context.permissions.app_error, message: You do not have the appropriate permissions., status_code: 403 } }
+error: "Mattermost answered 403: You do not have the appropriate permissions. (api.context.permissions.app_error)"

@@ -1,0 +1,6 @@
+description: A key that is wrong or was taken away
+action: count_contacts
+credential: { token: SG.old-key }
+exchanges:
+  - answer: { status: 401, body: { errors: [{ field: null, message: authorization required }] } }
+error: "SendGrid answered 401: authorization required"

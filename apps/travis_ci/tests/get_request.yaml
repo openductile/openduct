@@ -1,0 +1,11 @@
+description: "One build request and the build it made"
+action: get_request
+credential: { token: test-token }
+input: { repo: shop-example/storefront, request_id: 147 }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://api.travis-ci.com/repo/shop-example%2Fstorefront/request/147"
+    answer:
+      body: { "@type": request, id: 147, state: processed, result: approved, branch_name: main, builds: [{ id: 86601346, number: "212", state: started }] }
+result: { "@type": request, id: 147, state: processed, result: approved, branch_name: main, builds: [{ id: 86601346, number: "212", state: started }] }

@@ -3,21 +3,195 @@
 app: teams
 name: Microsoft Teams
 category: messaging
-description: Post messages to a Teams channel through its webhook.
-docs: https://learn.microsoft.com/microsoftteams/platform/webhooks-and-connectors/how-to/add-incoming-webhook
+description: Messages and Adaptive Cards in Teams channels and chats through Microsoft Graph, new messages as they are posted, and a channel's webhook.
+docs: https://learn.microsoft.com/graph/api/resources/teams-api-overview
+hosts: [graph.microsoft.com]
+base_url: https://graph.microsoft.com/v1.0
 sign_in:
   - id: teams_webhook
     label: A Microsoft Teams webhook
     fields:
       - { name: url, label: "The webhook's address", secret: true }
     url_field: url
+  - id: teams
+    label: Sign in with Microsoft
+    oauth2:
+      authorize: https://login.microsoftonline.com/common/oauth2/v2.0/authorize
+      token: https://login.microsoftonline.com/common/oauth2/v2.0/token
+      scopes:
+        - offline_access
+        - ChannelMessage.Send
+        - ChatMessage.Send
+        - ChannelMessage.Read.All
+        - Chat.Read
+        - Team.ReadBasic.All
+        - Channel.ReadBasic.All
+    headers:
+      Authorization: "Bearer {{ credential.access_token }}"
 default_action: send
+error: value.error.message
 actions:
   send:
     label: Post a message
+    description: With a webhook, to its own channel; signed in, to the team's channel given.
     write: true
     method: POST
+    path: "/teams/{{ input.team_id }}/channels/{{ input.channel_id }}/messages"
     inputs:
       - { name: text, label: The message, required: true }
-    send: { text: "{{ input.text }}" }
+      - { name: team_id, label: "The team's id", description: "Signed in only" }
+      - { name: channel_id, label: "The channel's id", description: "Signed in only" }
+    send:
+      body: { content: "{{ input.text }}" }
     result: "{'sent': true, 'answer': value}"
+    output: { sent: boolean, answer: record }
+    by:
+      teams_webhook:
+        send: { text: "{{ input.text }}" }
+  send_channel_message:
+    label: Send a message to a channel
+    description: A message in a team's channel, as text or HTML.
+    write: true
+    method: POST
+    path: "/teams/{{ input.team_id }}/channels/{{ input.channel_id }}/messages"
+    inputs:
+      - { name: team_id, label: "The team's id (from List teams)", required: true }
+      - { name: channel_id, label: "The channel's id (from List channels)", required: true }
+      - { name: text, label: The message, required: true }
+      - { name: format, label: "text (the default) or html" }
+      - { name: subject, label: "A subject, shown above it" }
+    send:
+      subject: "{{ input.subject }}"
+      body: { contentType: "{{ has(input.format) && input.format == 'html' ? 'html' : 'text' }}", content: "{{ input.text }}" }
+    output: { id: text, createdDateTime: text, webUrl: text, body: record, channelIdentity: record }
+  send_chat_message:
+    label: Send a message to a chat
+    description: A message in a chat that already exists (one person or a group).
+    write: true
+    method: POST
+    path: "/chats/{{ input.chat_id }}/messages"
+    inputs:
+      - { name: chat_id, label: "The chat's id", required: true }
+      - { name: text, label: The message, required: true }
+      - { name: format, label: "text (the default) or html" }
+    send:
+      body: { contentType: "{{ has(input.format) && input.format == 'html' ? 'html' : 'text' }}", content: "{{ input.text }}" }
+    output: { id: text, chatId: text, createdDateTime: text, body: record }
+  reply_in_thread:
+    label: Reply in a channel's thread
+    description: A reply to a message of a team's channel, in its thread.
+    write: true
+    method: POST
+    path: "/teams/{{ input.team_id }}/channels/{{ input.channel_id }}/messages/{{ input.message_id }}/replies"
+    inputs:
+      - { name: team_id, label: "The team's id", required: true }
+      - { name: channel_id, label: "The channel's id", required: true }
+      - { name: message_id, label: "The id of the message it answers (the thread's first)", required: true }
+      - { name: text, label: The reply, required: true }
+      - { name: format, label: "text (the default) or html" }
+    send:
+      body: { contentType: "{{ has(input.format) && input.format == 'html' ? 'html' : 'text' }}", content: "{{ input.text }}" }
+    output: { id: text, replyToId: text, createdDateTime: text, body: record }
+  post_card:
+    label: Post an Adaptive Card
+    description: >-
+      An Adaptive Card (its JSON, as the Adaptive Cards designer makes it) in a channel - or in a chat, when chat_id
+      is given.
+    write: true
+    method: POST
+    path: "{{ has(input.chat_id) && input.chat_id != null && input.chat_id != '' ? '/chats/' + input.chat_id + '/messages' : '/teams/' + input.team_id + '/channels/' + input.channel_id + '/messages' }}"
+    inputs:
+      - { name: card, label: "The card (its JSON)", required: true, kind: record }
+      - { name: team_id, label: "The team's id (for a channel)" }
+      - { name: channel_id, label: "The channel's id (for a channel)" }
+      - { name: chat_id, label: "The chat's id (for a chat)" }
+      - { name: text, label: "Text shown above the card" }
+    send:
+      body:
+        contentType: html
+        content: "{{ has(input.text) && input.text != null ? input.text : '' }}<attachment id=\"card\"></attachment>"
+      # Graph takes the card as text: its JSON, written out.
+      attachments: [{ id: card, contentType: application/vnd.microsoft.card.adaptive, content: "{{ input.card }}{{ '' }}" }]
+    output: { id: text, createdDateTime: text, attachments: list }
+  list_teams:
+    label: List teams
+    description: The teams the signed-in person belongs to.
+    method: GET
+    path: /me/joinedTeams
+    items: value.value
+    next: "value['@odata.nextLink']"
+    output: { id: text, displayName: text, description: text, isArchived: boolean }
+  list_channels:
+    label: List channels
+    description: A team's channels (private ones only to their members).
+    method: GET
+    path: "/teams/{{ input.team_id }}/channels"
+    query: { "$select": "id,displayName,description,membershipType,webUrl" }
+    inputs:
+      - { name: team_id, label: "The team's id", required: true }
+    items: value.value
+    next: "value['@odata.nextLink']"
+    output: { id: text, displayName: text, description: text, membershipType: text, webUrl: text }
+  read_message:
+    label: Read a message
+    description: >-
+      A message of a channel or a chat, in full - the trigger gives its ids (a reply's too) - as it is now.
+    method: GET
+    path: "{{ has(input.chat_id) && input.chat_id != null && input.chat_id != '' ? '/chats/' + input.chat_id + '/messages/' + input.message_id : '/teams/' + input.team_id + '/channels/' + input.channel_id + '/messages/' + input.message_id + (has(input.reply_id) && input.reply_id != null && input.reply_id != '' ? '/replies/' + input.reply_id : '') }}"
+    inputs:
+      - { name: message_id, label: "The message's id", required: true }
+      - { name: team_id, label: "The team's id (for a channel)" }
+      - { name: channel_id, label: "The channel's id (for a channel)" }
+      - { name: chat_id, label: "The chat's id (for a chat)" }
+      - { name: reply_id, label: "A reply's id, in the message's thread" }
+    output: { id: text, replyToId: text, createdDateTime: text, body: record, from: record, webUrl: text, chatId: text, channelIdentity: record }
+triggers:
+  new_message:
+    label: A new message in a channel or a chat
+    description: >-
+      Each message posted in a channel (its replies too) or in a chat, as Microsoft Graph tells it. Turning the
+      workflow on subscribes its address with Graph, which checks it first; the subscription is renewed every 20
+      minutes and taken away when the workflow is turned off. Graph tells which message, not what it says: read it
+      with Read a message.
+    inputs:
+      - { name: team_id, label: "The team's id (for a channel)" }
+      - { name: channel_id, label: "The channel's id (for a channel)" }
+      - { name: chat_id, label: "The chat's id (for a chat, instead)" }
+    webhook:
+      # Graph puts the secret it was given (clientState) in each notification.
+      signature: { algorithm: body_token, token: "value.value.map(n, has(n.clientState) ? n.clientState : '')" }
+      secret: client_state
+      # Graph checks the address with ?validationToken=..., and wants it back as text within 10 seconds.
+      echo: "has(query.validationToken) ? query.validationToken : null"
+      events: >-
+        value.value.filter(n, has(n.changeType) && n.changeType == 'created' && has(n.resource)).map(n,
+          cel.bind(p, n.resource.split("'"), {
+            'kind': p[0] == 'chats(' ? 'chat' : 'channel',
+            'team_id': p[0] == 'teams(' && size(p) > 1 ? p[1] : '',
+            'channel_id': p[0] == 'teams(' && size(p) > 3 ? p[3] : '',
+            'chat_id': p[0] == 'chats(' && size(p) > 1 ? p[1] : '',
+            'message_id': p[0] == 'chats(' ? (size(p) > 3 ? p[3] : '') : (size(p) > 5 ? p[5] : ''),
+            'reply_id': p[0] == 'teams(' && size(p) > 7 ? p[7] : '',
+            'resource': n.resource,
+            'subscription_id': has(n.subscriptionId) ? n.subscriptionId : '',
+            'tenant_id': has(n.tenantId) ? n.tenantId : ''}))
+      id: "item.subscription_id + ':' + item.resource"
+      register:
+        - method: POST
+          path: /subscriptions
+          send:
+            changeType: created
+            notificationUrl: "{{ input.address }}"
+            resource: "{{ input.chat_id != null && input.chat_id != '' ? '/chats/' + input.chat_id + '/messages' : '/teams/' + input.team_id + '/channels/' + input.channel_id + '/messages' }}"
+            includeResourceData: false
+            # Under an hour, so Graph asks for no lifecycle address; renewed every 20 minutes.
+            expirationDateTime: "{{ string(timestamp(input.now) + duration('55m')) }}"
+            clientState: "{{ input.secret }}"
+      keep: { client_state: input.secret, subscription_id: value.id, address: input.address }
+      renew:
+        - method: PATCH
+          path: "/subscriptions/{{ input.registered.subscription_id }}"
+          send: { expirationDateTime: "{{ string(timestamp(input.now) + duration('55m')) }}" }
+      renew_every: 20m
+      unregister:
+        - { method: DELETE, path: "/subscriptions/{{ input.registered.subscription_id }}" }

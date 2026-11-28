@@ -1,0 +1,65 @@
+name: A voice note turned into text and a summary, by e-mail
+description: >-
+  Record a voice note on your phone - after a site visit, a client call, an idea on the road - and upload it on a form
+  the studio serves. Deepgram's speech-to-text API writes it out, with punctuation, and sums it up in a few lines;
+  both come back to you by e-mail from your Gmail. Audio files up to 2 MB (about two minutes of MP3). Needs: deepgram
+  (a header credential: Authorization and "Token" with your key), gmail.
+category: AI
+trigger:
+  form:
+    title: Turn a voice note into text
+    description: Upload a recording (MP3, M4A, WAV or WebM, up to 2 MB). The text comes by e-mail.
+    fields:
+      - { name: note, label: The recording, type: file, accept: "audio/*", max_size: 2000000, required: true }
+      - { name: about, label: "What it is about (optional)", type: text, max_length: 120 }
+      - { name: email, label: Your e-mail, type: email, required: true }
+    thanks: Thank you - the text is on its way.
+# What a test runs on: an answer as the form gives it (the recording is a tiny file here).
+sample:
+  about: Visit to the Elm Street site
+  email: alex@example.com
+  note:
+    name: site-visit.m4a
+    type: audio/mp4
+    size: 12
+    base64: AAAAGGZ0eXBNNEEg
+steps:
+  - name: audio
+    convert:
+      format: base64
+      base64: value.note.base64
+      name: "{{ value.note.name }}"
+      # Deepgram reads the recording's own format from its bytes; audio/* tells it the body is sound.
+      type: audio/mpeg
+  - name: heard
+    http:
+      method: POST
+      url: https://api.deepgram.com/v1/listen
+      credential: deepgram
+      query: { model: nova-3, smart_format: "true", summarize: v2, language: en }
+      file: steps.audio
+      timeout: 2m
+      sample:
+        results:
+          channels:
+            - alternatives:
+                - transcript: "The east wall needs new flashing before the rain. Order two rolls and book the crew for Thursday."
+          summary: { short: "The east wall needs new flashing; order two rolls and book the crew for Thursday.", result: success }
+    retry: { attempts: 2, wait: 30s }
+  - name: text
+    javascript: |
+      // Deepgram's answer: the words of the first channel, and the summary when it made one.
+      const r = (steps.heard.body && steps.heard.body.results) || {};
+      const alt = (r.channels && r.channels[0] && r.channels[0].alternatives && r.channels[0].alternatives[0]) || {};
+      return { transcript: alt.transcript || "", summary: (r.summary && r.summary.short) || "" };
+  - name: send
+    gmail:
+      action: send_email
+      credential: gmail
+      to: "{{ value.email }}"
+      subject: "Your voice note{{ has(value.about) && value.about != '' ? ': ' + value.about : '' }}"
+      text: >-
+        {{ steps.text.transcript == '' ? 'No words were heard in the recording.' : 'In short: '
+        + (steps.text.summary == '' ? '(too short to sum up)' : steps.text.summary) + '\n\nThe whole note:\n'
+        + steps.text.transcript }}
+    retry: { attempts: 3, wait: 10s }

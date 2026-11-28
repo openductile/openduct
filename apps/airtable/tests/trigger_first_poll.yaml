@@ -1,0 +1,12 @@
+description: The first poll lists the table and notes what is there; it starts from the time it asked
+trigger: new_record
+credential: { token: pat_1 }
+input: { base_id: app1, table: Leads }
+exchanges:
+  - sent:
+      method: GET
+      url: https://api.airtable.com/v0/app1/Leads
+      query: { pageSize: "100" }
+    answer: { body: { records: [{ id: rec1, createdTime: "2023-11-14T10:00:00.000Z", fields: { Name: Ann } }] } }
+runs: []
+cursor: "2023-11-14T22:13:20Z"

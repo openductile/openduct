@@ -1,0 +1,12 @@
+description: "A contact taken out of a group"
+action: remove_from_group
+credential: {"access_token": "ya29.test"}
+input: {"group": "contactGroups/8c3d", "contacts": ["people/c222"]}
+exchanges:
+  - sent:
+      method: POST
+      url: "https://people.googleapis.com/v1/contactGroups/8c3d/members:modify"
+      headers: {"authorization": "Bearer ya29.test"}
+      body: {"resourceNamesToRemove": ["people/c222"]}
+    answer: {"status": 200, "body": {"notFoundResourceNames": []}}
+result: {"notFoundResourceNames": []}

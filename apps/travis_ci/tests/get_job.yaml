@@ -1,0 +1,11 @@
+description: "One job"
+action: get_job
+credential: { token: test-token }
+input: { job_id: 86601347 }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://api.travis-ci.com/job/86601347"
+    answer:
+      body: { "@type": job, id: 86601347, number: "212.1", state: passed, started_at: "2026-11-27T10:01:00Z", finished_at: "2026-11-27T10:05:00Z", build: { id: 86601346 } }
+result: { "@type": job, id: 86601347, number: "212.1", state: passed, started_at: "2026-11-27T10:01:00Z", finished_at: "2026-11-27T10:05:00Z", build: { id: 86601346 } }

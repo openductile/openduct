@@ -1,0 +1,16 @@
+description: "Every contact, page after page, each made plain"
+action: list_contacts
+credential: {"access_token": "ya29.test"}
+exchanges:
+  - sent:
+      method: GET
+      url: "https://people.googleapis.com/v1/people/me/connections"
+      query: {"personFields": "names,emailAddresses,phoneNumbers,organizations,addresses,birthdays,biographies,urls,memberships,metadata", "sortOrder": "LAST_MODIFIED_DESCENDING", "pageSize": "1000"}
+      headers: {"authorization": "Bearer ya29.test"}
+    answer: {"status": 200, "body": {"connections": [{"resourceName": "people/c111", "etag": "%EgUBAi43PRoEAQIFByIM", "names": [{"displayName": "Ann Lee", "givenName": "Ann", "familyName": "Lee"}], "emailAddresses": [{"value": "ann@example.com"}, {"value": "ann.lee@example.org"}], "phoneNumbers": [{"value": "+1 555 0100"}], "organizations": [{"name": "Northwind Example", "title": "Owner"}], "biographies": [{"value": "Met at the spring fair", "contentType": "TEXT_PLAIN"}], "memberships": [{"contactGroupMembership": {"contactGroupId": "myContacts", "contactGroupResourceName": "contactGroups/myContacts"}}]}], "nextPageToken": "tok2", "totalPeople": 2}}
+  - sent:
+      method: GET
+      url: "https://people.googleapis.com/v1/people/me/connections"
+      query: {"personFields": "names,emailAddresses,phoneNumbers,organizations,addresses,birthdays,biographies,urls,memberships,metadata", "sortOrder": "LAST_MODIFIED_DESCENDING", "pageSize": "1000", "pageToken": "tok2"}
+    answer: {"status": 200, "body": {"connections": [{"resourceName": "people/c222", "etag": "%EgUBAi43PRoEAQIFByIN", "names": [{"displayName": "Bo Chen", "givenName": "Bo", "familyName": "Chen"}], "emailAddresses": [{"value": "bo@example.com"}]}], "totalPeople": 2}}
+result: [{"resource_name": "people/c111", "etag": "%EgUBAi43PRoEAQIFByIM", "name": "Ann Lee", "given_name": "Ann", "family_name": "Lee", "email": "ann@example.com", "emails": ["ann@example.com", "ann.lee@example.org"], "phone": "+1 555 0100", "phones": ["+1 555 0100"], "company": "Northwind Example", "job_title": "Owner", "notes": "Met at the spring fair", "groups": ["contactGroups/myContacts"], "person": {"resourceName": "people/c111", "etag": "%EgUBAi43PRoEAQIFByIM", "names": [{"displayName": "Ann Lee", "givenName": "Ann", "familyName": "Lee"}], "emailAddresses": [{"value": "ann@example.com"}, {"value": "ann.lee@example.org"}], "phoneNumbers": [{"value": "+1 555 0100"}], "organizations": [{"name": "Northwind Example", "title": "Owner"}], "biographies": [{"value": "Met at the spring fair", "contentType": "TEXT_PLAIN"}], "memberships": [{"contactGroupMembership": {"contactGroupId": "myContacts", "contactGroupResourceName": "contactGroups/myContacts"}}]}}, {"resource_name": "people/c222", "etag": "%EgUBAi43PRoEAQIFByIN", "name": "Bo Chen", "given_name": "Bo", "family_name": "Chen", "email": "bo@example.com", "emails": ["bo@example.com"], "phone": "", "phones": [], "company": "", "job_title": "", "notes": "", "groups": [], "person": {"resourceName": "people/c222", "etag": "%EgUBAi43PRoEAQIFByIN", "names": [{"displayName": "Bo Chen", "givenName": "Bo", "familyName": "Chen"}], "emailAddresses": [{"value": "bo@example.com"}]}}]

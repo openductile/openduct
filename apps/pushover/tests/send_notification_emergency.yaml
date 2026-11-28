@@ -1,0 +1,11 @@
+description: "An emergency notification to a group, repeated until acknowledged, as HTML"
+action: send_notification
+credential: {"token": "aTestTokenAbcdefghijklmnopqrst", "user_key": "uTestUserKeyAbcdefghijklmnopq"}
+input: {"message": "<b>Freezer 2</b> is above 5 °C", "priority": 2, "retry": 60, "expire": 1800, "tags": "freezer2", "html": true, "user": "gTestGroupKeyAbcdefghijklmnop"}
+exchanges:
+  - sent:
+      method: POST
+      url: "https://api.pushover.net/1/messages.json"
+      body: {"token": "aTestTokenAbcdefghijklmnopqrst", "user": "gTestGroupKeyAbcdefghijklmnop", "message": "<b>Freezer 2</b> is above 5 °C", "priority": "2", "retry": "60", "expire": "1800", "tags": "freezer2", "html": "1"}
+    answer: {"status": 200, "body": {"status": 1, "request": "647d2300-702c-4b38-8b2f-d56326ae460b", "receipt": "rTestReceiptAbcdefghijklmnopq"}}
+result: {"status": 1, "request": "647d2300-702c-4b38-8b2f-d56326ae460b", "receipt": "rTestReceiptAbcdefghijklmnopq"}

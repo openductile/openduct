@@ -1,0 +1,66 @@
+name: Tell Teams when a service you rely on has trouble
+description: >-
+  For the people who keep your systems running: every ten minutes, read the public status pages of the services you
+  depend on (any page made with Statuspage, which answers at /api/v2/status.json) and post to a Microsoft Teams channel
+  only when one changes - trouble starting, getting worse, or over - so the team knows an outage is not theirs before
+  they start digging. What each page last said is kept between runs. Needs: a Microsoft Teams webhook credential called
+  teams.
+category: Engineering
+trigger:
+  schedule: { every: 10m }
+# What a test runs on: an event as this trigger gives it.
+sample:
+  scheduled_at: "2026-11-27T09:10:00Z"
+steps:
+  - name: settings
+    set:
+      # The status pages to watch: put your own vendors' here.
+      pages: "['https://status.payments.example', 'https://status.hosting.example']"
+  - name: each_page
+    for_each:
+      items: steps.settings.pages
+      steps:
+        - name: status
+          http:
+            method: GET
+            url: "{{ item }}/api/v2/status.json"
+            timeout: 15s
+            fail_on_status: true
+            sample:
+              page: { name: Payments Example, url: "https://status.payments.example", updated_at: "2026-11-27T09:02:11Z" }
+              status: { indicator: minor, description: Partially Degraded Service }
+          retry: { attempts: 3, wait: 10s }
+          # A page that does not answer is noted as unknown, and the others are still read.
+          on_error: continue
+  - name: changes
+    javascript:
+      state: true
+      code: |
+        // What each page says now, against what it said last time (kept in the workflow's state).
+        const rank = { none: 0, maintenance: 1, minor: 2, major: 3, critical: 4, unknown: 5 };
+        const last = state.last || {};
+        const changes = [];
+        steps.settings.pages.forEach((address, i) => {
+          const answer = (steps.each_page[i] || {}).status || {};
+          const body = answer.body || {};
+          const name = (body.page && body.page.name) || address;
+          const now = (body.status && body.status.indicator) || "unknown";
+          const said = (body.status && body.status.description) || "did not answer";
+          const before = last[address] || "none";
+          if (now !== before) {
+            const word = now === "none" ? "is back to normal" : rank[now] > rank[before] ? "has trouble" : "is better";
+            changes.push(`${name} ${word}: ${said} (was ${before}, now ${now})`);
+          }
+          last[address] = now;
+        });
+        state.last = last;
+        return { changes, count: changes.length };
+  - name: tell
+    if:
+      when: steps.changes.count > 0
+      then:
+        - name: post
+          teams:
+            credential: teams
+            text: "Status of services we use:\n{{ steps.changes.changes.join('\\n') }}"
+          retry: { attempts: 3, wait: 10s }

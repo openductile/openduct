@@ -1,0 +1,6 @@
+action: list_priorities
+credential: { subdomain: acme, token: zm_test_1 }
+exchanges:
+  - sent: { method: GET, url: https://acme.zammad.com/api/v1/ticket_priorities }
+    answer: { body: [{ id: 1, name: 1 low, active: true }, { id: 2, name: 2 normal, active: true }, { id: 3, name: 3 high, active: true }] }
+result: [{ id: 1, name: 1 low, active: true }, { id: 2, name: 2 normal, active: true }, { id: 3, name: 3 high, active: true }]

@@ -1,0 +1,17 @@
+description: A message to a channel, at a Cloud workspace's address, with the token's two headers
+action: send_message
+credential: { workspace: acme, user_id: uAbC123, token: rc_test_1 }
+input: { channel: "#sales", text: "New order from ann@example.com" }
+exchanges:
+  - sent:
+      method: POST
+      url: https://acme.rocket.chat/api/v1/chat.postMessage
+      headers: { x-user-id: uAbC123, x-auth-token: rc_test_1 }
+      body: { roomId: "#sales", text: "New order from ann@example.com" }
+    answer:
+      body:
+        ts: 1795773600000
+        channel: "#sales"
+        message: { _id: mSg001, rid: rSales1, msg: "New order from ann@example.com", ts: "2026-11-27T10:00:00.000Z", u: { _id: uAbC123, username: shop-bot } }
+        success: true
+result: { _id: mSg001, rid: rSales1, msg: "New order from ann@example.com", ts: "2026-11-27T10:00:00.000Z", u: { _id: uAbC123, username: shop-bot } }

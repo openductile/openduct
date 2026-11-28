@@ -1,0 +1,31 @@
+description: A security group made
+action: create_group
+sign_in: microsoft_entra_admin
+credential: {access_token: eyJ0-admin}
+input: {display_name: VPN users, mail_nickname: vpn-users, kind: security}
+exchanges:
+- sent:
+    method: POST
+    url: https://graph.microsoft.com/v1.0/groups
+    headers: {authorization: Bearer eyJ0-admin}
+    query: {}
+    body:
+      displayName: VPN users
+      mailNickname: vpn-users
+      groupTypes: []
+      mailEnabled: false
+      securityEnabled: true
+  answer:
+    status: 201
+    body: &id001
+      id: d7797254-3084-44d0-99c9-a3b5ab149538
+      displayName: VPN users
+      description: null
+      mail: null
+      mailEnabled: false
+      mailNickname: vpn-users
+      securityEnabled: true
+      groupTypes: []
+      visibility: null
+      createdDateTime: '2026-11-27T10:00:00Z'
+result: *id001

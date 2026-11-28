@@ -1,0 +1,11 @@
+description: A message's text changed
+action: update
+credential: { bot_token: xoxb-1 }
+input: { channel: C0123456, ts: "1700000050.000200", text: "Done" }
+exchanges:
+  - sent:
+      method: POST
+      url: https://slack.com/api/chat.update
+      body: { channel: C0123456, ts: "1700000050.000200", text: "Done" }
+    answer: { body: { ok: true, channel: C0123456, ts: "1700000050.000200", text: "Done" } }
+result: { ok: true, channel: C0123456, ts: "1700000050.000200", text: "Done" }

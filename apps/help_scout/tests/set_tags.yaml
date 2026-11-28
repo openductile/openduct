@@ -1,0 +1,16 @@
+description: A conversation's tags set
+action: set_tags
+credential: {access_token: hs-test-token}
+input:
+  conversation_id: '3443157477'
+  tags: [orders, late]
+exchanges:
+- sent:
+    method: PUT
+    url: https://api.helpscout.net/v2/conversations/3443157477/tags
+    query: {}
+    headers: {authorization: Bearer hs-test-token}
+    body:
+      tags: [orders, late]
+  answer: {status: 204}
+result: {changed: true}

@@ -1,0 +1,8 @@
+description: A file fetched from the web - Dropbox answers with a job
+action: save_url
+credential: { access_token: sl.test-token }
+input: { path: /Invoices/INV-2001.pdf, url: "https://billing.example.com/invoices/INV-2001.pdf" }
+exchanges:
+  - sent: { url: https://api.dropboxapi.com/2/files/save_url, body: { path: /Invoices/INV-2001.pdf, url: "https://billing.example.com/invoices/INV-2001.pdf" } }
+    answer: { body: { ".tag": async_job_id, async_job_id: 34g93hh34h04y384084 } }
+result: { ".tag": async_job_id, async_job_id: 34g93hh34h04y384084 }

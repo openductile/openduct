@@ -1,0 +1,15 @@
+description: Two addresses added to a sequence, one it could not take
+action: add_to_sequence
+credential: { api_key: hunter-test-key }
+input: { sequence_id: "31", emails: "bo@example.com, bounced@example.com" }
+exchanges:
+  - sent:
+      method: POST
+      url: https://api.hunter.io/v2/campaigns/31/recipients
+      body: { emails: [bo@example.com, bounced@example.com] }
+    answer:
+      status: 201
+      body:
+        data: { recipients_added: 1, skipped_recipients: [{ email: bounced@example.com, reason: bounced }] }
+        meta: { params: { campaign_id: 31 } }
+result: { recipients_added: 1, skipped_recipients: [{ email: bounced@example.com, reason: bounced }] }

@@ -1,0 +1,121 @@
+name: Month-end view of open invoices in other currencies
+description: >-
+  For businesses that bill in several currencies: on the last day of each month at 4 pm, read the open invoices from an
+  Open invoices sheet, convert each to your own currency at the day's European Central Bank rates (Frankfurter), sort
+  them by how late they are (not due, 1-30, 31-60, over 60 days), put the result in a spreadsheet on your bookkeeper's
+  SFTP server, and email a short note - written by a model - on what is owed and what to chase. Needs: a Google Sheets
+  sign-in called sheets, an sftp credential called books_sftp, an AI credential called model, and a Gmail sign-in called
+  gmail.
+category: Finance
+trigger:
+  schedule: { every: month, on: [last], at: "16:00", timezone: America/New_York }
+# What a test runs on: an event as this trigger gives it.
+sample:
+  scheduled_at: "2026-11-30T21:00:00Z"
+steps:
+  - name: settings
+    set:
+      # Change these to your own. The sheet's columns A to F: number, customer, currency, amount, issued, due (as 2026-11-30).
+      spreadsheet: "'your-spreadsheet-id'"
+      home: "'USD'"
+      send_to: "'owner@example.com'"
+  - name: invoices
+    google_sheets:
+      credential: sheets
+      action: read_rows
+      spreadsheet_id: "{{ steps.settings.spreadsheet }}"
+      range: Open invoices!A2:F
+    retry: { attempts: 3, wait: 10s }
+  - name: rates
+    http:
+      method: GET
+      url: https://api.frankfurter.dev/v1/latest
+      query: { base: "{{ steps.settings.home }}" }
+      fail_on_status: true
+      sample: { amount: 1, base: USD, date: "2026-11-30", rates: { EUR: 0.9483, GBP: 0.7891, CAD: 1.4012, JPY: 151.62 } }
+    retry: { attempts: 3, wait: 30s }
+  - name: aged
+    python: |
+      # Each open invoice in your own currency, and how late it is, from the sheet's rows and the day's rates.
+      from datetime import date
+      from decimal import Decimal, ROUND_HALF_UP
+
+      home = steps["settings"]["home"]
+      rates = dict(steps["rates"]["body"]["rates"])
+      rates[home] = 1
+      today = date.fromisoformat(value["scheduled_at"][:10])
+      cents = Decimal("0.01")
+
+      def bucket(days):
+          if days <= 0:
+              return "not due"
+          return "1-30" if days <= 30 else "31-60" if days <= 60 else "over 60"
+
+      rows, problems = [], []
+      totals = {"not due": Decimal(0), "1-30": Decimal(0), "31-60": Decimal(0), "over 60": Decimal(0)}
+      for n, r in enumerate(steps["invoices"] or [], start=2):
+          r = [str(c).strip() for c in r] + [""] * 6
+          number, customer, currency, amount, issued, due = r[:6]
+          if not number:
+              continue
+          currency = (currency or home).upper()
+          try:
+              money = Decimal(amount.replace(",", ""))
+              late = (today - date.fromisoformat(due)).days
+          except Exception:
+              problems.append(f"row {n} ({number}): the amount or the due date cannot be read")
+              continue
+          if currency not in rates:
+              problems.append(f"row {n} ({number}): no rate for {currency}")
+              continue
+          in_home = (money / Decimal(str(rates[currency]))).quantize(cents, ROUND_HALF_UP)
+          totals[bucket(late)] += in_home
+          rows.append({"invoice": number, "customer": customer, "currency": currency, "amount": float(money),
+                       f"in {home}": float(in_home), "due": due, "days late": max(late, 0), "bucket": bucket(late)})
+      rows.sort(key=lambda x: -x["days late"])
+      result = {
+          "rows": rows,
+          "latest": [f"{x['customer']} {x['invoice']}: {x['days late']} days late" for x in rows[:5] if x["days late"] > 0],
+          "totals": {k: float(v) for k, v in totals.items()},
+          "owed": float(sum(totals.values())),
+          "problems": problems,
+          "month": value["scheduled_at"][:7],
+          "rates_of": steps["rates"]["body"].get("date", ""),
+      }
+  - name: sheet
+    convert:
+      format: xlsx
+      rows: steps.aged.rows
+      sheet: Open invoices
+      name: "open-invoices-{{ steps.aged.month }}.xlsx"
+  - name: to_the_books
+    storage:
+      action: write
+      credential: books_sftp
+      path: "reports/open-invoices-{{ steps.aged.month }}.xlsx"
+      file: steps.sheet
+      overwrite: true
+    retry: { attempts: 3, wait: 30s }
+  - name: note
+    ai:
+      credential: model
+      system: >-
+        You write a business owner's month-end note on money owed to them: four short lines at most - the total, how
+        much is late and how late, the customers to chase first, and anything odd. Plain words, figures as given.
+      prompt: >-
+        Currency: {{ steps.settings.home }}. Owed in all: {{ steps.aged.owed }}. By lateness: {{ steps.aged.totals }}.
+        The five latest: {{ steps.aged.latest.join('; ') }}.
+      max_tokens: 300
+  - name: send
+    gmail:
+      credential: gmail
+      action: send_email
+      to: "{{ steps.settings.send_to }}"
+      subject: "Open invoices at the end of {{ steps.aged.month }}"
+      text: >-
+        {{ steps.note.text }}
+
+
+        The full list is on the bookkeeper's server: reports/open-invoices-{{ steps.aged.month }}.xlsx (rates of
+        {{ steps.aged.rates_of }}).{{ size(steps.aged.problems) > 0 ? '\n\nNot counted:\n' + steps.aged.problems.join('\n') : '' }}
+    retry: { attempts: 3, wait: 30s }

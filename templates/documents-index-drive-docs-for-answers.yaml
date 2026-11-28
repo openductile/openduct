@@ -1,0 +1,62 @@
+name: Keep a Drive folder's documents ready for AI answers
+description: >-
+  Every ten minutes, looks for Google Docs added or changed in one Drive folder - your handbook, policies, product
+  notes: each is read, cut into passages and kept with their embeddings in a pgvector table (a changed document's
+  old passages replaced, so answers never quote a page that is gone), and gets a two-line summary in your Document
+  register sheet with its link. "Answer a staff question from your help pages" answers from the same table. Needs:
+  google_drive, google_docs, docs_db, model, google_sheets.
+category: Documents
+trigger:
+  # The folder's id: the end of its address in Drive.
+  google_drive: { when: changed_file, credential: google_drive, folder_id: your-folder-id, every: 10m }
+# What a test runs on: a file as this trigger gives it.
+sample:
+  id: 1Qx7RkZp3TfV9mWb2Ls8Nd4Hc6Yj0Ae5GuIoPq
+  name: Returns and refunds policy
+  mimeType: application/vnd.google-apps.document
+  createdTime: "2026-09-02T10:15:00Z"
+  modifiedTime: "2026-11-27T08:41:00Z"
+  webViewLink: https://docs.google.com/document/d/1Qx7RkZp3TfV9mWb2Ls8Nd4Hc6Yj0Ae5GuIoPq/edit
+  parents: [your-folder-id]
+steps:
+  - where: value.mimeType == 'application/vnd.google-apps.document'
+  - name: doc
+    google_docs:
+      action: read_document
+      credential: google_docs
+      document: "{{ value.id }}"
+    retry: { attempts: 3, wait: 15s }
+  - where: has(steps.doc.text) && steps.doc.text.trim() != ''
+  - name: pieces
+    split_text:
+      text: "{{ steps.doc.text }}"
+      source: "{{ value.webViewLink }}"
+      by: paragraphs
+      size: 1000
+      overlap: 150
+      metadata:
+        title: "{{ value.name }}"
+        changed: "{{ value.modifiedTime }}"
+  # The document's pieces from before are replaced by these.
+  - name: keep
+    vector_store:
+      action: add
+      credential: docs_db
+      table: help_pieces
+      create: true
+      embed_with: model
+      pieces: steps.pieces.pieces
+  - name: summary
+    summarise:
+      credential: model
+      text: "{{ steps.doc.text }}"
+      length: 2 sentences
+      style: what the document covers, for someone deciding whether to open it
+  - name: register
+    google_sheets:
+      action: add_row
+      credential: google_sheets
+      spreadsheet_id: your-spreadsheet-id
+      sheet: Document register
+      values: "{{ [value.name, value.modifiedTime, size(steps.pieces.pieces), steps.summary.summary, value.webViewLink] }}"
+    retry: { attempts: 3, wait: 10s }

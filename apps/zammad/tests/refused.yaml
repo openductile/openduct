@@ -1,0 +1,6 @@
+description: A token Zammad does not take, in its words
+action: list_tickets
+credential: { subdomain: acme, token: wrong }
+exchanges:
+  - answer: { status: 401, body: { error: Invalid token!, error_human: "Invalid token!" } }
+error: "Zammad answered 401: Invalid token!"

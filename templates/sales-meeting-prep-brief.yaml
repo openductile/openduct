@@ -1,0 +1,76 @@
+name: A meeting brief on the morning of a sales call
+description: >-
+  A salesperson fills in a form with the company they are meeting, its website and the day. On that morning at 7:00
+  (UTC), an AI agent searches the web and the news about the company with the Brave Search API, and e-mails the
+  salesperson a brief from your Gmail: what the company does, what is new with it, three questions to ask, and what
+  to watch out for. Researched on the day, so the news is fresh. Needs: model (an AI credential), brave_search (a
+  header credential: X-Subscription-Token and your key), gmail.
+category: Sales
+trigger:
+  form:
+    title: Prepare me for a meeting
+    description: You get the brief by e-mail on the morning of the meeting.
+    fields:
+      - { name: company, label: The company, type: text, required: true, max_length: 120 }
+      - { name: website, label: Its website, type: text, placeholder: example.com, max_length: 200 }
+      - { name: contact, label: "Who you meet, and their role (optional)", type: text, max_length: 200 }
+      - { name: day, label: The day of the meeting, type: date, required: true }
+      - { name: email, label: Your e-mail, type: email, required: true }
+    thanks: Thank you - the brief comes on the morning of the meeting.
+# What a test runs on: an answer as the form gives it.
+sample:
+  company: Northwind Outdoor Gear
+  website: northwind-outdoor.example
+  contact: Lena Fischer, head of operations
+  day: "2026-12-03"
+  email: sam@example.com
+steps:
+  # The run waits on the log - through restarts - until 7:00 on the day.
+  - name: morning
+    wait:
+      until: "value.day + 'T07:00:00Z'"
+  - name: brief
+    agent:
+      credential: model
+      instructions: >-
+        You prepare a salesperson for a meeting today. Search the web and the news for the company, and use only
+        what you find, naming the source of each fact. Write, in plain words and at most 300 words: what the company
+        does and how big it is; what is new with it this year; three questions to ask; and anything to be careful
+        about. If you find little, say so rather than guess.
+      input: >-
+        Company: {{ value.company }}. {{ value.website == null ? '' : 'Website: ' + value.website + '.' }}
+        {{ value.contact == null ? '' : 'Meeting: ' + value.contact + '.' }}
+      tools:
+        - name: web_search
+          description: Search the web; gives the top results with their titles, addresses and descriptions.
+          parameters:
+            type: object
+            properties:
+              q: { type: string, description: "What to search for" }
+            required: [q]
+          http:
+            url: https://api.search.brave.com/res/v1/web/search
+            credential: brave_search
+            query: { q: "{{ args.q }}", count: "8" }
+        - name: news_search
+          description: Search the news of the last month; gives headlines with their sources and dates.
+          parameters:
+            type: object
+            properties:
+              q: { type: string, description: "What to search for, as the company's name" }
+            required: [q]
+          http:
+            url: https://api.search.brave.com/res/v1/news/search
+            credential: brave_search
+            query: { q: "{{ args.q }}", count: "8", freshness: pm }
+      allow: [web_search, news_search]
+      max_turns: 8
+      max_tool_calls: 8
+  - name: send
+    gmail:
+      action: send_email
+      credential: gmail
+      to: "{{ value.email }}"
+      subject: "Your brief for today's meeting with {{ value.company }}"
+      text: "{{ steps.brief.text }}"
+    retry: { attempts: 3, wait: 30s }

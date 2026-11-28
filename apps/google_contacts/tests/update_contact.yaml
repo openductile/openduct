@@ -1,0 +1,13 @@
+description: "Only a contact's phone changed, with the etag it was read with"
+action: update_contact
+credential: {"access_token": "ya29.test"}
+input: {"contact": "people/c333", "etag": "%EgUBAi43PRoEAQIFByIO", "phone": "+1 555 0199"}
+exchanges:
+  - sent:
+      method: PATCH
+      url: "https://people.googleapis.com/v1/people/c333:updateContact"
+      query: {"updatePersonFields": "phoneNumbers", "personFields": "names,emailAddresses,phoneNumbers,organizations,addresses,birthdays,biographies,urls,memberships,metadata"}
+      headers: {"authorization": "Bearer ya29.test"}
+      body: {"etag": "%EgUBAi43PRoEAQIFByIO", "phoneNumbers": [{"value": "+1 555 0199"}]}
+    answer: {"status": 200, "body": {"resourceName": "people/c333", "etag": "%EgUBAi43PRoEAQIFByIP", "names": [{"displayName": "Cy Park", "givenName": "Cy", "familyName": "Park"}], "emailAddresses": [{"value": "cy@example.com"}], "phoneNumbers": [{"value": "+1 555 0199"}], "organizations": [{"name": "Contoso Example", "title": "Buyer"}]}}
+result: {"resource_name": "people/c333", "etag": "%EgUBAi43PRoEAQIFByIP", "name": "Cy Park", "given_name": "Cy", "family_name": "Park", "email": "cy@example.com", "emails": ["cy@example.com"], "phone": "+1 555 0199", "phones": ["+1 555 0199"], "company": "Contoso Example", "job_title": "Buyer", "notes": "", "groups": [], "person": {"resourceName": "people/c333", "etag": "%EgUBAi43PRoEAQIFByIP", "names": [{"displayName": "Cy Park", "givenName": "Cy", "familyName": "Park"}], "emailAddresses": [{"value": "cy@example.com"}], "phoneNumbers": [{"value": "+1 555 0199"}], "organizations": [{"name": "Contoso Example", "title": "Buyer"}]}}

@@ -1,0 +1,62 @@
+# Made by `openduct app from-openapi`: Creates a conversation.
+description: "Creates a conversation, made from the API description's schemas"
+action: create_conversation
+credential: { token: test-token }
+input: { from: { type: lead }, body: Hello }
+exchanges:
+  - sent:
+      method: POST
+      url: "https://api.intercom.io/conversations"
+      query: {}
+      headers: { authorization: "Bearer test-token" }
+      body: { from: { type: lead }, body: Hello }
+    answer:
+      status: 200
+      body:
+        type: user_message
+        id: "1488971108"
+        created_at: 1667560812
+        subject: Greetings
+        body: Hello
+        message_type: email
+        conversation_id: "64619700005570"
+        owner:
+          type: admin
+          id: "1295"
+          name: example
+          email: "ann@example.com"
+          job_title: Associate
+          away_mode_enabled: false
+          away_mode_reassign: false
+          away_status_reason_id: 12345
+          has_inbox_seat: true
+          team_ids: [1]
+          avatar: { type: avatar, image_url: "https://example.com/1" }
+          team_priority_level: { primary_team_ids: [1], secondary_team_ids: [1] }
+        template: plain
+        external_id: "api:order-1234"
+        whatsapp_message_id: wamid.EXAMPLE123
+result:
+  type: user_message
+  id: "1488971108"
+  created_at: 1667560812
+  subject: Greetings
+  body: Hello
+  message_type: email
+  conversation_id: "64619700005570"
+  owner:
+    type: admin
+    id: "1295"
+    name: example
+    email: "ann@example.com"
+    job_title: Associate
+    away_mode_enabled: false
+    away_mode_reassign: false
+    away_status_reason_id: 12345
+    has_inbox_seat: true
+    team_ids: [1]
+    avatar: { type: avatar, image_url: "https://example.com/1" }
+    team_priority_level: { primary_team_ids: [1], secondary_team_ids: [1] }
+  template: plain
+  external_id: "api:order-1234"
+  whatsapp_message_id: wamid.EXAMPLE123

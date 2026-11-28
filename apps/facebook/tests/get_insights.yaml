@@ -1,0 +1,16 @@
+action: get_insights
+credential: { access_token: EAAB_test }
+input: { object_id: "1029384756", metric: page_post_engagements, period: day }
+exchanges:
+  - sent:
+      method: GET
+      url: https://graph.facebook.com/v25.0/1029384756/insights
+      query: { metric: page_post_engagements, period: day }
+    answer:
+      body:
+        data: [{ name: page_post_engagements, period: day, values: [{ value: 12, end_time: "2026-11-26T08:00:00+0000" }] }]
+        paging: { next: "https://graph.facebook.com/v25.0/1029384756/insights?metric=page_post_engagements&period=day&since=1764230400" }
+  - sent:
+      url: https://graph.facebook.com/v25.0/1029384756/insights?metric=page_post_engagements&period=day&since=1764230400
+    answer: { body: { data: [] } }
+result: [{ name: page_post_engagements, period: day, values: [{ value: 12, end_time: "2026-11-26T08:00:00+0000" }] }]

@@ -1,0 +1,7 @@
+description: "A table that is not there: the step fails in NocoDB's words, with its code"
+action: list_records
+credential: { api_token: test-nocodb-token }
+input: { base_id: pexample0001, table_id: mnotthere0001 }
+exchanges:
+  - answer: { status: 404, body: { error: ERR_TABLE_NOT_FOUND, message: "Table 'mnotthere0001' not found" } }
+error: "NocoDB answered 404: Table 'mnotthere0001' not found (ERR_TABLE_NOT_FOUND)"

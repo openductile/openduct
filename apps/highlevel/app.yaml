@@ -1,0 +1,778 @@
+# Copyright 2026 Ductile AI, Inc
+# SPDX-License-Identifier: Apache-2.0
+# HighLevel: made by `openduct app from-openapi` from HighLevel's own API descriptions (contacts, opportunities,
+# conversations and calendars, CC0-1.0, joined into one), then finished by hand: plain labels, the sub-account's id
+# from the credential, refusals in HighLevel's words.
+app: highlevel
+name: HighLevel
+category: crm
+description: Contacts, opportunities, messages and appointments of a HighLevel sub-account.
+docs: https://marketplace.gohighlevel.com/docs/
+hosts: [services.leadconnectorhq.com]
+base_url: https://services.leadconnectorhq.com
+sign_in:
+  - id: highlevel
+    label: A private integration token
+    fields:
+      - { name: token, label: The sub-account's private integration token, secret: true }
+      - { name: location_id, label: "The sub-account's id (its location id)" }
+    headers: { Authorization: "Bearer {{ credential.token }}" }
+  - id: highlevel_oauth
+    label: Sign in with HighLevel
+    oauth2:
+      authorize: https://marketplace.gohighlevel.com/v2/oauth/chooselocation
+      token: https://services.leadconnectorhq.com/oauth/token
+      scopes:
+        - contacts.readonly
+        - contacts.write
+        - opportunities.readonly
+        - opportunities.write
+        - conversations.readonly
+        - conversations/message.readonly
+        - conversations/message.write
+        - calendars.readonly
+        - calendars/events.readonly
+        - calendars/events.write
+    headers: { Authorization: "Bearer {{ credential.access_token }}" }
+default_action: create_contact
+error: >-
+  status >= 400 && type(value) == map && has(value.message) ? (type(value.message) == list ? value.message.join('; ')
+  : string(value.message)) : null
+actions:
+  create_contact:
+    label: Create a contact
+    description: >-
+      A new contact in the sub-account; any of their name, email, phone, address, tags, source and custom fields.
+    write: true
+    method: POST
+    path: "/contacts/"
+    inputs:
+      - { name: first_name, label: First name }
+      - { name: last_name, label: Last name }
+      - { name: name, label: Full name (in place of first and last) }
+      - { name: email, label: Email }
+      - { name: phone, label: "Phone (with its country code, +1 ...)" }
+      - { name: company_name, label: Company }
+      - { name: address1, label: Street address }
+      - { name: city, label: City }
+      - { name: state, label: State }
+      - { name: postal_code, label: Postal code }
+      - { name: country, label: Country (its two-letter code) }
+      - { name: website, label: Website }
+      - { name: timezone, label: Time zone (America/New_York ...) }
+      - { name: tags, label: "Tags: a list of words", kind: list }
+      - { name: source, label: Where they came from }
+      - { name: assigned_to, label: Who looks after them (a user's id) }
+      - { name: dnd, label: "Do not disturb: no messages of any kind", kind: boolean }
+      - name: custom_fields
+        label: "Custom field values: a list of records, each an id (or key) and a field_value"
+        kind: list
+      - { name: location_id, label: The sub-account's id (the credential's when empty), required: false }
+    headers: { Version: "2021-07-28" }
+    send:
+      firstName: "{{ input.first_name }}"
+      lastName: "{{ input.last_name }}"
+      name: "{{ input.name }}"
+      email: "{{ input.email }}"
+      locationId: >-
+        {{ has(input.location_id) && input.location_id != null ? input.location_id : (has(credential.location_id) ?
+        credential.location_id : null) }}
+      phone: "{{ input.phone }}"
+      address1: "{{ input.address1 }}"
+      city: "{{ input.city }}"
+      state: "{{ input.state }}"
+      postalCode: "{{ input.postal_code }}"
+      website: "{{ input.website }}"
+      timezone: "{{ input.timezone }}"
+      dnd: "{{ input.dnd }}"
+      tags: "{{ input.tags }}"
+      customFields: "{{ input.custom_fields }}"
+      source: "{{ input.source }}"
+      country: "{{ input.country }}"
+      companyName: "{{ input.company_name }}"
+      assignedTo: "{{ input.assigned_to }}"
+    result: value.contact
+    output: { id: text, locationId: text, firstName: text, lastName: text, name: text, email: text, phone: text, companyName: text, tags: list, source: text, assignedTo: text, dateAdded: text, customFields: list }
+  get_contact:
+    label: Look up a contact
+    description: Everything about one contact, by their id.
+    method: GET
+    path: "/contacts/{{ input.contact_id }}"
+    inputs:
+      - { name: contact_id, label: The contact's id, required: true }
+    headers: { Version: "2021-07-28" }
+    result: value.contact
+    output: { id: text, locationId: text, firstName: text, lastName: text, name: text, email: text, phone: text, companyName: text, tags: list, source: text, assignedTo: text, dateAdded: text, customFields: list }
+  update_contact:
+    label: Change a contact
+    description: "Only the fields given change; tags given take the place of those they had."
+    write: true
+    method: PUT
+    path: "/contacts/{{ input.contact_id }}"
+    inputs:
+      - { name: contact_id, label: The contact's id, required: true }
+      - { name: first_name, label: First name }
+      - { name: last_name, label: Last name }
+      - { name: name, label: Full name }
+      - { name: email, label: Email }
+      - { name: phone, label: Phone }
+      - { name: address1, label: Street address }
+      - { name: city, label: City }
+      - { name: state, label: State }
+      - { name: postal_code, label: Postal code }
+      - { name: country, label: Country (its two-letter code) }
+      - { name: website, label: Website }
+      - { name: timezone, label: Time zone }
+      - { name: tags, label: "Tags: a list of words (in place of those they had)", kind: list }
+      - { name: source, label: Where they came from }
+      - { name: assigned_to, label: Who looks after them (a user's id) }
+      - { name: dnd, label: Do not disturb, kind: boolean }
+      - { name: custom_fields, label: Custom field values, kind: list }
+    headers: { Version: "2021-07-28" }
+    send:
+      firstName: "{{ input.first_name }}"
+      lastName: "{{ input.last_name }}"
+      name: "{{ input.name }}"
+      email: "{{ input.email }}"
+      phone: "{{ input.phone }}"
+      address1: "{{ input.address1 }}"
+      city: "{{ input.city }}"
+      state: "{{ input.state }}"
+      postalCode: "{{ input.postal_code }}"
+      website: "{{ input.website }}"
+      timezone: "{{ input.timezone }}"
+      dnd: "{{ input.dnd }}"
+      tags: "{{ input.tags }}"
+      customFields: "{{ input.custom_fields }}"
+      source: "{{ input.source }}"
+      country: "{{ input.country }}"
+      assignedTo: "{{ input.assigned_to }}"
+    result: value.contact
+    output: { id: text, locationId: text, firstName: text, lastName: text, name: text, email: text, phone: text, companyName: text, tags: list, source: text, assignedTo: text, dateAdded: text, customFields: list }
+  upsert_contact:
+    label: Create or change a contact
+    description: >-
+      Finds the contact by email or phone (as the sub-account's duplicate setting says) and changes them, or makes a
+      new one when there is none.
+    write: true
+    method: POST
+    path: "/contacts/upsert"
+    inputs:
+      - { name: email, label: Email }
+      - { name: phone, label: Phone }
+      - { name: first_name, label: First name }
+      - { name: last_name, label: Last name }
+      - { name: name, label: Full name }
+      - { name: company_name, label: Company }
+      - { name: address1, label: Street address }
+      - { name: city, label: City }
+      - { name: state, label: State }
+      - { name: postal_code, label: Postal code }
+      - { name: country, label: Country (its two-letter code) }
+      - { name: website, label: Website }
+      - { name: tags, label: "Tags: a list of words (in place of those they had)", kind: list }
+      - { name: source, label: Where they came from }
+      - { name: assigned_to, label: Who looks after them (a user's id) }
+      - { name: custom_fields, label: Custom field values, kind: list }
+      - { name: location_id, label: The sub-account's id (the credential's when empty), required: false }
+    headers: { Version: "2021-07-28" }
+    send:
+      firstName: "{{ input.first_name }}"
+      lastName: "{{ input.last_name }}"
+      name: "{{ input.name }}"
+      email: "{{ input.email }}"
+      locationId: >-
+        {{ has(input.location_id) && input.location_id != null ? input.location_id : (has(credential.location_id) ?
+        credential.location_id : null) }}
+      phone: "{{ input.phone }}"
+      address1: "{{ input.address1 }}"
+      city: "{{ input.city }}"
+      state: "{{ input.state }}"
+      postalCode: "{{ input.postal_code }}"
+      website: "{{ input.website }}"
+      tags: "{{ input.tags }}"
+      customFields: "{{ input.custom_fields }}"
+      source: "{{ input.source }}"
+      country: "{{ input.country }}"
+      companyName: "{{ input.company_name }}"
+      assignedTo: "{{ input.assigned_to }}"
+    output: { new: boolean, contact: record, traceId: text }
+  delete_contact:
+    label: Remove a contact
+    description: The contact is removed from the sub-account.
+    write: true
+    method: DELETE
+    path: "/contacts/{{ input.contact_id }}"
+    inputs:
+      - { name: contact_id, label: The contact's id, required: true }
+    headers: { Version: "2021-07-28" }
+    output: { succeded: boolean }
+  search_contacts:
+    label: Search contacts
+    description: >-
+      Contacts by HighLevel's advanced search: a body of locationId, query, filters, sort, page and pageLimit, as its
+      search documentation writes them.
+    write: true
+    method: POST
+    path: "/contacts/search"
+    inputs:
+      - name: body
+        label: "The search, such as {locationId: ..., query: ann@example.com, pageLimit: 20}"
+        required: true
+        kind: record
+    headers: { Version: "2021-07-28" }
+    send: "{{ input.body }}"
+  find_contact:
+    label: Find a contact by email or phone
+    description: The contact who has the email (or the phone), as the sub-account's duplicate setting matches them.
+    method: GET
+    path: "/contacts/search/duplicate"
+    inputs:
+      - { name: email, label: Email }
+      - { name: number, label: Phone (with its country code) }
+      - { name: location_id, label: The sub-account's id (the credential's when empty), required: false }
+    query:
+      locationId: >-
+        {{ has(input.location_id) && input.location_id != null ? input.location_id : (has(credential.location_id) ?
+        credential.location_id : null) }}
+      number: "{{ input.number }}"
+      email: "{{ input.email }}"
+    headers: { Version: "2021-07-28" }
+  add_tags:
+    label: Tag a contact
+    description: The tags are added to those the contact has.
+    write: true
+    method: POST
+    path: "/contacts/{{ input.contact_id }}/tags"
+    inputs:
+      - { name: contact_id, label: The contact's id, required: true }
+      - { name: tags, label: "Tags: a list of words", required: true, kind: list }
+    headers: { Version: "2021-07-28" }
+    send: { tags: "{{ input.tags }}" }
+    output: { tags: list }
+  remove_tags:
+    label: Take tags off a contact
+    description: Only the tags given are taken off.
+    write: true
+    method: DELETE
+    path: "/contacts/{{ input.contact_id }}/tags"
+    inputs:
+      - { name: contact_id, label: The contact's id, required: true }
+      - { name: tags, label: "Tags: a list of words", required: true, kind: list }
+    headers: { Version: "2021-07-28" }
+    send: { tags: "{{ input.tags }}" }
+    output: { tags: list }
+  add_note:
+    label: Add a note to a contact
+    description: A note on the contact's record.
+    write: true
+    method: POST
+    path: "/contacts/{{ input.contact_id }}/notes"
+    inputs:
+      - { name: contact_id, label: The contact's id, required: true }
+      - { name: body, label: The note, required: true }
+      - { name: user_id, label: Who wrote it (a user's id) }
+    headers: { Version: "2021-07-28" }
+    send: { userId: "{{ input.user_id }}", body: "{{ input.body }}" }
+    output: { note: record }
+  add_task:
+    label: Add a task for a contact
+    description: A to-do about the contact, due on a date, for someone or not.
+    write: true
+    method: POST
+    path: "/contacts/{{ input.contact_id }}/tasks"
+    inputs:
+      - { name: contact_id, label: The contact's id, required: true }
+      - { name: title, label: Title, required: true }
+      - { name: body, label: What is to be done }
+      - { name: due_date, label: "When it is due (ISO 8601, such as 2026-12-01T10:00:00Z)", required: true }
+      - { name: completed, label: Done already, required: true, kind: boolean }
+      - { name: assigned_to, label: Who it is for (a user's id) }
+    headers: { Version: "2021-07-28" }
+    send:
+      title: "{{ input.title }}"
+      body: "{{ input.body }}"
+      dueDate: "{{ input.due_date }}"
+      completed: "{{ input.completed }}"
+      assignedTo: "{{ input.assigned_to }}"
+    output: { task: record }
+  add_to_workflow:
+    label: Add a contact to a workflow
+    description: Starts one of the sub-account's workflows for the contact.
+    write: true
+    method: POST
+    path: "/contacts/{{ input.contact_id }}/workflow/{{ input.workflow_id }}"
+    inputs:
+      - { name: contact_id, label: The contact's id, required: true }
+      - { name: workflow_id, label: The workflow's id, required: true }
+      - { name: event_start_time, label: "When it starts for them (ISO 8601; now when empty)" }
+    headers: { Version: "2021-07-28" }
+    send: { eventStartTime: "{{ input.event_start_time }}" }
+    output: { succeded: boolean }
+  create_opportunity:
+    label: Create an opportunity
+    description: A new deal in a pipeline, for a contact.
+    write: true
+    method: POST
+    path: "/opportunities/"
+    inputs:
+      - { name: name, label: Name, required: true }
+      - { name: pipeline_id, label: The pipeline's id (List pipelines gives it), required: true }
+      - { name: pipeline_stage_id, label: Its stage's id }
+      - { name: status, label: "Status: open, won, lost or abandoned", required: true }
+      - { name: contact_id, label: The contact it is with, required: true }
+      - { name: monetary_value, label: Its value, kind: number }
+      - { name: assigned_to, label: Who looks after it (a user's id) }
+      - { name: custom_fields, label: Custom field values, kind: list }
+      - { name: location_id, label: The sub-account's id (the credential's when empty), required: false }
+    headers: { Version: "2021-07-28" }
+    send:
+      pipelineId: "{{ input.pipeline_id }}"
+      locationId: >-
+        {{ has(input.location_id) && input.location_id != null ? input.location_id : (has(credential.location_id) ?
+        credential.location_id : null) }}
+      name: "{{ input.name }}"
+      pipelineStageId: "{{ input.pipeline_stage_id }}"
+      status: "{{ input.status }}"
+      contactId: "{{ input.contact_id }}"
+      monetaryValue: "{{ input.monetary_value }}"
+      assignedTo: "{{ input.assigned_to }}"
+      customFields: "{{ input.custom_fields }}"
+    result: value.opportunity
+    output: { id: text, name: text, monetaryValue: number, pipelineId: text, pipelineStageId: text, assignedTo: text, status: text, source: text, contactId: text, lastStatusChangeAt: text }
+  get_opportunity:
+    label: Look up an opportunity
+    description: One opportunity, by its id.
+    method: GET
+    path: "/opportunities/{{ input.id }}"
+    inputs:
+      - { name: id, label: The opportunity's id, required: true }
+    headers: { Version: "2021-07-28" }
+    result: value.opportunity
+    output: { id: text, name: text, monetaryValue: number, pipelineId: text, pipelineStageId: text, assignedTo: text, status: text, source: text, contactId: text, lastStatusChangeAt: text }
+  update_opportunity:
+    label: Change an opportunity
+    description: "Only the fields given change; a new stage or pipeline moves it."
+    write: true
+    method: PUT
+    path: "/opportunities/{{ input.id }}"
+    inputs:
+      - { name: id, label: The opportunity's id, required: true }
+      - { name: name, label: Name }
+      - { name: pipeline_id, label: Its pipeline's id }
+      - { name: pipeline_stage_id, label: Its stage's id }
+      - { name: status, label: "Status: open, won, lost or abandoned" }
+      - { name: monetary_value, label: Its value, kind: number }
+      - { name: assigned_to, label: Who looks after it (a user's id) }
+      - { name: custom_fields, label: Custom field values, kind: list }
+    headers: { Version: "2021-07-28" }
+    send:
+      pipelineId: "{{ input.pipeline_id }}"
+      name: "{{ input.name }}"
+      pipelineStageId: "{{ input.pipeline_stage_id }}"
+      status: "{{ input.status }}"
+      monetaryValue: "{{ input.monetary_value }}"
+      assignedTo: "{{ input.assigned_to }}"
+      customFields: "{{ input.custom_fields }}"
+    result: value.opportunity
+    output: { id: text, name: text, monetaryValue: number, pipelineId: text, pipelineStageId: text, assignedTo: text, status: text, source: text, contactId: text, lastStatusChangeAt: text }
+  set_opportunity_status:
+    label: Mark an opportunity won or lost
+    description: "Its status: open, won, lost or abandoned; why it was lost too."
+    write: true
+    method: PUT
+    path: "/opportunities/{{ input.id }}/status"
+    inputs:
+      - { name: id, label: The opportunity's id, required: true }
+      - { name: status, label: "Status: open, won, lost or abandoned", required: true }
+      - { name: lost_reason_id, label: Why it was lost (a lost reason's id) }
+    headers: { Version: "2021-07-28" }
+    send: { status: "{{ input.status }}", lostReasonId: "{{ input.lost_reason_id }}" }
+    output: { succeded: boolean }
+  search_opportunities:
+    label: Search opportunities
+    description: "Opportunities by words, pipeline, stage, status, contact or owner; every page, up to 1,000."
+    method: GET
+    path: "/opportunities/search"
+    inputs:
+      - { name: q, label: Words to look for }
+      - { name: pipeline_id, label: Only in this pipeline (its id) }
+      - { name: pipeline_stage_id, label: Only at this stage (its id) }
+      - { name: status, label: "Only these: open, won, lost, abandoned or all" }
+      - { name: contact_id, label: Only with this contact (their id) }
+      - { name: assigned_to, label: Only those this user looks after (their id) }
+      - { name: order, label: "Order, such as added_asc" }
+      - { name: location_id, label: The sub-account's id (the credential's when empty), required: false }
+    query:
+      q: "{{ input.q }}"
+      location_id: >-
+        {{ has(input.location_id) && input.location_id != null ? input.location_id : (has(credential.location_id) ?
+        credential.location_id : null) }}
+      pipeline_id: "{{ input.pipeline_id }}"
+      pipeline_stage_id: "{{ input.pipeline_stage_id }}"
+      contact_id: "{{ input.contact_id }}"
+      status: "{{ input.status }}"
+      assigned_to: "{{ input.assigned_to }}"
+      order: "{{ input.order }}"
+      limit: "100"
+    headers: { Version: "2021-07-28" }
+    items: value.opportunities
+    next: >-
+      size(value.opportunities) < 100 || !has(value.meta) || !has(value.meta.startAfterId) || value.meta.startAfterId
+      == null ? null : {'startAfter': value.meta.startAfter, 'startAfterId': value.meta.startAfterId}
+    output:
+      id: text
+      name: text
+      monetaryValue: number
+      pipelineId: text
+      pipelineStageId: text
+      assignedTo: text
+      status: text
+      source: text
+      lastStatusChangeAt: text
+      lastStageChangeAt: text
+      lastActionDate: text
+      indexVersion: text
+      createdAt: text
+      updatedAt: text
+      contactId: text
+      locationId: text
+      contact: record
+      notes: list
+      tasks: list
+      calendarEvents: list
+      lostReasonId: text
+      customFields: list
+      followers: list
+      externalObjectId: text
+  list_pipelines:
+    label: List pipelines
+    description: The sub-account's pipelines, each with its stages and their ids.
+    method: GET
+    path: "/opportunities/pipelines"
+    inputs:
+      - { name: location_id, label: The sub-account's id (the credential's when empty), required: false }
+    query:
+      locationId: >-
+        {{ has(input.location_id) && input.location_id != null ? input.location_id : (has(credential.location_id) ?
+        credential.location_id : null) }}
+    headers: { Version: "2021-07-28" }
+    items: value.pipelines
+    output:
+      id: text
+      name: text
+      stages: list
+      showInFunnel: boolean
+      showInPieChart: boolean
+      locationId: text
+      colorRenderMode: text
+  send_message:
+    label: Send a message
+    description: >-
+      A text (SMS), email, WhatsApp or other message to a contact, from the sub-account's own number or address.
+    write: true
+    method: POST
+    path: "/conversations/messages"
+    inputs:
+      - { name: type, label: "How: SMS, Email, WhatsApp, IG, FB, Custom, Live_Chat ...", required: true }
+      - { name: contact_id, label: "To whom: the contact's id", required: true }
+      - { name: message, label: The text }
+      - { name: subject, label: Subject (an email) }
+      - { name: html, label: The email as HTML (in place of the text) }
+      - { name: email_from, label: From this address (an email) }
+      - { name: email_to, label: "To this address, in place of the contact's own" }
+      - { name: email_cc, label: "Copy to: a list of addresses", kind: list }
+      - { name: email_bcc, label: "Blind copy to: a list of addresses", kind: list }
+      - { name: from_number, label: From this number (a text) }
+      - { name: to_number, label: "To this number, in place of the contact's own" }
+      - { name: attachments, label: "Files: a list of their addresses", kind: list }
+      - { name: reply_message_id, label: In reply to this message (its id) }
+      - { name: template_id, label: A message template's id }
+      - { name: scheduled_timestamp, label: "Send it later: when (Unix time in seconds)", kind: number }
+      - { name: sub_type, label: "Its subtype, where HighLevel asks for one", required: false, kind: record }
+      - name: status
+        label: "Its status, where HighLevel asks for one: delivered, failed, pending, read"
+        required: false
+    headers: { Version: "2021-04-15" }
+    send:
+      type: "{{ input.type }}"
+      subType: "{{ input.sub_type }}"
+      contactId: "{{ input.contact_id }}"
+      attachments: "{{ input.attachments }}"
+      emailFrom: "{{ input.email_from }}"
+      emailCc: "{{ input.email_cc }}"
+      emailBcc: "{{ input.email_bcc }}"
+      html: "{{ input.html }}"
+      message: "{{ input.message }}"
+      subject: "{{ input.subject }}"
+      replyMessageId: "{{ input.reply_message_id }}"
+      templateId: "{{ input.template_id }}"
+      scheduledTimestamp: "{{ input.scheduled_timestamp }}"
+      emailTo: "{{ input.email_to }}"
+      fromNumber: "{{ input.from_number }}"
+      toNumber: "{{ input.to_number }}"
+      status: "{{ input.status }}"
+    output:
+      conversationId: text
+      emailMessageId: text
+      messageId: text
+      messageIds: list
+      msg: text
+      forwardData: record
+      status: text
+  search_conversations:
+    label: Search conversations
+    description: >-
+      The sub-account's conversations, by contact, words, who they are assigned to or whether they are read.
+    method: GET
+    path: "/conversations/search"
+    inputs:
+      - { name: contact_id, label: Only with this contact (their id) }
+      - { name: query, label: Words to look for }
+      - { name: status, label: "Only these: all, read, unread or starred" }
+      - { name: assigned_to, label: "Only assigned to these users (ids, with commas)" }
+      - { name: sort, label: "Order: asc or desc" }
+      - { name: limit, label: At most this many (20 when empty), kind: number }
+      - { name: location_id, label: The sub-account's id (the credential's when empty), required: false }
+    query:
+      locationId: >-
+        {{ has(input.location_id) && input.location_id != null ? input.location_id : (has(credential.location_id) ?
+        credential.location_id : null) }}
+      contactId: "{{ input.contact_id }}"
+      assignedTo: "{{ input.assigned_to }}"
+      query: "{{ input.query }}"
+      sort: "{{ input.sort }}"
+      limit: "{{ input.limit }}"
+      status: "{{ input.status }}"
+    headers: { Version: "2021-04-15" }
+    items: value.conversations
+    output:
+      id: text
+      contactId: text
+      locationId: text
+      lastMessageBody: text
+      lastMessageType: text
+      type: text
+      unreadCount: number
+      fullName: text
+      contactName: text
+      email: text
+      phone: text
+  list_messages:
+    label: List a conversation's messages
+    description: The messages of one conversation, the newest first.
+    method: GET
+    path: "/conversations/{{ input.conversation_id }}/messages"
+    inputs:
+      - { name: conversation_id, label: The conversation's id, required: true }
+      - { name: type, label: "Only these kinds, with commas (TYPE_SMS, TYPE_EMAIL ...)" }
+      - { name: limit, label: At most this many, kind: number }
+      - { name: last_message_id, label: Those before this message (its id) }
+    query: { lastMessageId: "{{ input.last_message_id }}", limit: "{{ input.limit }}", type: "{{ input.type }}" }
+    headers: { Version: "2021-04-15" }
+    items: value.messages
+    next: "has(value.nextPage) && value.nextPage == true ? {'lastMessageId': value.lastMessageId} : null"
+    output:
+      id: text
+      type: number
+      messageType: text
+      locationId: text
+      contactId: text
+      conversationId: text
+      dateAdded: text
+      body: text
+      direction: text
+      status: text
+      contentType: text
+      attachments: list
+      meta: record
+      source: text
+      userId: text
+      conversationProviderId: text
+      chatWidgetId: text
+  create_appointment:
+    label: Book an appointment
+    description: >-
+      An appointment on a calendar for a contact, at a time (the calendar's free slots unless told otherwise).
+    write: true
+    method: POST
+    path: "/calendars/events/appointments"
+    inputs:
+      - { name: calendar_id, label: The calendar's id, required: true }
+      - { name: contact_id, label: The contact's id, required: true }
+      - { name: start_time, label: "When it starts (ISO 8601, such as 2026-12-01T15:00:00-05:00)", required: true }
+      - { name: end_time, label: When it ends (the calendar's length when empty) }
+      - { name: title, label: Title }
+      - { name: appointment_status, label: "Status: new, confirmed, cancelled, showed, noshow ..." }
+      - { name: assigned_user_id, label: With whom (a user's id) }
+      - { name: address, label: Where (an address or a meeting link) }
+      - { name: description, label: Notes }
+      - { name: ignore_free_slot_validation, label: Book it even outside the free slots, kind: boolean }
+      - { name: to_notify, label: Run the calendar's notifications and automations (yes unless said), kind: boolean }
+      - { name: location_id, label: The sub-account's id (the credential's when empty), required: false }
+    headers: { Version: "2021-04-15" }
+    send:
+      title: "{{ input.title }}"
+      appointmentStatus: "{{ input.appointment_status }}"
+      assignedUserId: "{{ input.assigned_user_id }}"
+      description: "{{ input.description }}"
+      address: "{{ input.address }}"
+      toNotify: "{{ input.to_notify }}"
+      ignoreFreeSlotValidation: "{{ input.ignore_free_slot_validation }}"
+      calendarId: "{{ input.calendar_id }}"
+      locationId: >-
+        {{ has(input.location_id) && input.location_id != null ? input.location_id : (has(credential.location_id) ?
+        credential.location_id : null) }}
+      contactId: "{{ input.contact_id }}"
+      startTime: "{{ input.start_time }}"
+      endTime: "{{ input.end_time }}"
+    output:
+      calendarId: text
+      locationId: text
+      contactId: text
+      startTime: text
+      endTime: text
+      title: text
+      meetingLocationType: text
+      appointmentStatus: text
+      assignedUserId: text
+      address: text
+      isRecurring: boolean
+      rrule: text
+      id: text
+  list_appointments:
+    label: List appointments
+    description: A calendar's (or a user's, or a group's) appointments between two times.
+    method: GET
+    path: "/calendars/events"
+    inputs:
+      - { name: start_time, label: From (Unix time in milliseconds), required: true }
+      - { name: end_time, label: To (Unix time in milliseconds), required: true }
+      - { name: calendar_id, label: Of this calendar (or give a user or a group) }
+      - { name: user_id, label: Of this user }
+      - { name: group_id, label: Of this group of calendars }
+      - { name: location_id, label: The sub-account's id (the credential's when empty), required: false }
+    query:
+      locationId: >-
+        {{ has(input.location_id) && input.location_id != null ? input.location_id : (has(credential.location_id) ?
+        credential.location_id : null) }}
+      userId: "{{ input.user_id }}"
+      calendarId: "{{ input.calendar_id }}"
+      groupId: "{{ input.group_id }}"
+      startTime: "{{ input.start_time }}"
+      endTime: "{{ input.end_time }}"
+    headers: { Version: "2021-04-15" }
+    items: value.events
+    output:
+      id: text
+      address: text
+      title: text
+      calendarId: text
+      locationId: text
+      contactId: text
+      groupId: text
+      appointmentStatus: text
+      assignedUserId: text
+      users: list
+      notes: text
+      description: text
+      isRecurring: boolean
+      rrule: text
+      startTime: record
+      endTime: record
+      dateAdded: record
+      dateUpdated: record
+      assignedResources: list
+      createdBy: record
+      masterEventId: text
+  get_free_slots:
+    label: List a calendar's free times
+    description: The times still free to book, day by day, over at most 31 days.
+    method: GET
+    path: "/calendars/{{ input.calendar_id }}/free-slots"
+    inputs:
+      - { name: calendar_id, label: The calendar's id, required: true }
+      - { name: start_date, label: From (Unix time in milliseconds), required: true, kind: number }
+      - { name: end_date, label: To (Unix time in milliseconds), required: true, kind: number }
+      - { name: timezone, label: In this time zone (America/New_York ...) }
+      - { name: user_id, label: Only this user's (their id) }
+    query:
+      startDate: "{{ input.start_date }}"
+      endDate: "{{ input.end_date }}"
+      timezone: "{{ input.timezone }}"
+      userId: "{{ input.user_id }}"
+    headers: { Version: "2021-04-15" }
+  list_calendars:
+    label: List calendars
+    description: The sub-account's calendars, with their ids.
+    method: GET
+    path: "/calendars/"
+    inputs:
+      - { name: group_id, label: Only those of this group }
+      - { name: show_drafted, label: Drafts too, kind: boolean }
+      - { name: location_id, label: The sub-account's id (the credential's when empty), required: false }
+    query:
+      locationId: >-
+        {{ has(input.location_id) && input.location_id != null ? input.location_id : (has(credential.location_id) ?
+        credential.location_id : null) }}
+      groupId: "{{ input.group_id }}"
+      showDrafted: "{{ input.show_drafted }}"
+    headers: { Version: "2021-04-15" }
+    items: value.calendars
+    output:
+      isActive: boolean
+      notifications: list
+      locationId: text
+      groupId: text
+      teamMembers: list
+      eventType: text
+      name: text
+      description: text
+      slug: text
+      widgetSlug: text
+      calendarType: text
+      widgetType: text
+      eventTitle: text
+      eventColor: text
+      meetingLocation: text
+      locationConfigurations: list
+      slotDuration: number
+      slotDurationUnit: text
+      slotInterval: number
+      slotIntervalUnit: text
+      slotBuffer: number
+      slotBufferUnit: text
+      preBuffer: number
+      preBufferUnit: text
+      appoinmentPerSlot: number
+      appoinmentPerDay: number
+      allowBookingAfter: number
+      allowBookingAfterUnit: text
+      allowBookingFor: number
+      allowBookingForUnit: text
+      openHours: list
+      enableRecurring: boolean
+      recurring: record
+      formId: text
+      stickyContact: boolean
+      isLivePaymentMode: boolean
+      autoConfirm: boolean
+      shouldSendAlertEmailsToAssignedMember: boolean
+      alertEmail: text
+      googleInvitationEmails: boolean
+      allowReschedule: boolean
+      allowCancellation: boolean
+      shouldAssignContactToTeamMember: boolean
+      shouldSkipAssigningContactForExisting: boolean
+      notes: text
+      pixelId: text
+      formSubmitType: text
+      formSubmitRedirectURL: text
+      formSubmitThanksMessage: text
+      availabilityType: number
+      availabilities: list
+      guestType: text
+      consentLabel: text
+      calendarCoverImage: text
+      lookBusyConfig: record
+      id: text

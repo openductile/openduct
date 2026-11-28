@@ -1,0 +1,59 @@
+name: Open a PagerDuty incident when a workflow fails
+description: >-
+  Watches one of your workflows - choose it under "When one fails" - and when a run of it fails at its last try, opens
+  an incident on your PagerDuty service (the same failure again joins the open incident instead of paging twice) and
+  posts what failed, where and why to your operations channel in Slack. The failed record waits in that workflow's
+  CatchErr, to run again once it is fixed. Needs: a PagerDuty REST API key as a header credential named Authorization
+  holding "Token token=..." (pagerduty) and Slack (team_slack).
+category: Engineering
+trigger:
+  # The workflow to watch, by its id.
+  failed: { workflow: orders-sync }
+# What a test runs on: the record the failed run started with.
+sample:
+  id: A-1042
+  total: 120.5
+  customer: ada@example.com
+steps:
+  - name: what
+    set:
+      workflow: "trigger.workflow != null ? trigger.workflow : 'orders-sync'"
+      error: "trigger.error != null ? trigger.error : 'no reason given'"
+      run: "trigger.run != null ? trigger.run : ''"
+  - name: incident
+    http:
+      method: POST
+      credential: pagerduty
+      url: https://api.pagerduty.com/incidents
+      headers:
+        # PagerDuty asks who opens it: an e-mail of a user on your account.
+        From: oncall@example.com
+        Accept: application/vnd.pagerduty+json;version=2
+      json:
+        incident:
+          type: incident
+          title: "Workflow {{ steps.what.workflow }} failed: {{ steps.what.error.substring(0, math.least(size(steps.what.error), 200)) }}"
+          # Your PagerDuty service's id.
+          service: { id: PABC123, type: service_reference }
+          urgency: high
+          # The same workflow's failures join one open incident.
+          incident_key: "openduct-{{ steps.what.workflow }}"
+          body:
+            type: incident_body
+            details: "Run {{ steps.what.run }} of {{ steps.what.workflow }} failed.\nError: {{ steps.what.error }}\nIts record: {{ value }}"
+      # PagerDuty answers 400 when an incident with that key is already open: that is not a failure here.
+      fail_on_status: false
+      sample:
+        incident: { id: Q1ABCDEF, incident_number: 812, status: triggered, html_url: "https://example.pagerduty.com/incidents/Q1ABCDEF" }
+    retry: { attempts: 3, wait: 20s }
+  - name: link
+    set:
+      url: >-
+        steps.incident.status < 300 && has(steps.incident.body.incident) ? steps.incident.body.incident.html_url
+        : 'not opened - PagerDuty answered ' + string(steps.incident.status) + ' (one may be open already)'
+  - name: tell
+    slack:
+      credential: team_slack
+      channel: "#ops"
+      text: ":rotating_light: {{ steps.what.workflow }} failed{{ steps.what.run != '' ? ' (run ' + steps.what.run + ')' : '' }}: {{ steps.what.error }}\nIncident: {{ steps.link.url }}"
+    retry: { attempts: 3, wait: 20s }

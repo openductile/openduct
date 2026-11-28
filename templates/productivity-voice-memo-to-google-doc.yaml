@@ -1,0 +1,64 @@
+name: Turn a voice memo into a Google Doc
+description: >-
+  Record a memo on your phone and upload it on this form: Deepgram turns the speech into text, with punctuation and
+  paragraphs, and calls back when it is done; the text is then written into a new Google Doc titled as you asked. For
+  people who think out loud - site visits, interviews, ideas on the move. Needs: deepgram (an API key, sent as
+  Authorization: Token ...), google_docs.
+category: Productivity
+trigger:
+  form:
+    title: Voice memo to a document
+    description: Upload a recording of up to 2 MB (about two minutes); the document is ready a minute or two later.
+    fields:
+      - { name: title, label: "The document's title", type: text, required: true, max_length: 120 }
+      - { name: memo, label: The recording, type: file, required: true, max_size: 2MB, accept: "audio/*,.mp3,.m4a,.wav,.ogg" }
+      - { name: language, label: Spoken in, type: dropdown, options: [en, es, fr, de, pt, nl], required: true }
+    thanks: Thank you - your document will be in Google Docs in a minute or two.
+# What a test runs on: an answer as the form gives it.
+sample:
+  title: Site visit - Harbor Street kitchen
+  memo: { name: harbor-street.m4a, type: audio/mp4, size: 18, base64: "AAAAGGZ0eXBNNEEgAAAAAA==" }
+  language: en
+steps:
+  - name: audio
+    convert:
+      format: base64
+      base64: value.memo.base64
+      name: "{{ value.memo.name }}"
+  # Deepgram answers at once with a request id, and sends the text to the wait step's address when it is done.
+  - name: send
+    http:
+      method: POST
+      url: https://api.deepgram.com/v1/listen
+      credential: deepgram
+      query:
+        model: nova-3
+        smart_format: "true"
+        paragraphs: "true"
+        language: "{{ value.language }}"
+        callback: "{{ links.transcript }}"
+      file: steps.audio
+      sample: { request_id: 4b1f6c2e-9d3a-4f7e-8a51-2c6d0e9f7b13 }
+    retry: { attempts: 3, wait: 15s }
+  - name: transcript
+    wait: { webhook: true, timeout: 1h, on_timeout: fail }
+  - name: text
+    set:
+      # A recording with no speech in it still makes its document, saying so.
+      words: >-
+        cel.bind(t, has(steps.transcript.body.results) ?
+        steps.transcript.body.results.channels[0].alternatives[0].transcript : null,
+        t != null && t.trim() != '' ? t : 'No speech was heard in the recording ' + value.memo.name + '.')
+  - name: doc
+    google_docs:
+      action: make_document
+      credential: google_docs
+      title: "{{ value.title }}"
+    retry: { attempts: 3, wait: 10s }
+  - name: write
+    google_docs:
+      action: add_text
+      credential: google_docs
+      document: "{{ steps.doc.id }}"
+      text: "{{ steps.text.words }}"
+    retry: { attempts: 3, wait: 10s }

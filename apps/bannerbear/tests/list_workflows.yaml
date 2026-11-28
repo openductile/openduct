@@ -1,0 +1,7 @@
+description: The workflows made in Bannerbear
+action: list_workflows
+credential: { api_key: bb_ak_v5_test }
+exchanges:
+  - sent: { method: GET, url: "https://api.bannerbear.com/v5/workflows" }
+    answer: { status: 200, body: [{ uid: wf_Z8, name: Welcome card, inputs: { name: { type: text } } }] }
+result: [{ uid: wf_Z8, name: Welcome card, inputs: { name: { type: text } } }]

@@ -3,6 +3,8 @@
 
 // The studio's API, as the page calls it. A change carries the session's token; the server refuses one without.
 
+import type { VersionSource } from "./deliveryApi"; // developer CI/CD
+
 export type Account = { id: string; email: string; name: string; admin: boolean };
 export type Role = "admin" | "editor" | "viewer";
 export type WorkspaceSummary = { id: string; name: string; role: Role };
@@ -19,7 +21,26 @@ export type Definition = {
   runs_at_once?: number;
   /** The event a test or a preview runs on, kept with the workflow. */
   sample?: unknown;
+  /** MCP: offered as a tool to AI assistants (the workspace's MCP server) and agents. */
+  tool?: ToolOffer;
 };
+/** MCP: a workflow offered as a tool - what a model reads to choose it, and the arguments it takes. */
+export type ToolOffer = {
+  name?: string;
+  description: string;
+  timeout?: string;
+  input?: Record<string, { type?: string; description?: string; required?: boolean; choices?: unknown[] } | string>;
+};
+/** MCP: the workspace's MCP server, as its page shows it. */
+export type McpServerInfo = {
+  path: string;
+  versions: string[];
+  tools: { workflow: string; workflow_name: string; name: string; description: string; inputs: number; active: boolean; taken_by: string | null }[];
+  tokens: McpToken[];
+  manage: boolean;
+};
+export type McpToken = { id: string; name: string; hint: string; tools: string[] | null; per_minute: number; created: number; by: string; token?: string };
+export type McpToolInfo = { name: string; title: string | null; description: string; input_schema: Record<string, unknown> };
 export type Step = Record<string, unknown> & { name?: string };
 export type WorkflowRecord = {
   id: string;
@@ -30,8 +51,12 @@ export type WorkflowRecord = {
   created: number;
   updated: number;
   hook?: string | null;
+  /** A chat trigger's address: /chat/<hook>. */
+  chat?: string | null; // chat trigger (G8)
+  // forms-and-resume: a form trigger's page.
+  form?: string | null;
 };
-export type VersionRecord = { number: number; hash: string; created: number; by: string; definition: Definition };
+export type VersionRecord = { number: number; hash: string; created: number; by: string; definition: Definition; source?: VersionSource }; // developer CI/CD: source
 export type Metrics = {
   runs: number;
   by_status: Record<string, number>;
@@ -52,6 +77,8 @@ export type CredentialKind = {
 };
 export type AppInput = { name: string; label: string; required: boolean; description: string; kind: string };
 export type AppAction = { name: string; label: string; description: string; write: boolean; list: boolean; inputs: AppInput[] };
+/** A trigger of an app's: what it asks for, and whether it asks the app (a poll) or the app calls it (a webhook). */
+export type AppTriggerInfo = { name: string; label: string; description: string; inputs: AppInput[]; kind: "poll" | "webhook"; every_ms: number | null; registers: boolean; setup: string }; // G3 app triggers
 /** An app workflows may use, as its definition says (apps/<id>/app.yaml). */
 export type AppInfo = {
   id: string;
@@ -63,6 +90,7 @@ export type AppInfo = {
   sign_ins: { id: string; label: string; connect: boolean }[];
   actions: AppAction[];
   registered: boolean;
+  triggers?: AppTriggerInfo[]; // G3 app triggers
 };
 /** An app a person signs in to at the vendor, and the install's registration with it. */
 export type OauthApp = { app: string; name: string; sign_in: string; sign_ins?: string[]; docs: string | null; registered: boolean; client_id: string | null };
@@ -71,6 +99,8 @@ export type FilePreview = { rows: number; columns: string[]; first: Record<strin
 export type Member = { user: string; email: string; name: string; role: Role };
 export type TriggerSummary = { workflow: string; name: string | null; kind: string; hook: string | null; every_ms: number | null; topic: string | null };
 export type WorkflowSummary = { id: string; name: string; active: boolean; trigger: string; updated: number };
+/** A schedule's settings as the studio reads them: in plain words, and its next times in UTC and on its own clock. */
+export type ScheduleTimes = { says: string; timezone: string; next: string[]; local: string[] }; // cron-schedules
 export type StepRun = {
   name: string;
   kind: string;
@@ -80,16 +110,36 @@ export type StepRun = {
   error: string | null;
   /** What a script step logged. */
   logs?: string[];
+  /** test runs: an answer given in place of sending ("sample answer, nothing sent"), the request it would have
+   * sent, or that a table is not made yet. */
+  sample?: string;
+  request?: unknown;
+  note?: string;
 };
 export type Run = {
   run?: string;
   at?: number;
-  status: "done" | "skipped" | "failed";
+  // forms-and-resume: "waiting" - a run stopped at a form, an approval, a call or a time.
+  status: "done" | "skipped" | "failed" | "waiting";
   error: string | null;
   ms: number;
   steps: StepRun[];
+  waiting?: { step: string; kind: string; until: number; since: number };
   event?: unknown;
   trigger?: Record<string, unknown>;
+};
+/** A run that waits now, with its one-time address. */
+// forms-and-resume
+export type WaitingRun = {
+  run: string;
+  step: string;
+  kind: "form" | "approval" | "webhook" | "time";
+  title: string;
+  since: number;
+  until: number;
+  on_timeout: "fail" | "continue";
+  answered: string | null;
+  url: string | null;
 };
 /** A run on the Runs page: with the workflow it is of. */
 export type WorkspaceRun = Run & { workflow: { id: string; name: string } };
@@ -166,7 +216,8 @@ export function setWorkspace(id: string) {
   workspace = id;
 }
 
-async function call<T>(method: "GET" | "POST" | "PUT" | "DELETE", path: string, body?: unknown): Promise<T> {
+// data tables: exported, for the Tables page's own calls (tablesApi.ts).
+export async function call<T>(method: "GET" | "POST" | "PUT" | "DELETE", path: string, body?: unknown): Promise<T> {
   const headers: Record<string, string> = {};
   if (workspace) headers["x-openduct-workspace"] = workspace;
   if (method !== "GET") {
@@ -252,6 +303,8 @@ export const api = {
     return call<LogPage>("GET", `/api/logs?${query}`);
   },
   runs: async (id: string) => (await call<{ runs: Run[] }>("GET", `/api/workflows/${encodeURIComponent(id)}/runs`)).runs,
+  // forms-and-resume
+  waiting: async (id: string) => (await call<{ waiting: WaitingRun[] }>("GET", `/api/workflows/${encodeURIComponent(id)}/waiting`)).waiting,
   failed: async (id: string) =>
     (await call<{ failed: SetAside[] }>("GET", `/api/workflows/${encodeURIComponent(id)}/failed`)).failed,
   runFailed: (id: string) =>
@@ -268,6 +321,14 @@ export const api = {
   versions: async (id: string) =>
     (await call<{ versions: VersionRecord[] }>("GET", `/api/workflows/${encodeURIComponent(id)}/versions`)).versions,
   triggers: async () => (await call<{ triggers: TriggerSummary[] }>("GET", "/api/triggers")).triggers,
+  schedule: (schedule: unknown, count: number) => call<ScheduleTimes>("POST", "/api/schedule", { schedule, count }), // cron-schedules
+  // chat trigger (G8): a message to the workflow being edited, run as a preview, with the conversation so far
+  tryChat: (id: string, definition: Definition, message: string, history: { role: string; content: string }[]) =>
+    call<{ answer: string | null; failed: boolean; error_text: string; session: string; run: Run }>(
+      "POST",
+      `/api/workflows/${encodeURIComponent(id)}/chat`,
+      { definition, message, history },
+    ),
   models: async (credential: string) =>
     (await call<{ models: { id: string; name: string | null }[] }>("GET", `/api/credentials/${encodeURIComponent(credential)}/models`)).models,
   credentials: async () => (await call<{ credentials: CredentialSummary[] }>("GET", "/api/credentials")).credentials,
@@ -305,4 +366,28 @@ export const api = {
   renameWorkspace: (id: string, name: string) => call("PUT", `/api/workspaces/${encodeURIComponent(id)}`, { name }),
   removeMember: (id: string, user: string) =>
     call("DELETE", `/api/workspaces/${encodeURIComponent(id)}/members/${encodeURIComponent(user)}`),
+  // MCP: the workspace's MCP server, its tokens, and another server's tools for the builder.
+  mcpServer: () => call<McpServerInfo>("GET", "/api/mcp"),
+  issueMcpToken: (asked: { name: string; tools: string[] | null; per_minute: number }) => call<McpToken>("POST", "/api/mcp/tokens", asked),
+  revokeMcpToken: (id: string) => call("DELETE", `/api/mcp/tokens/${encodeURIComponent(id)}`),
+  mcpTools: (url: string, credential: string) =>
+    call<{ tools: McpToolInfo[]; protocol: string | null }>("POST", "/api/mcp/discover", { url, credential: credential || undefined }),
+  // G6 files
+  /** A run's file, saved by the browser as a download. */
+  downloadRunFile: async (file: string, name: string) => {
+    const headers: Record<string, string> = {};
+    if (workspace) headers["x-openduct-workspace"] = workspace;
+    const query = new URLSearchParams({ file, name });
+    const response = await fetch(`/api/runs/file?${query}`, { headers, credentials: "same-origin" });
+    if (!response.ok) {
+      const data: unknown = await response.json().catch(() => ({}));
+      throw new ApiError(response.status, (data as { error?: string }).error ?? `the studio answered ${response.status}`);
+    }
+    const url = URL.createObjectURL(await response.blob());
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = name;
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  },
 };

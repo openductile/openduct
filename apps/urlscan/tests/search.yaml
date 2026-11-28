@@ -1,0 +1,25 @@
+description: Scans of a domain, the next page asked for after the last result's sort values
+action: search
+credential: { api_key: us_test_1 }
+input: { q: "domain:shop.example.com" }
+exchanges:
+  - sent:
+      method: GET
+      url: https://urlscan.io/api/v1/search
+      query: { q: "domain:shop.example.com", size: "100" }
+    answer:
+      body:
+        results: [{ _id: 0e37e828-a9d9-45c0-ac50-1ca579b86c72, page: { domain: shop.example.com }, sort: [1795773600000, "0e37e828-a9d9-45c0-ac50-1ca579b86c72"] }]
+        total: 2
+        has_more: true
+  - sent:
+      url: https://urlscan.io/api/v1/search
+      query: { q: "domain:shop.example.com", size: "100", search_after: "1795773600000,0e37e828-a9d9-45c0-ac50-1ca579b86c72" }
+    answer:
+      body:
+        results: [{ _id: 7a1c1e2b-0000-4000-8000-000000000002, page: { domain: shop.example.com }, sort: [1795770000000, "7a1c1e2b-0000-4000-8000-000000000002"] }]
+        total: 2
+        has_more: false
+result:
+  - { _id: 0e37e828-a9d9-45c0-ac50-1ca579b86c72, page: { domain: shop.example.com }, sort: [1795773600000, "0e37e828-a9d9-45c0-ac50-1ca579b86c72"] }
+  - { _id: 7a1c1e2b-0000-4000-8000-000000000002, page: { domain: shop.example.com }, sort: [1795770000000, "7a1c1e2b-0000-4000-8000-000000000002"] }

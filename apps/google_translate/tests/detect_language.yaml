@@ -1,0 +1,12 @@
+description: "A text's language told"
+action: detect_language
+credential: {"api_key": "AIza-test"}
+input: {"text": "Merci beaucoup"}
+exchanges:
+  - sent:
+      method: POST
+      url: "https://translation.googleapis.com/language/translate/v2/detect"
+      query: {"key": "AIza-test"}
+      body: {"q": ["Merci beaucoup"]}
+    answer: {"status": 200, "body": {"data": {"detections": [[{"language": "fr", "confidence": 0.98, "isReliable": false}]]}}}
+result: {"language": "fr", "confidence": 0.98, "is_reliable": false}

@@ -1,0 +1,32 @@
+description: A company added
+action: create_company
+credential: {domain: shopexample, email: dana@shop.example, api_key: agile-test-key}
+input: {name: Shop Example, url: 'https://shop.example'}
+exchanges:
+- sent:
+    method: POST
+    url: https://shopexample.agilecrm.com/dev/api/contacts
+    headers: {authorization: Basic ZGFuYUBzaG9wLmV4YW1wbGU6YWdpbGUtdGVzdC1rZXk=, accept: application/json}
+    query: {}
+    body:
+      type: COMPANY
+      properties:
+      - {type: SYSTEM, name: name, value: Shop Example}
+      - {type: SYSTEM, name: url, value: 'https://shop.example'}
+  answer:
+    status: 200
+    body: &id001
+      id: '5649189358796800'
+      type: COMPANY
+      created_time: '1764237600'
+      updated_time: 1764237600
+      star_value: 0
+      lead_score: 0
+      tags: []
+      properties:
+      - {type: SYSTEM, name: name, value: Shop Example}
+      - {type: SYSTEM, name: url, value: 'https://shop.example'}
+      contact_company_id: null
+      owner: {id: 6263975862861824}
+      campaignStatus: []
+result: *id001

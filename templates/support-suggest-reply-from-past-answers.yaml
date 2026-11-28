@@ -1,0 +1,79 @@
+name: A suggested reply for each new ticket, from your best past answers
+description: >-
+  When your help desk sends a new ticket over a webhook ({"ticket", "name", "email", "subject", "text"}), the three
+  past answers nearest it in meaning are found in Postgres with pgvector, an AI agent checks the customer's orders in
+  your Google Sheet and drafts a reply built on those answers, and the help desk is answered with the draft and the
+  answers it used, to show beside the ticket. The agent on duty also gets it by Gmail, and the sheet logs each
+  suggestion. Nothing is sent to the customer. Needs: a PostgreSQL database with pgvector holding your past answers
+  (support_db), an AI credential (model), Google Sheets (sheets) and Gmail (gmail).
+category: Support
+trigger:
+  # Left empty here: each workflow made from the template is given a token of its own.
+  webhook: { token: "" }
+# What a test runs on: an event as this trigger gives it.
+sample:
+  ticket: T-6120
+  name: Omar Haddad
+  email: omar.haddad@example.com
+  subject: Can I change the delivery address?
+  text: I ordered a table lamp yesterday (A-1231) but I am moving on Friday. Can it go to my new flat instead?
+steps:
+  # Past answers kept as pieces, as "Keep documents for answers" keeps them: here in the past_answers table.
+  - name: similar
+    vector_store:
+      action: search
+      credential: support_db
+      table: past_answers
+      embed_with: model
+      query: "{{ value.subject }}. {{ value.text }}"
+      top_k: 3
+      min_score: 0.45
+  - name: draft
+    agent:
+      credential: model
+      instructions: >-
+        You draft a reply to a customer for a small shop's support agent. Build on the past answers given, which
+        the team wrote and trusts; keep their facts, change only what this ticket needs. Look the customer's order
+        up with orders before you say anything about it. If the past answers do not cover the question, say what
+        the agent should check. Warm, brief, signed "The team at Example Home".
+      input: >-
+        Ticket {{ value.ticket }} from {{ value.name }} <{{ value.email }}>: {{ value.subject }}
+        {{ value.text }}
+
+        Past answers, nearest first:
+        {{ size(steps.similar.matches) == 0 ? '(none near enough)' : steps.similar.matches.map(m, '- (' + string(m.score) + ') ' + m.text).join('\n') }}
+      tools:
+        - name: orders
+          description: "Every order: a header row (order, date, email, items, total, status, address), then one order a row."
+          google_sheets: { action: read_rows, credential: sheets, spreadsheet_id: your-sheet-id, range: "Orders!A1:G5000" }
+      allow: [orders]
+      max_turns: 4
+      max_tool_calls: 3
+      max_tokens: 700
+  - name: used
+    set:
+      answers: "steps.similar.matches.map(m, {'source': m.source, 'score': m.score})"
+      count: size(steps.similar.matches)
+  - name: tell
+    gmail:
+      action: send_email
+      credential: gmail
+      to: support-duty@example.com
+      subject: "Suggested reply for {{ value.ticket }}: {{ value.subject }}"
+      text: "{{ steps.draft.text }}\n\n---\nBuilt on {{ steps.used.count }} past answers: {{ steps.used.answers.map(a, a.source).join(', ') }}"
+    retry: { attempts: 3, wait: 30s }
+  - name: log
+    google_sheets:
+      action: add_row
+      credential: sheets
+      spreadsheet_id: your-sheet-id
+      sheet: Suggestions
+      values: ["{{ value.ticket }}", "{{ value.subject }}", "{{ steps.used.count }}", "{{ steps.used.answers.map(a, a.source).join(', ') }}"]
+    retry: { attempts: 3, wait: 30s }
+  - name: answer
+    respond:
+      status: 200
+      body:
+        ticket: "{{ value.ticket }}"
+        reply: "{{ steps.draft.text }}"
+        based_on: "{{ steps.used.answers }}"

@@ -1,0 +1,29 @@
+# Made by `openduct app from-openapi`: Get Form Submission by Site.
+description: "Get Form Submission by Site, made from the API description's schemas"
+action: get_form_submission
+credential: { token: test-token }
+input: { site_id: site_1, form_submission_id: form_submission_1 }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://api.webflow.com/v2/sites/site_1/form_submissions/form_submission_1"
+      query: {}
+      headers: { authorization: "Bearer test-token" }
+    answer:
+      status: 200
+      body:
+        id: "545bbecb7bdd6769632504a7"
+        displayName: example
+        siteId: "545bbecb7bdd6769632504a7"
+        workspaceId: "580e63fc8c9a982ac9b8b744"
+        dateSubmitted: "2018-10-04T15:21:02.042Z"
+        formResponse: {}
+        localeId: "6a0cb90f3ecc9d3d47ca8b5b"
+result:
+  id: "545bbecb7bdd6769632504a7"
+  displayName: example
+  siteId: "545bbecb7bdd6769632504a7"
+  workspaceId: "580e63fc8c9a982ac9b8b744"
+  dateSubmitted: "2018-10-04T15:21:02.042Z"
+  formResponse: {}
+  localeId: "6a0cb90f3ecc9d3d47ca8b5b"

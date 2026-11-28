@@ -1,0 +1,12 @@
+description: Your own server's address, from the credential; a person by username, as a bot with an emoji
+action: send_message
+sign_in: rocketchat_self_hosted
+credential: { url: "https://chat.example.com", user_id: uAbC123, token: rc_test_2 }
+input: { channel: "@ann", text: Your order has shipped, alias: Shop, emoji: ":package:" }
+exchanges:
+  - sent:
+      method: POST
+      url: https://chat.example.com/api/v1/chat.postMessage
+      body: { roomId: "@ann", text: Your order has shipped, alias: Shop, emoji: ":package:" }
+    answer: { body: { message: { _id: mSg002, rid: dAnn1, msg: Your order has shipped, alias: Shop }, success: true } }
+result: { _id: mSg002, rid: dAnn1, msg: Your order has shipped, alias: Shop }

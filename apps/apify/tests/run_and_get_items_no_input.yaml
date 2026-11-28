@@ -1,0 +1,11 @@
+description: An Actor given no input is sent an empty one, as Apify needs a body
+action: run_and_get_items
+credential: { api_token: apify_api_test1 }
+input: { actor: HG7ML7M8z78YcAPEB }
+exchanges:
+  - sent:
+      url: https://api.apify.com/v2/actors/HG7ML7M8z78YcAPEB/run-sync-get-dataset-items
+      query: { format: json, clean: "true" }
+      body: {}
+    answer: { status: 201, body: [] }
+result: []

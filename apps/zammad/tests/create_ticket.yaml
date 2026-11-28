@@ -1,0 +1,16 @@
+description: A ticket opened for a customer by email, with the first message as theirs (Zammad's guess form makes them if new)
+action: create_ticket
+credential: { subdomain: acme, token: zm_test_1 }
+input: { title: Order 1001 arrived damaged, group: Users, customer: ann@example.com, body: The lid was broken., priority: 3 high }
+exchanges:
+  - sent:
+      method: POST
+      url: https://acme.zammad.com/api/v1/tickets
+      body:
+        title: Order 1001 arrived damaged
+        group: Users
+        customer_id: "guess:ann@example.com"
+        priority: 3 high
+        article: { body: The lid was broken., type: note, sender: Customer, internal: false }
+    answer: { status: 201, body: { id: 42, number: "31042", title: Order 1001 arrived damaged, group_id: 1, priority_id: 3, customer_id: 8, article_ids: [104] } }
+result: { id: 42, number: "31042", title: Order 1001 arrived damaged, group_id: 1, priority_id: 3, customer_id: 8, article_ids: [104] }

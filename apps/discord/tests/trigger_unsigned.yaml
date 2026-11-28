@@ -1,0 +1,8 @@
+description: A delivery with no signature is refused
+trigger: interaction
+sign_in: discord_bot
+credential: { bot_token: test-bot-token, public_key: 3a2e578f29addf031da4172d5c614f059c027eba074c2e13ab54bc7cc51c1180 }
+delivery:
+  body: '{"id":"1","application_id":"1","type":1,"token":"x","version":1}'
+  at: 1700000010
+refused: "it has no x-signature-ed25519 header"

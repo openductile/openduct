@@ -1,0 +1,14 @@
+description: Turning the workflow off takes the subscription away, and empties what was kept
+trigger: new_message
+unregister: true
+workflow: wf1
+sign_in: teams
+credential:
+  access_token: eyJ0.teams
+  "client_state@wf1": s3cr3t
+  "subscription_id@wf1": 7f105c7d-2dc5-4530-97cd-4e7ae6534c07
+  "address@wf1": https://studio.example/hooks/h1
+exchanges:
+  - sent: { method: DELETE, url: https://graph.microsoft.com/v1.0/subscriptions/7f105c7d-2dc5-4530-97cd-4e7ae6534c07 }
+    answer: { status: 204 }
+kept: { client_state: "", subscription_id: "", address: "" }

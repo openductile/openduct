@@ -1,0 +1,15 @@
+description: Tasks done since five minutes before the poll before; one not done starts nothing
+trigger: task_completed
+credential: { access_token: ya29.test }
+input: { list_id: "@default" }
+seen: { cursor: "2023-11-14T22:00:00Z", items: [] }
+exchanges:
+  - sent:
+      query: { showCompleted: "true", showHidden: "true", completedMin: "2023-11-14T21:55:00Z", maxResults: "100" }
+    answer:
+      body:
+        items:
+          - { id: dGFzazM, title: Send the March invoices, status: completed, completed: "2023-11-14T22:05:00.000Z" }
+          - { id: dGFzazE, title: Order more boxes, status: needsAction }
+runs: [{ id: dGFzazM, title: Send the March invoices, status: completed, completed: "2023-11-14T22:05:00.000Z" }]
+cursor: "2023-11-14T22:13:20Z"

@@ -1,0 +1,10 @@
+description: A file with a new revision runs again
+trigger: changed_file
+credential: { access_token: sl.test-token }
+input: { path: "" }
+seen: { items: [["id:a4ayc_80_OEAAAAAAAAAZg", "d5d0b6915aa6cf52"]] }
+exchanges:
+  - sent:
+      body: { path: "", recursive: false, limit: 2000 }
+    answer: { body: { entries: [{ ".tag": file, id: "id:a4ayc_80_OEAAAAAAAAAZg", name: Price list.xlsx, rev: a1c10ce0dd7a }], cursor: c1, has_more: false } }
+runs: [{ ".tag": file, id: "id:a4ayc_80_OEAAAAAAAAAZg", name: Price list.xlsx, rev: a1c10ce0dd7a }]

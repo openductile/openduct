@@ -1,0 +1,39 @@
+description: An indicator added to a case
+action: add_observable
+credential:
+  url: https://thehive.example.com
+  api_key: test-key
+input:
+  case_id: ~8192
+  data_type: domain
+  data: login-reset.example
+  message: Link in the email
+  ioc: true
+exchanges:
+- sent:
+    method: POST
+    url: https://thehive.example.com/api/v1/case/~8192/observable
+    headers:
+      authorization: Bearer test-key
+    body:
+      dataType: domain
+      data: login-reset.example
+      message: Link in the email
+      ioc: true
+  answer:
+    status: 201
+    body:
+    - &id001
+      _id: ~20480
+      _type: Observable
+      _createdAt: 1795161600000
+      dataType: domain
+      data: login-reset.example
+      message: Link in the email
+      tags:
+      - phishing
+      tlp: 2
+      pap: 2
+      ioc: true
+      sighted: false
+result: *id001

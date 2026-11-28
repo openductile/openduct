@@ -1,0 +1,11 @@
+description: Discord checks the address with a signed PING, and is answered with a PONG
+trigger: interaction
+sign_in: discord_bot
+credential: { bot_token: test-bot-token, public_key: 3a2e578f29addf031da4172d5c614f059c027eba074c2e13ab54bc7cc51c1180 }
+delivery:
+  headers:
+    x-signature-ed25519: f733edf7af021366636e915a45d55311444580a2feaf9e06b73c4d7e7c576d22a4c967659757bfbd5bd6ebcb749b466919156f95e3d5716293e06acc85ab0702
+    x-signature-timestamp: "1700000000"
+  body: '{"id":"1100000000000000001","application_id":"1000000000000000001","type":1,"token":"dGVzdC1waW5nLXRva2Vu","version":1}'
+  at: 1700000010
+answer: { type: 1 }

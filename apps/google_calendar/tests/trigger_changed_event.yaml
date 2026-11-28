@@ -1,0 +1,8 @@
+description: An event moved since the poll before runs again
+trigger: changed_event
+credential: { access_token: ya29.test }
+input: { calendar_id: primary }
+seen: { cursor: "2023-11-14T20:00:00.000Z", items: [] }
+exchanges:
+  - answer: { body: { items: [{ id: ev1, summary: Lunch, updated: "2023-11-14T21:30:00.000Z" }] } }
+ids: [ev1]

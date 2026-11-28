@@ -1,0 +1,8 @@
+description: A task ticked off since the last poll starts a run; the poll asks for the last 7 days
+trigger: completed_task
+credential: { token: todoist-test-token }
+seen: { cursor: null, items: [] }
+exchanges:
+  - sent: { method: GET, url: https://api.todoist.com/api/v1/tasks/completed/by_completion_date }
+    answer: { body: { items: [{ id: 6Xtest0000000001, content: Call the supplier, checked: true, completed_at: "2026-11-27T11:00:00.000000Z" }] } }
+runs: [{ id: 6Xtest0000000001, content: Call the supplier, checked: true, completed_at: "2026-11-27T11:00:00.000000Z" }]

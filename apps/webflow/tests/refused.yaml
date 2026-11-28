@@ -1,0 +1,6 @@
+description: Webflow refuses a token without the right scope, in its words
+action: list_sites
+credential: { token: test-token }
+exchanges:
+  - answer: { status: 403, body: { code: missing_scopes, message: "OAuthForbidden: You are missing the following scopes - sites:read" } }
+error: "OAuthForbidden: You are missing the following scopes - sites:read"

@@ -1,0 +1,15 @@
+description: The first poll starts from now - what is waiting is noted, not run
+trigger: new_message
+credential: { bot_token: "123:abc" }
+exchanges:
+  - sent:
+      method: GET
+      url: https://api.telegram.org/bot123:abc/getUpdates
+      query: { limit: "100", timeout: "0", allowed_updates: '["message"]' }
+    answer:
+      body:
+        ok: true
+        result:
+          - { update_id: 500, message: { message_id: 1, chat: { id: 42 }, text: an old one } }
+runs: []
+cursor: 501

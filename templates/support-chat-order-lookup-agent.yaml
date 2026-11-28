@@ -1,0 +1,87 @@
+name: A shop chat that looks orders up in your database
+description: >-
+  For online shops: a chat for your site where an AI agent answers customers, looking an order up in your MySQL database
+  - only when the customer gives both the order number and the email it was placed with, and only reading. It keeps each
+  conversation in mind. A second, short model call reads the exchange and, when a person should step in (an angry
+  customer, a refund, something the agent could not settle), tells your team's Slack channel with the conversation's id.
+  Needs: an AI credential called model, a MySQL credential called shop_db (a user that may only read is best), and a
+  Slack credential called slack.
+category: Support
+trigger:
+  chat:
+    texts:
+      title: Order help
+      welcome: "Hi! Ask me about an order - have its number and your email ready."
+      placeholder: Your question
+    # The sites that may show the chat (add yours), beside its own page.
+    origins: []
+    history: 10
+    limits: { message: 2000, per_session: 20, per_address: 60 }
+# What a test runs on: a message as this trigger gives it.
+sample:
+  message: "Where is order 10432? I ordered with sam@example.com and it's been ten days."
+  session: 3c59dc048e8850243be8079a5c74d079
+  history: []
+  person: {}
+steps:
+  - name: helper
+    agent:
+      credential: model
+      instructions: >-
+        You answer the customers of an online shop, kindly, in at most four sentences. Before you say anything about
+        an order, look it up with both its number and the email it was placed with; if the customer has not given
+        both, ask for what is missing. Never guess a status, a date or an amount. You cannot change orders or give
+        refunds: say that a person from the team will write back.
+      input: "{{ value.message }}"
+      tools:
+        - name: order
+          description: One order's status, total, dates and tracking, by its number and the email it was placed with.
+          parameters:
+            type: object
+            properties:
+              order_id: { type: integer, description: "The order's number, as 10432" }
+              email: { type: string, description: "The email the order was placed with" }
+            required: [order_id, email]
+          mysql:
+            credential: shop_db
+            read_only: true
+            max_rows: 1
+            sql: >-
+              SELECT id, status, total, currency, placed_at, shipped_at, carrier, tracking_number
+              FROM orders WHERE id = ? AND LOWER(email) = LOWER(?) LIMIT 1
+            params: [args.order_id, args.email]
+      allow: [order]
+      memory:
+        key: "{{ value.session }}"
+        window: 10
+      max_turns: 6
+      max_tool_calls: 4
+  - name: needs_a_person
+    ai:
+      credential: model
+      system: >-
+        You read one exchange between a shop's customer and its assistant. Say whether a person from the team should
+        step in: the customer is angry, asks for a refund, a change or a cancellation, or the assistant could not
+        answer. Answer as JSON.
+      prompt: "Customer: {{ value.message }}\nAssistant: {{ steps.helper.text }}"
+      schema:
+        type: object
+        properties:
+          handover: { type: boolean }
+          reason: { type: string, description: "A few words" }
+        required: [handover, reason]
+      max_tokens: 150
+  - name: tell_the_team
+    if:
+      when: has(steps.needs_a_person.json) && steps.needs_a_person.json.handover == true
+      then:
+        - name: post
+          slack:
+            credential: slack
+            channel: "#support"
+            text: "A chat needs a person ({{ steps.needs_a_person.json.reason }}). Conversation {{ value.session }}: {{ value.message }}"
+          retry: { attempts: 3, wait: 10s }
+          on_error: continue
+  - name: reply
+    respond:
+      body: { text: "{{ steps.helper.text }}" }

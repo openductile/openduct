@@ -1,0 +1,11 @@
+description: "A book moved to the top of its shelf"
+action: move_on_bookshelf
+credential: { access_token: ya29.test }
+input: { shelf: "2", volume_id: aBcDeFgHiJ0C, position: 0 }
+exchanges:
+  - sent:
+      method: POST
+      url: https://books.googleapis.com/books/v1/mylibrary/bookshelves/2/moveVolume
+      query: { volumeId: aBcDeFgHiJ0C, volumePosition: "0" }
+    answer: { status: 204 }
+result: { moved: true }

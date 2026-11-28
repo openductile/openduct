@@ -1,0 +1,10 @@
+description: Someone's display name and picture
+action: get_profile
+credential: { homeserver: "https://matrix.example.org", token: syt_test_token }
+input: { user_id: "@ann:example.org" }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://matrix.example.org/_matrix/client/v3/profile/@ann:example.org"
+    answer: { status: 200, body: { displayname: Ann, avatar_url: "mxc://example.org/a1" } }
+result: { displayname: Ann, avatar_url: "mxc://example.org/a1" }

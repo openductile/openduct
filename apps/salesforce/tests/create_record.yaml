@@ -1,0 +1,12 @@
+description: "A lead made from its fields by their API names"
+action: create_record
+credential: { access_token: "00D000000000001!AQ.test", instance: examplecorp.my.salesforce.com }
+input: { object: Lead, fields: { LastName: Lee, Company: Example Co, Email: ann.lee@example.com } }
+exchanges:
+  - sent:
+      method: POST
+      url: https://examplecorp.my.salesforce.com/services/data/v67.0/sobjects/Lead/
+      headers: { authorization: Bearer 00D000000000001!AQ.test }
+      body: { LastName: Lee, Company: Example Co, Email: ann.lee@example.com }
+    answer: { status: 201, body: { id: 00Q5e000001AbcDEAZ, success: true, errors: [] } }
+result: { id: 00Q5e000001AbcDEAZ, success: true, errors: [] }

@@ -2,7 +2,7 @@ name: Score a lead with Python
 description: >-
   When a lead comes in over a webhook ({"email", "company", "employees", "message"}), score it with your own rules in
   Python; tell Slack about the leads worth a call today.
-category: Code
+category: Sales
 trigger:
   webhook: {}
 # What a test runs on: an event as this trigger gives it.

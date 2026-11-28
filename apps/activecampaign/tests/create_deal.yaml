@@ -1,0 +1,48 @@
+description: A deal added for a contact in a pipeline
+action: create_deal
+credential:
+  account: shopexample
+  api_key: test-key
+input:
+  title: Spring order
+  value: 45678
+  currency: usd
+  contact_id: '113'
+  pipeline_id: '1'
+exchanges:
+- sent:
+    method: POST
+    url: https://shopexample.api-us1.com/api/3/deals
+    headers:
+      api-token: test-key
+    body:
+      deal:
+        title: Spring order
+        value: 45678
+        currency: usd
+        contact: '113'
+        group: '1'
+  answer:
+    status: 201
+    body:
+      contacts:
+      - id: '113'
+        email: ann@example.com
+        firstName: Ann
+        lastName: Example
+        phone: '+15555550100'
+        cdate: '2026-11-27T10:00:00-06:00'
+        udate: '2026-11-27T10:00:00-06:00'
+        orgid: '0'
+      deal: &id001
+        id: '7'
+        title: Spring order
+        value: '45678'
+        currency: usd
+        status: '0'
+        contact: '113'
+        group: '1'
+        stage: '2'
+        owner: '1'
+        cdate: '2026-11-27T10:05:00-06:00'
+result: *id001

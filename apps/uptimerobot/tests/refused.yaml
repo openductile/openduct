@@ -1,0 +1,7 @@
+description: A read-only key refused for a change, in UptimeRobot's words
+action: pause_monitor
+credential: { api_key: ur_readonly }
+input: { id: 801 }
+exchanges:
+  - answer: { status: 401, body: { code: "003-001", message: "This API key is read-only", statusCode: 401, error: Unauthorized } }
+error: "UptimeRobot answered 401: This API key is read-only"

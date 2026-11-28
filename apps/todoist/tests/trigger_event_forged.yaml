@@ -1,0 +1,8 @@
+description: A delivery signed with another secret is refused
+trigger: event
+credential: { token: todoist-test-token, webhook_secret: another-secret }
+delivery:
+  headers: { x-todoist-hmac-sha256: "meX00jpoOblK1MU/1QnW/MRKogrkkEJGiKd6B18pf6Q=", x-todoist-delivery-id: dlv-test-3 }
+  body: '{"event_name":"item:added","user_id":"1000001","event_data":{"id":"6Xtest0000000003","content":"Ring the bank","project_id":"6Xproj0000000001","priority":1,"checked":false},"initiator":{"id":"1000001","full_name":"Ann Lee"},"triggered_at":"2026-11-27T10:39:38.000000Z","version":"10"}'
+  at: 1795770000
+refused: does not match

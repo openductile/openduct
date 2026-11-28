@@ -1,0 +1,7 @@
+action: get_classification
+credential: { api_key: md_test_1 }
+input: { inference_id: 7d3a3b9f-0000-4000-8000-0000000000a2 }
+exchanges:
+  - sent: { method: GET, url: https://api-v2.mindee.net/v2/products/classification/results/7d3a3b9f-0000-4000-8000-0000000000a2 }
+    answer: { body: { inference: { id: 7d3a3b9f-0000-4000-8000-0000000000a2, file: { name: scan-7.pdf, page_count: 1 }, result: { classification: { document_type: invoice } } } } }
+result: { id: 7d3a3b9f-0000-4000-8000-0000000000a2, file: { name: scan-7.pdf, page_count: 1 }, result: { classification: { document_type: invoice } } }

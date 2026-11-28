@@ -1,0 +1,10 @@
+description: A delivery signed more than five minutes ago is refused
+trigger: new_form_submission
+workflow: wf1
+credential: { token: test-token, "webhook_secret@wf1": whsec_test_5f3a9c }
+input: { site_id: site_1 }
+delivery:
+  headers: { x-webflow-timestamp: "1764237600000", x-webflow-signature: "584a538984e2f8e2b284477535ed53a3a67a520549edbc81fe1f0dea97580083" }
+  body: '{"triggerType":"form_submission","payload":{"name":"Contact Us","siteId":"site_1","data":{"Name":"Ann Lee","Email":"ann@example.com"},"submittedAt":"2025-11-27T09:59:58.000Z","id":"sub_9","formId":"frm_1"}}'
+  at: 1764241200
+refused: "signed too long ago"

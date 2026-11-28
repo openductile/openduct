@@ -7,15 +7,28 @@
 //! rule and previews hold as for any HTTP step), and reads the answer. The apps OpenDuct comes with are built in; a
 //! folder of one's own adds more ([`add_dir`]).
 
+pub mod custom; // app generator: the apps a workspace adds itself
 mod definition;
 mod engine;
+mod examples; // test runs
+pub(crate) mod follow_ups; // messaging
+pub mod generate; // app generator: apps made from an API description or an MCP server
+pub mod hook; // G3 app triggers
+pub(crate) mod mcp_action; // app generator
 pub mod oauth;
+pub mod poll; // G3 app triggers
+pub mod quality; // app generator
 pub mod recorded;
+mod recorded_triggers; // G3 app triggers
+#[cfg(test)]
+mod trigger_tests; // G3 app triggers
+pub mod triggers; // G3 app triggers
 
 use std::sync::RwLock;
 
 pub use definition::{Action, AppDef, BodyKind, Field, Grant, Input, OAuth2, SignIn, TOKEN_FIELDS};
 pub use engine::{Answer, answer, request};
+pub use examples::example; // test runs
 
 mod built_in {
     include!(concat!(env!("OUT_DIR"), "/apps.rs"));
@@ -45,9 +58,43 @@ const STEPS: &[&str] = &[
     "stop",
     "ai",
     "embed",
+    // G7 more AI steps
+    "classify",
+    "extract",
+    "summarise",
+    "sentiment",
+    "split_text",    // retrieval
+    "vector_store",  // retrieval
+    "ask_documents", // retrieval
+    // The other steps added beside them: no app may take a step's name.
+    "agent",
+    "mcp",
+    "form",
+    "approval",
+    "table",
+    "state",
+    "extract_file",
+    "convert",
+    "file_details",
+    "mysql",     // sql databases
+    "sqlserver", // sql databases
 ];
 /// Credential kinds that are not apps': no app's sign-in may take their names.
-const CREDENTIALS: &[&str] = &["bearer", "header", "basic", "ai", "postgres", "smtp", "test"];
+const CREDENTIALS: &[&str] = &[
+    "bearer",
+    "header",
+    "basic",
+    "ai",
+    "postgres",
+    "smtp",
+    "test",
+    "mysql",     // sql databases
+    "sqlserver", // sql databases
+    // storage places
+    "azure_blob",
+    "gcs",
+    "box_token",
+];
 
 fn apps() -> &'static RwLock<Vec<&'static AppDef>> {
     static APPS: RwLock<Vec<&'static AppDef>> = RwLock::new(Vec::new());
@@ -97,15 +144,24 @@ pub fn all() -> Vec<&'static AppDef> {
     apps().read().map(|a| a.clone()).unwrap_or_default()
 }
 
-/// The app called `id`.
+/// The app called `id`: one OpenDuct carries or the installation adds, else (while a workflow of a workspace is
+/// read, see [`custom::within`]) one of that workspace's own.
 pub fn find(id: &str) -> Option<&'static AppDef> {
+    shipped(id).or_else(|| custom::scoped(id)) // app generator: a workspace's custom apps
+}
+
+/// The app called `id` that OpenDuct carries or the installation adds. // app generator
+fn shipped(id: &str) -> Option<&'static AppDef> {
     apps().read().ok()?.iter().copied().find(|a| a.id == id)
 }
 
 /// The app a credential kind (a sign-in's id) belongs to, and that sign-in.
 pub fn by_credential(kind: &str) -> Option<(&'static AppDef, &'static SignIn)> {
     let all = apps().read().ok()?;
-    all.iter().copied().find_map(|a| a.sign_in(kind).map(|s| (a, s)))
+    all.iter()
+        .copied()
+        .find_map(|a| a.sign_in(kind).map(|s| (a, s)))
+        .or_else(|| custom::by_kind(kind)) // app generator: a custom app's sign-in
 }
 
 /// Adds an app read from `text` (`source` is where it came from); one of the same id replaces it. Refused when its
@@ -135,7 +191,12 @@ pub fn add_dir(dir: &std::path::Path) -> Result<Vec<&'static AppDef>, String> {
     for file in files {
         let text =
             std::fs::read_to_string(&file).map_err(|e| format!("cannot read {}: {e}", file.display()))?;
-        added.push(add(&text, &file.display().to_string())?);
+        let app = add(&text, &file.display().to_string())?;
+        // test runs: its recorded exchanges, whose results a test run answers with.
+        if let Some(dir) = file.parent() {
+            examples::add_dir(&app.id, &dir.join("tests"));
+        }
+        added.push(app);
     }
     Ok(added)
 }
@@ -144,10 +205,20 @@ pub fn add_dir(dir: &std::path::Path) -> Result<Vec<&'static AppDef>, String> {
 /// secret. Made once for each, and kept.
 pub fn credential_kind(kind: &str) -> Option<&'static crate::apps::CredentialKind> {
     static MADE: RwLock<Vec<&'static crate::apps::CredentialKind>> = RwLock::new(Vec::new());
-    if let Some(found) = MADE.read().ok()?.iter().copied().find(|k| k.kind == kind) {
+    let (app, sign_in) = by_credential(kind)?;
+    // app generator: a custom app's sign-in may change its fields, so one made before is taken only while they hold.
+    let same = |k: &crate::apps::CredentialKind| {
+        k.kind == kind
+            && k.fields.len() == sign_in.fields.len()
+            && k.fields
+                .iter()
+                .zip(&sign_in.fields)
+                .all(|(a, f)| a.trim_end_matches('?') == f.name && a.ends_with('?') == f.optional)
+            && k.secrets.len() == sign_in.fields.iter().filter(|f| f.secret).count()
+    };
+    if let Some(found) = MADE.read().ok()?.iter().copied().find(|k| same(k)) {
         return Some(found);
     }
-    let (app, sign_in) = by_credential(kind)?;
     let leak = |s: String| -> &'static str { Box::leak(s.into_boxed_str()) };
     let fields: Vec<&'static str> = sign_in
         .fields
@@ -173,7 +244,7 @@ pub fn credential_kind(kind: &str) -> Option<&'static crate::apps::CredentialKin
         secrets: Box::leak(secrets.into_boxed_slice()),
     }));
     let mut all = MADE.write().ok()?;
-    if let Some(found) = all.iter().copied().find(|k| k.kind == kind) {
+    if let Some(found) = all.iter().copied().find(|k| same(k)) {
         return Some(found);
     }
     all.push(made);
@@ -279,7 +350,7 @@ error: value.error.message
         assert!(by_credential("slack_webhook").is_some());
         assert_eq!(
             crate::apps::credential_kind("whatsapp").unwrap().secrets,
-            ["access_token"]
+            ["access_token", "app_secret"] // G3 app triggers: the app's secret signs what Meta sends
         );
     }
 
@@ -388,5 +459,33 @@ error: value.error.message
         );
         let sub = Value::text("https://eu.shop.example/orders?page=2");
         assert!(request(&app, orders, &key(), &Value::Null, &sub).is_ok());
+    }
+
+    // more apps (G1): an action may wait longer for a service that answers only when its work is done.
+    #[test]
+    fn an_action_s_request_waits_as_long_as_it_says_and_no_longer_than_five_minutes() {
+        let app = AppDef::parse(SHOP, "shop.yaml").unwrap();
+        let (_, orders) = app.action(Some("orders")).unwrap();
+        let r = request(&app, orders, &key(), &Value::Null, &Value::Null).unwrap();
+        assert_eq!(r.timeout, std::time::Duration::from_secs(30));
+        let slow = AppDef::parse(
+            &SHOP.replace("label: Orders\n", "label: Orders\n    timeout: 300\n"),
+            "shop.yaml",
+        )
+        .unwrap();
+        let (_, orders) = slow.action(Some("orders")).unwrap();
+        let r = request(&slow, orders, &key(), &Value::Null, &Value::Null).unwrap();
+        assert_eq!(r.timeout, std::time::Duration::from_secs(300));
+        for wrong in ["0", "301", "-1", "soon"] {
+            let e = AppDef::parse(
+                &SHOP.replace(
+                    "label: Orders\n",
+                    &format!("label: Orders\n    timeout: {wrong}\n"),
+                ),
+                "shop.yaml",
+            )
+            .unwrap_err();
+            assert!(e.contains("actions.orders"), "{wrong}: {e}");
+        }
     }
 }

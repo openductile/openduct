@@ -1,0 +1,13 @@
+description: "HTML translated from a given language, signed in with Google"
+action: translate_text
+sign_in: google_translate_oauth
+credential: {"access_token": "ya29.test"}
+input: {"text": "<p>Thank you!</p>", "target": "de", "source": "en", "html": true}
+exchanges:
+  - sent:
+      method: POST
+      url: "https://translation.googleapis.com/language/translate/v2"
+      headers: {"authorization": "Bearer ya29.test"}
+      body: {"q": ["<p>Thank you!</p>"], "target": "de", "source": "en", "format": "html"}
+    answer: {"status": 200, "body": {"data": {"translations": [{"translatedText": "<p>Vielen Dank!</p>"}]}}}
+result: {"text": "<p>Vielen Dank!</p>", "detected_source_language": ""}

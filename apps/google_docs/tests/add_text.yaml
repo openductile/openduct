@@ -1,0 +1,10 @@
+action: add_text
+credential: { access_token: ya29.a0 }
+input: { document: 1AbCdEfGhIjKlMnOpQrStUvWxYz0123456789, text: "Next meeting: Monday.\n" }
+exchanges:
+  - sent:
+      method: POST
+      url: https://docs.googleapis.com/v1/documents/1AbCdEfGhIjKlMnOpQrStUvWxYz0123456789:batchUpdate
+      body: { requests: [{ insertText: { text: "Next meeting: Monday.\n", endOfSegmentLocation: { segmentId: "" } } }] }
+    answer: { body: { documentId: 1AbCdEfGhIjKlMnOpQrStUvWxYz0123456789, replies: [{}], writeControl: { requiredRevisionId: r2 } } }
+result: { id: 1AbCdEfGhIjKlMnOpQrStUvWxYz0123456789 }

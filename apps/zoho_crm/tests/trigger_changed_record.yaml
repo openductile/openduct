@@ -1,0 +1,14 @@
+description: A lead seen before whose Modified_Time moved on runs again, read in full
+trigger: changed_record
+credential: { access_token: 1000.test.token }
+input: { module: Leads }
+seen: { cursor: null, items: [["1000000000000000101", "x"]] }
+exchanges:
+  - sent:
+      url: https://www.zohoapis.com/crm/v8/Leads
+      query: { fields: Modified_Time, sort_by: Modified_Time, sort_order: desc, per_page: "200" }
+    answer: { body: { data: [{ id: "1000000000000000101", Modified_Time: "2026-11-27T09:00:00-05:00" }], info: { page: 1, more_records: false } } }
+  - sent: { url: https://www.zohoapis.com/crm/v8/Leads/1000000000000000101 }
+    answer: { body: { data: [{ id: "1000000000000000101", Last_Name: Lee, First_Name: Ann, Email: ann@example.com, Company: Example Ltd, Lead_Source: Web, Created_Time: "2026-11-27T09:00:00-05:00", Modified_Time: "2026-11-27T09:00:00-05:00" }] } }
+runs:
+  - { id: "1000000000000000101", Last_Name: Lee, First_Name: Ann, Email: ann@example.com, Company: Example Ltd, Lead_Source: Web, Created_Time: "2026-11-27T09:00:00-05:00", Modified_Time: "2026-11-27T09:00:00-05:00" }

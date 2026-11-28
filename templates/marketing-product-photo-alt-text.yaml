@@ -1,0 +1,87 @@
+name: Alt text for your product photos, written and filed in a sheet
+description: >-
+  Press Run to fill in the missing alt text in your Photos sheet (sku, product, photo address, alt text): each photo
+  without one is described by Azure AI Vision - a caption and tags - and a model turns that and the product's name
+  into alt text of at most 125 characters, written into the sheet. Up to 50 photos a run. The sheet is then shared with
+  your copy editor in Google Drive, to check before the words go on the site - better for shoppers using screen
+  readers, and for search. Needs: sheets (google_sheets), azure_vision (header: Ocp-Apim-Subscription-Key and your
+  key), model (ai), drive (google_drive).
+category: Marketing
+trigger: manual
+# What a test runs on: a run started by hand.
+sample: {}
+steps:
+  - name: photos
+    google_sheets:
+      action: read_rows
+      credential: sheets
+      spreadsheet_id: your-spreadsheet-id
+      range: Photos!A1:D2000
+    retry: { attempts: 3, wait: 30s }
+  - name: todo
+    javascript: |
+      // The rows (after the header) with a photo address and no alt text yet, with their row number in the sheet.
+      const rows = steps.photos || [];
+      const todo = [];
+      rows.slice(1).forEach((row, i) => {
+        const [sku = "", product = "", url = "", alt = ""] = row.map((c) => String(c ?? "").trim());
+        if (/^https:\/\//.test(url) && !alt) todo.push({ row: i + 2, sku, product, url });
+      });
+      return { todo: todo.slice(0, 50), left: Math.max(0, todo.length - 50) };
+  - name: each
+    for_each:
+      items: steps.todo.todo
+      steps:
+        - name: look
+          http:
+            method: POST
+            # Your Azure AI Vision resource's address.
+            url: https://your-resource.cognitiveservices.azure.com/computervision/imageanalysis:analyze
+            credential: azure_vision
+            query: { api-version: "2024-02-01", features: "caption,tags", language: en }
+            json: { url: "{{ item.url }}" }
+            sample:
+              captionResult: { text: a white ceramic mug on a wooden table, confidence: 0.87 }
+              tagsResult:
+                values:
+                  - { name: cup, confidence: 0.98 }
+                  - { name: ceramic, confidence: 0.91 }
+                  - { name: wood, confidence: 0.84 }
+          retry: { attempts: 3, wait: 10s }
+          on_error: continue
+        - name: described
+          if:
+            when: has(steps.look.body) && has(steps.look.body.captionResult)
+            then:
+              - name: alt
+                ai:
+                  credential: model
+                  system: >-
+                    You write alt text for product photos on a shop's site: what the photo shows, with the product's
+                    name, at most 125 characters, no "image of" or "photo of", no claims the description does not
+                    support. Answer with the alt text only.
+                  prompt: >-
+                    Product: {{ item.product }} ({{ item.sku }}). The photo, as described:
+                    {{ steps.look.body.captionResult.text }}; tags: {{ steps.look.body.tagsResult.values.map(t, t.name).join(', ') }}
+                  max_tokens: 80
+              - name: write
+                google_sheets:
+                  action: set_rows
+                  credential: sheets
+                  spreadsheet_id: your-spreadsheet-id
+                  range: "Photos!D{{ item.row }}"
+                  rows: [["{{ steps.alt.text.trim().substring(0, math.least(size(steps.alt.text.trim()), 125)) }}"]]
+                retry: { attempts: 3, wait: 30s }
+  - name: review
+    if:
+      when: size(steps.todo.todo) > 0
+      then:
+        - name: share
+          google_drive:
+            action: share_file
+            credential: drive
+            # The spreadsheet is a Drive file: the same id.
+            file_id: your-spreadsheet-id
+            email: copy-editor@example.com
+            role: commenter
+          retry: { attempts: 3, wait: 10s }

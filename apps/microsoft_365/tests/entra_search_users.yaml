@@ -1,0 +1,19 @@
+description: 'A search: Graph asks for a count and eventual consistency with it'
+action: list_users
+sign_in: microsoft_entra_admin
+credential: {access_token: eyJ0-admin}
+input: {search: 'displayName:ann', select: 'id,displayName,mail'}
+exchanges:
+- sent:
+    method: GET
+    url: https://graph.microsoft.com/v1.0/users
+    headers: {authorization: Bearer eyJ0-admin, consistencylevel: eventual}
+    query: {$search: '"displayName:ann"', $select: 'id,displayName,mail', $count: 'true', $top: '999'}
+  answer:
+    status: 200
+    body:
+      '@odata.count': 1
+      value:
+      - {id: 6ea91a8d-e32e-41a1-b7bd-d2d185eed0e0, displayName: Ann Example, mail: ann@contoso.example}
+result:
+- {id: 6ea91a8d-e32e-41a1-b7bd-d2d185eed0e0, displayName: Ann Example, mail: ann@contoso.example}

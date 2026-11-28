@@ -1,0 +1,153 @@
+# Made by `openduct app from-openapi`: Get Object Types.
+description: "Get Object Types, made from the API description's schemas"
+action: list_object_types
+credential: { api_key: test-key }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://a.klaviyo.com/api/object-types"
+      query: {}
+      headers: { authorization: test-key, revision: "2026-10-15" }
+    answer:
+      status: 200
+      body:
+        data:
+          - type: object-type
+            id: "01JXKYCN9A5M3QPVR8T2WE4BLD"
+            attributes:
+              title: example
+              description: example
+              status: active
+              namespace: example
+              created_at: "2026-01-15T09:30:00Z"
+              updated_at: "2026-01-15T09:30:00Z"
+            relationships:
+              current-schema:
+                data: { type: object-schema, id: id_1 }
+                links: { self: "https://example.com/1", related: "https://example.com/1" }
+              draft-schema:
+                data: { type: object-schema, id: id_1 }
+                links: { self: "https://example.com/1", related: "https://example.com/1" }
+              schema-versions:
+                data: [{}]
+                links: { self: "https://example.com/1", related: "https://example.com/1" }
+              object-types:
+                data: [{}]
+                links: { self: "https://example.com/1", related: "https://example.com/1" }
+              profile-object-types:
+                data: [{}]
+                links: { self: "https://example.com/1", related: "https://example.com/1" }
+            links: { self: "https://example.com/1" }
+        links:
+          self: "https://example.com/1"
+          prev: "https://example.com/1"
+          next: "https://a.klaviyo.com/api/object-types?page=2"
+        meta: { agent_hints: { next_steps: [example] } }
+        included:
+          - type: object-schema
+            id: "01K61DKJ7EKJ0ES9VE456XF5JG"
+            attributes:
+              title: example
+              description: example
+              status: active
+              properties: [null]
+              required: [null]
+              published_at: "2026-01-15T09:30:00Z"
+              visibility: private
+            relationships: { source-mapping: {}, object-schemas: {}, profile-object-schemas: {} }
+            links: { self: "https://example.com/1" }
+  - sent: { url: "https://a.klaviyo.com/api/object-types?page=2" }
+    answer:
+      status: 200
+      body:
+        data:
+          - type: object-type
+            id: id_2
+            attributes:
+              title: example
+              description: example
+              status: active
+              namespace: example
+              created_at: "2026-01-15T09:30:00Z"
+              updated_at: "2026-01-15T09:30:00Z"
+            relationships:
+              current-schema:
+                data: { type: object-schema, id: id_1 }
+                links: { self: "https://example.com/1", related: "https://example.com/1" }
+              draft-schema:
+                data: { type: object-schema, id: id_1 }
+                links: { self: "https://example.com/1", related: "https://example.com/1" }
+              schema-versions:
+                data: [{}]
+                links: { self: "https://example.com/1", related: "https://example.com/1" }
+              object-types:
+                data: [{}]
+                links: { self: "https://example.com/1", related: "https://example.com/1" }
+              profile-object-types:
+                data: [{}]
+                links: { self: "https://example.com/1", related: "https://example.com/1" }
+            links: { self: "https://example.com/1" }
+        links: { self: "https://example.com/1", prev: "https://example.com/1", next: null }
+        meta: { agent_hints: { next_steps: [example] } }
+        included:
+          - type: object-schema
+            id: "01K61DKJ7EKJ0ES9VE456XF5JG"
+            attributes:
+              title: example
+              description: example
+              status: active
+              properties: [null]
+              required: [null]
+              published_at: "2026-01-15T09:30:00Z"
+              visibility: private
+            relationships: { source-mapping: {}, object-schemas: {}, profile-object-schemas: {} }
+            links: { self: "https://example.com/1" }
+result:
+  - type: object-type
+    id: "01JXKYCN9A5M3QPVR8T2WE4BLD"
+    attributes:
+      title: example
+      description: example
+      status: active
+      namespace: example
+      created_at: "2026-01-15T09:30:00Z"
+      updated_at: "2026-01-15T09:30:00Z"
+    relationships:
+      current-schema:
+        data: { type: object-schema, id: id_1 }
+        links: { self: "https://example.com/1", related: "https://example.com/1" }
+      draft-schema:
+        data: { type: object-schema, id: id_1 }
+        links: { self: "https://example.com/1", related: "https://example.com/1" }
+      schema-versions:
+        data: [{}]
+        links: { self: "https://example.com/1", related: "https://example.com/1" }
+      object-types: { data: [{}], links: { self: "https://example.com/1", related: "https://example.com/1" } }
+      profile-object-types:
+        data: [{}]
+        links: { self: "https://example.com/1", related: "https://example.com/1" }
+    links: { self: "https://example.com/1" }
+  - type: object-type
+    id: id_2
+    attributes:
+      title: example
+      description: example
+      status: active
+      namespace: example
+      created_at: "2026-01-15T09:30:00Z"
+      updated_at: "2026-01-15T09:30:00Z"
+    relationships:
+      current-schema:
+        data: { type: object-schema, id: id_1 }
+        links: { self: "https://example.com/1", related: "https://example.com/1" }
+      draft-schema:
+        data: { type: object-schema, id: id_1 }
+        links: { self: "https://example.com/1", related: "https://example.com/1" }
+      schema-versions:
+        data: [{}]
+        links: { self: "https://example.com/1", related: "https://example.com/1" }
+      object-types: { data: [{}], links: { self: "https://example.com/1", related: "https://example.com/1" } }
+      profile-object-types:
+        data: [{}]
+        links: { self: "https://example.com/1", related: "https://example.com/1" }
+    links: { self: "https://example.com/1" }

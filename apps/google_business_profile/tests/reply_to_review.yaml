@@ -1,0 +1,12 @@
+description: "A reply put under a review"
+action: reply_to_review
+credential: {"access_token": "ya29.test"}
+input: {"account_id": "1001", "location_id": "2002", "review_id": "rv3", "comment": "Thank you for the kind words!"}
+exchanges:
+  - sent:
+      method: PUT
+      url: "https://mybusiness.googleapis.com/v4/accounts/1001/locations/2002/reviews/rv3/reply"
+      headers: {"authorization": "Bearer ya29.test"}
+      body: {"comment": "Thank you for the kind words!"}
+    answer: {"status": 200, "body": {"comment": "Thank you for the kind words!", "updateTime": "2026-11-27T09:00:00Z", "reviewReplyState": "PENDING"}}
+result: {"comment": "Thank you for the kind words!", "updateTime": "2026-11-27T09:00:00Z", "reviewReplyState": "PENDING"}

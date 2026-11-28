@@ -1,0 +1,7 @@
+action: archive_issue
+credential: { api_key: lin_api_test1 }
+input: { issue: ENG-102 }
+exchanges:
+  - sent: { url: https://api.linear.app/graphql, body: { query: "mutation($id: String!) { issueArchive(id: $id) { success entity { id identifier archivedAt } } }", variables: { id: ENG-102 } } }
+    answer: { body: { data: { issueArchive: { success: true, entity: { id: 0b1e6a52-0000-4000-8000-000000000002, identifier: ENG-102, archivedAt: "2026-11-27T11:00:00.000Z" } } } } }
+result: { id: 0b1e6a52-0000-4000-8000-000000000002, identifier: ENG-102, archivedAt: "2026-11-27T11:00:00.000Z" }

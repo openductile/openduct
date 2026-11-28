@@ -1,0 +1,15 @@
+description: A task made, as ClickUp sends it, signed with the webhook's secret (HMAC-SHA256 of the body, in hex)
+trigger: task_event
+workflow: wf1
+credential: { api_key: pk_1_TEST, "webhook_secret@wf1": O94IM25S7PXBPYTMNXLLET230SRP0S89 }
+input: { team_id: "108" }
+delivery:
+  headers: { x-signature: e584cb113d3d5d2433cf1cca396a72a31d551742a5992a2ae10f2501eade9424 }
+  body: '{"event":"taskCreated","history_items":[{"id":"2800763136700363640","type":1,"date":"1764235200000","field":"task_creation","parent_id":"901","data":{},"source":null,"user":{"id":183,"username":"Ann","email":"ann@example.com"},"before":null,"after":null}],"task_id":"86a1b2c3f","webhook_id":"7fa3ec74-69a8-4530-a251-8a13730bd204"}'
+  at: 1764235200
+runs:
+  - event: taskCreated
+    task_id: 86a1b2c3f
+    changes:
+      - { id: "2800763136700363640", type: 1, date: "1764235200000", field: task_creation, parent_id: "901", data: {}, source: null, user: { id: 183, username: Ann, email: ann@example.com }, before: null, after: null }
+ids: ["7fa3ec74-69a8-4530-a251-8a13730bd204#taskCreated#86a1b2c3f#2800763136700363640"]

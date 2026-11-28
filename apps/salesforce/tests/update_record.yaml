@@ -1,0 +1,11 @@
+description: "A record changed: Salesforce answers 204, with nothing"
+action: update_record
+credential: { access_token: "00D000000000001!AQ.test", instance: examplecorp.my.salesforce.com }
+input: { object: Opportunity, id: 0065e00000OpPqRAAV, fields: { StageName: Closed Won } }
+exchanges:
+  - sent:
+      method: PATCH
+      url: https://examplecorp.my.salesforce.com/services/data/v67.0/sobjects/Opportunity/0065e00000OpPqRAAV
+      body: { StageName: Closed Won }
+    answer: { status: 204 }
+result: { updated: true }

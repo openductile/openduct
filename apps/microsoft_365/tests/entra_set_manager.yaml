@@ -1,0 +1,14 @@
+description: A user's manager set
+action: set_manager
+sign_in: microsoft_entra_admin
+credential: {access_token: eyJ0-admin}
+input: {user: 4562bcc8-c436-4f95-b7c0-4f8ce89dca5e, manager_id: 6ea91a8d-e32e-41a1-b7bd-d2d185eed0e0}
+exchanges:
+- sent:
+    method: PUT
+    url: https://graph.microsoft.com/v1.0/users/4562bcc8-c436-4f95-b7c0-4f8ce89dca5e/manager/$ref
+    headers: {authorization: Bearer eyJ0-admin}
+    query: {}
+    body: {'@odata.id': 'https://graph.microsoft.com/v1.0/users/6ea91a8d-e32e-41a1-b7bd-d2d185eed0e0'}
+  answer: {status: 204}
+result: {changed: true}

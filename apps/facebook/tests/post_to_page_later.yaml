@@ -1,0 +1,10 @@
+description: A post kept to appear later, on the Graph API version the credential names
+action: post_to_page
+credential: { access_token: EAAB_test, api_version: v26.0 }
+input: { page_id: "1029384756", message: Doors open at nine., publish_at: "2026-12-01T09:00:00Z" }
+exchanges:
+  - sent:
+      url: https://graph.facebook.com/v26.0/1029384756/feed
+      body: { message: Doors open at nine., published: "false", scheduled_publish_time: "2026-12-01T09:00:00Z" }
+    answer: { body: { id: 1029384756_556 } }
+result: { id: 1029384756_556 }

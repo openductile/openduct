@@ -18,8 +18,14 @@ Two ways, both giving the account's name (`mycompany` of `mycompany.zendesk.com`
 - **Answer a ticket** (`answer_ticket`): to the customer or as a note, and its new status.
 - **List tickets** (`list_tickets`): every page.
 
+## Triggers
+
+- **A new ticket** (`new_ticket`) and **A ticket changed** (`updated_ticket`), asked every 5 minutes.
+
 ## Tested
 
 Recorded exchanges from Zendesk's documented requests and answers (`tests/`).
 
 Tried on 2026-11-16 with an OAuth client: the test account's trial had run out (Zendesk answered its token request with a page), and that was said. Not otherwise run against a live account yet.
+
+Triggers are tested with recorded exchanges and signed deliveries (`tests/trigger_*.yaml`), signatures made as the app documents them; none was run against a live account.

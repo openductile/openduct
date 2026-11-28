@@ -1,0 +1,84 @@
+name: Answer a staff question from your help pages, checked
+description: >-
+  Press Run with a question, or let an AI assistant ask it through the workspace's MCP server: the passages of your
+  help pages nearest it are found (kept with "Keep documents for answers" in a pgvector table), an AI agent answers
+  from them - reading a whole page on help.example.com when a passage is cut short - and a second model checks that
+  every claim rests on a passage. For support and operations teams who want answers they can trust. Needs: model,
+  docs_db.
+category: AI
+trigger: manual
+# Also offered to AI assistants through the workspace's MCP server.
+tool:
+  name: ask_the_help_pages
+  description: An answer to a question about our products and policies, from our help pages, with the pages it used.
+  input:
+    question: { type: string, description: "The question, in plain words", required: true }
+# What a test runs on: the question someone asks.
+sample:
+  question: Can a customer return a gift without the receipt?
+steps:
+  - name: found
+    vector_store:
+      action: search
+      credential: docs_db
+      table: help_pieces
+      embed_with: model
+      query: "{{ value.question }}"
+      top_k: 6
+      min_score: 0.3
+  - name: research
+    agent:
+      credential: model
+      instructions: >-
+        You answer questions from staff about our products and policies. Use only the passages below and the pages
+        you read; when a passage is cut short, read its whole page. If the passages do not hold the answer, say so
+        plainly. Answer in at most five sentences and list the pages you used.
+      input: >-
+        Question: {{ value.question }}
+
+        Passages:
+        {{ steps.found.matches != null ? steps.found.matches.map(p, '[' + string(p.source) + '] ' + string(p.text)).join('\n') : '' }}
+      tools:
+        - name: read_page
+          description: The whole text of one help page, by its path on help.example.com (as returns/gifts).
+          parameters:
+            type: object
+            properties:
+              path: { type: string, description: "The page's path, as returns/gifts" }
+            required: [path]
+          http:
+            url: "https://help.example.com/{{ args.path }}"
+            timeout: 20s
+      output:
+        schema:
+          type: object
+          properties:
+            answer: { type: string }
+            pages: { type: array, items: { type: string } }
+          required: [answer, pages]
+      max_turns: 5
+      max_tool_calls: 4
+  - name: check
+    ai:
+      credential: model
+      system: >-
+        You check an answer against the passages it rests on. Say whether every claim in it is supported, and list
+        any claim that is not.
+      prompt: >-
+        Answer: {{ steps.research.json.answer }}
+
+        Passages:
+        {{ steps.found.matches != null ? steps.found.matches.map(p, string(p.text)).join('\n---\n') : '' }}
+      schema:
+        type: object
+        properties:
+          supported: { type: boolean }
+          unsupported: { type: array, items: { type: string } }
+        required: [supported, unsupported]
+      max_tokens: 300
+  - name: result
+    set:
+      answer: steps.research.json.answer
+      pages: steps.research.json.pages
+      checked: steps.check.json.supported
+      not_supported: steps.check.json.unsupported

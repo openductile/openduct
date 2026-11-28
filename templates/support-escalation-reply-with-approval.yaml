@@ -1,0 +1,96 @@
+name: An escalated ticket answered after a manager approves
+description: >-
+  When your help desk escalates a ticket over a webhook ({"ticket", "name", "email", "subject", "text"}), an AI agent
+  reads the customer's orders in your Google Sheet and drafts a reply, with a refund when one is fair. The manager
+  gets the draft on Telegram with a one-time link to approve or decline it, with a comment; the run waits up to four
+  hours. Approved, the reply goes from Gmail; declined or unanswered, the team is told on Telegram. Every outcome is
+  logged in the sheet. Needs: Google Sheets (sheets), Gmail (gmail), a Telegram bot (bot) and an AI credential (model).
+category: Support
+trigger:
+  # Left empty here: each workflow made from the template is given a token of its own.
+  webhook: { token: "" }
+# What a test runs on: an event as this trigger gives it.
+sample:
+  ticket: T-5531
+  name: Ada Brooks
+  email: ada.brooks@example.com
+  subject: Second broken mug this month
+  text: My order A-1188 arrived with the mug broken again, like A-1102 last month. I am really tired of this.
+steps:
+  - name: draft
+    agent:
+      credential: model
+      instructions: >-
+        You draft replies to escalated tickets for a small shop. Look the customer's orders up with orders before
+        you write; never guess an order's contents or amount. Be warm and brief, own the problem, and say what we
+        will do. A refund is fair when an item came broken or never came: at most the item's price. Sign as "The
+        team at Example Goods".
+      input: "Ticket {{ value.ticket }} from {{ value.name }} <{{ value.email }}>: {{ value.subject }}\n\n{{ value.text }}"
+      tools:
+        - name: orders
+          description: "Every order: a header row (order, date, email, items, total, status), then one order a row."
+          google_sheets: { action: read_rows, credential: sheets, spreadsheet_id: your-sheet-id, range: "Orders!A1:F5000" }
+      allow: [orders]
+      max_turns: 4
+      max_tool_calls: 3
+      output:
+        schema:
+          type: object
+          properties:
+            reply: { type: string }
+            refund: { type: number, description: "The refund to give, 0 for none" }
+            why: { type: string, description: "For the manager, in one sentence" }
+          required: [reply, refund, why]
+  - name: draft_is
+    set:
+      reply: "has(steps.draft.json.reply) ? steps.draft.json.reply : steps.draft.text"
+      refund: "has(steps.draft.json.refund) ? steps.draft.json.refund : 0"
+      why: "has(steps.draft.json.why) ? steps.draft.json.why : ''"
+  - name: ask
+    telegram:
+      credential: bot
+      # The manager's chat with the bot.
+      chat_id: "123456789"
+      text: "Ticket {{ value.ticket }} - {{ value.name }}: {{ value.subject }}\nRefund: {{ steps.draft_is.refund }}. {{ steps.draft_is.why }}\n\nDraft reply:\n{{ steps.draft_is.reply }}\n\nApprove or decline (the link works once): {{ links.decide }}"
+    retry: { attempts: 3, wait: 20s }
+  - name: decide
+    approval:
+      title: "Send this reply to {{ value.name }} (ticket {{ value.ticket }})?"
+      description: "Refund: {{ steps.draft_is.refund }}. {{ steps.draft_is.why }}\n\n{{ steps.draft_is.reply }}"
+      comment: true
+      approve: Send it
+      reject: Do not send
+      timeout: 4h
+      on_timeout: continue
+  - name: outcome
+    if:
+      when: steps.decide.approved
+      then:
+        - name: send
+          gmail:
+            action: send_email
+            credential: gmail
+            to: "{{ value.email }}"
+            subject: "Re: {{ value.subject }} [{{ value.ticket }}]"
+            text: "{{ steps.draft_is.reply }}"
+          retry: { attempts: 3, wait: 30s }
+      else:
+        - name: not_sent
+          telegram:
+            credential: bot
+            chat_id: "123456789"
+            text: "Ticket {{ value.ticket }} was not answered ({{ steps.decide.decision }}{{ steps.decide.comment != '' ? ': ' + steps.decide.comment : '' }}). Please reply to {{ value.name }} yourself."
+          retry: { attempts: 3, wait: 20s }
+  - name: log
+    google_sheets:
+      action: add_row
+      credential: sheets
+      spreadsheet_id: your-sheet-id
+      sheet: Escalations
+      values:
+        - "{{ value.ticket }}"
+        - "{{ value.email }}"
+        - "{{ steps.decide.decision }}"
+        - "{{ steps.draft_is.refund }}"
+        - "{{ steps.decide.comment }}"
+    retry: { attempts: 3, wait: 30s }

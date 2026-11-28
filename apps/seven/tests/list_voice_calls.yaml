@@ -1,0 +1,34 @@
+# Made by `openduct app from-openapi`: Get voice journal.
+description: "Get voice journal, made from the API description's schemas"
+action: list_voice_calls
+credential: { api_key: test-key }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://gateway.seven.io/api/journal/voice"
+      query: { limit: "100" }
+      headers: { x-api-key: test-key }
+    answer:
+      status: 200
+      body:
+        - to: example
+          from: example
+          text: example
+          timestamp: example
+          price: example
+          id: id_1
+          xml: true
+          duration: example
+          status: example
+          error: example
+result:
+  - to: example
+    from: example
+    text: example
+    timestamp: example
+    price: example
+    id: id_1
+    xml: true
+    duration: example
+    status: example
+    error: example

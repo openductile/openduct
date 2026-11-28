@@ -1,0 +1,11 @@
+description: A sign-in without the permission is refused in Graph's words
+action: create_user
+sign_in: microsoft_entra_admin
+credential: {access_token: eyJ0-admin}
+input: {display_name: Cleo Example, user_principal_name: cleo@contoso.example, mail_nickname: cleo, password: Test-Password-1}
+exchanges:
+- answer:
+    status: 403
+    body:
+      error: {code: Authorization_RequestDenied, message: Insufficient privileges to complete the operation.}
+error: 'Microsoft 365 answered 403: Insufficient privileges to complete the operation.'

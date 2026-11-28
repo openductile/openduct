@@ -1,0 +1,26 @@
+description: "Every message, over two pages: the second asked from the last id of the first"
+action: list_messages
+sign_in: gotify_client
+credential: { base_url: "https://gotify.example.com", token: CzyoeNS.D4iJLVb }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://gotify.example.com/message"
+      query: { limit: "200" }
+      headers: { x-gotify-key: CzyoeNS.D4iJLVb }
+    answer:
+      body:
+        messages:
+          - { id: 26, appid: 5, message: Backup finished, priority: 2, date: "2026-11-27T11:00:00Z" }
+        paging: { size: 1, since: 26, limit: 200, next: "https://gotify.example.com/message?limit=200&since=26" }
+  - sent:
+      url: "https://gotify.example.com/message"
+      query: { limit: "200", since: "26" }
+    answer:
+      body:
+        messages:
+          - { id: 25, appid: 5, title: New order, message: "**Order 1042** is paid: $58.00", priority: 5, date: "2026-11-27T10:36:10Z" }
+        paging: { size: 1, since: 25, limit: 200 }
+result:
+  - { id: 26, appid: 5, message: Backup finished, priority: 2, date: "2026-11-27T11:00:00Z" }
+  - { id: 25, appid: 5, title: New order, message: "**Order 1042** is paid: $58.00", priority: 5, date: "2026-11-27T10:36:10Z" }

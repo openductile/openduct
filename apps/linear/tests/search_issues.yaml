@@ -1,0 +1,7 @@
+action: search_issues
+credential: { api_key: lin_api_test1 }
+input: { term: checkout button }
+exchanges:
+  - sent: { url: https://api.linear.app/graphql, body: { query: "query($term: String!, $teamId: String, $includeComments: Boolean) { searchIssues(term: $term, teamId: $teamId, includeComments: $includeComments, first: 50) { nodes { id identifier title priorityLabel url state { name } assignee { name } team { key } } } }", variables: { term: checkout button } } }
+    answer: { body: { data: { searchIssues: { nodes: [{ id: 0b1e6a52-0000-4000-8000-000000000001, identifier: ENG-101, title: Checkout button does nothing, priority: 2, priorityLabel: High, url: "https://linear.app/example/issue/ENG-101", state: { id: st-1, name: Todo, type: unstarted }, assignee: { id: u-1, name: Ann Lee }, team: { id: tm-1, key: ENG } }] } } } }
+result: [{ id: 0b1e6a52-0000-4000-8000-000000000001, identifier: ENG-101, title: Checkout button does nothing, priority: 2, priorityLabel: High, url: "https://linear.app/example/issue/ENG-101", state: { id: st-1, name: Todo, type: unstarted }, assignee: { id: u-1, name: Ann Lee }, team: { id: tm-1, key: ENG } }]

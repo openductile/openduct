@@ -1,0 +1,370 @@
+# Copyright 2026 Ductile AI, Inc
+# SPDX-License-Identifier: Apache-2.0
+# SendGrid: made by `openduct app from-openapi` from Twilio SendGrid's own API descriptions
+# (https://github.com/twilio/sendgrid-oai at 51a0dee5a218, MIT licence: mail, contacts, lists, templates,
+# suppressions and email validation, merged into one), then finished by hand.
+app: sendgrid
+name: SendGrid
+category: email
+description: Email sent through Twilio SendGrid, its marketing contacts and lists, and who unsubscribed or bounced.
+docs: "https://www.twilio.com/docs/sendgrid/api-reference"
+hosts: [api.sendgrid.com, api.eu.sendgrid.com]
+base_url: "https://api.sendgrid.com"
+sign_in:
+  - id: sendgrid
+    label: "An API key"
+    fields: [{ name: token, label: "The API key (SG....)", secret: true }]
+    headers: { Authorization: "Bearer {{ credential.token }}" }
+  - id: sendgrid_eu
+    label: "An API key of an EU subuser (data kept in the EU)"
+    base_url: "https://api.eu.sendgrid.com"
+    fields: [{ name: token, label: "The EU subuser's API key (SG....)", secret: true }]
+    headers: { Authorization: "Bearer {{ credential.token }}" }
+error: "has(value.errors) && size(value.errors) > 0 ? value.errors.map(e, e.message).join('; ') : null"
+default_action: send_email
+actions:
+  send_email:
+    label: "Send an email"
+    description: "One email to one or more people: your own words, or one of your dynamic templates filled with the values given."
+    write: true
+    method: POST
+    path: "/v3/mail/send"
+    inputs:
+      - { name: to, label: "To: email addresses, separated by commas", required: true }
+      - { name: from, label: "From: an address of a sender you verified in SendGrid", required: true }
+      - { name: from_name, label: "The sender's name, as people see it" }
+      - { name: subject, label: "Subject (a template may set its own)" }
+      - { name: text, label: "The message, as plain text" }
+      - { name: html, label: "The message, as HTML" }
+      - { name: template_id, label: "Or a dynamic template's id (d-...)" }
+      - { name: template_data, label: "The template's values, as a record", kind: record }
+      - { name: cc, label: "Cc: email addresses, separated by commas" }
+      - { name: bcc, label: "Bcc: email addresses, separated by commas" }
+      - { name: reply_to, label: "Replies go to this address" }
+      - { name: categories, label: "Categories to find it by in the statistics, separated by commas" }
+      - { name: send_at, label: "Send later: when, in seconds since 1970 (up to 72 hours ahead)", kind: number }
+      - { name: unsubscribe_group, label: "The unsubscribe group it belongs to (its number)", kind: number }
+    send:
+      personalizations:
+        - to: "{{ input.to.split(',').map(e, {'email': e.trim()}) }}"
+          cc: "{{ input.cc.split(',').map(e, {'email': e.trim()}) }}"
+          bcc: "{{ input.bcc.split(',').map(e, {'email': e.trim()}) }}"
+          dynamic_template_data: "{{ input.template_data }}"
+      from: { email: "{{ input.from }}", name: "{{ input.from_name }}" }
+      reply_to: { email: "{{ input.reply_to }}" }
+      subject: "{{ input.subject }}"
+      # Plain text first, then HTML, as SendGrid asks.
+      content: "{{ has(input.text) && input.text != null ? [{'type': 'text/plain', 'value': input.text}] + (has(input.html) && input.html != null ? [{'type': 'text/html', 'value': input.html}] : []) : (has(input.html) && input.html != null ? [{'type': 'text/html', 'value': input.html}] : null) }}"
+      template_id: "{{ input.template_id }}"
+      categories: "{{ input.categories.split(',').map(c, c.trim()) }}"
+      send_at: "{{ input.send_at }}"
+      asm: { group_id: "{{ input.unsubscribe_group }}" }
+    # SendGrid answers 202 with nothing more: the email is queued to be sent.
+    result: "{'sent': true}"
+    output: { sent: boolean }
+  add_or_update_contact:
+    label: "Add or update a contact"
+    description: "A marketing contact, found by its email address: added if new, its fields changed if not, and put on lists. SendGrid takes it in a moment, not at once."
+    write: true
+    method: PUT
+    path: "/v3/marketing/contacts"
+    inputs:
+      - { name: email, label: "Email address", required: true }
+      - { name: first_name, label: "First name" }
+      - { name: last_name, label: "Last name" }
+      - { name: list_ids, label: "Lists to put it on: their ids, separated by commas" }
+      - { name: phone_number_id, label: "Phone number" }
+      - { name: address_line_1, label: "Address, first line" }
+      - { name: address_line_2, label: "Address, second line" }
+      - { name: city, label: City }
+      - { name: state_province_region, label: "State, province or region" }
+      - { name: postal_code, label: "Postal code" }
+      - { name: country, label: Country }
+      - { name: custom_fields, label: "Custom fields made in SendGrid, by their ids (e1_T, ...), as a record", kind: record }
+    send:
+      list_ids: "{{ input.list_ids.split(',').map(l, l.trim()) }}"
+      contacts:
+        - email: "{{ input.email }}"
+          first_name: "{{ input.first_name }}"
+          last_name: "{{ input.last_name }}"
+          phone_number_id: "{{ input.phone_number_id }}"
+          address_line_1: "{{ input.address_line_1 }}"
+          address_line_2: "{{ input.address_line_2 }}"
+          city: "{{ input.city }}"
+          state_province_region: "{{ input.state_province_region }}"
+          postal_code: "{{ input.postal_code }}"
+          country: "{{ input.country }}"
+          custom_fields: "{{ input.custom_fields }}"
+    output: { job_id: text }
+  find_contacts_by_email:
+    label: "Find contacts by email address"
+    description: "The contacts with these addresses (as their main or another address), up to 100; SendGrid refuses with 404 when none is found."
+    method: POST
+    path: "/v3/marketing/contacts/search/emails"
+    inputs:
+      - { name: emails, label: "Email addresses, separated by commas", required: true }
+    send: { emails: "{{ input.emails.split(',').map(e, e.trim()) }}" }
+    result: "value.result.map(k, has(value.result[k].contact), value.result[k].contact)"
+    output: &contact
+      id: text
+      email: text
+      first_name: text
+      last_name: text
+      alternate_emails: list
+      phone_number_id: text
+      address_line_1: text
+      address_line_2: text
+      city: text
+      state_province_region: text
+      postal_code: text
+      country: text
+      list_ids: list
+      segment_ids: list
+      custom_fields: record
+      created_at: text
+      updated_at: text
+  search_contacts:
+    label: "Search contacts"
+    description: "Contacts that match a query in SendGrid's query language, such as email LIKE '%@example.com'; the first 50."
+    method: POST
+    path: "/v3/marketing/contacts/search"
+    inputs:
+      - { name: query, label: "The query, such as first_name = 'Ann' AND CONTAINS(list_ids, '<a list id>')", required: true }
+    send: { query: "{{ input.query }}" }
+    items: value.result
+    output: *contact
+  get_contact:
+    label: "Look up a contact"
+    description: "A contact's fields, lists and segments, by its id."
+    method: GET
+    path: "/v3/marketing/contacts/{{ input.contact_id }}"
+    inputs: [{ name: contact_id, label: "The contact's id", required: true }]
+    output: *contact
+  delete_contacts:
+    label: "Delete contacts"
+    description: "Contacts removed for good, by their ids; SendGrid does it in a moment, not at once."
+    write: true
+    method: DELETE
+    path: "/v3/marketing/contacts"
+    inputs: [{ name: ids, label: "The contacts' ids, separated by commas", required: true }]
+    query: { ids: "{{ input.ids }}" }
+    output: { job_id: text }
+  count_contacts:
+    label: "Count contacts"
+    description: "How many contacts there are, and how many are billed."
+    method: GET
+    path: "/v3/marketing/contacts/count"
+    output: { contact_count: number, billable_count: number, billable_breakdown: record }
+  list_lists:
+    label: "List contact lists"
+    description: "Every contact list, with how many contacts each holds."
+    method: GET
+    path: "/v3/marketing/lists"
+    query: { page_size: "100" }
+    items: value.result
+    next: "value._metadata.next == null || value._metadata.next == '' ? null : (value._metadata.next.startsWith('http') ? value._metadata.next : 'https://api.sendgrid.com' + value._metadata.next)"
+    output: &list { id: text, name: text, contact_count: number }
+  create_list:
+    label: "Make a contact list"
+    description: "A new, empty contact list, with its name."
+    write: true
+    method: POST
+    path: "/v3/marketing/lists"
+    inputs: [{ name: name, label: "The list's name", required: true }]
+    send: { name: "{{ input.name }}" }
+    output: *list
+  get_list:
+    label: "Look up a contact list"
+    description: "A list's name and how many contacts it holds; with a sample of them, if asked."
+    method: GET
+    path: "/v3/marketing/lists/{{ input.list_id }}"
+    inputs:
+      - { name: list_id, label: "The list's id", required: true }
+      - { name: contact_sample, label: "With a sample of its contacts", kind: boolean }
+    query: { contact_sample: "{{ input.contact_sample }}" }
+    output: { id: text, name: text, contact_count: number, contact_sample: list }
+  rename_list:
+    label: "Rename a contact list"
+    description: "A list given another name."
+    write: true
+    method: PATCH
+    path: "/v3/marketing/lists/{{ input.list_id }}"
+    inputs:
+      - { name: list_id, label: "The list's id", required: true }
+      - { name: name, label: "Its new name", required: true }
+    send: { name: "{{ input.name }}" }
+    output: *list
+  delete_list:
+    label: "Delete a contact list"
+    description: "A list removed; its contacts stay, unless asked to go too."
+    write: true
+    method: DELETE
+    path: "/v3/marketing/lists/{{ input.list_id }}"
+    inputs:
+      - { name: list_id, label: "The list's id", required: true }
+      - { name: delete_contacts, label: "Delete its contacts too", kind: boolean }
+    query: { delete_contacts: "{{ input.delete_contacts }}" }
+    result: "value == null ? {'deleted': true} : value"
+    output: { job_id: text, deleted: boolean }
+  remove_from_list:
+    label: "Take contacts off a list"
+    description: "Contacts taken off one list; they stay among your contacts."
+    write: true
+    method: DELETE
+    path: "/v3/marketing/lists/{{ input.list_id }}/contacts"
+    inputs:
+      - { name: list_id, label: "The list's id", required: true }
+      - { name: contact_ids, label: "The contacts' ids, separated by commas", required: true }
+    query: { contact_ids: "{{ input.contact_ids }}" }
+    output: { job_id: text }
+  list_templates:
+    label: "List email templates"
+    description: "The transactional templates, dynamic and legacy, with their versions."
+    method: GET
+    path: "/v3/templates"
+    inputs:
+      - { name: generations, label: "Which: dynamic, legacy, or both (dynamic,legacy)", description: "both when empty" }
+    query: { generations: "{{ has(input.generations) && input.generations != null ? input.generations : 'legacy,dynamic' }}", page_size: "100" }
+    items: value.result
+    next: "value._metadata.next == null || value._metadata.next == '' ? null : (value._metadata.next.startsWith('http') ? value._metadata.next : 'https://api.sendgrid.com' + value._metadata.next)"
+    output: &template { id: text, name: text, generation: text, updated_at: text, versions: list }
+  get_template:
+    label: "Look up an email template"
+    description: "A template's name and its versions, with their subjects and content."
+    method: GET
+    path: "/v3/templates/{{ input.template_id }}"
+    inputs: [{ name: template_id, label: "The template's id", required: true }]
+    output: *template
+  validate_email:
+    label: "Check an email address"
+    description: "Whether an address looks deliverable: a verdict, a score and a suggestion for a typo. It needs SendGrid's Email Address Validation key, and each check counts against the plan."
+    write: true
+    method: POST
+    path: "/v3/validations/email"
+    inputs:
+      - { name: email, label: "The email address", required: true }
+      - { name: source, label: "A word saying where it came from, such as signup" }
+    send: { email: "{{ input.email }}", source: "{{ input.source }}" }
+    result: value.result
+    output: { email: text, verdict: text, score: number, local: text, host: text, suggestion: text, checks: record, ip_address: text }
+  list_unsubscribes:
+    label: "List who unsubscribed from everything"
+    description: "The addresses that asked for no more email at all, with when."
+    method: GET
+    path: "/v3/suppression/unsubscribes"
+    inputs:
+      - { name: start_time, label: "Since (seconds since 1970)", kind: number }
+      - { name: end_time, label: "Until (seconds since 1970)", kind: number }
+      - { name: email, label: "Only this address" }
+    query: { start_time: "{{ input.start_time }}", end_time: "{{ input.end_time }}", email: "{{ input.email }}", limit: "100" }
+    items: value
+    next: "size(value) < 100 ? null : {'offset': (page == null ? 0 : int(page['offset'])) + size(value)}"
+    output: { created: number, email: text }
+  unsubscribe:
+    label: "Unsubscribe from everything"
+    description: "Addresses that get no more email from you at all (the global unsubscribe list)."
+    write: true
+    method: POST
+    path: "/v3/asm/suppressions/global"
+    inputs: [{ name: emails, label: "Email addresses, separated by commas", required: true }]
+    send: { recipient_emails: "{{ input.emails.split(',').map(e, e.trim()) }}" }
+    output: { recipient_emails: list }
+  resubscribe:
+    label: "Take an address off the global unsubscribe list"
+    description: "An address that may be sent email again."
+    write: true
+    method: DELETE
+    path: "/v3/asm/suppressions/global/{{ input.email }}"
+    inputs: [{ name: email, label: "The email address", required: true }]
+    result: "{'removed': true}"
+    output: { removed: boolean }
+  list_bounces:
+    label: "List bounced addresses"
+    description: "Addresses mail to which came back, with why and when."
+    method: GET
+    path: "/v3/suppression/bounces"
+    inputs:
+      - { name: start_time, label: "Since (seconds since 1970)", kind: number }
+      - { name: end_time, label: "Until (seconds since 1970)", kind: number }
+      - { name: email, label: "Only this address" }
+    query: { start_time: "{{ input.start_time }}", end_time: "{{ input.end_time }}", email: "{{ input.email }}", limit: "100" }
+    items: value
+    next: "size(value) < 100 ? null : {'offset': (page == null ? 0 : int(page['offset'])) + size(value)}"
+    output: { created: number, email: text, reason: text, status: text }
+  delete_bounce:
+    label: "Clear a bounced address"
+    description: "An address taken off the bounce list, so mail to it is tried again."
+    write: true
+    method: DELETE
+    path: "/v3/suppression/bounces/{{ input.email }}"
+    inputs: [{ name: email, label: "The email address", required: true }]
+    result: "{'removed': true}"
+    output: { removed: boolean }
+  list_spam_reports:
+    label: "List spam reports"
+    description: "Addresses whose owners marked your email as spam, with when."
+    method: GET
+    path: "/v3/suppression/spam_reports"
+    inputs:
+      - { name: start_time, label: "Since (seconds since 1970)", kind: number }
+      - { name: end_time, label: "Until (seconds since 1970)", kind: number }
+      - { name: email, label: "Only this address" }
+    query: { start_time: "{{ input.start_time }}", end_time: "{{ input.end_time }}", email: "{{ input.email }}", limit: "100" }
+    items: value
+    next: "size(value) < 100 ? null : {'offset': (page == null ? 0 : int(page['offset'])) + size(value)}"
+    output: { created: number, email: text, ip: text }
+  list_unsubscribe_groups:
+    label: "List unsubscribe groups"
+    description: "The kinds of email people may opt out of one by one (such as newsletters), with how many did."
+    method: GET
+    path: "/v3/asm/groups"
+    items: value
+    output: { id: number, name: text, description: text, is_default: boolean, unsubscribes: number }
+  add_to_unsubscribe_group:
+    label: "Unsubscribe from a group"
+    description: "Addresses that get no more email of one kind (an unsubscribe group)."
+    write: true
+    method: POST
+    path: "/v3/asm/groups/{{ input.group_id }}/suppressions"
+    inputs:
+      - { name: group_id, label: "The group's number", required: true }
+      - { name: emails, label: "Email addresses, separated by commas", required: true }
+    send: { recipient_emails: "{{ input.emails.split(',').map(e, e.trim()) }}" }
+    output: { recipient_emails: list }
+  remove_from_unsubscribe_group:
+    label: "Resubscribe to a group"
+    description: "An address taken out of an unsubscribe group, so it gets that kind of email again."
+    write: true
+    method: DELETE
+    path: "/v3/asm/groups/{{ input.group_id }}/suppressions/{{ input.email }}"
+    inputs:
+      - { name: group_id, label: "The group's number", required: true }
+      - { name: email, label: "The email address", required: true }
+    result: "{'removed': true}"
+    output: { removed: boolean }
+triggers:
+  new_unsubscribe:
+    label: "Someone unsubscribed from everything"
+    description: "Each address added to the global unsubscribe list, asked for every few minutes."
+    poll:
+      method: GET
+      path: "/v3/suppression/unsubscribes"
+      query: { start_time: "{{ input.cursor == null ? int(timestamp(input.now)) : input.cursor }}", limit: "100" }
+      items: value
+      next: "size(value) < 100 ? null : {'offset': (page == null ? 0 : int(page['offset'])) + size(value)}"
+      id: "item.email + '@' + string(item.created)"
+      # The next poll asks from the newest seen (SendGrid counts in seconds, both ends included).
+      cursor: "size(items) == 0 ? (cursor == null ? int(timestamp(input.now)) : cursor) : math.greatest(items.map(i, i.created))"
+      every: 5m
+  new_bounce:
+    label: "An email bounced"
+    description: "Each address added to the bounce list, with why, asked for every few minutes."
+    poll:
+      method: GET
+      path: "/v3/suppression/bounces"
+      query: { start_time: "{{ input.cursor == null ? int(timestamp(input.now)) : input.cursor }}", limit: "100" }
+      items: value
+      next: "size(value) < 100 ? null : {'offset': (page == null ? 0 : int(page['offset'])) + size(value)}"
+      id: "item.email + '@' + string(item.created)"
+      cursor: "size(items) == 0 ? (cursor == null ? int(timestamp(input.now)) : cursor) : math.greatest(items.map(i, i.created))"
+      every: 5m

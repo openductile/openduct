@@ -1,0 +1,140 @@
+{{/*
+Copyright 2026 Ductile AI, Inc
+SPDX-License-Identifier: Apache-2.0
+
+The nodes: a StatefulSet, each node a broker with the studio beside it. Node <release>-N is broker N+1. A rolling
+update restarts one node at a time and waits until the one restarted is ready - joined, every partition it holds
+led and level with its leader (`openduct health --ready`) - before the next.
+*/}}
+{{- $cluster := include "openduct.cluster" . }}
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "openduct.name" . }}
+  labels:
+    {{- include "openduct.labels" . | nindent 4 }}
+spec:
+  serviceName: {{ include "openduct.name" . }}
+  replicas: {{ .Values.replicas }}
+  # A cluster's nodes start together: one alone cannot elect a leader.
+  podManagementPolicy: {{ if $cluster }}Parallel{{ else }}OrderedReady{{ end }}
+  updateStrategy:
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      {{- include "openduct.selector" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "openduct.selector" . | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        fsGroup: 10001
+        seccompProfile: { type: RuntimeDefault }
+      terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds }}
+      {{- if $cluster }}
+      # The cluster's secret as a file, read by the node's own group only: never in the environment.
+      volumes:
+        - name: cluster-secret
+          secret:
+            secretName: {{ include "openduct.secretName" . }}
+            items: [{ key: secret, path: cluster-secret }]
+            defaultMode: 0440
+      {{- end }}
+      containers:
+        - name: openduct
+          image: {{ include "openduct.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          {{- if $cluster }}
+          # Every node lists every broker, itself included. ($$ is how Kubernetes writes a $ the shell is to read.)
+          command: ["/bin/sh", "-c"]
+          args:
+            - >-
+              export OPENDUCT_NODE_ID=$$(( ${HOSTNAME##*-} + 1 ))
+              OPENDUCT_ADVERTISE="${HOSTNAME}.{{ include "openduct.name" . }}:9092"
+              OPENDUCT_REPLICATION_LISTEN="0.0.0.0:9093" &&
+              exec openduct start --replication-factor {{ .Values.cluster.replicationFactor }}
+          {{- else }}
+          args: ["start"]
+          {{- end }}
+          env:
+            {{- if $cluster }}
+            - { name: OPENDUCT_BROKERS, value: {{ include "openduct.brokers" . | quote }} }
+            - { name: OPENDUCT_CLUSTER_SECRET_FILE, value: /run/secrets/openduct/cluster-secret }
+            {{- else }}
+            - { name: OPENDUCT_ADVERTISE, value: "{{ include "openduct.name" . }}-0.{{ include "openduct.name" . }}:9092" }
+            {{- end }}
+            - { name: OPENDUCT_DATA_DIR, value: /data }
+            - { name: OPENDUCT_LISTEN, value: "0.0.0.0:9092" }
+            - { name: OPENDUCT_STUDIO_LISTEN, value: "0.0.0.0:5480" }
+            - { name: OPENDUCT_STUDIO_HOSTS, value: {{ join "," .Values.studio.hosts | quote }} }
+            - { name: OPENDUCT_STUDIO_SECURE_COOKIES, value: {{ .Values.studio.secureCookies | quote }} }
+            {{- with .Values.studio.url }}
+            - { name: OPENDUCT_STUDIO_URL, value: {{ . | quote }} }
+            {{- end }}
+            - { name: OPENDUCT_ALLOW_PRIVATE_NETWORK, value: {{ .Values.studio.allowPrivateNetwork | quote }} }
+            - { name: OPENDUCT_ALLOW_INSECURE, value: {{ .Values.allowInsecure | quote }} }
+            - { name: OPENDUCT_LOG_FORMAT, value: {{ .Values.logFormat | quote }} }
+            # Readiness asks the node's own metrics address: on loopback, it needs no token.
+            - { name: OPENDUCT_METRICS_LISTEN, value: "127.0.0.1:9645" }
+            {{- with .Values.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          ports:
+            - { name: kafka, containerPort: 9092 }
+            - { name: replication, containerPort: 9093 }
+            - { name: studio, containerPort: 5480 }
+          # docs/deployment.md, Health: liveness asks whether the broker answers; readiness whether it can be relied
+          # on. A node that has just started answers long before it is ready, so a restart of the next node waits.
+          startupProbe:
+            exec: { command: ["openduct", "health", "--bootstrap", "127.0.0.1:9092"] }
+            periodSeconds: 5
+            failureThreshold: 60
+          livenessProbe:
+            exec: { command: ["openduct", "health", "--bootstrap", "127.0.0.1:9092"] }
+            periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            exec: { command: ["openduct", "health", "--ready", "--ready-address", "127.0.0.1:9645"] }
+            periodSeconds: 10
+            timeoutSeconds: 5
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: [ALL] }
+          volumeMounts:
+            - { name: data, mountPath: /data }
+            {{- if $cluster }}
+            - { name: cluster-secret, mountPath: /run/secrets/openduct, readOnly: true }
+            {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: [ReadWriteOnce]
+        {{- with .Values.persistence.storageClass }}
+        storageClassName: {{ . }}
+        {{- end }}
+        resources:
+          requests: { storage: {{ .Values.persistence.size }} }

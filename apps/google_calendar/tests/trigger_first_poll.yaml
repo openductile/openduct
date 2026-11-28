@@ -1,0 +1,12 @@
+description: The first poll asks for what changes from now on
+trigger: new_event
+credential: { access_token: ya29.test }
+input: { calendar_id: primary }
+exchanges:
+  - sent:
+      method: GET
+      url: https://www.googleapis.com/calendar/v3/calendars/primary/events
+      query: { updatedMin: "2023-11-14T22:13:20Z", orderBy: updated, showDeleted: "false", maxResults: "250" }
+    answer: { body: { items: [] } }
+runs: []
+cursor: "2023-11-14T22:13:20Z"

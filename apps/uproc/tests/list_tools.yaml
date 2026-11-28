@@ -1,0 +1,10 @@
+description: "The catalogue of tools"
+action: list_tools
+credential: {"api_key": "up-test-key"}
+exchanges:
+  - sent:
+      method: GET
+      url: "https://api.uproc.io/api/v1/external/modules/data-process/tools"
+      headers: {"authorization": "Bearer up-test-key"}
+    answer: {"status": 200, "body": {"success": true, "data": {"rows": [{"key": "get-company-by-name", "name": "by-name", "description": "Company by name", "params": [{"name": "name", "required": true}]}], "total": 1}}}
+result: [{"key": "get-company-by-name", "name": "by-name", "description": "Company by name", "params": [{"name": "name", "required": true}]}]

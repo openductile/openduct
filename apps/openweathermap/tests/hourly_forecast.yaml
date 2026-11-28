@@ -1,0 +1,10 @@
+description: Hours over two pages, the next at the address OpenWeather gives
+action: hourly_forecast
+credential: { api_key: test-owm-key-1 }
+input: { lat: 51.5, lon: -0.1, units: metric }
+exchanges:
+  - sent: { url: https://api.openweathermap.org/data/4.0/onecall/timeline/1h, query: { appid: test-owm-key-1, lat: "51.5", lon: "-0.1", units: metric } }
+    answer: { body: { timezone: Europe/London, data: [{ dt: 1795770000, temp: 8.2, pop: 0 }], next: "https://api.openweathermap.org/data/4.0/onecall/timeline/1h?lat=51.5000&lon=-0.1000&start=1795842000&units=metric&appid=test-owm-key-1" } }
+  - sent: { url: "https://api.openweathermap.org/data/4.0/onecall/timeline/1h?lat=51.5000&lon=-0.1000&start=1795842000&units=metric&appid=test-owm-key-1" }
+    answer: { body: { timezone: Europe/London, data: [{ dt: 1795842000, temp: 6.0, pop: 0.4 }] } }
+result: [{ dt: 1795770000, temp: 8.2, pop: 0 }, { dt: 1795842000, temp: 6.0, pop: 0.4 }]

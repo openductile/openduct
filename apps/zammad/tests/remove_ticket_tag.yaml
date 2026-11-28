@@ -1,0 +1,7 @@
+action: remove_ticket_tag
+credential: { subdomain: acme, token: zm_test_1 }
+input: { ticket_id: "42", tag: damaged }
+exchanges:
+  - sent: { method: DELETE, url: https://acme.zammad.com/api/v1/tags/remove, body: { item: damaged, object: Ticket, o_id: "42" } }
+    answer: { status: 201, body: true }
+result: { removed: true }

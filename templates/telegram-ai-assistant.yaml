@@ -2,7 +2,7 @@ name: A Telegram bot that answers with AI
 description: >-
   Point your Telegram bot's webhook at this workflow's address, with the secret token made for it when you use this
   template (Telegram sends it back): each message the bot gets is answered by a model, in the same chat.
-category: Messaging
+category: AI
 trigger:
   # Left empty here: each workflow made from the template is given a token of its own.
   webhook: { token: "" }

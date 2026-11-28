@@ -1,0 +1,12 @@
+description: "Companies a search finds"
+action: list_companies
+credential: {"site_url": "https://mautic.example.com", "username": "admin", "password": "pw-test"}
+input: {"search": "Northwind"}
+exchanges:
+  - sent:
+      method: GET
+      url: "https://mautic.example.com/api/companies"
+      query: {"search": "Northwind", "limit": "100"}
+      headers: {"authorization": "Basic YWRtaW46cHctdGVzdA=="}
+    answer: {"status": 200, "body": {"total": "1", "companies": {"11": {"id": 11, "fields": {"all": {"companyname": "Northwind Example", "companywebsite": "https://northwind.example"}}, "score": 0}}}}
+result: [{"id": 11, "fields": {"all": {"companyname": "Northwind Example", "companywebsite": "https://northwind.example"}}, "score": 0}]

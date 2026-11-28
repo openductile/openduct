@@ -1,0 +1,10 @@
+action: comment_on_issue
+credential: { token: test-token-1 }
+input: { owner: example-shop, repo: website, number: 1347, body: Fixed in the new release. }
+exchanges:
+  - sent:
+      method: POST
+      url: https://api.github.com/repos/example-shop/website/issues/1347/comments
+      body: { body: Fixed in the new release. }
+    answer: { status: 201, body: { id: 11, body: Fixed in the new release. } }
+result: { id: 11, body: Fixed in the new release. }

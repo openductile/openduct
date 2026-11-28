@@ -1,0 +1,7 @@
+action: monitor_uptime
+credential: { api_key: ur_test_1 }
+input: { id: 801, from: "2026-11-01T00:00:00Z", to: "2026-11-27T00:00:00Z" }
+exchanges:
+  - sent: { method: GET, url: https://api.uptimerobot.com/v3/monitors/801/stats/uptime, query: { from: "2026-11-01T00:00:00Z", to: "2026-11-27T00:00:00Z" } }
+    answer: { body: { uptime: 99.95, total_downtime_seconds: 1120, incident_count: 2, mtbf: 1122000, from: "2026-11-01T00:00:00Z", to: "2026-11-27T00:00:00Z" } }
+result: { uptime: 99.95, total_downtime_seconds: 1120, incident_count: 2, mtbf: 1122000, from: "2026-11-01T00:00:00Z", to: "2026-11-27T00:00:00Z" }

@@ -1,0 +1,7 @@
+action: list_registrants
+credential: { access_token: zoom-test-token }
+input: { meeting_id: "85700000001" }
+exchanges:
+  - sent: { method: GET, url: https://api.zoom.us/v2/meetings/85700000001/registrants, query: { page_size: "300" } }
+    answer: { body: { page_size: 300, total_records: 1, registrants: [{ id: reg-test-1, email: ann@example.com, first_name: Ann, last_name: Lee, status: approved, create_time: "2026-11-27T10:00:00Z", join_url: "https://us02web.zoom.us/w/85700000001?tk=test1" }] } }
+result: [{ id: reg-test-1, email: ann@example.com, first_name: Ann, last_name: Lee, status: approved, create_time: "2026-11-27T10:00:00Z", join_url: "https://us02web.zoom.us/w/85700000001?tk=test1" }]

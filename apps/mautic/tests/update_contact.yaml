@@ -1,0 +1,12 @@
+description: "Only a contact's phone changed"
+action: update_contact
+credential: {"site_url": "https://mautic.example.com", "username": "admin", "password": "pw-test"}
+input: {"contact_id": 48, "phone": "+1 555 0101"}
+exchanges:
+  - sent:
+      method: PATCH
+      url: "https://mautic.example.com/api/contacts/48/edit"
+      headers: {"authorization": "Basic YWRtaW46cHctdGVzdA=="}
+      body: {"phone": "+1 555 0101"}
+    answer: {"status": 200, "body": {"contact": {"id": 48, "isPublished": true, "dateAdded": "2026-11-26T09:00:00+00:00", "dateModified": "2026-11-27T10:00:00+00:00", "points": 0, "tags": [], "fields": {"core": {"firstname": {"alias": "firstname", "value": "Cy"}}, "all": {"id": 48, "firstname": "Cy", "lastname": "Park", "email": "cy@example.com", "company": "Contoso Example", "phone": "+1 555 0101"}}}}}
+result: {"id": 48, "email": "cy@example.com", "first_name": "Cy", "last_name": "Park", "company": "Contoso Example", "phone": "+1 555 0101", "points": 0, "tags": [], "date_added": "2026-11-26T09:00:00+00:00", "date_modified": "2026-11-27T10:00:00+00:00", "fields": {"id": 48, "firstname": "Cy", "lastname": "Park", "email": "cy@example.com", "company": "Contoso Example", "phone": "+1 555 0101"}}

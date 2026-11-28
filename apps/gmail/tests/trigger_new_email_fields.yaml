@@ -1,0 +1,23 @@
+description: What a run gets of an email - who from and to, the subject, a piece of its text
+trigger: new_email
+credential: { access_token: ya29.test }
+seen: { items: [] }
+exchanges:
+  - answer: { body: { messages: [{ id: m9, threadId: t9 }] } }
+  - answer:
+      body:
+        id: m9
+        threadId: t9
+        labelIds: [INBOX]
+        snippet: See you
+        payload: { headers: [{ name: From, value: ann@example.com }, { name: To, value: bob@example.com }, { name: Subject, value: Lunch }] }
+runs:
+  - id: m9
+    thread_id: t9
+    from: ann@example.com
+    to: bob@example.com
+    subject: Lunch
+    date: ""
+    snippet: See you
+    labels: [INBOX]
+    message: { id: m9, threadId: t9, labelIds: [INBOX], snippet: See you, payload: { headers: [{ name: From, value: ann@example.com }, { name: To, value: bob@example.com }, { name: Subject, value: Lunch }] } }

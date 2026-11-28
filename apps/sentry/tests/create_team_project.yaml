@@ -1,0 +1,40 @@
+# Made by `openduct app from-openapi`: Create a project.
+description: "Create a project, made from the API description's schemas"
+action: create_team_project
+credential: { token: test-token }
+input: { organization_id_or_slug: example, team_id_or_slug: example, name: example }
+exchanges:
+  - sent:
+      method: POST
+      url: "https://us.sentry.io/api/0/teams/example/example/projects/"
+      query: {}
+      headers: { authorization: "Bearer test-token" }
+      body: { name: example }
+    answer:
+      status: 201
+      body:
+        latestDeploys: {}
+        options: {}
+        stats: [example]
+        transactionStats: [[1]]
+        sessionStats: { currentCrashFreeRate: 1, previousCrashFreeRate: 1, hasHealthData: true }
+        id: id_1
+        slug: example
+        name: example
+        platform: example
+        dateCreated: "2026-01-15T09:30:00Z"
+        isBookmarked: true
+        isMember: true
+result:
+  latestDeploys: {}
+  options: {}
+  stats: [example]
+  transactionStats: [[1]]
+  sessionStats: { currentCrashFreeRate: 1, previousCrashFreeRate: 1, hasHealthData: true }
+  id: id_1
+  slug: example
+  name: example
+  platform: example
+  dateCreated: "2026-01-15T09:30:00Z"
+  isBookmarked: true
+  isMember: true

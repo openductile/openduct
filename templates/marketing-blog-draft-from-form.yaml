@@ -1,0 +1,89 @@
+name: A blog post draft from a request form
+description: >-
+  Your team asks for a blog post on a form - the topic, who it is for, the words it should use, how long. An AI agent
+  checks its facts in Wikipedia (its public API, no key), writes a draft with a title, an outline and the sources it
+  used, and adds it to your Content plan sheet in Google Sheets as a draft for an editor. Nothing is published.
+  Needs: Google Sheets (sheets) and an AI credential (model).
+category: Marketing
+trigger:
+  form:
+    title: Ask for a blog post
+    description: A first draft lands in the Content plan sheet within a few minutes.
+    fields:
+      - { name: topic, label: "What is it about?", type: text, required: true, max_length: 200 }
+      - { name: audience, label: "Who is it for?", type: dropdown, options: [Customers, Prospects, Partners, Job seekers], required: true }
+      - { name: keywords, label: Words it should use, type: text, help: "Separated by commas", max_length: 300 }
+      - { name: length, label: How long, type: dropdown, options: [Short (400 words), Medium (800 words), Long (1500 words)], required: true }
+      - { name: notes, label: Anything else the writer should know, type: long_text, max_length: 2000 }
+      - { name: email, label: Your e-mail, type: email, required: true }
+    thanks: Thank you - the draft will be in the Content plan sheet in a few minutes.
+# What a test runs on: an answer as the form gives it.
+sample:
+  topic: How to keep cut flowers fresh for longer
+  audience: Customers
+  keywords: fresh flowers, vase, flower food
+  length: Medium (800 words)
+  notes: Mention our free flower food sachet.
+  email: sam@example.com
+steps:
+  - name: writer
+    agent:
+      credential: model
+      instructions: >-
+        You write first drafts of blog posts for a small company. Check each fact you use with wiki_search and
+        wiki_page, and never state a fact you could not check; list the pages you used as sources. Write for
+        {{ value.audience }}, in plain, warm words, about {{ value.length }}, using these words where they fit:
+        {{ value.keywords }}. {{ value.notes }}
+      input: "Write a draft on: {{ value.topic }}"
+      tools:
+        - name: wiki_search
+          description: Finds Wikipedia pages on a subject, with a short description of each.
+          parameters:
+            type: object
+            properties:
+              q: { type: string, description: "What to search for" }
+            required: [q]
+          http:
+            url: https://en.wikipedia.org/w/rest.php/v1/search/page
+            query: { q: "{{ args.q }}", limit: "5" }
+            # Wikimedia asks every program to say who it is.
+            headers: { User-Agent: "ContentDrafts/1.0 (content@example.com)" }
+        - name: wiki_page
+          description: A Wikipedia page's summary, by its key from wiki_search.
+          parameters:
+            type: object
+            properties:
+              key: { type: string, description: "The page's key, as Cut_flowers" }
+            required: [key]
+          http:
+            url: "https://en.wikipedia.org/api/rest_v1/page/summary/{{ args.key }}"
+            headers: { User-Agent: "ContentDrafts/1.0 (content@example.com)" }
+      allow: [wiki_search, wiki_page]
+      max_turns: 12
+      max_tool_calls: 16
+      max_tokens: 4000
+      output:
+        schema:
+          type: object
+          properties:
+            title: { type: string }
+            outline: { type: array, items: { type: string } }
+            draft: { type: string, description: "The whole draft, in Markdown" }
+            sources: { type: array, items: { type: string }, description: "The addresses of the pages used" }
+          required: [title, outline, draft, sources]
+  - name: plan
+    google_sheets:
+      action: add_row
+      credential: sheets
+      spreadsheet_id: your-sheet-id
+      sheet: Content plan
+      values:
+        - draft
+        - "{{ value.topic }}"
+        - "{{ has(steps.writer.json.title) ? steps.writer.json.title : value.topic }}"
+        - "{{ value.audience }}"
+        - "{{ has(steps.writer.json.outline) ? steps.writer.json.outline.join(' / ') : '' }}"
+        - "{{ has(steps.writer.json.draft) ? steps.writer.json.draft : steps.writer.text }}"
+        - "{{ has(steps.writer.json.sources) ? steps.writer.json.sources.join(' ') : '' }}"
+        - "{{ value.email }}"
+    retry: { attempts: 3, wait: 30s }

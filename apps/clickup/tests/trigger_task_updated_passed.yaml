@@ -1,0 +1,10 @@
+description: A change, when the workflow asked only for tasks made, is answered and runs nothing
+trigger: task_event
+workflow: wf1
+credential: { api_key: pk_1_TEST, "webhook_secret@wf1": O94IM25S7PXBPYTMNXLLET230SRP0S89 }
+input: { team_id: "108" }
+delivery:
+  headers: { x-signature: 7972abdc38255e1b282f7711d938401ef5e3916c66552ea70878ddf85093fbfb }
+  body: '{"event":"taskUpdated","history_items":[{"id":"2800763136700363641","type":1,"date":"1764235300000","field":"name","parent_id":"901","data":{},"source":null,"user":{"id":183,"username":"Ann","email":"ann@example.com"},"before":"Pack","after":"Pack the order"}],"task_id":"86a1b2c3f","webhook_id":"7fa3ec74-69a8-4530-a251-8a13730bd204"}'
+  at: 1764235200
+passed: true

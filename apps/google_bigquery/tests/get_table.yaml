@@ -1,0 +1,7 @@
+action: get_table
+credential: { access_token: ya29.bq-test }
+input: { project_id: example-shop-1, dataset_id: shop, table_id: orders }
+exchanges:
+  - sent: { method: GET, url: https://bigquery.googleapis.com/bigquery/v2/projects/example-shop-1/datasets/shop/tables/orders }
+    answer: { body: { tableReference: { projectId: example-shop-1, datasetId: shop, tableId: orders }, type: TABLE, numRows: "2", numBytes: "512", lastModifiedTime: "1795770000000", schema: { fields: [{ name: order_id, type: STRING, mode: REQUIRED }, { name: total, type: NUMERIC }] } } }
+result: { id: orders, kind: TABLE, rows: 2, bytes: 512, modified: "1795770000000", columns: [{ name: order_id, type: STRING, mode: REQUIRED }, { name: total, type: NUMERIC, mode: NULLABLE }] }

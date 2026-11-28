@@ -1,0 +1,33 @@
+description: "One build"
+action: get_build
+credential: { token: test-token }
+input: { build_id: 86601346 }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://api.travis-ci.com/build/86601346"
+    answer:
+      body:
+        "@type": build
+        id: 86601346
+        number: "212"
+        state: passed
+        duration: 301
+        event_type: api
+        started_at: "2026-11-27T10:01:00Z"
+        finished_at: "2026-11-27T10:06:01Z"
+        branch: { name: main }
+        commit: { sha: 0a1b2c3d, message: "Release check" }
+        jobs: [{ id: 86601347 }]
+result:
+  "@type": build
+  id: 86601346
+  number: "212"
+  state: passed
+  duration: 301
+  event_type: api
+  started_at: "2026-11-27T10:01:00Z"
+  finished_at: "2026-11-27T10:06:01Z"
+  branch: { name: main }
+  commit: { sha: 0a1b2c3d, message: "Release check" }
+  jobs: [{ id: 86601347 }]

@@ -1,0 +1,8 @@
+description: A place with no alerts starts nothing
+trigger: new_alert
+credential: { api_key: test-owm-key-1 }
+input: { lat: 39.799, lon: -89.644 }
+seen: { cursor: null, items: [] }
+exchanges:
+  - answer: { body: { lat: 39.799, lon: -89.644, data: [{ dt: 1795770000, temp: 280.5 }] } }
+runs: []

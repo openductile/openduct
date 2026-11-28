@@ -1,0 +1,17 @@
+description: A post with a link to an article, as a company page, signed in for company pages
+sign_in: linkedin_pages
+action: post
+credential: { access_token: AQX_test, person_id: 782bbtaQ }
+input: { text: Our winter guide, organization_id: "5515715", link: "https://example.com/guide", link_title: The winter guide }
+exchanges:
+  - sent:
+      body:
+        author: urn:li:organization:5515715
+        commentary: Our winter guide
+        visibility: PUBLIC
+        distribution: { feedDistribution: MAIN_FEED, targetEntities: [], thirdPartyDistributionChannels: [] }
+        content: { article: { source: "https://example.com/guide", title: The winter guide } }
+        lifecycleState: PUBLISHED
+        isReshareDisabledByAuthor: false
+    answer: { status: 201, headers: { x-restli-id: "urn:li:share:6844785523593134081" }, body: "" }
+result: { id: "urn:li:share:6844785523593134081" }

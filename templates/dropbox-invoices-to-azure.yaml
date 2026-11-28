@@ -1,0 +1,43 @@
+name: New invoices in Dropbox kept in Azure Blob Storage
+description: >-
+  Every five minutes, look for new PDF invoices in the Invoices folder of a Dropbox (a dropbox credential called
+  dropbox - connect it under Credentials; the install's admin registers its Dropbox app once, under Settings), read
+  each new one and keep a copy in an Azure Blob Storage container (an azure_blob credential called archive: the
+  storage account, its key, the container), under invoices/ and the month it came, then move it into Invoices/Done so
+  whoever drops them in sees it was taken. Dropbox tells what changed since the last look: the folder is not read whole
+  each time.
+category: Finance
+trigger:
+  storage:
+    credential: dropbox
+    folder: Invoices
+    pattern: "*.pdf"
+    every: 5m
+# What a test runs on: an event as this trigger gives it.
+sample:
+  name: invoice-1042.pdf
+  path: Invoices/invoice-1042.pdf
+  kind: file
+  size: 48213
+  modified: "2026-11-27T09:00:00Z"
+  change: new
+steps:
+  - name: invoice
+    storage:
+      action: read
+      credential: dropbox
+      path: "{{ value.path }}"
+  - name: keep
+    storage:
+      action: write
+      credential: archive
+      path: "invoices/{{ value.modified.substring(0, 7) }}/{{ value.name }}"
+      file: steps.invoice
+      overwrite: true
+  - name: done
+    storage:
+      action: move
+      credential: dropbox
+      path: "{{ value.path }}"
+      to: "Invoices/Done/{{ value.name }}"
+      overwrite: true

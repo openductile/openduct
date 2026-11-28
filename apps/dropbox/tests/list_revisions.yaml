@@ -1,0 +1,8 @@
+description: A file's earlier versions
+action: list_revisions
+credential: { access_token: sl.test-token }
+input: { path: /Price list.xlsx }
+exchanges:
+  - sent: { url: https://api.dropboxapi.com/2/files/list_revisions, body: { path: /Price list.xlsx, limit: 100 } }
+    answer: { body: { is_deleted: false, has_more: false, entries: [{ ".tag": file, name: Price list.xlsx, rev: a1c10ce0dd79, server_modified: "2026-11-25T09:00:00Z", size: 9120 }, { ".tag": file, name: Price list.xlsx, rev: a1c10ce0dd70, server_modified: "2026-11-01T09:00:00Z", size: 8875 }] } }
+result: [{ ".tag": file, name: Price list.xlsx, rev: a1c10ce0dd79, server_modified: "2026-11-25T09:00:00Z", size: 9120 }, { ".tag": file, name: Price list.xlsx, rev: a1c10ce0dd70, server_modified: "2026-11-01T09:00:00Z", size: 8875 }]

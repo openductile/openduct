@@ -1,0 +1,153 @@
+# Copyright 2026 Ductile AI, Inc
+# SPDX-License-Identifier: Apache-2.0
+# Written by hand from Wikipedia's own API descriptions: the MediaWiki REST API (w/rest.php/specs/v0/module/-) and the
+# Wikimedia REST API (api/rest_v1/?spec) as en.wikipedia.org serves them.
+app: wikipedia
+name: Wikipedia
+category: content
+description: Search Wikipedia in any language, and read an article's summary, text, history, languages and files.
+docs: https://www.mediawiki.org/wiki/API:REST_API/Reference
+hosts: ["*.wikipedia.org"]
+# Each action may name a language (its code: en, fr, de ...); the credential's, or English, when it does not.
+base_url: >-
+  https://{{ has(input.language) && input.language != null ? input.language : (has(credential.language) && credential.language != '' ? credential.language : 'en') }}.wikipedia.org
+sign_in:
+  - id: wikipedia
+    label: A contact for Wikimedia (no account needed)
+    fields:
+      - { name: contact, label: "An email or web address Wikimedia can reach you at, sent with each request as its rules ask" }
+      - { name: language, label: "The language to read, by its code (en, fr, de ...; English when empty)", optional: true }
+      - { name: access_token, label: "A Wikimedia API access token, for a higher rate (optional)", secret: true, optional: true }
+    headers:
+      User-Agent: "OpenDuct-workflow/1.0 ({{ credential.contact }})"
+      Authorization: "{{ credential.access_token != '' ? 'Bearer ' + credential.access_token : '' }}"
+# The MediaWiki REST API says what was wrong in messageTranslations (or message); the Wikimedia REST API in detail.
+error: >-
+  status >= 400 && type(value) == map
+  ? (has(value.messageTranslations) && has(value.messageTranslations.en) ? value.messageTranslations.en
+  : (has(value.message) ? value.message : (has(value.detail) ? value.detail : (has(value.title) ? value.title : null))))
+  : null
+default_action: get_summary
+actions:
+  search_articles:
+    label: Search articles
+    description: Articles whose title or text hold the words, the best first, each with a short piece of its text.
+    method: GET
+    path: /w/rest.php/v1/search/page
+    inputs:
+      - { name: q, label: "The words to look for", required: true }
+      - { name: limit, label: "At most this many (1 to 100; 10 when empty)", kind: number }
+      - { name: language, label: "In this language's Wikipedia (its code: en, fr, de ...)" }
+    query: { q: "{{ input.q }}", limit: "{{ input.limit }}" }
+    items: value.pages
+    output: { id: number, key: text, title: text, excerpt: text, matched_title: text, description: text, thumbnail: record }
+  suggest_titles:
+    label: Find articles by title
+    description: Articles whose titles begin with the words - for a title someone is typing.
+    method: GET
+    path: /w/rest.php/v1/search/title
+    inputs:
+      - { name: q, label: "The start of a title", required: true }
+      - { name: limit, label: "At most this many (1 to 100; 10 when empty)", kind: number }
+      - { name: language, label: "In this language's Wikipedia" }
+    query: { q: "{{ input.q }}", limit: "{{ input.limit }}" }
+    items: value.pages
+    output: { id: number, key: text, title: text, description: text, thumbnail: record }
+  get_summary:
+    label: Read an article's summary
+    description: Its title, a short description, its first paragraph as plain text, a picture and its address.
+    method: GET
+    path: "/api/rest_v1/page/summary/{{ input.title }}"
+    inputs:
+      - { name: title, label: "The article's title (spaces or underscores)", required: true }
+      - { name: language, label: "In this language's Wikipedia" }
+    output: { type: text, title: text, displaytitle: text, description: text, extract: text, extract_html: text, thumbnail: record, originalimage: record, content_urls: record, timestamp: text, pageid: number, lang: text }
+  get_article:
+    label: Look up an article
+    description: An article's id, title, latest revision and address, without its text.
+    method: GET
+    path: "/w/rest.php/v1/page/{{ input.title }}/bare"
+    inputs:
+      - { name: title, label: "The article's title", required: true }
+      - { name: language, label: "In this language's Wikipedia" }
+    output: { id: number, key: text, title: text, latest: record, content_model: text, license: record, html_url: text }
+  get_article_source:
+    label: Read an article's wikitext
+    description: The article's text as it is written, in wikitext, with its latest revision.
+    method: GET
+    path: "/w/rest.php/v1/page/{{ input.title }}"
+    inputs:
+      - { name: title, label: "The article's title", required: true }
+      - { name: language, label: "In this language's Wikipedia" }
+    output: { id: number, key: text, title: text, latest: record, content_model: text, license: record, source: text }
+  get_article_html:
+    label: Read an article as HTML
+    description: The whole article as HTML, with its latest revision.
+    method: GET
+    path: "/w/rest.php/v1/page/{{ input.title }}/with_html"
+    inputs:
+      - { name: title, label: "The article's title", required: true }
+      - { name: language, label: "In this language's Wikipedia" }
+    output: { id: number, key: text, title: text, latest: record, content_model: text, license: record, html: text }
+  get_history:
+    label: List an article's changes
+    description: Its revisions, the newest first - who changed it, when and why; every page, up to 200.
+    method: GET
+    path: "/w/rest.php/v1/page/{{ input.title }}/history"
+    inputs:
+      - { name: title, label: "The article's title", required: true }
+      - { name: filter, label: "Only these: reverted, anonymous, bot or minor" }
+      - { name: language, label: "In this language's Wikipedia" }
+    query: { filter: "{{ input.filter }}" }
+    items: value.revisions
+    # Wikipedia gives the next (older) page as a whole address.
+    next: "has(value.older) && value.older != null ? value.older : null"
+    output: { id: number, timestamp: text, minor: boolean, size: number, comment: text, user: record, delta: number }
+  get_languages:
+    label: List an article's languages
+    description: The same article in the other languages' Wikipedias, with each one's title.
+    method: GET
+    path: "/w/rest.php/v1/page/{{ input.title }}/links/language"
+    inputs:
+      - { name: title, label: "The article's title", required: true }
+      - { name: language, label: "In this language's Wikipedia" }
+    items: value
+    output: { code: text, name: text, key: text, title: text }
+  get_article_files:
+    label: List an article's files
+    description: The pictures and other files the article shows, each with its address.
+    method: GET
+    path: "/w/rest.php/v1/page/{{ input.title }}/links/media"
+    inputs:
+      - { name: title, label: "The article's title", required: true }
+      - { name: language, label: "In this language's Wikipedia" }
+    items: value.files
+    output: { title: text, file_description_url: text, latest: record, preferred: record, original: record }
+  get_file:
+    label: Look up a file
+    description: A file's description page and its addresses, in its original size and a preferred one.
+    method: GET
+    path: "/w/rest.php/v1/file/{{ input.title }}"
+    inputs:
+      - { name: title, label: "The file's title, such as Example.jpg", required: true }
+      - { name: language, label: "In this language's Wikipedia" }
+    output: { title: text, file_description_url: text, latest: record, preferred: record, original: record, thumbnail: record }
+  get_revision:
+    label: Look up a revision
+    description: One revision of an article - when it was made, by whom, why, and its size.
+    method: GET
+    path: "/w/rest.php/v1/revision/{{ input.id }}/bare"
+    inputs:
+      - { name: id, label: "The revision's id", required: true, kind: number }
+      - { name: language, label: "In this language's Wikipedia" }
+    output: { id: number, size: number, minor: boolean, timestamp: text, content_model: text, page: record, license: record, user: record, comment: text, delta: number }
+  compare_revisions:
+    label: Compare two revisions
+    description: What changed between two revisions of an article, line by line.
+    method: GET
+    path: "/w/rest.php/v1/revision/{{ input.from }}/compare/{{ input.to }}"
+    inputs:
+      - { name: from, label: "The older revision's id", required: true, kind: number }
+      - { name: to, label: "The newer revision's id", required: true, kind: number }
+      - { name: language, label: "In this language's Wikipedia" }
+    output: { from: record, to: record, diff: list }

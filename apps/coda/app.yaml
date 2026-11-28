@@ -1,0 +1,553 @@
+# Copyright 2026 Ductile AI, Inc
+# SPDX-License-Identifier: Apache-2.0
+# Coda: made by `openduct app from-openapi` from https://docs.superhuman.com/apis/v1/openapi.json, Coda API 1.7.0, fetched 2026-11-27 (Superhuman Developer Terms; descriptions in our own words) (Superhuman Docs API 1.7.0, OpenAPI 3.0).
+# Checked as made. Change what you like, then run `openduct app check` and `openduct app test` again.
+app: coda
+name: Coda
+category: productivity
+description: "Docs, pages and tables in Coda (now Superhuman Docs): rows listed, added, changed and removed, buttons pushed, automations run."
+docs: "https://docs.superhuman.com/developers/apis/v1"
+hosts: [docs.superhuman.com]
+base_url: "https://docs.superhuman.com/apis/v1"
+sign_in:
+  - id: coda
+    label: "An API token"
+    fields: [{ name: token, label: "The API token (made on the My account page)", secret: true }]
+    headers: { Authorization: "Bearer {{ credential.token }}" }
+actions:
+  list_docs:
+    label: "List docs"
+    description: "The docs you can open and have opened at least once, every page."
+    method: GET
+    path: "/docs"
+    inputs:
+      - { name: is_owner, label: "Only the docs you own", kind: boolean }
+      - { name: is_published, label: "Only published docs", kind: boolean }
+      - { name: query, label: "Words to look for" }
+      - { name: source_doc, label: "Only copies of this doc (its id)" }
+      - { name: is_starred, label: "Only starred docs", kind: boolean }
+      - { name: in_gallery, label: "Only docs in the gallery", kind: boolean }
+      - { name: workspace_id, label: "Only docs in this workspace (its id)" }
+      - { name: folder_id, label: "Only docs in this folder (its id)" }
+      - { name: minimum_access, label: "Only docs you have at least this access to: readonly, comment or write" }
+    query:
+      isOwner: "{{ input.is_owner }}"
+      isPublished: "{{ input.is_published }}"
+      query: "{{ input.query }}"
+      sourceDoc: "{{ input.source_doc }}"
+      isStarred: "{{ input.is_starred }}"
+      inGallery: "{{ input.in_gallery }}"
+      workspaceId: "{{ input.workspace_id }}"
+      folderId: "{{ input.folder_id }}"
+      minimumAccess: "{{ input.minimum_access }}"
+      limit: "100"
+    items: value.items
+    next: "value.nextPageToken == null || value.nextPageToken == '' ? null : {'pageToken': value.nextPageToken}"
+    output:
+      id: text
+      type: text
+      href: text
+      browserLink: text
+      icon: record
+      name: text
+      owner: text
+      ownerName: text
+      docSize: record
+      sourceDoc: record
+      createdAt: text
+      updatedAt: text
+      published: record
+      folder: record
+      workspace: record
+      workspaceId: text
+      folderId: text
+  list_pages:
+    label: "List pages"
+    description: "The pages of a doc, every page of results."
+    method: GET
+    path: "/docs/{{ input.doc_id }}/pages"
+    inputs: [{ name: doc_id, label: "The doc's id (List docs gives it)", required: true }]
+    query: { limit: "25" }
+    items: value.items
+    next: "value.nextPageToken == null || value.nextPageToken == '' ? null : {'pageToken': value.nextPageToken}"
+    output:
+      id: text
+      type: text
+      href: text
+      browserLink: text
+      name: text
+      subtitle: text
+      icon: record
+      image: record
+      contentType: text
+      isHidden: boolean
+      isEffectivelyHidden: boolean
+      parent: record
+      children: list
+      authors: list
+      createdAt: text
+      createdBy: record
+      updatedAt: text
+      updatedBy: record
+  list_tables:
+    label: "List tables"
+    description: "The tables and views of a doc."
+    method: GET
+    path: "/docs/{{ input.doc_id }}/tables"
+    inputs:
+      - { name: doc_id, label: "The doc's id (List docs gives it)", required: true }
+      - { name: sort_by, label: "Sort by: name" }
+    query: { sortBy: "{{ input.sort_by }}", limit: "25" }
+    items: value.items
+    next: "value.nextPageToken == null || value.nextPageToken == '' ? null : {'pageToken': value.nextPageToken}"
+    output:
+      id: text
+      type: text
+      tableType: text
+      href: text
+      browserLink: text
+      name: text
+      parent: record
+  list_formulas:
+    label: "List named formulas"
+    description: "The named formulas of a doc."
+    method: GET
+    path: "/docs/{{ input.doc_id }}/formulas"
+    inputs:
+      - { name: doc_id, label: "The doc's id (List docs gives it)", required: true }
+      - { name: sort_by, label: "Sort by: name" }
+    query: { sortBy: "{{ input.sort_by }}", limit: "25" }
+    items: value.items
+    next: "value.nextPageToken == null || value.nextPageToken == '' ? null : {'pageToken': value.nextPageToken}"
+    output: { id: text, type: text, href: text, name: text, parent: record }
+  list_controls:
+    label: "List controls"
+    description: "The controls on a doc's pages: sliders, pickers, checkboxes and the like."
+    method: GET
+    path: "/docs/{{ input.doc_id }}/controls"
+    inputs:
+      - { name: doc_id, label: "The doc's id (List docs gives it)", required: true }
+      - { name: sort_by, label: "Sort by: name" }
+    query: { sortBy: "{{ input.sort_by }}", limit: "25" }
+    items: value.items
+    next: "value.nextPageToken == null || value.nextPageToken == '' ? null : {'pageToken': value.nextPageToken}"
+    output: { id: text, type: text, href: text, name: text, parent: record }
+  create_doc:
+    label: "Create a doc"
+    description: "A new doc: empty, or a copy of another."
+    write: true
+    method: POST
+    path: "/docs"
+    inputs:
+      - { name: title, label: "Title" }
+      - { name: source_doc, label: "A doc to copy (its id)" }
+      - { name: timezone, label: "Its time zone (such as America/New_York)" }
+      - { name: folder_id, label: "The folder to put it in (its id)" }
+      - { name: initial_page, label: "What its first page holds (as JSON)", kind: record }
+    send:
+      title: "{{ input.title }}"
+      sourceDoc: "{{ input.source_doc }}"
+      timezone: "{{ input.timezone }}"
+      folderId: "{{ input.folder_id }}"
+      initialPage: "{{ input.initial_page }}"
+    output:
+      id: text
+      type: text
+      href: text
+      browserLink: text
+      icon: record
+      name: text
+      owner: text
+      ownerName: text
+      docSize: record
+      sourceDoc: record
+      createdAt: text
+      updatedAt: text
+      published: record
+      folder: record
+      workspace: record
+      workspaceId: text
+      folderId: text
+      requestId: text
+  list_columns:
+    label: "List a table's columns"
+    description: "The columns of a table or view: names, formats and formulas."
+    method: GET
+    path: "/docs/{{ input.doc_id }}/tables/{{ input.table_id_or_name }}/columns"
+    inputs:
+      - { name: doc_id, label: "The doc's id (List docs gives it)", required: true }
+      - { name: table_id_or_name, label: "The table's id or name", required: true }
+      - { name: visible_only, label: "Only the columns shown", kind: boolean }
+    query: { visibleOnly: "{{ input.visible_only }}", limit: "100" }
+    items: value.items
+    next: "value.nextPageToken == null || value.nextPageToken == '' ? null : {'pageToken': value.nextPageToken}"
+    output:
+      id: text
+      type: text
+      href: text
+      name: text
+      display: boolean
+      calculated: boolean
+      formula: text
+      defaultValue: text
+      format: record
+  list_rows:
+    label: "List a table's rows"
+    description: "The rows of a table or view, every page; only those with a value in a column, if asked."
+    method: GET
+    path: "/docs/{{ input.doc_id }}/tables/{{ input.table_id_or_name }}/rows"
+    inputs:
+      - { name: doc_id, label: "The doc's id (List docs gives it)", required: true }
+      - { name: table_id_or_name, label: "The table's id or name", required: true }
+      - { name: query, label: "Only rows with this value in a column, as column:value (a column's name in double quotes)" }
+      - { name: sort_by, label: "Sort by: createdAt (the first added first), natural (as the table shows them) or updatedAt" }
+      - name: use_column_names
+        label: "Name the values by column name, not column id"
+        kind: boolean
+      - { name: value_format, label: "How values come: simple, simpleWithArrays or rich" }
+      - name: visible_only
+        label: "Only the rows and columns shown"
+        kind: boolean
+      - name: sync_token
+        label: "Only what changed since an earlier list: the nextSyncToken it gave"
+    query:
+      query: "{{ input.query }}"
+      sortBy: "{{ input.sort_by }}"
+      useColumnNames: "{{ input.use_column_names }}"
+      valueFormat: "{{ input.value_format }}"
+      visibleOnly: "{{ input.visible_only }}"
+      syncToken: "{{ input.sync_token }}"
+      limit: "25"
+    items: value.items
+    next: "value.nextPageToken == null || value.nextPageToken == '' ? null : {'pageToken': value.nextPageToken}"
+    output:
+      id: text
+      type: text
+      href: text
+      name: text
+      index: number
+      browserLink: text
+      createdAt: text
+      updatedAt: text
+      values: record
+  get_doc:
+    label: "Look up a doc"
+    description: "A doc's details: its name, owner, size, folder and when it was changed."
+    method: GET
+    path: "/docs/{{ input.doc_id }}"
+    inputs: [{ name: doc_id, label: "The doc's id (List docs gives it)", required: true }]
+    output:
+      id: text
+      type: text
+      href: text
+      browserLink: text
+      icon: record
+      name: text
+      owner: text
+      ownerName: text
+      docSize: record
+      sourceDoc: record
+      createdAt: text
+      updatedAt: text
+      published: record
+      folder: record
+      workspace: record
+      workspaceId: text
+      folderId: text
+  create_page:
+    label: "Add a page"
+    description: "A new page in a doc, at the top or under another page."
+    write: true
+    method: POST
+    path: "/docs/{{ input.doc_id }}/pages"
+    inputs:
+      - { name: doc_id, label: "The doc's id (List docs gives it)", required: true }
+      - { name: name, label: "Name" }
+      - { name: subtitle, label: "Subtitle" }
+      - { name: icon_name, label: "An icon's name" }
+      - { name: image_url, label: "A cover image's address" }
+      - { name: parent_page_id, label: "The page to put it under (its id)" }
+      - name: page_content
+        label: "What it holds (as JSON): text, rich text, or an address to show as the whole page"
+        kind: record
+    send:
+      name: "{{ input.name }}"
+      subtitle: "{{ input.subtitle }}"
+      iconName: "{{ input.icon_name }}"
+      imageUrl: "{{ input.image_url }}"
+      parentPageId: "{{ input.parent_page_id }}"
+      pageContent: "{{ input.page_content }}"
+    output: { requestId: text, id: text }
+  get_page:
+    label: "Look up a page"
+    description: "A page's details: its name, where it sits, its sub-pages and who changed it last."
+    method: GET
+    path: "/docs/{{ input.doc_id }}/pages/{{ input.page_id_or_name }}"
+    inputs:
+      - { name: doc_id, label: "The doc's id (List docs gives it)", required: true }
+      - { name: page_id_or_name, label: "The page's id or name", required: true }
+    output:
+      id: text
+      type: text
+      href: text
+      browserLink: text
+      name: text
+      subtitle: text
+      icon: record
+      image: record
+      contentType: text
+      isHidden: boolean
+      isEffectivelyHidden: boolean
+      parent: record
+      children: list
+      authors: list
+      createdAt: text
+      createdBy: record
+      updatedAt: text
+      updatedBy: record
+  get_table:
+    label: "Look up a table"
+    description: "A table's or view's details: its display column, number of rows, sorts and filter."
+    method: GET
+    path: "/docs/{{ input.doc_id }}/tables/{{ input.table_id_or_name }}"
+    inputs:
+      - { name: doc_id, label: "The doc's id (List docs gives it)", required: true }
+      - { name: table_id_or_name, label: "The table's id or name", required: true }
+      - name: use_updated_table_layouts
+        label: "Tell detail and form layouts apart (not masterDetail for both)"
+        kind: boolean
+    query: { useUpdatedTableLayouts: "{{ input.use_updated_table_layouts }}" }
+    output:
+      id: text
+      type: text
+      tableType: text
+      href: text
+      browserLink: text
+      name: text
+      parent: record
+      parentTable: record
+      displayColumn: record
+      rowCount: number
+      sorts: list
+      layout: text
+      filter: record
+      createdAt: text
+      updatedAt: text
+  upsert_rows:
+    label: "Add or update rows"
+    description: "Adds rows to a table; given key columns, a row whose keys match one already there changes that one instead."
+    write: true
+    method: POST
+    path: "/docs/{{ input.doc_id }}/tables/{{ input.table_id_or_name }}/rows"
+    inputs:
+      - { name: doc_id, label: "The doc's id (List docs gives it)", required: true }
+      - { name: table_id_or_name, label: "The table's id or name", required: true }
+      - name: disable_parsing
+        label: "Keep the values exactly as given (not read as dates, numbers and the like)"
+        kind: boolean
+      - { name: rows, label: "The rows (as JSON): each a list of cells, a column and its value", required: true, kind: list }
+      - name: key_columns
+        label: "Key columns: the columns (ids) that tell one row from another, to change matching rows"
+        kind: list
+    query: { disableParsing: "{{ input.disable_parsing }}" }
+    send: { rows: "{{ input.rows }}", keyColumns: "{{ input.key_columns }}" }
+    output: { requestId: text, addedRowIds: list }
+  get_formula:
+    label: "Look up a named formula"
+    description: "A named formula and its value now."
+    method: GET
+    path: "/docs/{{ input.doc_id }}/formulas/{{ input.formula_id_or_name }}"
+    inputs:
+      - { name: doc_id, label: "The doc's id (List docs gives it)", required: true }
+      - { name: formula_id_or_name, label: "The formula's id or name", required: true }
+    output: { id: text, type: text, href: text, name: text, parent: record, value: text }
+  get_control:
+    label: "Look up a control"
+    description: "A control: its kind and its value now."
+    method: GET
+    path: "/docs/{{ input.doc_id }}/controls/{{ input.control_id_or_name }}"
+    inputs:
+      - { name: doc_id, label: "The doc's id (List docs gives it)", required: true }
+      - { name: control_id_or_name, label: "The control's id or name", required: true }
+    output: { id: text, type: text, href: text, name: text, parent: record, controlType: text, value: text }
+  update_doc:
+    label: "Rename a doc"
+    description: "Changes a doc's title or icon."
+    write: true
+    method: PATCH
+    path: "/docs/{{ input.doc_id }}"
+    inputs:
+      - { name: doc_id, label: "The doc's id (List docs gives it)", required: true }
+      - { name: title, label: "New title" }
+      - { name: icon_name, label: "A new icon's name" }
+    send: { title: "{{ input.title }}", iconName: "{{ input.icon_name }}" }
+  get_row:
+    label: "Look up a row"
+    description: "One row's values, and when it was added and last changed."
+    method: GET
+    path: "/docs/{{ input.doc_id }}/tables/{{ input.table_id_or_name }}/rows/{{ input.row_id_or_name }}"
+    inputs:
+      - { name: doc_id, label: "The doc's id (List docs gives it)", required: true }
+      - { name: table_id_or_name, label: "The table's id or name", required: true }
+      - { name: row_id_or_name, label: "The row's id or name", required: true }
+      - name: use_column_names
+        label: "Name the values by column name, not column id"
+        kind: boolean
+      - { name: value_format, label: "How values come: simple, simpleWithArrays or rich" }
+    query: { useColumnNames: "{{ input.use_column_names }}", valueFormat: "{{ input.value_format }}" }
+    output:
+      id: text
+      type: text
+      href: text
+      name: text
+      index: number
+      browserLink: text
+      createdAt: text
+      updatedAt: text
+      values: record
+      parent: record
+  get_column:
+    label: "Look up a column"
+    description: "A column's details: its format, formula and default value."
+    method: GET
+    path: "/docs/{{ input.doc_id }}/tables/{{ input.table_id_or_name }}/columns/{{ input.column_id_or_name }}"
+    inputs:
+      - { name: doc_id, label: "The doc's id (List docs gives it)", required: true }
+      - { name: table_id_or_name, label: "The table's id or name", required: true }
+      - { name: column_id_or_name, label: "The column's id or name", required: true }
+    output:
+      id: text
+      type: text
+      href: text
+      name: text
+      display: boolean
+      calculated: boolean
+      formula: text
+      defaultValue: text
+      format: record
+      parent: record
+  update_page:
+    label: "Change a page"
+    description: "Changes a page's name, subtitle, icon, cover or content, or hides it."
+    write: true
+    method: PUT
+    path: "/docs/{{ input.doc_id }}/pages/{{ input.page_id_or_name }}"
+    inputs:
+      - { name: doc_id, label: "The doc's id (List docs gives it)", required: true }
+      - { name: page_id_or_name, label: "The page's id or name", required: true }
+      - { name: name, label: "New name" }
+      - { name: subtitle, label: "New subtitle" }
+      - { name: icon_name, label: "A new icon's name" }
+      - { name: image_url, label: "A new cover image's address" }
+      - { name: is_hidden, label: "Hidden", kind: boolean }
+      - { name: content_update, label: "New content (as JSON), added to or in place of what is there", kind: record }
+    send:
+      name: "{{ input.name }}"
+      subtitle: "{{ input.subtitle }}"
+      iconName: "{{ input.icon_name }}"
+      imageUrl: "{{ input.image_url }}"
+      isHidden: "{{ input.is_hidden }}"
+      contentUpdate: "{{ input.content_update }}"
+    output: { requestId: text, id: text }
+  run_automation:
+    label: "Run an automation"
+    description: "Starts one of the doc's automations that runs when called (a webhook rule), with what is sent to it."
+    write: true
+    method: POST
+    path: "/docs/{{ input.doc_id }}/hooks/automation/{{ input.rule_id }}"
+    inputs:
+      - { name: doc_id, label: "The doc's id (List docs gives it)", required: true }
+      - { name: rule_id, label: "The automation rule's id", required: true }
+      - name: body
+        label: "What to send it (as JSON)"
+        kind: record
+    send: "{{ input.body }}"
+    output: { requestId: text }
+  get_mutation_status:
+    label: "Check that a change is done"
+    description: "Coda makes changes a moment after it is asked: this says whether the one with this request id is done."
+    method: GET
+    path: "/mutationStatus/{{ input.request_id }}"
+    inputs: [{ name: request_id, label: "The request id the change gave", required: true }]
+    output: { completed: boolean, warning: text }
+  update_row:
+    label: "Change a row"
+    description: "Changes some cells of one row."
+    write: true
+    method: PUT
+    path: "/docs/{{ input.doc_id }}/tables/{{ input.table_id_or_name }}/rows/{{ input.row_id_or_name }}"
+    inputs:
+      - { name: doc_id, label: "The doc's id (List docs gives it)", required: true }
+      - { name: table_id_or_name, label: "The table's id or name", required: true }
+      - { name: row_id_or_name, label: "The row's id or name", required: true }
+      - name: disable_parsing
+        label: "Keep the values exactly as given (not read as dates, numbers and the like)"
+        kind: boolean
+      - { name: cells, label: "The cells to change (as JSON): each a column and its value", required: true, kind: list }
+    query: { disableParsing: "{{ input.disable_parsing }}" }
+    send: { row: { cells: "{{ input.cells }}" } }
+    output: { requestId: text, id: text }
+  push_button:
+    label: "Push a button"
+    description: "Pushes the button in a button column, on one row: what the button does is done."
+    write: true
+    method: POST
+    path: "/docs/{{ input.doc_id }}/tables/{{ input.table_id_or_name }}/rows/{{ input.row_id_or_name }}/buttons/{{ input.column_id_or_name }}"
+    body: none
+    inputs:
+      - { name: doc_id, label: "The doc's id (List docs gives it)", required: true }
+      - { name: table_id_or_name, label: "The table's id or name", required: true }
+      - { name: row_id_or_name, label: "The row's id or name", required: true }
+      - { name: column_id_or_name, label: "The button column's id or name", required: true }
+    output: { requestId: text, rowId: text, columnId: text }
+  delete_rows:
+    label: "Delete rows"
+    description: "Removes the rows with these ids from a table."
+    write: true
+    method: DELETE
+    path: "/docs/{{ input.doc_id }}/tables/{{ input.table_id_or_name }}/rows"
+    inputs:
+      - { name: doc_id, label: "The doc's id (List docs gives it)", required: true }
+      - { name: table_id_or_name, label: "The table's id or name", required: true }
+      - { name: row_ids, label: "The rows' ids", required: true, kind: list }
+    send: { rowIds: "{{ input.row_ids }}" }
+    output: { requestId: text, rowIds: list }
+  delete_row:
+    label: "Delete a row"
+    description: "Removes one row from a table."
+    write: true
+    method: DELETE
+    path: "/docs/{{ input.doc_id }}/tables/{{ input.table_id_or_name }}/rows/{{ input.row_id_or_name }}"
+    inputs:
+      - { name: doc_id, label: "The doc's id (List docs gives it)", required: true }
+      - { name: table_id_or_name, label: "The table's id or name", required: true }
+      - { name: row_id_or_name, label: "The row's id or name", required: true }
+    output: { requestId: text, id: text }
+triggers:
+  new_row:
+    label: A new row
+    description: >-
+      Each row added to a table, asked for every few minutes. The table is read from its first row, so it watches
+      tables of up to 5,000 rows.
+    inputs:
+      - { name: doc_id, label: "The doc's id (List docs gives it)", required: true }
+      - { name: table_id_or_name, label: "The table's id or name", required: true }
+    poll:
+      action: list_rows
+      input: { doc_id: "{{ input.doc_id }}", table_id_or_name: "{{ input.table_id_or_name }}", use_column_names: true }
+      id: item.id
+      every: 5m
+  changed_row:
+    label: A row added or changed
+    description: >-
+      Each row added to a table, or whose cells were changed (not by a formula), asked for every few minutes; for
+      tables of up to 5,000 rows.
+    inputs:
+      - { name: doc_id, label: "The doc's id (List docs gives it)", required: true }
+      - { name: table_id_or_name, label: "The table's id or name", required: true }
+    poll:
+      action: list_rows
+      input: { doc_id: "{{ input.doc_id }}", table_id_or_name: "{{ input.table_id_or_name }}", use_column_names: true }
+      id: item.id
+      version: item.updatedAt
+      every: 5m

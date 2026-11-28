@@ -1,0 +1,6 @@
+action: list_devices
+credential: { access_token: BQ-test-token }
+exchanges:
+  - sent: { method: GET, url: https://api.spotify.com/v1/me/player/devices }
+    answer: { body: { devices: [{ id: dev-test-1, name: Shop speaker, type: Speaker, is_active: true, is_restricted: false, volume_percent: 40, supports_volume: true }] } }
+result: [{ id: dev-test-1, name: Shop speaker, type: Speaker, is_active: true, is_restricted: false, volume_percent: 40, supports_volume: true }]

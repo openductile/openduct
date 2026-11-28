@@ -1,0 +1,32 @@
+description: The organization's details
+action: get_organization
+credential:
+  api_key: test-key
+exchanges:
+- sent:
+    method: GET
+    url: https://onfleet.com/api/v2/organization
+    headers:
+      authorization: Basic dGVzdC1rZXk6
+  answer:
+    status: 200
+    body:
+      id: yAM*fDkztrT3gUcz9mNDgNOL
+      timeCreated: 1794500000000
+      timeLastModified: 1794500000000
+      name: Sample Deliveries
+      email: ops@example.com
+      image: null
+      timezone: America/Los_Angeles
+      country: US
+      delegatees: []
+result:
+  id: yAM*fDkztrT3gUcz9mNDgNOL
+  timeCreated: 1794500000000
+  timeLastModified: 1794500000000
+  name: Sample Deliveries
+  email: ops@example.com
+  image: null
+  timezone: America/Los_Angeles
+  country: US
+  delegatees: []

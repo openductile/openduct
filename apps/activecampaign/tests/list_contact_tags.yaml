@@ -1,0 +1,24 @@
+description: The tags on a contact
+action: list_contact_tags
+credential:
+  account: shopexample
+  api_key: test-key
+input:
+  contact_id: '113'
+exchanges:
+- sent:
+    method: GET
+    url: https://shopexample.api-us1.com/api/3/contacts/113/contactTags
+    headers:
+      api-token: test-key
+  answer:
+    status: 200
+    body:
+      contactTags:
+      - &id001
+        id: '55'
+        contact: '113'
+        tag: '20'
+        cdate: '2026-11-27T10:10:00-06:00'
+result:
+- *id001

@@ -1,0 +1,22 @@
+description: Files whose names match
+action: search_files
+credential: { url: "https://cloud.example.com", username: ann, password: app-pass-1 }
+input: { term: invoice, limit: 5 }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://cloud.example.com/ocs/v2.php/search/providers/files/search"
+      query: { term: invoice, limit: "5" }
+    answer:
+      status: 200
+      body:
+        ocs:
+          meta: { status: ok, statuscode: 200 }
+          data:
+            name: Files
+            isPaginated: true
+            cursor: 5
+            entries:
+              - { title: invoice-1001.pdf, subline: in Invoices, resourceUrl: "https://cloud.example.com/index.php/f/1234", thumbnailUrl: "", attributes: { fileId: "1234", path: /Invoices/invoice-1001.pdf } }
+result:
+  - { title: invoice-1001.pdf, subline: in Invoices, resourceUrl: "https://cloud.example.com/index.php/f/1234", thumbnailUrl: "", attributes: { fileId: "1234", path: /Invoices/invoice-1001.pdf } }

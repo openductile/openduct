@@ -1,0 +1,11 @@
+description: Fields of a record changed
+action: update_record
+credential: { instance: acme, username: integration.user, password: pw-test-1 }
+input: { table: sc_task, sys_id: 1f2e3d4c5b6a79880716253443526170, fields: { state: "3" } }
+exchanges:
+  - sent:
+      method: PATCH
+      url: "https://acme.service-now.com/api/now/table/sc_task/1f2e3d4c5b6a79880716253443526170"
+      body: { state: "3" }
+    answer: { status: 200, body: { result: { sys_id: 1f2e3d4c5b6a79880716253443526170, number: SCTASK0010001, state: "3" } } }
+result: { sys_id: 1f2e3d4c5b6a79880716253443526170, number: SCTASK0010001, state: "3" }

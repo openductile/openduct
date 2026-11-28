@@ -1,0 +1,11 @@
+description: Two tracks added at the top
+action: add_to_playlist
+credential: { access_token: BQ-test-token }
+input: { playlist: 0TestList000000000001, uris: "spotify:track:0TestTrack000000000001, spotify:track:0TestTrack000000000002", position: 0 }
+exchanges:
+  - sent:
+      method: POST
+      url: https://api.spotify.com/v1/playlists/0TestList000000000001/items
+      body: { uris: ["spotify:track:0TestTrack000000000001", "spotify:track:0TestTrack000000000002"], position: 0 }
+    answer: { status: 201, body: { snapshot_id: snap2 } }
+result: { snapshot_id: snap2 }

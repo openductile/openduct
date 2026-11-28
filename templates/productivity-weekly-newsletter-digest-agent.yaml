@@ -1,0 +1,49 @@
+name: All your newsletters in one weekly e-mail
+description: >-
+  Every Saturday at 8:00 Berlin time, an AI agent reads the week's newsletters in your Gmail - those under a label you
+  choose, or any it recognises - picks what matters for your work, and sends you one e-mail: the five to eight items
+  worth knowing, a line each with its link, and the newsletters that had nothing for you this week - candidates to
+  unsubscribe from. Say what matters to you in the first step. Needs: Gmail (gmail) and an AI credential
+  (model).
+category: Productivity
+trigger:
+  schedule: { every: week, on: [saturday], at: "08:00", timezone: Europe/Berlin }
+# What a test runs on: an event as this trigger gives it.
+sample:
+  scheduled_at: '2026-11-28T07:00:00Z'
+steps:
+  - name: me
+    set:
+      cares: "'I run a 12-person online shop selling kitchenware: e-commerce tools, shipping costs, marketing ideas that work for small brands, and EU rules for online sellers.'"
+      search: "'(label:newsletters OR category:updates OR list:*) newer_than:7d -from:me'"
+      to: "'me@example.com'"
+  - name: digest
+    agent:
+      credential: model
+      instructions: >-
+        You read a busy person's newsletters and keep only what matters to them: {{ steps.me.cares }}
+        Find the week's newsletters with find_emails (search {{ steps.me.search }}), read up to 25 of them with
+        read_email, and pick five to eight items. For each: one line on what it is and why it matters to them, and
+        its link from the newsletter. Then list, in one line, the newsletters that had nothing useful. Never invent
+        an item or a link; write "no link" when there is none. Plain words, no greeting.
+      input: "The week's newsletters, up to {{ value.scheduled_at.substring(0, 10) }}."
+      tools:
+        - name: find_emails
+          description: Finds e-mails by a Gmail search, giving each one's id.
+          gmail: { action: find_emails, credential: gmail }
+        - name: read_email
+          description: Reads one e-mail in full, by its id.
+          gmail: { action: read_email, credential: gmail }
+      allow: [find_emails, read_email]
+      max_turns: 30
+      max_tool_calls: 30
+      max_tokens: 1500
+      max_total_tokens: 400000
+  - name: send
+    gmail:
+      action: send_email
+      credential: gmail
+      to: "{{ steps.me.to }}"
+      subject: "Your newsletters, week to {{ value.scheduled_at.substring(0, 10) }}"
+      text: "{{ steps.digest.text }}"
+    retry: { attempts: 3, wait: 30s }

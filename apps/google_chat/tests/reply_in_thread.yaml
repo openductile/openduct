@@ -1,0 +1,12 @@
+description: A reply by a thread key of your own, through a space's webhook; a thread not found starts with that key
+action: reply_in_thread
+credential: { url: "https://chat.googleapis.com/v1/spaces/AAA/messages?key=k&token=t" }
+input: { text: "Packed, ships today", thread_key: order-A-1 }
+exchanges:
+  - sent:
+      method: POST
+      url: "https://chat.googleapis.com/v1/spaces/AAA/messages?key=k&token=t"
+      query: { messageReplyOption: REPLY_MESSAGE_FALLBACK_TO_NEW_THREAD }
+      body: { text: "Packed, ships today", thread: { threadKey: order-A-1 } }
+    answer: { body: { name: spaces/AAA/messages/m2, text: "Packed, ships today", thread: { name: spaces/AAA/threads/t1, threadKey: order-A-1 }, createTime: "2026-11-23T10:00:00Z" } }
+result: { name: spaces/AAA/messages/m2, text: "Packed, ships today", thread: { name: spaces/AAA/threads/t1, threadKey: order-A-1 }, createTime: "2026-11-23T10:00:00Z" }

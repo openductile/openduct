@@ -1,0 +1,7 @@
+description: An account out of searches is refused (429), in SerpApi's words
+action: google_search
+credential: { api_key: serp_test_key_1 }
+input: { q: plant pots }
+exchanges:
+  - answer: { status: 429, body: { error: "Your account has run out of searches." } }
+error: "SerpApi answered 429: Your account has run out of searches."

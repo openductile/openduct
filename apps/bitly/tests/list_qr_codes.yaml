@@ -1,0 +1,74 @@
+# Made by `openduct app from-openapi`: Retrieve QR Codes by Group.
+description: "Retrieve QR Codes by Group, made from the API description's schemas"
+action: list_qr_codes
+credential: { token: test-token }
+input: { group_guid: group_guid_1 }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://api-ssl.bitly.com/v4/groups/group_guid_1/qr-codes"
+      query: { size: "50" }
+      headers: { authorization: "Bearer test-token" }
+    answer:
+      status: 200
+      body:
+        qr_codes:
+          - qrcode_id: qrcode_1
+            group_guid: group_guid_1
+            title: example
+            is_customized: true
+            serialized_content: example
+            qr_code_type: bitlink
+            long_urls: [example]
+            bitlink_id: bitlink_1
+            domain: example
+            is_gs1: true
+            created_by: example
+            tags: [example]
+        pagination:
+          next: "https://api-ssl.bitly.com/v4/groups/group_guid_1/qr-codes?page=2"
+          search_after: Qn8sfFRC2tm
+          size: 50
+  - sent: { url: "https://api-ssl.bitly.com/v4/groups/group_guid_1/qr-codes?page=2" }
+    answer:
+      status: 200
+      body:
+        qr_codes:
+          - qrcode_id: qrcode_1
+            group_guid: group_guid_1
+            title: example
+            is_customized: true
+            serialized_content: example
+            qr_code_type: bitlink
+            long_urls: [example]
+            bitlink_id: bitlink_1
+            domain: example
+            is_gs1: true
+            created_by: example
+            tags: [example]
+        pagination: { next: null, search_after: Qn8sfFRC2tm, size: 50 }
+result:
+  - qrcode_id: qrcode_1
+    group_guid: group_guid_1
+    title: example
+    is_customized: true
+    serialized_content: example
+    qr_code_type: bitlink
+    long_urls: [example]
+    bitlink_id: bitlink_1
+    domain: example
+    is_gs1: true
+    created_by: example
+    tags: [example]
+  - qrcode_id: qrcode_1
+    group_guid: group_guid_1
+    title: example
+    is_customized: true
+    serialized_content: example
+    qr_code_type: bitlink
+    long_urls: [example]
+    bitlink_id: bitlink_1
+    domain: example
+    is_gs1: true
+    created_by: example
+    tags: [example]

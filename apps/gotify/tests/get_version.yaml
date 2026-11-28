@@ -1,0 +1,9 @@
+description: "The server's version"
+action: get_version
+credential: { base_url: "https://gotify.example.com", token: AzyoeNS.D4iJLVa }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://gotify.example.com/version"
+    answer: { body: { version: 3.1.1, commit: e6361caa512547052b1013dbf4544e6d7ff32604, buildDate: "2026-11-01T00:00:00Z" } }
+result: { version: 3.1.1, commit: e6361caa512547052b1013dbf4544e6d7ff32604, buildDate: "2026-11-01T00:00:00Z" }

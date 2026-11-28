@@ -1,0 +1,37 @@
+description: An address with a typo in its domain, and SendGrid's suggestion
+action: validate_email
+credential: { token: SG.validation-key }
+input: { email: ann@exmaple.com, source: signup }
+exchanges:
+  - sent:
+      method: POST
+      url: https://api.sendgrid.com/v3/validations/email
+      body: { email: ann@exmaple.com, source: signup }
+    answer:
+      body:
+        result:
+          email: ann@exmaple.com
+          verdict: Risky
+          score: 0.21
+          local: ann
+          host: exmaple.com
+          suggestion: example.com
+          checks:
+            domain: { has_valid_address_syntax: true, has_mx_or_a_record: false, is_suspected_disposable_address: false }
+            local_part: { is_suspected_role_address: false }
+            additional: { has_known_bounces: false, has_suspected_bounces: true }
+          source: SIGNUP
+          ip_address: 192.0.2.10
+result:
+  email: ann@exmaple.com
+  verdict: Risky
+  score: 0.21
+  local: ann
+  host: exmaple.com
+  suggestion: example.com
+  checks:
+    domain: { has_valid_address_syntax: true, has_mx_or_a_record: false, is_suspected_disposable_address: false }
+    local_part: { is_suspected_role_address: false }
+    additional: { has_known_bounces: false, has_suspected_bounces: true }
+  source: SIGNUP
+  ip_address: 192.0.2.10

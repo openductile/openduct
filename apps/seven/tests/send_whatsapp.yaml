@@ -1,0 +1,52 @@
+# Made by `openduct app from-openapi`: Send WhatsApp Message.
+description: "Send WhatsApp Message, made from the API description's schemas"
+action: send_whatsapp
+credential: { api_key: test-key }
+input: { from: example, to: example }
+exchanges:
+  - sent:
+      method: POST
+      url: "https://gateway.seven.io/api/waba/messages"
+      query: {}
+      headers: { x-api-key: test-key }
+      body: { from: example, to: example }
+    answer:
+      status: 200
+      body:
+        success: example
+        total_price: 1
+        balance: 1
+        debug: example
+        sms_type: WA
+        messages:
+          - id: id_1
+            sender: example
+            recipient: example
+            text: example
+            encoding: example
+            label: example
+            parts: 1
+            udh: example
+            is_binary: true
+            price: 1
+            channel: WA
+            success: true
+result:
+  success: example
+  total_price: 1
+  balance: 1
+  debug: example
+  sms_type: WA
+  messages:
+    - id: id_1
+      sender: example
+      recipient: example
+      text: example
+      encoding: example
+      label: example
+      parts: 1
+      udh: example
+      is_binary: true
+      price: 1
+      channel: WA
+      success: true

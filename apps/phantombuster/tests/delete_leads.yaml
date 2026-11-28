@@ -1,0 +1,11 @@
+description: Two leads removed
+action: delete_leads
+credential: { api_key: pb_test_key_1 }
+input: { ids: [l100, l101] }
+exchanges:
+  - sent:
+      method: POST
+      url: "https://api.phantombuster.com/api/v2/org-storage/leads/delete-many"
+      body: { ids: [l100, l101] }
+    answer: { status: 200, body: { deletedCount: 2 } }
+result: { deletedCount: 2 }

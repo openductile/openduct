@@ -1,0 +1,89 @@
+name: Website enquiries into your Airtable CRM, without duplicates
+description: >-
+  Your site's contact form posts each enquiry to this workflow's webhook ({"name", "email", "company", "message",
+  "page"}). A short script checks it and tidies it - a real e-mail address, a name, no empty message - and answers the
+  form with what is wrong when it is not right. A contact already in your Airtable Contacts table (by e-mail, whatever
+  its case) gets the new enquiry added and its count raised; a new one is added as a lead. The form is answered with
+  the contact's id. Needs: airtable.
+category: Sales
+trigger:
+  # Left empty here: each workflow made from the template is given a token of its own.
+  webhook: { token: "" }
+# What a test runs on: an event as this trigger gives it.
+sample:
+  name: '  Priya Natarajan '
+  email: Priya.N@quillfield-analytics.example
+  company: Quillfield Analytics
+  message: We would like a demo for a team of 12 next week.
+  page: /pricing
+steps:
+  - name: tidy
+    javascript: |
+      // Tidy what the form sent and say plainly what is wrong with it.
+      const text = (v) => String(v ?? "").replace(/\s+/g, " ").trim();
+      const name = text(value.name);
+      const email = text(value.email).toLowerCase();
+      const company = text(value.company);
+      const message = String(value.message ?? "").trim().slice(0, 5000);
+      const problems = [];
+      if (!name) problems.push("a name");
+      // Letters, digits and . _ % + - before the @, a domain with a dot after: no quotes or spaces.
+      if (!/^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$/.test(email)) problems.push("a valid e-mail address");
+      if (message.length < 5) problems.push("a message");
+      return { ok: problems.length === 0, problems, name, email, company, message, page: text(value.page) };
+  - name: refuse
+    if:
+      when: "!steps.tidy.ok"
+      then:
+        - respond:
+            status: 422
+            body: { ok: false, error: "{{ 'Please give ' + steps.tidy.problems.join(', ') + '.' }}" }
+        - stop: {}
+  # The e-mail was checked above: it holds no quote that could change the formula.
+  - name: known
+    airtable:
+      action: list_records
+      credential: airtable
+      base_id: appYourBaseId
+      table: Contacts
+      formula: "LOWER({Email}) = '{{ steps.tidy.email }}'"
+    retry: { attempts: 3, wait: 10s }
+  - name: save
+    if:
+      when: size(steps.known) > 0
+      then:
+        - name: updated
+          airtable:
+            action: update_record
+            credential: airtable
+            base_id: appYourBaseId
+            table: Contacts
+            record_id: "{{ steps.known[0].id }}"
+            fields:
+              Last enquiry: "{{ steps.tidy.message }}"
+              Last page: "{{ steps.tidy.page }}"
+              Enquiries: "{{ (has(steps.known[0].fields.Enquiries) ? double(steps.known[0].fields.Enquiries) : 1.0) + 1.0 }}"
+          retry: { attempts: 3, wait: 10s }
+      else:
+        - name: added
+          airtable:
+            action: add_record
+            credential: airtable
+            base_id: appYourBaseId
+            table: Contacts
+            fields:
+              Name: "{{ steps.tidy.name }}"
+              Email: "{{ steps.tidy.email }}"
+              Company: "{{ steps.tidy.company }}"
+              Status: Lead
+              Last enquiry: "{{ steps.tidy.message }}"
+              Last page: "{{ steps.tidy.page }}"
+              Enquiries: 1
+          retry: { attempts: 3, wait: 10s }
+  - name: answer
+    respond:
+      status: 200
+      body:
+        ok: true
+        contact: "{{ size(steps.known) > 0 ? steps.known[0].id : steps.added.id }}"
+        new: "{{ size(steps.known) == 0 }}"

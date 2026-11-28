@@ -1,0 +1,8 @@
+description: An incident changed since the poll before runs again
+trigger: updated_incident
+credential: { instance: acme, username: integration.user, password: pw-test-1 }
+seen: { items: [["s41", "2026-11-27 09:00:00"]] }
+exchanges:
+  - sent: { query: { sysparm_query: ORDERBYDESCsys_updated_on, sysparm_exclude_reference_link: "true", sysparm_limit: "100" } }
+    answer: { body: { result: [{ sys_id: s41, number: INC0010041, state: "6", sys_updated_on: "2026-11-27 10:00:00" }] } }
+runs: [{ sys_id: s41, number: INC0010041, state: "6", sys_updated_on: "2026-11-27 10:00:00" }]

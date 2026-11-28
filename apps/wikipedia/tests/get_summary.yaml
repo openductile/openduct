@@ -1,0 +1,9 @@
+description: An article's summary
+action: get_summary
+credential: { contact: ops@example.com }
+input: { title: Jupiter }
+exchanges:
+  - sent: { method: GET, url: https://en.wikipedia.org/api/rest_v1/page/summary/Jupiter, headers: { user-agent: "OpenDuct-workflow/1.0 (ops@example.com)" } }
+    answer:
+      body: { type: standard, title: Jupiter, description: Fifth planet from the Sun, extract: Jupiter is the fifth planet from the Sun and the largest in the Solar System., pageid: 38930, lang: en, content_urls: { desktop: { page: "https://en.wikipedia.org/wiki/Jupiter" } } }
+result: { type: standard, title: Jupiter, description: Fifth planet from the Sun, extract: Jupiter is the fifth planet from the Sun and the largest in the Solar System., pageid: 38930, lang: en, content_urls: { desktop: { page: "https://en.wikipedia.org/wiki/Jupiter" } } }

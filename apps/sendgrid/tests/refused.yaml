@@ -1,0 +1,9 @@
+description: A sender that was never verified - SendGrid's own words
+action: send_email
+credential: { token: SG.test-key }
+input: { to: ann@example.com, from: nobody@shop.example, subject: Hello, text: Hi }
+exchanges:
+  - answer:
+      status: 403
+      body: { errors: [{ message: "The from address does not match a verified Sender Identity. Mail cannot be sent until this error is resolved.", field: from, help: null }] }
+error: "SendGrid answered 403: The from address does not match a verified Sender Identity"

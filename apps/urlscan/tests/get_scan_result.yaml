@@ -1,0 +1,18 @@
+action: get_scan_result
+credential: { api_key: us_test_1 }
+input: { uuid: 0e37e828-a9d9-45c0-ac50-1ca579b86c72 }
+exchanges:
+  - sent: { method: GET, url: https://urlscan.io/api/v1/result/0e37e828-a9d9-45c0-ac50-1ca579b86c72/ }
+    answer:
+      body:
+        task: { uuid: 0e37e828-a9d9-45c0-ac50-1ca579b86c72, url: "https://shop.example.com/login", visibility: unlisted, time: "2026-11-27T10:00:00.000Z" }
+        page: { url: "https://shop.example.com/login", domain: shop.example.com, ip: 192.0.2.10, country: DE, status: "200" }
+        verdicts: { overall: { score: 100, malicious: true, brands: [brand-x] } }
+        lists: { domains: [shop.example.com], ips: [192.0.2.10] }
+        stats: { requests: 12 }
+result:
+  task: { uuid: 0e37e828-a9d9-45c0-ac50-1ca579b86c72, url: "https://shop.example.com/login", visibility: unlisted, time: "2026-11-27T10:00:00.000Z" }
+  page: { url: "https://shop.example.com/login", domain: shop.example.com, ip: 192.0.2.10, country: DE, status: "200" }
+  verdicts: { overall: { score: 100, malicious: true, brands: [brand-x] } }
+  lists: { domains: [shop.example.com], ips: [192.0.2.10] }
+  stats: { requests: 12 }

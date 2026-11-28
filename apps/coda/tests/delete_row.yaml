@@ -1,0 +1,13 @@
+# Made by `openduct app from-openapi`: Delete a row.
+description: "Delete a row, made from the API description's schemas"
+action: delete_row
+credential: { token: test-token }
+input: { doc_id: doc_1, table_id_or_name: example, row_id_or_name: example }
+exchanges:
+  - sent:
+      method: DELETE
+      url: "https://docs.superhuman.com/apis/v1/docs/doc_1/tables/example/rows/example"
+      query: {}
+      headers: { authorization: "Bearer test-token" }
+    answer: { status: 202, body: { requestId: abc-123-def-456, id: i-tuVwxYz } }
+result: { requestId: abc-123-def-456, id: i-tuVwxYz }

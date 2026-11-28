@@ -1,0 +1,24 @@
+description: The organisation's licences, with the organisation's own app signed in (its token from its id and secret)
+action: list_licenses
+sign_in: microsoft_entra_app
+credential: {tenant_id: 11111111-2222-3333-4444-555555555555, client_id: app-1, client_secret: secret-1, access_token: eyJ0-app,
+  expires_at: '4102444800'}
+exchanges:
+- sent:
+    method: GET
+    url: https://graph.microsoft.com/v1.0/subscribedSkus
+    headers: {authorization: Bearer eyJ0-app}
+  answer:
+    body:
+      value:
+      - &id001
+        id: 48a80680-7326-48cd-9935-b556b81d3a4e_c7df2760-2c81-4ef7-b578-5b5392b571df
+        skuId: c7df2760-2c81-4ef7-b578-5b5392b571df
+        skuPartNumber: ENTERPRISEPREMIUM
+        appliesTo: User
+        capabilityStatus: Enabled
+        consumedUnits: 14
+        prepaidUnits: {enabled: 25, lockedOut: 0, suspended: 0, warning: 0}
+        servicePlans: []
+result:
+- *id001

@@ -1,0 +1,32 @@
+description: Unsubscribed from a list, by default
+action: remove_from_list
+credential:
+  api_key: test-key
+  secret_key: test-secret
+input:
+  list_id: '55'
+  email: pat@example.com
+exchanges:
+- sent:
+    method: POST
+    url: https://api.mailjet.com/v3/REST/contactslist/55/managecontact
+    headers:
+      authorization: Basic dGVzdC1rZXk6dGVzdC1zZWNyZXQ=
+    body:
+      Action: unsub
+      Email: pat@example.com
+  answer:
+    status: 201
+    body:
+      Count: 1
+      Data:
+      - Action: unsub
+        Email: pat@example.com
+        Name: ''
+        Properties: {}
+      Total: 1
+result:
+  Action: unsub
+  Email: pat@example.com
+  Name: ''
+  Properties: {}

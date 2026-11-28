@@ -1,0 +1,11 @@
+description: A lead made into a contact, an account and a deal
+action: convert_lead
+credential: { access_token: 1000.test.token }
+input: { lead_id: "1000000000000000101", deal_name: Example Ltd - shelving, deal_stage: Qualification, deal_closing_date: "2026-12-31", deal_amount: 4800 }
+exchanges:
+  - sent:
+      method: POST
+      url: https://www.zohoapis.com/crm/v8/Leads/1000000000000000101/actions/convert
+      body: { data: [{ Deals: { Deal_Name: Example Ltd - shelving, Stage: Qualification, Closing_Date: "2026-12-31", Amount: 4800 } }] }
+    answer: { body: { data: [{ code: SUCCESS, status: success, message: Successfully converted, details: { Contacts: { name: Ann Lee, id: "1000000000000000201" }, Accounts: { name: Example Ltd, id: "1000000000000000301" }, Deals: { name: Example Ltd - shelving, id: "1000000000000000401" } } }] } }
+result: { Contacts: { name: Ann Lee, id: "1000000000000000201" }, Accounts: { name: Example Ltd, id: "1000000000000000301" }, Deals: { name: Example Ltd - shelving, id: "1000000000000000401" } }

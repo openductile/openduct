@@ -1,0 +1,18 @@
+description: More new messages than a poll takes - the rest wait for the next poll, which asks from the first left
+trigger: new_message
+credential: { bot_token: "123:abc" }
+seen: { cursor: 501, items: [] }
+max_items: 1
+exchanges:
+  - sent:
+      method: GET
+      query: { offset: "501", limit: "100", timeout: "0", allowed_updates: '["message"]' }
+    answer:
+      body:
+        ok: true
+        result:
+          - { update_id: 501, message: { message_id: 2, text: first } }
+          - { update_id: 502, message: { message_id: 3, text: second } }
+runs:
+  - { message_id: 2, text: first }
+cursor: 502

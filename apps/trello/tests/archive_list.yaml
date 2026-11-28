@@ -1,0 +1,11 @@
+description: A list archived
+action: archive_list
+credential: { api_key: testkey0123456789, token: ATTAtesttoken0123 }
+input: { list_id: 6567a1b2c3d4e5f6000000a1 }
+exchanges:
+  - sent:
+      method: PUT
+      url: https://api.trello.com/1/lists/6567a1b2c3d4e5f6000000a1/closed
+      query: { key: testkey0123456789, token: ATTAtesttoken0123, value: "true" }
+    answer: { body: { id: 6567a1b2c3d4e5f6000000a1, name: To do, closed: true } }
+result: { id: 6567a1b2c3d4e5f6000000a1, name: To do, closed: true }

@@ -1,0 +1,7 @@
+action: update_meeting
+credential: { access_token: zoom-test-token }
+input: { meeting_id: "85700000001", start_time: "2026-12-01T16:00:00", timezone: America/New_York }
+exchanges:
+  - sent: { method: PATCH, url: https://api.zoom.us/v2/meetings/85700000001, body: { start_time: "2026-12-01T16:00:00", timezone: America/New_York } }
+    answer: { status: 204 }
+result: { changed: true }

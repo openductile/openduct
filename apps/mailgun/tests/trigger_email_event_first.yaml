@@ -1,0 +1,9 @@
+description: The first poll notes what is there and runs nothing
+trigger: email_event
+credential: {"api_key": "key-test", "domain": "mg.example.com"}
+exchanges:
+  - sent: { query: { begin: "1699998200", ascending: "yes", limit: "300" } }
+    answer: { body: { items: [{"id": "ev_5", "event": "delivered", "timestamp": 1699999000.0, "recipient": "ann@example.com"}], paging: { next: "https://api.mailgun.net/v3/mg.example.com/events/p2" } } }
+  - sent: { url: "https://api.mailgun.net/v3/mg.example.com/events/p2" }
+    answer: { body: { items: [], paging: {} } }
+runs: []

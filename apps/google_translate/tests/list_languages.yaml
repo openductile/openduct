@@ -1,0 +1,11 @@
+description: "The languages, named in English"
+action: list_languages
+credential: {"api_key": "AIza-test"}
+input: {"names_in": "en"}
+exchanges:
+  - sent:
+      method: GET
+      url: "https://translation.googleapis.com/language/translate/v2/languages"
+      query: {"key": "AIza-test", "target": "en"}
+    answer: {"status": 200, "body": {"data": {"languages": [{"language": "de", "name": "German"}, {"language": "fr", "name": "French"}]}}}
+result: [{"language": "de", "name": "German"}, {"language": "fr", "name": "French"}]

@@ -1,0 +1,103 @@
+# Made by `openduct app from-openapi`: Get Tags.
+description: "Get Tags, made from the API description's schemas"
+action: list_tags
+credential: { api_key: test-key }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://a.klaviyo.com/api/tags"
+      query: { "page[size]": "50" }
+      headers: { authorization: test-key, revision: "2026-10-15" }
+    answer:
+      status: 200
+      body:
+        data:
+          - type: tag
+            id: abcd1234-ef56-gh78-ij90-abcdef123456
+            attributes: { name: example }
+            relationships:
+              tag-group:
+                data: { type: tag-group, id: id_1 }
+                links: { self: "https://example.com/1", related: "https://example.com/1" }
+              lists:
+                data: [{}]
+                links: { self: "https://example.com/1", related: "https://example.com/1" }
+              segments:
+                data: [{}]
+                links: { self: "https://example.com/1", related: "https://example.com/1" }
+              campaigns:
+                data: [{}]
+                links: { self: "https://example.com/1", related: "https://example.com/1" }
+              flows:
+                data: [{}]
+                links: { self: "https://example.com/1", related: "https://example.com/1" }
+            links: { self: "https://example.com/1" }
+        links:
+          self: "https://example.com/1"
+          prev: "https://example.com/1"
+          next: "https://a.klaviyo.com/api/tags?page=2"
+        meta: { agent_hints: { next_steps: [example] } }
+        included:
+          - type: tag-group
+            id: zyxw9876-vu54-ts32-rq10-zyxwvu654321
+            attributes: { name: example, exclusive: true, default: true }
+            relationships: { tags: {} }
+            links: { self: "https://example.com/1" }
+  - sent: { url: "https://a.klaviyo.com/api/tags?page=2" }
+    answer:
+      status: 200
+      body:
+        data:
+          - type: tag
+            id: id_2
+            attributes: { name: example }
+            relationships:
+              tag-group:
+                data: { type: tag-group, id: id_1 }
+                links: { self: "https://example.com/1", related: "https://example.com/1" }
+              lists:
+                data: [{}]
+                links: { self: "https://example.com/1", related: "https://example.com/1" }
+              segments:
+                data: [{}]
+                links: { self: "https://example.com/1", related: "https://example.com/1" }
+              campaigns:
+                data: [{}]
+                links: { self: "https://example.com/1", related: "https://example.com/1" }
+              flows:
+                data: [{}]
+                links: { self: "https://example.com/1", related: "https://example.com/1" }
+            links: { self: "https://example.com/1" }
+        links: { self: "https://example.com/1", prev: "https://example.com/1", next: null }
+        meta: { agent_hints: { next_steps: [example] } }
+        included:
+          - type: tag-group
+            id: zyxw9876-vu54-ts32-rq10-zyxwvu654321
+            attributes: { name: example, exclusive: true, default: true }
+            relationships: { tags: {} }
+            links: { self: "https://example.com/1" }
+result:
+  - type: tag
+    id: abcd1234-ef56-gh78-ij90-abcdef123456
+    attributes: { name: example }
+    relationships:
+      tag-group:
+        data: { type: tag-group, id: id_1 }
+        links: { self: "https://example.com/1", related: "https://example.com/1" }
+      lists: { data: [{}], links: { self: "https://example.com/1", related: "https://example.com/1" } }
+      segments: { data: [{}], links: { self: "https://example.com/1", related: "https://example.com/1" } }
+      campaigns: { data: [{}], links: { self: "https://example.com/1", related: "https://example.com/1" } }
+      flows: { data: [{}], links: { self: "https://example.com/1", related: "https://example.com/1" } }
+    links: { self: "https://example.com/1" }
+  - type: tag
+    id: id_2
+    attributes: { name: example }
+    relationships:
+      tag-group:
+        data: { type: tag-group, id: id_1 }
+        links: { self: "https://example.com/1", related: "https://example.com/1" }
+      lists: { data: [{}], links: { self: "https://example.com/1", related: "https://example.com/1" } }
+      segments: { data: [{}], links: { self: "https://example.com/1", related: "https://example.com/1" } }
+      campaigns: { data: [{}], links: { self: "https://example.com/1", related: "https://example.com/1" } }
+      flows: { data: [{}], links: { self: "https://example.com/1", related: "https://example.com/1" } }
+    links: { self: "https://example.com/1" }

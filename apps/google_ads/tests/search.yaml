@@ -1,0 +1,26 @@
+description: A query over two pages - the next page's token goes in the body; the dashes of the id are taken out
+action: search
+credential: { access_token: ya29.test }
+input: { customer_id: 123-456-7890, query: "SELECT ad_group.id, ad_group.name FROM ad_group", developer_token: devtok-test }
+exchanges:
+  - sent:
+      method: POST
+      url: "https://googleads.googleapis.com/v26/customers/1234567890/googleAds:search"
+      headers: { authorization: Bearer ya29.test, developer-token: devtok-test }
+      body: { query: "SELECT ad_group.id, ad_group.name FROM ad_group" }
+    answer:
+      status: 200
+      body:
+        results: [{ adGroup: { resourceName: customers/1234567890/adGroups/501, id: "501", name: Garden chairs } }]
+        nextPageToken: pg2
+        fieldMask: adGroup.id,adGroup.name
+  - sent:
+      body: { query: "SELECT ad_group.id, ad_group.name FROM ad_group", pageToken: pg2 }
+    answer:
+      status: 200
+      body:
+        results: [{ adGroup: { resourceName: customers/1234567890/adGroups/502, id: "502", name: Garden tables } }]
+        fieldMask: adGroup.id,adGroup.name
+result:
+  - { adGroup: { resourceName: customers/1234567890/adGroups/501, id: "501", name: Garden chairs } }
+  - { adGroup: { resourceName: customers/1234567890/adGroups/502, id: "502", name: Garden tables } }

@@ -1,0 +1,57 @@
+description: The query is sent in double quotes
+action: search_tickets
+credential:
+  domain: acme
+  api_key: test-key
+input:
+  query: status:2 AND priority:4
+exchanges:
+- sent:
+    method: GET
+    url: https://acme.freshdesk.com/api/v2/search/tickets
+    query:
+      query: '"status:2 AND priority:4"'
+    headers:
+      authorization: Basic dGVzdC1rZXk6WA==
+  answer:
+    status: 200
+    body:
+      total: 1
+      results:
+      - id: 20
+        subject: Cracked lid
+        description_text: The lid of my mug is cracked.
+        status: 2
+        priority: 4
+        source: 2
+        type: null
+        requester_id: 5001
+        responder_id: null
+        group_id: null
+        company_id: null
+        tags: &id001 []
+        cc_emails: &id002 []
+        custom_fields: &id003 {}
+        due_by: '2026-11-20T11:30:00Z'
+        fr_due_by: '2026-11-18T11:30:00Z'
+        created_at: '2026-11-17T12:02:50Z'
+        updated_at: '2026-11-17T12:02:51Z'
+result:
+- id: 20
+  subject: Cracked lid
+  description_text: The lid of my mug is cracked.
+  status: 2
+  priority: 4
+  source: 2
+  type: null
+  requester_id: 5001
+  responder_id: null
+  group_id: null
+  company_id: null
+  tags: *id001
+  cc_emails: *id002
+  custom_fields: *id003
+  due_by: '2026-11-20T11:30:00Z'
+  fr_due_by: '2026-11-18T11:30:00Z'
+  created_at: '2026-11-17T12:02:50Z'
+  updated_at: '2026-11-17T12:02:51Z'

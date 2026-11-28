@@ -1,0 +1,13 @@
+description: "A To Do task with a title alone: no notes, no due date sent"
+action: add_task
+credential: { access_token: eyJ0 }
+input: { list_id: AAMkShop2, title: Call the supplier }
+exchanges:
+  - sent:
+      method: POST
+      url: https://graph.microsoft.com/v1.0/me/todo/lists/AAMkShop2/tasks
+      body: { title: Call the supplier }
+    answer:
+      status: 201
+      body: { id: AlMKXwbQ3, title: Call the supplier, status: notStarted, importance: normal }
+result: { id: AlMKXwbQ3, title: Call the supplier, status: notStarted, importance: normal }

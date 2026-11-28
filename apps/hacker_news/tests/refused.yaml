@@ -1,0 +1,7 @@
+description: A search the search refuses (400) fails in its words
+action: search
+credential: {}
+input: { query: plants, tags: "(story" }
+exchanges:
+  - answer: { status: 400, body: { message: "Invalid syntax for tags", status: 400 } }
+error: "Hacker News answered 400: Invalid syntax for tags"

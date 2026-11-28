@@ -1,0 +1,49 @@
+# Made by `openduct app from-openapi`: Look up an organization.
+description: "Look up an organization, made from the API description's schemas"
+action: get_organization
+credential: { token: test-token }
+input: { organization_id_or_slug: example }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://us.sentry.io/api/0/organizations/example/"
+      query: {}
+      headers: { authorization: "Bearer test-token" }
+    answer:
+      status: 200
+      body:
+        features: [example]
+        extraOptions: {}
+        access: [example]
+        onboardingTasks:
+          - task: example
+            status: example
+            completionSeen: "2026-01-15T09:30:00Z"
+            dateCompleted: "2026-01-15T09:30:00Z"
+            data: { invited_member_id: 1, platform: example, plugin: example, providers: [null] }
+        id: id_1
+        slug: example
+        status: { id: id_1, name: example }
+        name: example
+        dateCreated: "2026-01-15T09:30:00Z"
+        isEarlyAdopter: true
+        require2FA: true
+        avatar: { avatarType: letter_avatar, avatarUuid: avatar_uuid_1, avatarUrl: example }
+result:
+  features: [example]
+  extraOptions: {}
+  access: [example]
+  onboardingTasks:
+    - task: example
+      status: example
+      completionSeen: "2026-01-15T09:30:00Z"
+      dateCompleted: "2026-01-15T09:30:00Z"
+      data: { invited_member_id: 1, platform: example, plugin: example, providers: [null] }
+  id: id_1
+  slug: example
+  status: { id: id_1, name: example }
+  name: example
+  dateCreated: "2026-01-15T09:30:00Z"
+  isEarlyAdopter: true
+  require2FA: true
+  avatar: { avatarType: letter_avatar, avatarUuid: avatar_uuid_1, avatarUrl: example }

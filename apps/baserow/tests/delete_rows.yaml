@@ -1,0 +1,11 @@
+description: Two rows removed at once
+action: delete_rows
+credential: { token: br-test-token }
+input: { table_id: 1203, row_ids: "10, 11" }
+exchanges:
+  - sent:
+      method: POST
+      url: https://api.baserow.io/api/database/rows/table/1203/batch-delete/
+      body: { items: [10, 11] }
+    answer: { status: 204 }
+result: { deleted: true }

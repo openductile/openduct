@@ -1,0 +1,14 @@
+description: A site's lists and libraries
+action: list_lists
+credential: { access_token: eyJ0 }
+input: { site_id: "example.sharepoint.com,da60e844-ba1d-49bc-b4d4-d5e36bae9019,712a596e-90a1-49e3-9b48-bfa80bee8740" }
+exchanges:
+  - sent: { method: GET, url: "https://graph.microsoft.com/v1.0/sites/example.sharepoint.com,da60e844-ba1d-49bc-b4d4-d5e36bae9019,712a596e-90a1-49e3-9b48-bfa80bee8740/lists" }
+    answer:
+      body:
+        value:
+          - { id: 243bca4b-4e5e-45af-b37d-25f6135a740d, name: Orders, displayName: Orders, list: { template: genericList, hidden: false }, webUrl: "https://example.sharepoint.com/sites/sales/Lists/Orders" }
+          - { id: b57af081-936c-4803-a120-d94887b03864, name: Shared Documents, displayName: Documents, list: { template: documentLibrary, hidden: false }, webUrl: "https://example.sharepoint.com/sites/sales/Shared%20Documents" }
+result:
+  - { id: 243bca4b-4e5e-45af-b37d-25f6135a740d, name: Orders, displayName: Orders, list: { template: genericList, hidden: false }, webUrl: "https://example.sharepoint.com/sites/sales/Lists/Orders" }
+  - { id: b57af081-936c-4803-a120-d94887b03864, name: Shared Documents, displayName: Documents, list: { template: documentLibrary, hidden: false }, webUrl: "https://example.sharepoint.com/sites/sales/Shared%20Documents" }

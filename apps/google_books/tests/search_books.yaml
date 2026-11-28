@@ -1,0 +1,107 @@
+description: "A search by author with an API key, over two pages"
+action: search_books
+sign_in: google_books_key
+credential: { api_key: test-key }
+input: { q: "inauthor:Example gardening", order_by: newest }
+exchanges:
+  - sent:
+      method: GET
+      url: https://books.googleapis.com/books/v1/volumes
+      query: { q: "inauthor:Example gardening", orderBy: newest, maxResults: "40", key: test-key }
+    answer:
+      body:
+        kind: books#volumes
+        totalItems: 41
+        items:
+          - { kind: "books#volume", id: zyTCAlFPjgYC, volumeInfo: { title: The Example Garden, authors: [Ann Example], publishedDate: "2024-03-01" } }
+          - { kind: "books#volume", id: aBcDeFgHiJ0C, volumeInfo: { title: Roses for Everyone, authors: [Ann Example] } }
+          - { kind: "books#volume", id: aBcDeFgHiJ2C, volumeInfo: { title: Bulbs, authors: [Ann Example] } }
+          - { kind: "books#volume", id: aBcDeFgHiJ3C, volumeInfo: { title: Herbs, authors: [Ann Example] } }
+          - { kind: "books#volume", id: aBcDeFgHiJ4C, volumeInfo: { title: Trees, authors: [Ann Example] } }
+          - { kind: "books#volume", id: aBcDeFgHiJ5C, volumeInfo: { title: Ferns, authors: [Ann Example] } }
+          - { kind: "books#volume", id: aBcDeFgHiJ6C, volumeInfo: { title: Moss, authors: [Ann Example] } }
+          - { kind: "books#volume", id: aBcDeFgHiJ7C, volumeInfo: { title: Soil, authors: [Ann Example] } }
+          - { kind: "books#volume", id: aBcDeFgHiJ8C, volumeInfo: { title: Seeds, authors: [Ann Example] } }
+          - { kind: "books#volume", id: aBcDeFgHiJ9C, volumeInfo: { title: Ponds, authors: [Ann Example] } }
+          - { kind: "books#volume", id: bBcDeFgHiJ0C, volumeInfo: { title: Hedges, authors: [Ann Example] } }
+          - { kind: "books#volume", id: bBcDeFgHiJ1C, volumeInfo: { title: Lawns, authors: [Ann Example] } }
+          - { kind: "books#volume", id: bBcDeFgHiJ2C, volumeInfo: { title: Paths, authors: [Ann Example] } }
+          - { kind: "books#volume", id: bBcDeFgHiJ3C, volumeInfo: { title: Walls, authors: [Ann Example] } }
+          - { kind: "books#volume", id: bBcDeFgHiJ4C, volumeInfo: { title: Sheds, authors: [Ann Example] } }
+          - { kind: "books#volume", id: bBcDeFgHiJ5C, volumeInfo: { title: Fences, authors: [Ann Example] } }
+          - { kind: "books#volume", id: bBcDeFgHiJ6C, volumeInfo: { title: Gates, authors: [Ann Example] } }
+          - { kind: "books#volume", id: bBcDeFgHiJ7C, volumeInfo: { title: Pots, authors: [Ann Example] } }
+          - { kind: "books#volume", id: bBcDeFgHiJ8C, volumeInfo: { title: Tools, authors: [Ann Example] } }
+          - { kind: "books#volume", id: bBcDeFgHiJ9C, volumeInfo: { title: Compost, authors: [Ann Example] } }
+          - { kind: "books#volume", id: cBcDeFgHiJ0C, volumeInfo: { title: Water, authors: [Ann Example] } }
+          - { kind: "books#volume", id: cBcDeFgHiJ1C, volumeInfo: { title: Light, authors: [Ann Example] } }
+          - { kind: "books#volume", id: cBcDeFgHiJ2C, volumeInfo: { title: Shade, authors: [Ann Example] } }
+          - { kind: "books#volume", id: cBcDeFgHiJ3C, volumeInfo: { title: Frost, authors: [Ann Example] } }
+          - { kind: "books#volume", id: cBcDeFgHiJ4C, volumeInfo: { title: Wind, authors: [Ann Example] } }
+          - { kind: "books#volume", id: cBcDeFgHiJ5C, volumeInfo: { title: Rain, authors: [Ann Example] } }
+          - { kind: "books#volume", id: cBcDeFgHiJ6C, volumeInfo: { title: Bees, authors: [Ann Example] } }
+          - { kind: "books#volume", id: cBcDeFgHiJ7C, volumeInfo: { title: Birds, authors: [Ann Example] } }
+          - { kind: "books#volume", id: cBcDeFgHiJ8C, volumeInfo: { title: Worms, authors: [Ann Example] } }
+          - { kind: "books#volume", id: cBcDeFgHiJ9C, volumeInfo: { title: Snails, authors: [Ann Example] } }
+          - { kind: "books#volume", id: dBcDeFgHiJ0C, volumeInfo: { title: Slugs, authors: [Ann Example] } }
+          - { kind: "books#volume", id: dBcDeFgHiJ1C, volumeInfo: { title: Weeds, authors: [Ann Example] } }
+          - { kind: "books#volume", id: dBcDeFgHiJ2C, volumeInfo: { title: Fruit, authors: [Ann Example] } }
+          - { kind: "books#volume", id: dBcDeFgHiJ3C, volumeInfo: { title: Vegetables, authors: [Ann Example] } }
+          - { kind: "books#volume", id: dBcDeFgHiJ4C, volumeInfo: { title: Vines, authors: [Ann Example] } }
+          - { kind: "books#volume", id: dBcDeFgHiJ5C, volumeInfo: { title: Grasses, authors: [Ann Example] } }
+          - { kind: "books#volume", id: dBcDeFgHiJ6C, volumeInfo: { title: Cacti, authors: [Ann Example] } }
+          - { kind: "books#volume", id: dBcDeFgHiJ7C, volumeInfo: { title: Orchids, authors: [Ann Example] } }
+          - { kind: "books#volume", id: dBcDeFgHiJ8C, volumeInfo: { title: Lilies, authors: [Ann Example] } }
+          - { kind: "books#volume", id: dBcDeFgHiJ9C, volumeInfo: { title: Tulips, authors: [Ann Example] } }
+  - sent:
+      method: GET
+      url: https://books.googleapis.com/books/v1/volumes
+      query: { q: "inauthor:Example gardening", orderBy: newest, maxResults: "40", startIndex: "40", key: test-key }
+    answer:
+      body:
+        kind: books#volumes
+        totalItems: 41
+        items:
+          - { kind: "books#volume", id: eBcDeFgHiJ0C, volumeInfo: { title: Daisies, authors: [Ann Example] } }
+result:
+  - { kind: "books#volume", id: zyTCAlFPjgYC, volumeInfo: { title: The Example Garden, authors: [Ann Example], publishedDate: "2024-03-01" } }
+  - { kind: "books#volume", id: aBcDeFgHiJ0C, volumeInfo: { title: Roses for Everyone, authors: [Ann Example] } }
+  - { kind: "books#volume", id: aBcDeFgHiJ2C, volumeInfo: { title: Bulbs, authors: [Ann Example] } }
+  - { kind: "books#volume", id: aBcDeFgHiJ3C, volumeInfo: { title: Herbs, authors: [Ann Example] } }
+  - { kind: "books#volume", id: aBcDeFgHiJ4C, volumeInfo: { title: Trees, authors: [Ann Example] } }
+  - { kind: "books#volume", id: aBcDeFgHiJ5C, volumeInfo: { title: Ferns, authors: [Ann Example] } }
+  - { kind: "books#volume", id: aBcDeFgHiJ6C, volumeInfo: { title: Moss, authors: [Ann Example] } }
+  - { kind: "books#volume", id: aBcDeFgHiJ7C, volumeInfo: { title: Soil, authors: [Ann Example] } }
+  - { kind: "books#volume", id: aBcDeFgHiJ8C, volumeInfo: { title: Seeds, authors: [Ann Example] } }
+  - { kind: "books#volume", id: aBcDeFgHiJ9C, volumeInfo: { title: Ponds, authors: [Ann Example] } }
+  - { kind: "books#volume", id: bBcDeFgHiJ0C, volumeInfo: { title: Hedges, authors: [Ann Example] } }
+  - { kind: "books#volume", id: bBcDeFgHiJ1C, volumeInfo: { title: Lawns, authors: [Ann Example] } }
+  - { kind: "books#volume", id: bBcDeFgHiJ2C, volumeInfo: { title: Paths, authors: [Ann Example] } }
+  - { kind: "books#volume", id: bBcDeFgHiJ3C, volumeInfo: { title: Walls, authors: [Ann Example] } }
+  - { kind: "books#volume", id: bBcDeFgHiJ4C, volumeInfo: { title: Sheds, authors: [Ann Example] } }
+  - { kind: "books#volume", id: bBcDeFgHiJ5C, volumeInfo: { title: Fences, authors: [Ann Example] } }
+  - { kind: "books#volume", id: bBcDeFgHiJ6C, volumeInfo: { title: Gates, authors: [Ann Example] } }
+  - { kind: "books#volume", id: bBcDeFgHiJ7C, volumeInfo: { title: Pots, authors: [Ann Example] } }
+  - { kind: "books#volume", id: bBcDeFgHiJ8C, volumeInfo: { title: Tools, authors: [Ann Example] } }
+  - { kind: "books#volume", id: bBcDeFgHiJ9C, volumeInfo: { title: Compost, authors: [Ann Example] } }
+  - { kind: "books#volume", id: cBcDeFgHiJ0C, volumeInfo: { title: Water, authors: [Ann Example] } }
+  - { kind: "books#volume", id: cBcDeFgHiJ1C, volumeInfo: { title: Light, authors: [Ann Example] } }
+  - { kind: "books#volume", id: cBcDeFgHiJ2C, volumeInfo: { title: Shade, authors: [Ann Example] } }
+  - { kind: "books#volume", id: cBcDeFgHiJ3C, volumeInfo: { title: Frost, authors: [Ann Example] } }
+  - { kind: "books#volume", id: cBcDeFgHiJ4C, volumeInfo: { title: Wind, authors: [Ann Example] } }
+  - { kind: "books#volume", id: cBcDeFgHiJ5C, volumeInfo: { title: Rain, authors: [Ann Example] } }
+  - { kind: "books#volume", id: cBcDeFgHiJ6C, volumeInfo: { title: Bees, authors: [Ann Example] } }
+  - { kind: "books#volume", id: cBcDeFgHiJ7C, volumeInfo: { title: Birds, authors: [Ann Example] } }
+  - { kind: "books#volume", id: cBcDeFgHiJ8C, volumeInfo: { title: Worms, authors: [Ann Example] } }
+  - { kind: "books#volume", id: cBcDeFgHiJ9C, volumeInfo: { title: Snails, authors: [Ann Example] } }
+  - { kind: "books#volume", id: dBcDeFgHiJ0C, volumeInfo: { title: Slugs, authors: [Ann Example] } }
+  - { kind: "books#volume", id: dBcDeFgHiJ1C, volumeInfo: { title: Weeds, authors: [Ann Example] } }
+  - { kind: "books#volume", id: dBcDeFgHiJ2C, volumeInfo: { title: Fruit, authors: [Ann Example] } }
+  - { kind: "books#volume", id: dBcDeFgHiJ3C, volumeInfo: { title: Vegetables, authors: [Ann Example] } }
+  - { kind: "books#volume", id: dBcDeFgHiJ4C, volumeInfo: { title: Vines, authors: [Ann Example] } }
+  - { kind: "books#volume", id: dBcDeFgHiJ5C, volumeInfo: { title: Grasses, authors: [Ann Example] } }
+  - { kind: "books#volume", id: dBcDeFgHiJ6C, volumeInfo: { title: Cacti, authors: [Ann Example] } }
+  - { kind: "books#volume", id: dBcDeFgHiJ7C, volumeInfo: { title: Orchids, authors: [Ann Example] } }
+  - { kind: "books#volume", id: dBcDeFgHiJ8C, volumeInfo: { title: Lilies, authors: [Ann Example] } }
+  - { kind: "books#volume", id: dBcDeFgHiJ9C, volumeInfo: { title: Tulips, authors: [Ann Example] } }
+  - { kind: "books#volume", id: eBcDeFgHiJ0C, volumeInfo: { title: Daisies, authors: [Ann Example] } }

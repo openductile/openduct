@@ -1,0 +1,10 @@
+description: Stripe refuses an address it cannot reach, and says why
+trigger: event
+register: true
+workflow: wf1
+address: http://localhost:8080/hooks/h1
+credential: { secret_key: sk_test_1 }
+input: { events: invoice.paid }
+exchanges:
+  - answer: { status: 400, body: { error: { message: "Invalid URL: URL must be publicly accessible." } } }
+refused: "Stripe answered 400: Invalid URL"

@@ -1,0 +1,7 @@
+description: The first poll notes the contacts there and runs nothing
+trigger: new_contact
+credential: { access_token: ya29.test }
+exchanges:
+  - sent: { query: {"personFields": "names,emailAddresses,phoneNumbers,organizations,addresses,birthdays,biographies,urls,memberships,metadata", "sortOrder": "LAST_MODIFIED_DESCENDING", "pageSize": "100"} }
+    answer: { body: { connections: [{"resourceName": "people/c111", "etag": "%EgUBAi43PRoEAQIFByIM", "names": [{"displayName": "Ann Lee", "givenName": "Ann", "familyName": "Lee"}], "emailAddresses": [{"value": "ann@example.com"}, {"value": "ann.lee@example.org"}], "phoneNumbers": [{"value": "+1 555 0100"}], "organizations": [{"name": "Northwind Example", "title": "Owner"}], "biographies": [{"value": "Met at the spring fair", "contentType": "TEXT_PLAIN"}], "memberships": [{"contactGroupMembership": {"contactGroupId": "myContacts", "contactGroupResourceName": "contactGroups/myContacts"}}]}, {"resourceName": "people/c222", "etag": "%EgUBAi43PRoEAQIFByIN", "names": [{"displayName": "Bo Chen", "givenName": "Bo", "familyName": "Chen"}], "emailAddresses": [{"value": "bo@example.com"}]}] } }
+runs: []

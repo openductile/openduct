@@ -1,0 +1,12 @@
+description: "An email sent as an ordinary form, with a tag and a reply-to"
+action: send_email
+credential: {"api_key": "key-test", "domain": "mg.example.com"}
+input: {"from": "Shop <orders@mg.example.com>", "to": "ann@example.com", "subject": "Your order", "text": "Thanks for your order.", "reply_to": "help@example.com", "tag": "orders"}
+exchanges:
+  - sent:
+      method: POST
+      url: "https://api.mailgun.net/v3/mg.example.com/messages"
+      headers: {"authorization": "Basic YXBpOmtleS10ZXN0"}
+      body: {"from": "Shop <orders@mg.example.com>", "to": "ann@example.com", "subject": "Your order", "text": "Thanks for your order.", "h:Reply-To": "help@example.com", "o:tag": "orders"}
+    answer: {"status": 200, "body": {"id": "<20261127100000.1.ABC@mg.example.com>", "message": "Queued. Thank you."}}
+result: {"id": "<20261127100000.1.ABC@mg.example.com>", "message": "Queued. Thank you."}

@@ -1,0 +1,7 @@
+description: A batch not ready yet answers 200 with success false; the step fails in Dropcontact's words
+action: get_results
+credential: { api_key: dc_test_key_1 }
+input: { request_id: abcdefghijklmno }
+exchanges:
+  - answer: { status: 200, body: { error: false, reason: "Request not ready yet, try again in 30 seconds", success: false } }
+error: "Request not ready yet, try again in 30 seconds"

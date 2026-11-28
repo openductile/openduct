@@ -1,0 +1,11 @@
+description: A message the bot posted, deleted
+action: delete
+credential: { bot_token: xoxb-1 }
+input: { channel: C0123456, ts: "1700000050.000200" }
+exchanges:
+  - sent:
+      method: POST
+      url: https://slack.com/api/chat.delete
+      body: { channel: C0123456, ts: "1700000050.000200" }
+    answer: { body: { ok: true, channel: C0123456, ts: "1700000050.000200" } }
+result: { ok: true, channel: C0123456, ts: "1700000050.000200" }

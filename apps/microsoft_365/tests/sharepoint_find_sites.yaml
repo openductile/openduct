@@ -1,0 +1,28 @@
+description: Sites found by a word
+action: find_sites
+credential: { access_token: eyJ0 }
+input: { search: sales }
+exchanges:
+  - sent:
+      method: GET
+      url: https://graph.microsoft.com/v1.0/sites
+      query: { search: sales }
+      headers: { authorization: Bearer eyJ0 }
+    answer:
+      body:
+        value:
+          - id: "example.sharepoint.com,da60e844-ba1d-49bc-b4d4-d5e36bae9019,712a596e-90a1-49e3-9b48-bfa80bee8740"
+            name: sales
+            displayName: Sales
+            description: ""
+            webUrl: "https://example.sharepoint.com/sites/sales"
+            createdDateTime: "2025-10-18T03:05:59Z"
+            lastModifiedDateTime: "2026-11-18T10:40:59Z"
+result:
+  - id: "example.sharepoint.com,da60e844-ba1d-49bc-b4d4-d5e36bae9019,712a596e-90a1-49e3-9b48-bfa80bee8740"
+    name: sales
+    displayName: Sales
+    description: ""
+    webUrl: "https://example.sharepoint.com/sites/sales"
+    createdDateTime: "2025-10-18T03:05:59Z"
+    lastModifiedDateTime: "2026-11-18T10:40:59Z"

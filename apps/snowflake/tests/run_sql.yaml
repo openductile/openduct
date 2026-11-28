@@ -1,0 +1,54 @@
+description: A query with a bound value - its columns and rows, as Snowflake's SQL API answers
+action: run_sql
+credential: { account: exampleorg-example1, token: pat-test-1 }
+input:
+  statement: "select id, email, total from orders where email = ?"
+  bindings: { "1": { type: TEXT, value: ann@example.com } }
+  warehouse: REPORTING_WH
+  database: SHOP
+  schema: PUBLIC
+exchanges:
+  - sent:
+      method: POST
+      url: https://exampleorg-example1.snowflakecomputing.com/api/v2/statements
+      headers:
+        authorization: Bearer pat-test-1
+        x-snowflake-authorization-token-type: PROGRAMMATIC_ACCESS_TOKEN
+        user-agent: OpenDuct/1.0
+      body:
+        statement: "select id, email, total from orders where email = ?"
+        bindings: { "1": { type: TEXT, value: ann@example.com } }
+        warehouse: REPORTING_WH
+        database: SHOP
+        schema: PUBLIC
+    answer:
+      status: 200
+      body:
+        code: "090001"
+        sqlState: "00000"
+        message: Statement executed successfully.
+        statementHandle: 01b2c3d4-0000-4000-8000-000000000001
+        createdOn: 1764230400000
+        statementStatusUrl: /api/v2/statements/01b2c3d4-0000-4000-8000-000000000001
+        resultSetMetaData:
+          format: jsonv2
+          numRows: 2
+          rowType:
+            - { name: ID, type: FIXED, length: 0, precision: 38, scale: 0, nullable: false }
+            - { name: EMAIL, type: TEXT, length: 256, precision: 0, scale: 0, nullable: true }
+            - { name: TOTAL, type: FIXED, length: 0, precision: 10, scale: 2, nullable: true }
+          partitionInfo: [{ rowCount: 2, uncompressedSize: 120 }]
+        data:
+          - ["1001", ann@example.com, "42.50"]
+          - ["1002", ann@example.com, "18.00"]
+result:
+  statement_handle: 01b2c3d4-0000-4000-8000-000000000001
+  code: "090001"
+  message: Statement executed successfully.
+  columns: [ID, EMAIL, TOTAL]
+  rows:
+    - ["1001", ann@example.com, "42.50"]
+    - ["1002", ann@example.com, "18.00"]
+  row_count: 2
+  partitions: 1
+  stats: null

@@ -1,0 +1,50 @@
+name: A reminder of the e-mails you starred to answer
+description: >-
+  Star an e-mail in Gmail when it needs an answer from you. Every weekday at 16:00 your time, this finds the starred
+  ones waiting more than two days and sends you one short e-mail listing them - who, what about, how long it has
+  waited - oldest first, so nothing important slips. Unstar an e-mail once it is answered. Set the time zone and your
+  address to your own. Needs: Gmail (gmail).
+category: Productivity
+trigger:
+  schedule: { every: weekday, at: "16:00", timezone: America/Los_Angeles }
+# What a test runs on: an event as this trigger gives it.
+sample:
+  scheduled_at: '2026-11-27T00:00:00Z'
+steps:
+  - name: waiting
+    gmail:
+      action: find_emails
+      credential: gmail
+      q: "is:starred older_than:2d -in:sent -in:chats"
+    retry: { attempts: 3, wait: 30s }
+  - where: size(steps.waiting) > 0
+  # The 25 oldest are enough for one reminder.
+  - name: some
+    list: { items: steps.waiting, limit: 25 }
+  - name: each
+    for_each:
+      items: steps.some
+      steps:
+        - name: mail
+          gmail: { action: read_email, credential: gmail, message_id: "{{ item.id }}" }
+          retry: { attempts: 3, wait: 10s }
+        - name: line
+          set:
+            # Who it is from, its subject and its date, from the message's headers.
+            text: >-
+              cel.bind(h, has(steps.mail.payload) && has(steps.mail.payload.headers) ? steps.mail.payload.headers : [],
+                cel.bind(from, h.filter(x, x.name.lowerAscii() == 'from').map(x, x.value).join(' '),
+                cel.bind(subject, h.filter(x, x.name.lowerAscii() == 'subject').map(x, x.value).join(' '),
+                  '- ' + (from == '' ? 'someone' : from) + ': ' + (subject == '' ? '(no subject)' : subject)
+                  + (has(steps.mail.internalDate) ? ', waiting ' + string(int((timestamp(value.scheduled_at) - timestamp(int(int(steps.mail.internalDate) / 1000))).getMinutes() / 1440)) + ' days' : ''))))
+            at: "has(steps.mail.internalDate) ? int(steps.mail.internalDate) : 0"
+  - name: oldest_first
+    list: { items: steps.each, sort: item.line.at }
+  - name: remind
+    gmail:
+      action: send_email
+      credential: gmail
+      to: me@example.com
+      subject: "{{ size(steps.waiting) }} starred e-mails are waiting for your answer"
+      text: "Starred more than two days ago and not answered yet:\n\n{{ steps.oldest_first.map(e, e.line.text).join('\\n') }}\n\nUnstar each one once it is answered."
+    retry: { attempts: 3, wait: 30s }

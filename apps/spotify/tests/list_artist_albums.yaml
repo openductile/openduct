@@ -1,0 +1,14 @@
+description: An artist's albums over two pages, the next one at the address Spotify gives
+action: list_artist_albums
+credential: { access_token: BQ-test-token }
+input: { artist: 0TestArtist00000000001, include_groups: "album,single" }
+exchanges:
+  - sent:
+      url: https://api.spotify.com/v1/artists/0TestArtist00000000001/albums
+      query: { include_groups: "album,single", limit: "10" }
+    answer: { body: { items: [{ id: 0TestAlbum000000000001, name: Example Album, album_group: album }], next: "https://api.spotify.com/v1/artists/0TestArtist00000000001/albums?offset=10&limit=10&include_groups=album,single" } }
+  - sent: { url: "https://api.spotify.com/v1/artists/0TestArtist00000000001/albums?offset=10&limit=10&include_groups=album,single" }
+    answer: { body: { items: [{ id: 0TestAlbum000000000002, name: Example Single, album_group: single }], next: null } }
+result:
+  - { id: 0TestAlbum000000000001, name: Example Album, album_group: album }
+  - { id: 0TestAlbum000000000002, name: Example Single, album_group: single }

@@ -1,0 +1,108 @@
+name: Job applications with a CV, screened by the hiring manager
+description: >-
+  Candidates apply on a form the studio serves, with their CV as a PDF. The CV is read, kept in your S3 bucket, and
+  e-mailed to the hiring manager with a link to a short screening form; the run waits for the answer, up to a week. A
+  candidate invited to interview is added to Lever through its API and told so; every other candidate hears back
+  kindly too, so nobody is left waiting. Needs: hr_files (s3: AWS S3, or a store that speaks its API), mail (your mail
+  server), lever (a basic credential: your Lever API key as the user name, no password).
+category: HR
+trigger:
+  form:
+    title: Apply to work with us
+    description: Tell us who you are and attach your CV. We answer every application within a week.
+    fields:
+      - { name: name, label: Your name, type: text, required: true, max_length: 120 }
+      - { name: email, label: Your e-mail, type: email, required: true }
+      - { name: role, label: The job, type: dropdown, options: [Barista, Shift lead, Baker, Delivery driver], required: true }
+      - { name: cv, label: "Your CV (a PDF, up to 2 MB)", type: file, accept: ".pdf,application/pdf", required: true }
+      - { name: note, label: "Anything you want to add (optional)", type: long_text, max_length: 2000 }
+    thanks: Thank you for applying - we answer within a week.
+# What a test runs on: an answer as the form gives it (the CV is a small PDF, in Base64).
+sample:
+  name: Jordan Example
+  email: jordan@example.com
+  role: Barista
+  note: I can start in January.
+  cv:
+    name: jordan-example-cv.pdf
+    type: application/pdf
+    size: 742
+    base64: JVBERi0xLjQKMSAwIG9iago8PCAvVHlwZSAvQ2F0YWxvZyAvUGFnZXMgMiAwIFIgPj4KZW5kb2JqCjIgMCBvYmoKPDwgL1R5cGUgL1BhZ2VzIC9LaWRzIFszIDAgUl0gL0NvdW50IDEgPj4KZW5kb2JqCjMgMCBvYmoKPDwgL1R5cGUgL1BhZ2UgL1BhcmVudCAyIDAgUiAvTWVkaWFCb3ggWzAgMCA2MTIgNzkyXSAvQ29udGVudHMgNCAwIFIgL1Jlc291cmNlcyA8PCAvRm9udCA8PCAvRjEgNSAwIFIgPj4gPj4gPj4KZW5kb2JqCjQgMCBvYmoKPDwgL0xlbmd0aCAxOTcgPj4Kc3RyZWFtCkJUIC9GMSAxMSBUZiA1MCA3ODAgVGQgMTQgVEwKKEpvcmRhbiBFeGFtcGxlIC0gam9yZGFuQGV4YW1wbGUuY29tKSBUaiBUKgooQmFyaXN0YSwgQmVhbiBUaGVyZSBDYWZlLCAyMDIzIC0gbm93KSBUaiBUKgooU2hpZnQgbGVhZCwgQ29ybmVyIEN1cCwgMjAyMSAtIDIwMjMpIFRqIFQqCihGb29kIGhhbmRsZXIgY2VydGlmaWNhdGUpIFRqIFQqCkVUCmVuZHN0cmVhbQplbmRvYmoKNSAwIG9iago8PCAvVHlwZSAvRm9udCAvU3VidHlwZSAvVHlwZTEgL0Jhc2VGb250IC9IZWx2ZXRpY2EgPj4KZW5kb2JqCnhyZWYKMCA2CjAwMDAwMDAwMDAgNjU1MzUgZiAKMDAwMDAwMDAwOSAwMDAwMCBuIAowMDAwMDAwMDU4IDAwMDAwIG4gCjAwMDAwMDAxMTUgMDAwMDAgbiAKMDAwMDAwMDI0MSAwMDAwMCBuIAowMDAwMDAwNDg5IDAwMDAwIG4gCnRyYWlsZXIKPDwgL1NpemUgNiAvUm9vdCAxIDAgUiA+PgpzdGFydHhyZWYKNTU5CiUlRU9GCg==
+steps:
+  # The upload as a file of the run, then its text.
+  - name: cv_file
+    convert:
+      format: base64
+      base64: value.cv.base64
+      name: "{{ value.cv.name }}"
+      type: application/pdf
+  - name: cv
+    extract_file: { file: steps.cv_file, format: pdf }
+  - name: kept
+    storage:
+      action: write
+      credential: hr_files
+      path: "applications/{{ value.role.lowerAscii().replace(' ', '-') }}/{{ value.email.lowerAscii().replace('@', '-at-') }}.pdf"
+      file: steps.cv_file
+      overwrite: true
+    retry: { attempts: 3, wait: 10s }
+  - name: to_manager
+    email:
+      credential: mail
+      to: hiring@example.com
+      reply_to: "{{ value.email }}"
+      subject: "New application: {{ value.name }} for {{ value.role }}"
+      text: >-
+        {{ value.name }} ({{ value.email }}) applies for {{ value.role }}.{{ value.note == null ? '' : ' They add: ' + value.note }}
+
+        The CV is attached; it starts:
+        {{ size(steps.cv.text) > 1500 ? steps.cv.text.substring(0, 1500) + '...' : steps.cv.text }}
+
+        Screen the application here - the link works once: {{ links.screen }}
+      attachments: steps.cv_file
+  - name: screen
+    form:
+      title: "Screen {{ value.name }} for {{ value.role }}"
+      description: "{{ value.email }} applied for {{ value.role }}. The CV came by e-mail."
+      fields:
+        - { name: decision, label: Your decision, type: dropdown, options: [Invite to interview, Keep on file, Decline], required: true }
+        - { name: notes, label: "Notes for the team (not sent to the candidate)", type: long_text, max_length: 2000 }
+      timeout: 7d
+      on_timeout: continue
+  - name: next
+    switch:
+      cases:
+        - label: invite
+          when: steps.screen.decision == 'Invite to interview'
+          steps:
+            - name: in_lever
+              http:
+                method: POST
+                url: https://api.lever.co/v1/opportunities
+                credential: lever
+                # The Lever user the candidate is added as: their id, from Lever's users list.
+                query: { perform_as: your-lever-user-id }
+                json:
+                  name: "{{ value.name }}"
+                  emails: ["{{ value.email }}"]
+                  tags: ["{{ value.role }}"]
+                  sources: [Careers form]
+                  origin: applied
+                sample: { data: { id: 250d8f03-1111-4c33-9a54-example0001 } }
+              retry: { attempts: 3, wait: 15s }
+            - name: invited
+              email:
+                credential: mail
+                to: "{{ value.email }}"
+                subject: "Your application for {{ value.role }}"
+                text: "Hello {{ value.name }}, thank you for applying. We would like to meet you: we write in the next few days to find a time."
+      default:
+        - name: answered
+          email:
+            credential: mail
+            to: "{{ value.email }}"
+            subject: "Your application for {{ value.role }}"
+            text: >-
+              Hello {{ value.name }}, thank you for applying for {{ value.role }}. We will not take your application
+              further this time{{ steps.screen.decision == 'Keep on file' ? ', but we keep your CV and write if a job that
+              suits you opens' : '' }}. We wish you the best.

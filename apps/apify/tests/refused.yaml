@@ -1,0 +1,7 @@
+description: A run longer than Apify waits for is refused, with its reason
+action: run_and_get_items
+credential: { api_token: apify_api_test1 }
+input: { actor: apify/web-scraper }
+exchanges:
+  - answer: { status: 408, body: { error: { type: run-timeout-exceeded, message: "Actor run exceeded the timeout of 300 seconds for this API endpoint" } } }
+error: "Apify answered 408: Actor run exceeded the timeout of 300 seconds"

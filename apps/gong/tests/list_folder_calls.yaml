@@ -1,0 +1,34 @@
+# Made by `openduct app from-openapi`: List the calls in a library folder.
+description: "List the calls in a library folder, made from the API description's schemas"
+action: list_folder_calls
+credential: { access_key: ann, access_key_secret: test-password }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://api.gong.io/v2/library/folder-content"
+      query: {}
+      headers: { authorization: "Basic YW5uOnRlc3QtcGFzc3dvcmQ=" }
+    answer:
+      status: 200
+      body:
+        requestId: "4al018gzaztcr8nbukw"
+        id: "3843152912968920037"
+        name: example
+        createdBy: "234599484848423"
+        updated: "2020-03-14T13:30:00Z"
+        calls:
+          - id: "7782342274025937895"
+            title: example
+            note: example
+            addedBy: "234599484848423"
+            created: "2020-01-12T22:30:00Z"
+            url: example
+            snippet: { fromSec: 21, toSec: 132 }
+result:
+  - id: "7782342274025937895"
+    title: example
+    note: example
+    addedBy: "234599484848423"
+    created: "2020-01-12T22:30:00Z"
+    url: example
+    snippet: { fromSec: 21, toSec: 132 }

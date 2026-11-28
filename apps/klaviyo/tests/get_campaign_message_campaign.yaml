@@ -1,0 +1,55 @@
+# Made by `openduct app from-openapi`: Get Campaign for Campaign Message.
+description: "Get Campaign for Campaign Message, made from the API description's schemas"
+action: get_campaign_message_campaign
+credential: { api_key: test-key }
+input: { id: id_1 }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://a.klaviyo.com/api/campaign-messages/id_1/campaign"
+      query: {}
+      headers: { authorization: test-key, revision: "2026-10-15" }
+    answer:
+      status: 200
+      body:
+        data:
+          type: campaign
+          id: id_1
+          attributes:
+            created_at: "2026-01-15T09:30:00Z"
+            updated_at: "2026-01-15T09:30:00Z"
+            definition:
+              name: example
+              builder: canvas
+              archived: true
+              color: example
+              description: example
+              send_settings: {}
+          relationships:
+            campaign-audiences: { data: [null], links: {} }
+            campaign-messages: { data: [null], links: {} }
+            tags: { data: [null], links: {} }
+          links: { self: "https://example.com/1" }
+        links: { self: "https://example.com/1" }
+        meta: { agent_hints: { next_steps: [example] } }
+result:
+  data:
+    type: campaign
+    id: id_1
+    attributes:
+      created_at: "2026-01-15T09:30:00Z"
+      updated_at: "2026-01-15T09:30:00Z"
+      definition:
+        name: example
+        builder: canvas
+        archived: true
+        color: example
+        description: example
+        send_settings: {}
+    relationships:
+      campaign-audiences: { data: [null], links: {} }
+      campaign-messages: { data: [null], links: {} }
+      tags: { data: [null], links: {} }
+    links: { self: "https://example.com/1" }
+  links: { self: "https://example.com/1" }
+  meta: { agent_hints: { next_steps: [example] } }

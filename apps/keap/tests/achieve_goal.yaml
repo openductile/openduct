@@ -1,0 +1,30 @@
+# Made by `openduct app from-openapi`: Achieve a campaign goal.
+description: "Achieve a campaign goal, made from the API description's schemas"
+action: achieve_goal
+credential: { access_token: test-access-token }
+input: { contact_id: 789 }
+exchanges:
+  - sent:
+      method: POST
+      url: "https://api.keap.com/crm/rest/v2/automations/goals/achieve"
+      query: {}
+      headers: { authorization: "Bearer test-access-token" }
+      body: { contact_id: 789 }
+    answer:
+      status: 200
+      body:
+        results:
+          - success: true
+            message: example
+            automation_id: 123
+            goal_id: 456
+            flow_start_results: [{}]
+            flow_stop_results: [{}]
+result:
+  results:
+    - success: true
+      message: example
+      automation_id: 123
+      goal_id: 456
+      flow_start_results: [{}]
+      flow_stop_results: [{}]

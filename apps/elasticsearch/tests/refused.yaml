@@ -1,0 +1,16 @@
+description: 'An index that is not there: the step fails in Elasticsearch''s words'
+action: find_documents
+credential: {url: 'https://search.example.com:9200', api_key: VnVhQ2ZHY0JDZGJrUW0tZTVhT3g6dWkybHAyYXhUTm1zeWFrdzl0dk5udw==}
+input: {index: ordrs}
+exchanges:
+- answer:
+    status: 404
+    body:
+      error:
+        root_cause:
+        - {type: index_not_found_exception, reason: 'no such index [ordrs]', index: ordrs}
+        type: index_not_found_exception
+        reason: no such index [ordrs]
+        index: ordrs
+      status: 404
+error: 'Elasticsearch answered 404: no such index [ordrs]'

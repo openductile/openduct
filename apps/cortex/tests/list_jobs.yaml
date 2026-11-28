@@ -1,0 +1,15 @@
+description: "The newest successful jobs on addresses"
+action: list_jobs
+credential: { base_url: "https://cortex.example.com:9001", api_key: test-key }
+input: { status: Success, data_type: ip, how_many: 20 }
+exchanges:
+  - sent:
+      method: POST
+      url: "https://cortex.example.com:9001/api/job/_search"
+      query: { range: "0-20", sort: "-createdAt" }
+      body: { query: { _and: [{ status: Success }, { dataType: ip }] } }
+    answer:
+      body:
+        - { id: AWNei4vH3rJ8unegCPB9, analyzerName: Abuse_Finder_3_0, status: Success, data: 203.0.113.7, dataType: ip, tlp: 1, createdAt: 1764237600000 }
+result:
+  - { id: AWNei4vH3rJ8unegCPB9, analyzerName: Abuse_Finder_3_0, status: Success, data: 203.0.113.7, dataType: ip, tlp: 1, createdAt: 1764237600000 }

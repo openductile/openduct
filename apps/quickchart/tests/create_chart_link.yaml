@@ -1,0 +1,21 @@
+description: A bar chart of the week's sales kept, with a short link to its image (with a paid key, in the address and the body)
+action: create_chart_link
+credential: { api_key: qc-test-1 }
+input:
+  chart: { type: bar, data: { labels: [Mon, Tue, Wed], datasets: [{ label: Sales, data: [120, 90, 150] }] } }
+  width: 600
+  background_color: white
+exchanges:
+  - sent:
+      method: POST
+      url: https://quickchart.io/chart/create
+      query: { key: qc-test-1 }
+      body:
+        chart: { type: bar, data: { labels: [Mon, Tue, Wed], datasets: [{ label: Sales, data: [120, 90, 150] }] } }
+        width: 600
+        backgroundColor: white
+        key: qc-test-1
+    answer:
+      status: 200
+      body: { success: true, url: "https://quickchart.io/chart/render/zf-abc123example" }
+result: { success: true, url: "https://quickchart.io/chart/render/zf-abc123example" }

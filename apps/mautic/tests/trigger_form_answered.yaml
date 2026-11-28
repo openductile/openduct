@@ -1,0 +1,11 @@
+description: A form answer, signed; the run gets the submission
+trigger: form_answered
+workflow: wf3
+credential: {"site_url": "https://mautic.example.com", "username": "admin", "password": "pw-test", "webhook_secret@wf3": "mautic-hook-secret-1"}
+delivery:
+  headers: { webhook-signature: "UXzRo/b++ZRJtWUFe+/vj6nl7buJJ91uu035joJsstw=" }
+  body: '{"mautic.form_on_submit":[{"submission":{"id":301,"form":{"id":4,"name":"Contact us","alias":"contactus"},"lead":{"id":52},"dateSubmitted":"2026-11-27T12:00:00+00:00","referer":"https://www.example.com/contact","results":{"email":"dee@example.com","message":"Do you ship abroad?"}},"timestamp":"2026-11-27T12:00:00+00:00"}],"timestamp":"2026-11-27T12:00:01+00:00"}'
+  at: 1764237600
+runs:
+  - {"id": 301, "form": {"id": 4, "name": "Contact us", "alias": "contactus"}, "lead": {"id": 52}, "dateSubmitted": "2026-11-27T12:00:00+00:00", "referer": "https://www.example.com/contact", "results": {"email": "dee@example.com", "message": "Do you ship abroad?"}}
+ids: ["301"]

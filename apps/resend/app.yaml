@@ -1,0 +1,499 @@
+# Copyright 2026 Ductile AI, Inc
+# SPDX-License-Identifier: Apache-2.0
+# Resend: made by `openduct app from-openapi` from https://github.com/resend/resend-openapi/blob/90a7e8ecf9ae/resend.yaml (MIT licence) (Resend 1.5.1, OpenAPI 3.1).
+# Checked as made. Change what you like, then run `openduct app check` and `openduct app test` again.
+app: resend
+name: Resend
+category: email
+description: "Resend is the email platform for developers."
+docs: "https://resend.com/docs/api-reference"
+hosts: [api.resend.com]
+base_url: "https://api.resend.com"
+sign_in:
+  - id: resend
+    label: "An access token"
+    fields: [{ name: token, label: "The access token (or API key) it sends as a bearer token", secret: true }]
+    headers: { Authorization: "Bearer {{ credential.token }}" }
+actions:
+  list_inboxes:
+    label: "Retrieve a list of inboxes"
+    description: "Returns the inboxes of the team, newest first."
+    method: GET
+    path: "/inboxes"
+    inputs: [{ name: before, label: "Return items before this cursor" }]
+    query: { before: "{{ input.before }}", limit: "100" }
+    items: value.data
+    next: "value.has_more == true && size(value.data) > 0 ? {'after': value.data[size(value.data) - 1].id} : null"
+    output:
+      id: text
+      name: text
+      email_address: text
+      from_name: text
+      unread: number
+      last_received: text
+      created_at: text
+      updated_at: text
+  list_emails:
+    label: "Retrieve a list of emails"
+    method: GET
+    path: "/emails"
+    inputs: [{ name: before, label: "Return items before this cursor" }]
+    query: { before: "{{ input.before }}", limit: "100" }
+    items: value.data
+    next: "value.has_more == true && size(value.data) > 0 ? {'after': value.data[size(value.data) - 1].id} : null"
+    output:
+      object: text
+      id: text
+      message_id: text
+      to: list
+      from: text
+      created_at: text
+      subject: text
+      html: text
+      text: text
+      bcc: list
+      cc: list
+      reply_to: list
+      last_event: text
+  list_domains:
+    label: "Retrieve a list of domains"
+    method: GET
+    path: "/domains"
+    inputs: [{ name: before, label: "Return items before this cursor" }]
+    query: { before: "{{ input.before }}", limit: "100" }
+    items: value.data
+    next: "value.has_more == true && size(value.data) > 0 ? {'after': value.data[size(value.data) - 1].id} : null"
+    output:
+      id: text
+      name: text
+      status: text
+      created_at: text
+      region: text
+      open_tracking: boolean
+      click_tracking: boolean
+      capabilities: record
+  list_contacts:
+    label: "Retrieve a list of contacts"
+    method: GET
+    path: "/contacts"
+    inputs: [{ name: before, label: "Return items before this cursor" }]
+    query: { before: "{{ input.before }}", limit: "100" }
+    items: value.data
+    next: "value.has_more == true && size(value.data) > 0 ? {'after': value.data[size(value.data) - 1].id} : null"
+    output:
+      id: text
+      email: text
+      first_name: text
+      last_name: text
+      created_at: text
+      unsubscribed: boolean
+  list_broadcasts:
+    label: "Retrieve a list of broadcasts"
+    method: GET
+    path: "/broadcasts"
+    inputs: [{ name: before, label: "Return items before this cursor" }]
+    query: { before: "{{ input.before }}", limit: "100" }
+    items: value.data
+    next: "value.has_more == true && size(value.data) > 0 ? {'after': value.data[size(value.data) - 1].id} : null"
+    output:
+      id: text
+      name: text
+      audience_id: text
+      segment_id: text
+      status: text
+      created_at: text
+      scheduled_at: text
+      sent_at: text
+      topic_id: text
+  create_inbox:
+    label: "Create an inbox"
+    description: "Creates an inbox that sends and receives email at an address on one of your domains."
+    write: true
+    method: POST
+    path: "/inboxes"
+    inputs:
+      - { name: email_address, label: "The inbox email address on one of your domains", required: true }
+      - { name: name, label: "Internal name for the inbox" }
+      - { name: from_name, label: "The name recipients see when mail is sent from this inbox" }
+      - name: forwarding
+        label: "When true, Resend provisions a receiving address so you can receive mail…"
+        kind: boolean
+        description: "When true, Resend provisions a receiving address so you can receive mail without adding an MX record."
+    send:
+      email_address: "{{ input.email_address }}"
+      name: "{{ input.name }}"
+      from_name: "{{ input.from_name }}"
+      forwarding: "{{ input.forwarding }}"
+    output: { object: text, id: text }
+  create_email:
+    label: "Send an email"
+    write: true
+    method: POST
+    path: "/emails"
+    inputs:
+      - name: idempotency_key
+        label: "A unique identifier for the request to ensure emails are only sent once"
+      - { name: from, label: "Sender email address", required: true }
+      - { name: to, label: "Recipient email address", required: true }
+      - { name: subject, label: "Email subject", required: true }
+      - { name: bcc, label: "Bcc recipient email address" }
+      - { name: cc, label: "Cc recipient email address" }
+      - { name: reply_to, label: "Reply-to email address" }
+      - { name: html, label: "The HTML version of the message" }
+      - { name: text, label: "The plain text version of the message" }
+      - { name: template, label: "Use a published template to send the email", kind: record }
+      - { name: headers, label: "Custom headers to add to the email", kind: record }
+      - { name: scheduled_at, label: "Schedule email to be sent later" }
+      - { name: attachments, label: Attachments, kind: list }
+      - { name: tags, label: Tags, kind: list }
+      - { name: topic_id, label: "The topic ID to scope the email to" }
+    headers: { Idempotency-Key: "{{ input.idempotency_key }}" }
+    send:
+      from: "{{ input.from }}"
+      to: "{{ input.to }}"
+      subject: "{{ input.subject }}"
+      bcc: "{{ input.bcc }}"
+      cc: "{{ input.cc }}"
+      reply_to: "{{ input.reply_to }}"
+      html: "{{ input.html }}"
+      text: "{{ input.text }}"
+      template: "{{ input.template }}"
+      headers: "{{ input.headers }}"
+      scheduled_at: "{{ input.scheduled_at }}"
+      attachments: "{{ input.attachments }}"
+      tags: "{{ input.tags }}"
+      topic_id: "{{ input.topic_id }}"
+    output: { id: text }
+  create_domain:
+    label: "Create a new domain"
+    write: true
+    method: POST
+    path: "/domains"
+    inputs:
+      - { name: name, label: "The name of the domain you want to create", required: true }
+      - { name: region, label: "The region where emails will be sent from" }
+      - name: custom_return_path
+        label: "For advanced use cases, choose a subdomain for the Return-Path address"
+      - { name: open_tracking, label: "Track the open rate of each email", kind: boolean }
+      - { name: click_tracking, label: "Track clicks within the body of each HTML email", kind: boolean }
+      - { name: tls, label: "TLS mode" }
+      - name: capabilities
+        label: "Configure the domain capabilities for sending and receiving emails"
+        kind: record
+      - { name: tracking_subdomain, label: "The subdomain to use for click and open tracking" }
+    send:
+      name: "{{ input.name }}"
+      region: "{{ input.region }}"
+      custom_return_path: "{{ input.custom_return_path }}"
+      open_tracking: "{{ input.open_tracking }}"
+      click_tracking: "{{ input.click_tracking }}"
+      tls: "{{ input.tls }}"
+      capabilities: "{{ input.capabilities }}"
+      tracking_subdomain: "{{ input.tracking_subdomain }}"
+    output:
+      id: text
+      name: text
+      created_at: text
+      status: text
+      capabilities: record
+      records: list
+      region: text
+      open_tracking: boolean
+      click_tracking: boolean
+      tracking_subdomain: text
+  create_contact:
+    label: "Create a new contact"
+    write: true
+    method: POST
+    path: "/contacts"
+    inputs:
+      - { name: email, label: "Email address of the contact", required: true }
+      - { name: first_name, label: "First name of the contact" }
+      - { name: last_name, label: "Last name of the contact" }
+      - { name: unsubscribed, label: "The Contact's global subscription status", kind: boolean }
+      - { name: properties, label: "A map of custom property keys and values to create", kind: record }
+      - { name: segments, label: "Array of segment IDs to add the contact to", kind: list }
+      - { name: topics, label: "Array of topic subscriptions for the contact", kind: list }
+      - { name: audience_id, label: "Unique identifier of the audience to which the contact belongs" }
+    send:
+      email: "{{ input.email }}"
+      first_name: "{{ input.first_name }}"
+      last_name: "{{ input.last_name }}"
+      unsubscribed: "{{ input.unsubscribed }}"
+      properties: "{{ input.properties }}"
+      segments: "{{ input.segments }}"
+      topics: "{{ input.topics }}"
+      audience_id: "{{ input.audience_id }}"
+    output: { object: text, id: text }
+  create_broadcast:
+    label: "Create a broadcast"
+    write: true
+    method: POST
+    path: "/broadcasts"
+    inputs:
+      - { name: name, label: "Name of the broadcast" }
+      - name: segment_id
+        label: "Unique identifier of the segment this broadcast will be sent to"
+        required: true
+      - { name: audience_id, label: "Use segment_id instead" }
+      - { name: from, label: "The email address of the sender", required: true }
+      - { name: subject, label: "The subject line of the email", required: true }
+      - { name: reply_to, label: "The email addresses to which replies should be sent", kind: list }
+      - { name: preview_text, label: "The preview text of the email" }
+      - { name: html, label: "The HTML version of the message" }
+      - { name: text, label: "The plain text version of the message" }
+      - { name: topic_id, label: "The topic ID that the broadcast will be scoped to" }
+      - name: send
+        label: "Whether to send the broadcast immediately or keep it as a draft"
+        kind: boolean
+      - { name: scheduled_at, label: "Schedule time to send the broadcast" }
+    send:
+      name: "{{ input.name }}"
+      segment_id: "{{ input.segment_id }}"
+      audience_id: "{{ input.audience_id }}"
+      from: "{{ input.from }}"
+      subject: "{{ input.subject }}"
+      reply_to: "{{ input.reply_to }}"
+      preview_text: "{{ input.preview_text }}"
+      html: "{{ input.html }}"
+      text: "{{ input.text }}"
+      topic_id: "{{ input.topic_id }}"
+      send: "{{ input.send }}"
+      scheduled_at: "{{ input.scheduled_at }}"
+    output: { id: text, object: text }
+  get_email:
+    label: "Retrieve a single email"
+    method: GET
+    path: "/emails/{{ input.email_id }}"
+    inputs: [{ name: email_id, label: "The ID of the email", required: true }]
+    output:
+      object: text
+      id: text
+      message_id: text
+      to: list
+      from: text
+      created_at: text
+      subject: text
+      html: text
+      text: text
+      bcc: list
+      cc: list
+      reply_to: list
+      last_event: text
+  get_domain:
+    label: "Retrieve a single domain"
+    method: GET
+    path: "/domains/{{ input.domain_id }}"
+    inputs: [{ name: domain_id, label: "The ID of the domain", required: true }]
+    output:
+      object: text
+      id: text
+      name: text
+      status: text
+      created_at: text
+      region: text
+      open_tracking: boolean
+      click_tracking: boolean
+      tracking_subdomain: text
+      capabilities: record
+      records: list
+  get_import:
+    label: "Retrieve a single contact import"
+    method: GET
+    path: "/contacts/imports/{{ input.id }}"
+    inputs: [{ name: id, label: "The Contact Import ID", required: true }]
+    output: { object: text, id: text, status: text, created_at: text, completed_at: text, counts: record }
+  get_broadcast:
+    label: "Retrieve a single broadcast"
+    method: GET
+    path: "/broadcasts/{{ input.id }}"
+    inputs: [{ name: id, label: "The Broadcast ID", required: true }]
+    output:
+      id: text
+      name: text
+      audience_id: text
+      segment_id: text
+      from: text
+      subject: text
+      reply_to: list
+      preview_text: text
+      status: text
+      created_at: text
+      scheduled_at: text
+      sent_at: text
+      text: text
+      html: text
+      topic_id: text
+  get_inbox:
+    label: "Retrieve a single inbox by ID or email address"
+    method: GET
+    path: "/inboxes/{{ input.inbox_id }}"
+    inputs:
+      - name: inbox_id
+        label: "The Inbox ID or the inbox email address, such as support@acme.com"
+        required: true
+    output:
+      object: text
+      id: text
+      name: text
+      email_address: text
+      domain_id: text
+      receiving_address: text
+      from_name: text
+      unread: number
+      drafts: number
+      last_received: text
+      created_at: text
+      updated_at: text
+  update_inbox:
+    label: "Update an existing inbox by ID or email address"
+    description: "Updates the internal name of the inbox or the name recipients see when mail is sent from it."
+    write: true
+    method: PATCH
+    path: "/inboxes/{{ input.inbox_id }}"
+    inputs:
+      - name: inbox_id
+        label: "The Inbox ID or the inbox email address, such as support@acme.com"
+        required: true
+      - { name: name, label: "New internal name for the inbox" }
+      - { name: from_name, label: "The name recipients see when mail is sent from this inbox" }
+    send: { name: "{{ input.name }}", from_name: "{{ input.from_name }}" }
+    output: { object: text, id: text }
+  update_email:
+    label: "Update a single email"
+    write: true
+    method: PATCH
+    path: "/emails/{{ input.email_id }}"
+    body: none
+    inputs: [{ name: email_id, label: "The ID of the email", required: true }]
+    output: { scheduled_at: text }
+  update_domain:
+    label: "Update an existing domain"
+    write: true
+    method: PATCH
+    path: "/domains/{{ input.domain_id }}"
+    inputs:
+      - { name: domain_id, label: "The ID of the domain", required: true }
+      - { name: open_tracking, label: "Track the open rate of each email", kind: boolean }
+      - { name: click_tracking, label: "Track clicks within the body of each HTML email", kind: boolean }
+      - { name: tls, label: "enforced | opportunistic" }
+      - name: capabilities
+        label: "Configure the domain capabilities for sending and receiving emails"
+        kind: record
+      - { name: tracking_subdomain, label: "The subdomain to use for click and open tracking" }
+    send:
+      open_tracking: "{{ input.open_tracking }}"
+      click_tracking: "{{ input.click_tracking }}"
+      tls: "{{ input.tls }}"
+      capabilities: "{{ input.capabilities }}"
+      tracking_subdomain: "{{ input.tracking_subdomain }}"
+    output: { id: text, object: text }
+  get_claim:
+    label: "Retrieve a domain claim"
+    description: "Retrieve the latest claim for the placeholder domain created by the claim."
+    method: GET
+    path: "/domains/{{ input.domain_id }}/claim"
+    inputs:
+      - { name: domain_id, label: "The ID of the placeholder domain created by the claim", required: true }
+    output:
+      object: text
+      id: text
+      name: text
+      status: text
+      domain_id: text
+      region: text
+      record: record
+      blocked_reason: text
+      failure_reason: text
+      created_at: text
+      expires_at: text
+  update_contact:
+    label: "Update a single contact by ID or email"
+    write: true
+    method: PATCH
+    path: "/contacts/{{ input.id }}"
+    inputs:
+      - { name: id, label: "The Contact ID or email address", required: true }
+      - { name: email, label: "Email address of the contact" }
+      - { name: first_name, label: "First name of the contact" }
+      - { name: last_name, label: "Last name of the contact" }
+      - { name: unsubscribed, label: "The Contact's global subscription status", kind: boolean }
+      - { name: properties, label: "A map of custom property keys and values to update", kind: record }
+    send:
+      email: "{{ input.email }}"
+      first_name: "{{ input.first_name }}"
+      last_name: "{{ input.last_name }}"
+      unsubscribed: "{{ input.unsubscribed }}"
+      properties: "{{ input.properties }}"
+    output: { object: text, id: text }
+  update_broadcast:
+    label: "Update an existing broadcast"
+    write: true
+    method: PATCH
+    path: "/broadcasts/{{ input.id }}"
+    inputs:
+      - { name: id, label: "The Broadcast ID", required: true }
+      - { name: name, label: "Name of the broadcast" }
+      - { name: audience_id, label: "Use segment_id instead" }
+      - { name: segment_id, label: "Unique identifier of the segment this broadcast will be sent to" }
+      - { name: from, label: "The email address of the sender" }
+      - { name: subject, label: "The subject line of the email" }
+      - { name: reply_to, label: "The email addresses to which replies should be sent", kind: list }
+      - { name: preview_text, label: "The preview text of the email" }
+      - { name: html, label: "The HTML version of the message" }
+      - { name: text, label: "The plain text version of the message" }
+      - { name: topic_id, label: "The topic ID that the broadcast will be scoped to" }
+    send:
+      name: "{{ input.name }}"
+      audience_id: "{{ input.audience_id }}"
+      segment_id: "{{ input.segment_id }}"
+      from: "{{ input.from }}"
+      subject: "{{ input.subject }}"
+      reply_to: "{{ input.reply_to }}"
+      preview_text: "{{ input.preview_text }}"
+      html: "{{ input.html }}"
+      text: "{{ input.text }}"
+      topic_id: "{{ input.topic_id }}"
+    output: { id: text, object: text }
+  batch_email:
+    label: "Trigger up to 100 batch emails at once"
+    write: true
+    method: POST
+    path: "/emails/batch"
+    inputs:
+      - name: idempotency_key
+        label: "A unique identifier for the request to ensure emails are only sent once"
+      - { name: body, label: "The whole body of the request, as the API reference describes it", kind: list }
+    headers: { Idempotency-Key: "{{ input.idempotency_key }}" }
+    send: "{{ input.body }}"
+    output: { data: list }
+  cancel_broadcast:
+    label: "Cancel a broadcast"
+    description: "Cancels a broadcast that is queued or scheduled."
+    write: true
+    method: POST
+    path: "/broadcasts/{{ input.id }}/cancel"
+    body: none
+    inputs: [{ name: id, label: "The Broadcast ID", required: true }]
+    output: { id: text, object: text }
+  labels_thread:
+    label: "Add labels to an inbox thread"
+    description: "Applies one or more labels to the thread."
+    write: true
+    method: POST
+    path: "/inboxes/{{ input.inbox_id }}/threads/{{ input.thread_id }}/labels"
+    inputs:
+      - name: inbox_id
+        label: "The Inbox ID or the inbox email address, such as support@acme.com"
+        required: true
+      - { name: thread_id, label: "The Thread ID", required: true }
+      - { name: labels, label: "The IDs of the labels to apply to the thread", required: true, kind: list }
+    send: { labels: "{{ input.labels }}" }
+    output: { object: text, data: list }
+  delete_contact:
+    label: "Remove an existing contact by ID or email"
+    write: true
+    method: DELETE
+    path: "/contacts/{{ input.id }}"
+    inputs: [{ name: id, label: "The Contact ID or email address", required: true }]
+    output: { object: text, id: text, deleted: boolean }

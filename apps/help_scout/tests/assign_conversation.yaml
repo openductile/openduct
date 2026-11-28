@@ -1,0 +1,13 @@
+description: A conversation given to a user
+action: assign_conversation
+credential: {access_token: hs-test-token}
+input: {conversation_id: '3443157477', assign_to: 4}
+exchanges:
+- sent:
+    method: PATCH
+    url: https://api.helpscout.net/v2/conversations/3443157477
+    query: {}
+    headers: {authorization: Bearer hs-test-token}
+    body: {op: replace, path: /assignTo, value: 4}
+  answer: {status: 204}
+result: {changed: true}

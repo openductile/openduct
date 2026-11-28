@@ -1,0 +1,12 @@
+description: An account in the Australian region is asked at rest-au.apitemplate.io
+action: create_pdf
+credential: { api_key: at_test_key_1, region: au }
+input: { template_id: cd890b2b199c5c42, data: { name: Ann } }
+exchanges:
+  - sent:
+      method: POST
+      url: "https://rest-au.apitemplate.io/v2/create-pdf"
+      query: { template_id: cd890b2b199c5c42 }
+      body: { name: Ann }
+    answer: { status: 200, body: { status: success, download_url: "https://files.example.com/a.pdf", total_pages: 1, transaction_ref: t-au-1 } }
+result: { status: success, download_url: "https://files.example.com/a.pdf", total_pages: 1, transaction_ref: t-au-1 }

@@ -1,0 +1,62 @@
+description: A request, sent as requested by default, with the note from the employee
+action: request_time_off
+credential:
+  company_domain: acme
+  api_key: test-key
+input:
+  employee_id: '101'
+  time_off_type_id: 78
+  start: '2026-12-21'
+  end: '2026-12-23'
+  amount: 3
+  note: Family visit
+exchanges:
+- sent:
+    method: PUT
+    url: https://acme.bamboohr.com/api/v1/employees/101/time_off/request
+    headers:
+      authorization: Basic dGVzdC1rZXk6eA==
+      accept: application/json
+    body:
+      status: requested
+      start: '2026-12-21'
+      end: '2026-12-23'
+      timeOffTypeId: 78
+      amount: 3
+      notes:
+      - from: employee
+        note: Family visit
+  answer:
+    status: 201
+    body: &id001
+      id: 1348
+      employeeId: 101
+      name: Ada Sample
+      start: '2026-12-21'
+      end: '2026-12-23'
+      created: '2026-11-20'
+      status:
+        lastChanged: '2026-11-20'
+        lastChangedByUserId: 7
+        status: requested
+      type:
+        id: 78
+        name: Vacation
+        icon: palm-trees
+      amount:
+        unit: days
+        amount: 3
+      actions:
+        view: true
+        edit: true
+        cancel: true
+        approve: true
+        deny: true
+        bypass: false
+      dates:
+        '2026-12-21': 1
+        '2026-12-22': 1
+        '2026-12-23': 1
+      notes:
+        employee: Family visit
+result: *id001

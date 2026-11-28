@@ -1,0 +1,8 @@
+description: A customer added to the store, as Shopify sends it
+trigger: new_customer
+credential: { shop: mystore, access_token: shpat_1, webhook_secret: shpss_test_app_secret }
+delivery:
+  headers: { x-shopify-hmac-sha256: "aj1fD0NqCuzDL0kbpnMgdCIPTU6WtjYTwcpTlsBVCsc=", x-shopify-topic: customers/create, x-shopify-webhook-id: w7 }
+  body: '{"id":207119551,"email":"bob@example.com","first_name":"Bob"}'
+  at: 1700000000
+runs: [{ id: 207119551, email: bob@example.com, first_name: Bob }]

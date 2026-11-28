@@ -1,0 +1,7 @@
+action: list_collaborators
+credential: { token: todoist-test-token }
+input: { project_id: 6Xproj0000000001 }
+exchanges:
+  - sent: { method: GET, url: https://api.todoist.com/api/v1/projects/6Xproj0000000001/collaborators }
+    answer: { body: { results: [{ id: "1000002", name: Sam Owner, email: sam@example.com }] } }
+result: [{ id: "1000002", name: Sam Owner, email: sam@example.com }]

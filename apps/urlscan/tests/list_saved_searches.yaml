@@ -1,0 +1,6 @@
+action: list_saved_searches
+credential: { api_key: us_test_1 }
+exchanges:
+  - sent: { method: GET, url: https://urlscan.io/api/v1/user/searches/ }
+    answer: { body: { searches: [{ _id: s-1, name: Brand X look-alikes, query: "page.title:\"Brand X\"", datasource: scans }] } }
+result: [{ _id: s-1, name: Brand X look-alikes, query: "page.title:\"Brand X\"", datasource: scans }]

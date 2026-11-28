@@ -1,0 +1,8 @@
+description: A message that came since the last poll
+trigger: new_message
+credential: { access_token: test-reddit-token }
+seen: { items: [["t4_2k3l4l", ""]] }
+exchanges:
+  - sent: { method: GET, url: https://oauth.reddit.com/message/inbox, query: { limit: "100", mark: "false" } }
+    answer: { body: { kind: Listing, data: { after: null, children: [{ kind: t4, data: { id: 2k3l4m, name: t4_2k3l4m, author: example_buyer, subject: Your order, body: Thanks! } }, { kind: t4, data: { id: 2k3l4l, name: t4_2k3l4l, author: example_buyer, subject: Hello, body: Hi } }] } } }
+runs: [{ id: 2k3l4m, name: t4_2k3l4m, author: example_buyer, subject: Your order, body: Thanks! }]

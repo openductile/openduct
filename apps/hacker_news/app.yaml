@@ -1,0 +1,163 @@
+# Copyright 2026 Ductile AI, Inc
+# SPDX-License-Identifier: Apache-2.0
+# Hacker News, written by hand from its official API (https://github.com/HackerNews/API at 8a0528f538bc, MIT licence)
+# and from the API of Hacker News Search by Algolia, the search Hacker News links to (https://hn.algolia.com/api, read
+# 2026-11-27; its source, algolia/hn-search, is MIT licence).
+app: hacker_news
+name: Hacker News
+category: news
+description: Stories, comments and people of Hacker News, its front page and lists, and a search of all of it.
+docs: "https://github.com/HackerNews/API"
+hosts: [hacker-news.firebaseio.com, hn.algolia.com]
+base_url: "https://hacker-news.firebaseio.com/v0"
+sign_in:
+  # Hacker News's data is open: a credential of this kind holds nothing.
+  - id: hacker_news
+    label: "No sign-in: Hacker News's data is open to all"
+default_action: search
+actions:
+  get_item:
+    label: "Look up a story or comment"
+    description: "A story, comment, job, poll or poll option by its id: its title, address, author, score and the ids of its comments."
+    method: GET
+    path: "/item/{{ input.id }}.json"
+    inputs:
+      - { name: id, label: "The item's id (the number in its address, item?id=...)", required: true }
+    output:
+      id: number
+      type: text
+      by: text
+      time: number
+      title: text
+      url: text
+      text: text
+      score: number
+      descendants: number
+      kids: list
+      parent: number
+      dead: boolean
+      deleted: boolean
+  get_user:
+    label: "Look up a person"
+    description: "A Hacker News user by name: when they joined, their karma, what they say about themselves and what they posted."
+    method: GET
+    path: "/user/{{ input.id }}.json"
+    inputs:
+      - { name: id, label: "Their user name (it is case-sensitive)", required: true }
+    output: { id: text, created: number, karma: number, about: text, submitted: list }
+  list_story_ids:
+    label: "List the ids of top, new or best stories"
+    description: >-
+      The ids of the stories on one of Hacker News's lists, in its order: top (the front page, up to 500), new, best,
+      ask, show or job (up to 200 each).
+    method: GET
+    path: "/{{ has(input.list) && input.list != null && input.list != '' ? input.list : 'top' }}stories.json"
+    inputs:
+      - { name: list, label: "Which list: top (by default), new, best, ask, show or job" }
+    items: value
+  front_page:
+    label: "Get the front page"
+    description: "The stories on the front page now, each with its title, address, author, points and number of comments."
+    method: GET
+    path: /
+    query: { tags: front_page, hitsPerPage: "50" }
+    by:
+      hacker_news: { url: "https://hn.algolia.com/api/v1/search" }
+    items: value.hits
+    output:
+      objectID: text
+      title: text
+      url: text
+      author: text
+      points: number
+      num_comments: number
+      created_at: text
+      created_at_i: number
+      story_text: text
+  search:
+    label: "Search Hacker News"
+    description: >-
+      Finds stories (or comments) that match the words given, the most relevant first, or the newest first if asked;
+      with at least so many points, or since a time.
+    method: GET
+    path: /
+    inputs:
+      - { name: query, label: "The words to look for" }
+      - { name: tags, label: "What to look in: story (by default), comment, ask_hn, show_hn, poll, author_<name>, story_<id>" }
+      - { name: newest_first, label: "The newest first, not the most relevant", kind: boolean }
+      - { name: min_points, label: "Only those with at least this many points", kind: number }
+      - { name: since, label: "Only those posted since this time (seconds since 1970)", kind: number }
+      - { name: hits_per_page, label: "How many (20 by default, up to 1000)", kind: number }
+      - { name: page, label: "Which page of them (0 is the first)", kind: number }
+    query:
+      query: "{{ input.query }}"
+      tags: "{{ has(input.tags) && input.tags != null && input.tags != '' ? input.tags : 'story' }}"
+      numericFilters: >-
+        {{ [has(input.min_points) && input.min_points != null ? 'points>=' + string(int(input.min_points)) : '',
+            has(input.since) && input.since != null ? 'created_at_i>' + string(int(input.since)) : '']
+           .filter(f, f != '').join(',') }}
+      hitsPerPage: "{{ input.hits_per_page }}"
+      page: "{{ input.page }}"
+    by:
+      hacker_news:
+        url: "https://hn.algolia.com/api/v1/{{ has(input.newest_first) && input.newest_first == true ? 'search_by_date' : 'search' }}"
+    items: value.hits
+    output:
+      objectID: text
+      title: text
+      url: text
+      author: text
+      points: number
+      num_comments: number
+      created_at: text
+      created_at_i: number
+      story_id: number
+      story_title: text
+      story_text: text
+      comment_text: text
+      _tags: list
+  get_story_with_comments:
+    label: "Get a story with its comments"
+    description: "A story and every comment under it, as a tree: each with its author, text, time and the replies to it."
+    method: GET
+    path: /
+    inputs:
+      - { name: id, label: "The story's id", required: true }
+    by:
+      hacker_news: { url: "https://hn.algolia.com/api/v1/items/{{ input.id }}" }
+    output:
+      id: number
+      type: text
+      author: text
+      title: text
+      url: text
+      text: text
+      points: number
+      created_at: text
+      children: list
+triggers:
+  new_story:
+    label: A new story
+    description: >-
+      Each story posted to Hacker News (or only those with the words given), the newest asked for every few minutes:
+      for an alert when a name or subject comes up.
+    inputs:
+      - { name: query, label: "Only stories with these words" }
+      - { name: tags, label: "Only these: story (by default), ask_hn, show_hn, or comment for comments" }
+    poll:
+      action: search
+      input:
+        query: "{{ input.query }}"
+        tags: "{{ input.tags }}"
+        newest_first: true
+        hits_per_page: 100
+      newest_first: true
+      id: item.objectID
+      every: 5m
+  front_page_story:
+    label: A story on the front page
+    description: Each story as it reaches the front page, asked for every 15 minutes.
+    poll:
+      action: front_page
+      id: item.objectID
+      every: 15m

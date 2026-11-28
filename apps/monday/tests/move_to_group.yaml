@@ -1,0 +1,30 @@
+description: An item moved to another group
+action: move_to_group
+credential:
+  token: monday-test-token
+input:
+  item_id: '9876543210'
+  group_id: done_orders
+exchanges:
+- sent:
+    body:
+      query: 'mutation ($item: ID, $group: String!) { move_item_to_group(item_id: $item, group_id: $group) { id name group
+        { id title } } }'
+      variables:
+        item: '9876543210'
+        group: done_orders
+  answer:
+    body:
+      data:
+        move_item_to_group:
+          id: '9876543210'
+          name: Order 1042
+          group:
+            id: done_orders
+            title: Shipped
+result:
+  id: '9876543210'
+  name: Order 1042
+  group:
+    id: done_orders
+    title: Shipped

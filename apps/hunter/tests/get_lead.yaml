@@ -1,0 +1,8 @@
+description: A lead by its id
+action: get_lead
+credential: { api_key: hunter-test-key }
+input: { lead_id: "101" }
+exchanges:
+  - sent: { method: GET, url: https://api.hunter.io/v2/leads/101 }
+    answer: { body: { data: { id: 101, email: ann.example@example.com, first_name: Ann, last_name: Example, position: Head of Sales, sending_status: null } } }
+result: { id: 101, email: ann.example@example.com, first_name: Ann, last_name: Example, position: Head of Sales, sending_status: null }

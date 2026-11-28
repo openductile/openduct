@@ -1,0 +1,24 @@
+description: People of the whole account in Sales, over two pages (the next asked for with the page token given)
+action: list_users
+credential: { access_token: ya29.test }
+input: { query: "orgUnitPath=/Sales" }
+exchanges:
+  - sent:
+      method: GET
+      url: https://admin.googleapis.com/admin/directory/v1/users
+      query: { customer: my_customer, query: "orgUnitPath=/Sales", maxResults: "500" }
+      headers: { authorization: Bearer ya29.test }
+    answer:
+      body:
+        kind: admin#directory#users
+        nextPageToken: tok2
+        users: [{ id: "100000000000000000001", primaryEmail: ann@example.com, name: { givenName: Ann, familyName: Lee, fullName: Ann Lee }, orgUnitPath: /Sales, suspended: false }]
+  - sent:
+      url: https://admin.googleapis.com/admin/directory/v1/users
+      query: { customer: my_customer, query: "orgUnitPath=/Sales", maxResults: "500", pageToken: tok2 }
+    answer:
+      body:
+        users: [{ id: "100000000000000000002", primaryEmail: bob@example.com, name: { givenName: Bob, familyName: Ray, fullName: Bob Ray }, orgUnitPath: /Sales, suspended: false }]
+result:
+  - { id: "100000000000000000001", primaryEmail: ann@example.com, name: { givenName: Ann, familyName: Lee, fullName: Ann Lee }, orgUnitPath: /Sales, suspended: false }
+  - { id: "100000000000000000002", primaryEmail: bob@example.com, name: { givenName: Bob, familyName: Ray, fullName: Bob Ray }, orgUnitPath: /Sales, suspended: false }

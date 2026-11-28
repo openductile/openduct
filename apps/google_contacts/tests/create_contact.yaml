@@ -1,0 +1,13 @@
+description: "A contact added with a name, email, phone and company"
+action: create_contact
+credential: {"access_token": "ya29.test"}
+input: {"given_name": "Cy", "family_name": "Park", "email": "cy@example.com", "phone": "+1 555 0101", "company": "Contoso Example", "job_title": "Buyer"}
+exchanges:
+  - sent:
+      method: POST
+      url: "https://people.googleapis.com/v1/people:createContact"
+      query: {"personFields": "names,emailAddresses,phoneNumbers,organizations,addresses,birthdays,biographies,urls,memberships,metadata"}
+      headers: {"authorization": "Bearer ya29.test"}
+      body: {"names": [{"givenName": "Cy", "familyName": "Park"}], "emailAddresses": [{"value": "cy@example.com"}], "phoneNumbers": [{"value": "+1 555 0101"}], "organizations": [{"name": "Contoso Example", "title": "Buyer"}]}
+    answer: {"status": 200, "body": {"resourceName": "people/c333", "etag": "%EgUBAi43PRoEAQIFByIO", "names": [{"displayName": "Cy Park", "givenName": "Cy", "familyName": "Park"}], "emailAddresses": [{"value": "cy@example.com"}], "phoneNumbers": [{"value": "+1 555 0101"}], "organizations": [{"name": "Contoso Example", "title": "Buyer"}]}}
+result: {"resource_name": "people/c333", "etag": "%EgUBAi43PRoEAQIFByIO", "name": "Cy Park", "given_name": "Cy", "family_name": "Park", "email": "cy@example.com", "emails": ["cy@example.com"], "phone": "+1 555 0101", "phones": ["+1 555 0101"], "company": "Contoso Example", "job_title": "Buyer", "notes": "", "groups": [], "person": {"resourceName": "people/c333", "etag": "%EgUBAi43PRoEAQIFByIO", "names": [{"displayName": "Cy Park", "givenName": "Cy", "familyName": "Park"}], "emailAddresses": [{"value": "cy@example.com"}], "phoneNumbers": [{"value": "+1 555 0101"}], "organizations": [{"name": "Contoso Example", "title": "Buyer"}]}}

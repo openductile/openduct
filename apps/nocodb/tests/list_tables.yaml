@@ -1,0 +1,8 @@
+description: A base's tables
+action: list_tables
+credential: { api_token: test-nocodb-token }
+input: { base_id: pexample0001 }
+exchanges:
+  - sent: { method: GET, url: https://app.nocodb.com/api/v3/meta/bases/pexample0001/tables }
+    answer: { body: { list: [{ id: mexample0001, title: Customers, base_id: pexample0001, workspace_id: wexample0001 }] } }
+result: [{ id: mexample0001, title: Customers, base_id: pexample0001, workspace_id: wexample0001 }]

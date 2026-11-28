@@ -1,0 +1,28 @@
+description: "A short link read by an account connected through Bitly's sign-in"
+action: get_link
+sign_in: bitly_oauth
+credential: { access_token: oauth-test-token }
+input: { bitlink: bit.ly/3xMpl01 }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://api-ssl.bitly.com/v4/bitlinks/bit.ly/3xMpl01"
+      headers: { authorization: "Bearer oauth-test-token" }
+    answer:
+      status: 200
+      body:
+        link: "https://bit.ly/3xMpl01"
+        id: bit.ly/3xMpl01
+        long_url: "https://shop.example/spring-sale"
+        title: Spring sale
+        archived: false
+        created_at: "2026-11-27T10:00:00+0000"
+        tags: [spring-sale]
+result:
+  link: "https://bit.ly/3xMpl01"
+  id: bit.ly/3xMpl01
+  long_url: "https://shop.example/spring-sale"
+  title: Spring sale
+  archived: false
+  created_at: "2026-11-27T10:00:00+0000"
+  tags: [spring-sale]

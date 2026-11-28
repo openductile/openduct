@@ -1,0 +1,44 @@
+description: The kinds of time off
+action: list_time_off_types
+credential:
+  company_domain: acme
+  api_key: test-key
+exchanges:
+- sent:
+    method: GET
+    url: https://acme.bamboohr.com/api/v1/meta/time_off/types
+    headers:
+      authorization: Basic dGVzdC1rZXk6eA==
+      accept: application/json
+  answer:
+    status: 200
+    body:
+      timeOffTypes:
+      - id: 78
+        name: Vacation
+        units: days
+        color: '#7DB2E1'
+        icon: palm-trees
+        source: internal
+      - id: 79
+        name: Sick
+        units: hours
+        color: null
+        icon: medical
+        source: internal
+      defaultHours:
+      - name: Monday
+        amount: '8'
+result:
+- id: 78
+  name: Vacation
+  units: days
+  color: '#7DB2E1'
+  icon: palm-trees
+  source: internal
+- id: 79
+  name: Sick
+  units: hours
+  color: null
+  icon: medical
+  source: internal

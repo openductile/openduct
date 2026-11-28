@@ -1,0 +1,7 @@
+action: reopen_task
+credential: { token: todoist-test-token }
+input: { task_id: 6Xtest0000000001 }
+exchanges:
+  - sent: { method: POST, url: https://api.todoist.com/api/v1/tasks/6Xtest0000000001/reopen }
+    answer: { status: 204 }
+result: { reopened: true }

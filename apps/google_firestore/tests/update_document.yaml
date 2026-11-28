@@ -1,0 +1,38 @@
+description: 'Only the fields given are set: the mask names them, and the document must be there'
+action: update_document
+credential:
+  access_token: ya29.test
+input:
+  project_id: sample-shop
+  collection: orders
+  document_id: A-100
+  fields:
+    status:
+      stringValue: shipped
+exchanges:
+- sent:
+    method: POST
+    url: https://firestore.googleapis.com/v1/projects/sample-shop/databases/(default)/documents:commit
+    headers:
+      authorization: Bearer ya29.test
+    body:
+      writes:
+      - update:
+          name: projects/sample-shop/databases/(default)/documents/orders/A-100
+          fields:
+            status:
+              stringValue: shipped
+        updateMask:
+          fieldPaths:
+          - status
+        currentDocument:
+          exists: true
+  answer:
+    status: 200
+    body:
+      writeResults:
+      - updateTime: '2026-11-21T08:00:00.000000Z'
+      commitTime: '2026-11-21T08:00:00.000000Z'
+result:
+  updateTime: '2026-11-21T08:00:00.000000Z'
+  commitTime: '2026-11-21T08:00:00.000000Z'

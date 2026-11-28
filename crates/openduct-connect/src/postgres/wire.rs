@@ -390,6 +390,16 @@ impl Connection {
     /// server reads each parameter as the type its place calls for (`$1::vector` takes `[0.1,0.2]`), so no value is
     /// ever written into the SQL itself.
     pub(super) async fn query_with(&mut self, sql: &str, params: &[Option<String>]) -> Result<Rows, Failure> {
+        self.query_with_limit(sql, params, 0).await
+    }
+
+    /// As [`Connection::query_with`], the server sending at most `limit` rows (0: all). // sql databases
+    pub(super) async fn query_with_limit(
+        &mut self,
+        sql: &str,
+        params: &[Option<String>],
+        limit: i32,
+    ) -> Result<Rows, Failure> {
         let mut parse = Vec::with_capacity(sql.len() + 8);
         parse.push(0);
         parse.extend_from_slice(sql.as_bytes());
@@ -415,7 +425,9 @@ impl Connection {
         let mut out = frame(b'P', &parse);
         out.extend_from_slice(&frame(b'B', &bind));
         out.extend_from_slice(&frame(b'D', b"P\0"));
-        out.extend_from_slice(&frame(b'E', &[0, 0, 0, 0, 0]));
+        let mut execute = vec![0];
+        execute.extend_from_slice(&limit.to_be_bytes());
+        out.extend_from_slice(&frame(b'E', &execute));
         out.extend_from_slice(&frame(b'S', &[]));
         self.send(&out).await?;
         let what = self.what.clone();

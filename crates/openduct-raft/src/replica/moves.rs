@@ -25,6 +25,8 @@ const STEADY_CHECKS: u32 = 2;
 
 /// Moves partitions along and hands leaders back, on every broker, until it stops.
 pub(super) async fn tend(inner: Arc<Inner>) {
+    // At once: a broker starts no partition before the cluster has it on record (reconcile).
+    inner.register_and_raise().await;
     let mut tick = 0u64;
     loop {
         tokio::time::sleep(Duration::from_secs(1)).await;
@@ -120,6 +122,10 @@ impl Inner {
     /// Keeps this broker's build registered with the controller and, on the controller's leader, raises the
     /// cluster's feature level once every broker supports a higher one.
     async fn register_and_raise(&self) {
+        // A broker that started with an empty disk first looks itself up in the cluster's record (empty_disk.rs).
+        if !self.empty_disk.lock().may_register() {
+            return;
+        }
         let supported = self.members.levels().supported();
         let wanted = crate::controller::BrokerRecord {
             version: env!("CARGO_PKG_VERSION").to_owned(),
@@ -306,6 +312,17 @@ impl Inner {
         };
         let mut steady = self.steady.lock().clone();
         let mut kept = BTreeMap::new();
+        // How long each partition has been led here: one taken over only now is not handed back yet - its first
+        // broker most likely gave it away because it is stopping (Timing::hand_back_after).
+        let now = tokio::time::Instant::now();
+        let mut since = std::mem::take(&mut *self.leading_since.lock());
+        let mut led = BTreeMap::new();
+        for (group, member) in self.members.all() {
+            if member.leader().0 == Some(self.id) {
+                led.insert(group, since.remove(&group).unwrap_or(now));
+            }
+        }
+        *self.leading_since.lock() = led.clone();
         for (group, first) in preferred {
             if first == self.id {
                 continue;
@@ -323,7 +340,11 @@ impl Inner {
                         .and_then(|r| r.get(&first))
                         .is_some_and(|matched| matched.map(|l| l.index) >= m.last_log_index)
             };
-            if !caught_up {
+            if !caught_up
+                || led
+                    .get(&group)
+                    .is_none_or(|t| now.duration_since(*t) < self.config.timing.hand_back_after)
+            {
                 continue;
             }
             let checks = steady.remove(&group).unwrap_or(0) + 1;

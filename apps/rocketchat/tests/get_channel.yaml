@@ -1,0 +1,7 @@
+action: get_channel
+credential: { workspace: acme, user_id: uAbC123, token: rc_test_1 }
+input: { room_name: sales }
+exchanges:
+  - sent: { method: GET, url: https://acme.rocket.chat/api/v1/channels.info, query: { roomName: sales } }
+    answer: { body: { channel: { _id: rSales1, name: sales, t: c, topic: Orders and leads, usersCount: 4 }, success: true } }
+result: { _id: rSales1, name: sales, t: c, topic: Orders and leads, usersCount: 4 }

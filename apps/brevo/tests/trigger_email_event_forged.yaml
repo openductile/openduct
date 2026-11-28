@@ -1,0 +1,9 @@
+description: A delivery without the workflow's token is refused
+trigger: email_event
+workflow: wf1
+credential: { api_key: xkeysib-test-1, "webhook_secret@wf1": brevo-hook-secret-test }
+delivery:
+  headers: { x-webhook-token: a-guess }
+  body: '{"event":"delivered","email":"ann@example.com","id":7,"date":"2026-11-27 10:00:00","ts":1795770000,"message-id":"<202611271000.1@smtp-relay.example.com>","ts_event":1795770001,"subject":"Your order A-1001","tag":"orders","ts_epoch":1795770001000,"template_id":12,"tags":["orders"]}'
+  at: 1795770002
+refused: token is wrong

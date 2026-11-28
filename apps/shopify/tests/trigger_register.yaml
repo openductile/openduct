@@ -1,0 +1,14 @@
+description: Turning the workflow on adds an orders/create webhook to the store
+trigger: new_order
+register: true
+workflow: wf1
+address: https://studio.example/hooks/h1
+credential: { shop: mystore, access_token: shpat_1 }
+exchanges:
+  - sent:
+      method: POST
+      url: https://mystore.myshopify.com/admin/api/2025-01/webhooks.json
+      headers: { x-shopify-access-token: shpat_1 }
+      body: { webhook: { topic: orders/create, address: https://studio.example/hooks/h1, format: json } }
+    answer: { status: 201, body: { webhook: { id: 4759306, topic: orders/create, address: https://studio.example/hooks/h1 } } }
+kept: { webhook_id: "4759306" }

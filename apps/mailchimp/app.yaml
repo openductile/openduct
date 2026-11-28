@@ -37,3 +37,16 @@ actions:
     path: /lists
     query: { count: "100", fields: "lists.id,lists.name,lists.stats.member_count" }
     items: value.lists
+triggers:
+  new_subscriber:
+    label: A new subscriber
+    description: Each person who joins an audience, the newest asked for every few minutes.
+    inputs:
+      - { name: list_id, label: "The audience's id (from List audiences)", required: true }
+    poll:
+      method: GET
+      path: "/lists/{{ input.list_id }}/members"
+      query: { status: subscribed, sort_field: timestamp_opt, sort_dir: DESC, count: "100" }
+      items: value.members
+      newest_first: true
+      id: item.id

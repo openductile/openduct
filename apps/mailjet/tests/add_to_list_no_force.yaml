@@ -1,0 +1,33 @@
+description: Added only if not on the list
+action: add_to_list
+credential:
+  api_key: test-key
+  secret_key: test-secret
+input:
+  list_id: '55'
+  email: pat@example.com
+  keep_unsubscribed: true
+exchanges:
+- sent:
+    method: POST
+    url: https://api.mailjet.com/v3/REST/contactslist/55/managecontact
+    headers:
+      authorization: Basic dGVzdC1rZXk6dGVzdC1zZWNyZXQ=
+    body:
+      Action: addnoforce
+      Email: pat@example.com
+  answer:
+    status: 201
+    body:
+      Count: 1
+      Data:
+      - Action: addnoforce
+        Email: pat@example.com
+        Name: ''
+        Properties: {}
+      Total: 1
+result:
+  Action: addnoforce
+  Email: pat@example.com
+  Name: ''
+  Properties: {}

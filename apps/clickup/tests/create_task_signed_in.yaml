@@ -1,0 +1,13 @@
+description: A task made by a workspace signed in with ClickUp, its token sent as a bearer token
+action: create_task
+sign_in: clickup_oauth
+credential: { access_token: "183_TESTTOKEN" }
+input: { list_id: 901, name: Call the supplier, priority: 2, tags: [suppliers] }
+exchanges:
+  - sent:
+      method: POST
+      url: "https://api.clickup.com/api/v2/list/901/task"
+      headers: { authorization: Bearer 183_TESTTOKEN }
+      body: { name: Call the supplier, priority: 2, tags: [suppliers] }
+    answer: { status: 200, body: { id: 86a1b2c3d, name: Call the supplier, url: "https://app.clickup.com/t/86a1b2c3d" } }
+result: { id: 86a1b2c3d, name: Call the supplier, url: "https://app.clickup.com/t/86a1b2c3d" }

@@ -1,0 +1,31 @@
+description: A DeepL API Free key (it ends in :fx) is sent to api-free.deepl.com, with a list of texts and a glossary
+action: translate_text
+credential: { api_key: "9d8c7b6a-1234-4abc-8def-0a1b2c3d4e5f:fx" }
+input:
+  text: ["Thank you for your order.", "See you soon."]
+  source_lang: EN
+  target_lang: FR
+  glossary_id: def3a26b-3e84-45b3-84ae-0c0aaf3525f7
+  show_billed_characters: true
+  reporting_tag: shop-emails
+exchanges:
+  - sent:
+      method: POST
+      url: "https://api-free.deepl.com/v2/translate"
+      headers: { authorization: "DeepL-Auth-Key 9d8c7b6a-1234-4abc-8def-0a1b2c3d4e5f:fx", x-deepl-reporting-tag: shop-emails }
+      body:
+        text: ["Thank you for your order.", "See you soon."]
+        source_lang: EN
+        target_lang: FR
+        glossary_id: def3a26b-3e84-45b3-84ae-0c0aaf3525f7
+        show_billed_characters: true
+    answer:
+      status: 200
+      body:
+        translations:
+          - { detected_source_language: EN, text: "Merci pour votre commande.", billed_characters: 25 }
+          - { detected_source_language: EN, text: "À bientôt.", billed_characters: 13 }
+result:
+  translations:
+    - { detected_source_language: EN, text: "Merci pour votre commande.", billed_characters: 25 }
+    - { detected_source_language: EN, text: "À bientôt.", billed_characters: 13 }

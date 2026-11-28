@@ -1,0 +1,97 @@
+/* Copyright 2026 Ductile AI, Inc */
+/* SPDX-License-Identifier: Apache-2.0 */
+
+/* The Tables page and the table step's form: what the shared styles do not already give. */
+
+.tables-page h1 {
+  font-size: 1rem;
+  margin: 0;
+}
+
+.tables-page h2 {
+  font-size: 0.95rem;
+  margin: 1.5rem 0 0.25rem;
+}
+
+.table-new {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0.75rem 0;
+  max-width: 44rem;
+}
+
+.table-columns {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.table-column {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+}
+
+.table-column input {
+  flex: 1;
+  min-width: 0;
+}
+
+.table-filter {
+  margin: 0.5rem 0;
+  gap: 0.5rem;
+}
+
+.table-filter input {
+  flex: 1;
+}
+
+.table-rows th.sortable {
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.table-rows td.cell {
+  max-width: 18rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.table-rows td.editable {
+  cursor: text;
+}
+
+.table-rows td.editable:hover {
+  outline: 1px dashed currentColor;
+  outline-offset: -2px;
+}
+
+.table-rows td input {
+  width: 100%;
+  min-width: 6rem;
+}
+
+.table-rows tr.adding td {
+  vertical-align: middle;
+}
+
+.table-state {
+  max-height: 18rem;
+  overflow: auto;
+}
+
+.pager {
+  gap: 0.75rem;
+  align-items: center;
+  margin-top: 0.5rem;
+}
+
+.table-test {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+}
+
+.table-test > * {
+  min-width: 0;
+}

@@ -1,0 +1,8 @@
+description: The files an article shows
+action: get_article_files
+credential: { contact: ops@example.com }
+input: { title: Jupiter }
+exchanges:
+  - sent: { method: GET, url: https://en.wikipedia.org/w/rest.php/v1/page/Jupiter/links/media }
+    answer: { body: { files: [{ title: Example_planet.jpg, file_description_url: "//commons.wikimedia.org/wiki/File:Example_planet.jpg", preferred: { url: "https://upload.wikimedia.org/example/Example_planet.jpg", width: 640, height: 640 } }] } }
+result: [{ title: Example_planet.jpg, file_description_url: "//commons.wikimedia.org/wiki/File:Example_planet.jpg", preferred: { url: "https://upload.wikimedia.org/example/Example_planet.jpg", width: 640, height: 640 } }]

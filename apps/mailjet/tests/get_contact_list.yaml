@@ -1,0 +1,27 @@
+description: One contact list
+action: get_contact_list
+credential:
+  api_key: test-key
+  secret_key: test-secret
+input:
+  list_id: '55'
+exchanges:
+- sent:
+    method: GET
+    url: https://api.mailjet.com/v3/REST/contactslist/55
+    headers:
+      authorization: Basic dGVzdC1rZXk6dGVzdC1zZWNyZXQ=
+  answer:
+    status: 200
+    body:
+      Count: 1
+      Data:
+      - &id001
+        ID: 55
+        Name: Newsletter
+        Address: k8sd7f6g5
+        SubscriberCount: 120
+        CreatedAt: '2026-05-01T10:00:00Z'
+        IsDeleted: false
+      Total: 1
+result: *id001

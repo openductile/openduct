@@ -1,0 +1,74 @@
+# Made by `openduct app from-openapi`: List content import sources.
+description: "List content import sources, made from the API description's schemas"
+action: list_content_import_sources
+credential: { token: test-token }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://api.intercom.io/ai/content_import_sources"
+      query: { per_page: "100" }
+      headers: { authorization: "Bearer test-token" }
+    answer:
+      status: 200
+      body:
+        type: list
+        pages:
+          type: pages
+          page: 1
+          next: "https://api.intercom.io/ai/content_import_sources?page=2"
+          prev: "https://example.com/1"
+          per_page: 50
+          total_pages: 1
+        total_count: 1
+        data:
+          - type: content_import_source
+            id: 1234
+            last_synced_at: 1672928610
+            sync_behavior: api
+            status: active
+            url: example
+            created_at: 1672928359
+            updated_at: 1672928610
+            audience_ids: [1]
+  - sent: { url: "https://api.intercom.io/ai/content_import_sources?page=2" }
+    answer:
+      status: 200
+      body:
+        type: list
+        pages:
+          type: pages
+          page: 1
+          next: null
+          prev: "https://example.com/1"
+          per_page: 50
+          total_pages: 1
+        total_count: 1
+        data:
+          - type: content_import_source
+            id: id_2
+            last_synced_at: 1672928610
+            sync_behavior: api
+            status: active
+            url: example
+            created_at: 1672928359
+            updated_at: 1672928610
+            audience_ids: [1]
+result:
+  - type: content_import_source
+    id: 1234
+    last_synced_at: 1672928610
+    sync_behavior: api
+    status: active
+    url: example
+    created_at: 1672928359
+    updated_at: 1672928610
+    audience_ids: [1]
+  - type: content_import_source
+    id: id_2
+    last_synced_at: 1672928610
+    sync_behavior: api
+    status: active
+    url: example
+    created_at: 1672928359
+    updated_at: 1672928610
+    audience_ids: [1]

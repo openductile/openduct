@@ -1,0 +1,7 @@
+action: find_similar_scans
+credential: { api_key: us_test_1 }
+input: { uuid: 0e37e828-a9d9-45c0-ac50-1ca579b86c72 }
+exchanges:
+  - sent: { method: GET, url: https://urlscan.io/api/v1/pro/result/0e37e828-a9d9-45c0-ac50-1ca579b86c72/similar/, query: { size: "100" } }
+    answer: { body: { results: [{ _id: 9c2d0000-0000-4000-8000-000000000003, page: { domain: login-shop.example.net }, sort: [1795760000000] }], has_more: false } }
+result: [{ _id: 9c2d0000-0000-4000-8000-000000000003, page: { domain: login-shop.example.net }, sort: [1795760000000] }]

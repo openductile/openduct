@@ -1,0 +1,62 @@
+# Made by `openduct app from-openapi`: Search for articles.
+description: "Search for articles, made from the API description's schemas"
+action: get_search
+credential: { token: test-token }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://api.intercom.io/articles/search"
+      query: {}
+      headers: { authorization: "Bearer test-token" }
+    answer:
+      status: 200
+      body:
+        type: list
+        total_count: 5
+        data:
+          articles:
+            - statistics: {}
+              type: article
+              id: "6871119"
+              workspace_id: hfi1bx4l
+              content_id: "6871120"
+              title: example
+              description: example
+              body: example
+              body_markdown: example
+              author_id: "5017691"
+              state: published
+              created_at: 1672928359
+          highlights: [{ article_id: "123", highlighted_title: [null], highlighted_summary: [null] }]
+        pages:
+          type: pages
+          page: 1
+          next: "https://example.com/1"
+          prev: "https://example.com/1"
+          per_page: 50
+          total_pages: 1
+result:
+  type: list
+  total_count: 5
+  data:
+    articles:
+      - statistics: {}
+        type: article
+        id: "6871119"
+        workspace_id: hfi1bx4l
+        content_id: "6871120"
+        title: example
+        description: example
+        body: example
+        body_markdown: example
+        author_id: "5017691"
+        state: published
+        created_at: 1672928359
+    highlights: [{ article_id: "123", highlighted_title: [null], highlighted_summary: [null] }]
+  pages:
+    type: pages
+    page: 1
+    next: "https://example.com/1"
+    prev: "https://example.com/1"
+    per_page: 50
+    total_pages: 1

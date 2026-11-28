@@ -1,0 +1,7 @@
+action: list_members
+credential: { access_token: ya29.test }
+input: { group: sales@example.com, roles: "OWNER,MANAGER" }
+exchanges:
+  - sent: { method: GET, url: https://admin.googleapis.com/admin/directory/v1/groups/sales@example.com/members, query: { roles: "OWNER,MANAGER", maxResults: "200" } }
+    answer: { body: { members: [{ id: "100000000000000000001", email: ann@example.com, role: OWNER, type: USER, status: ACTIVE }] } }
+result: [{ id: "100000000000000000001", email: ann@example.com, role: OWNER, type: USER, status: ACTIVE }]

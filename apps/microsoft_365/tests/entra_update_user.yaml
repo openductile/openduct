@@ -1,0 +1,14 @@
+description: A user blocked from signing in, and their department changed
+action: update_user
+sign_in: microsoft_entra_admin
+credential: {access_token: eyJ0-admin}
+input: {user: 4562bcc8-c436-4f95-b7c0-4f8ce89dca5e, account_enabled: false, department: Former staff}
+exchanges:
+- sent:
+    method: PATCH
+    url: https://graph.microsoft.com/v1.0/users/4562bcc8-c436-4f95-b7c0-4f8ce89dca5e
+    headers: {authorization: Bearer eyJ0-admin}
+    query: {}
+    body: {accountEnabled: false, department: Former staff}
+  answer: {status: 204}
+result: {changed: true}

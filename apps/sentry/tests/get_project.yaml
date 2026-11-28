@@ -1,0 +1,39 @@
+# Made by `openduct app from-openapi`: Look up a project.
+description: "Look up a project, made from the API description's schemas"
+action: get_project
+credential: { token: test-token }
+input: { organization_id_or_slug: example, project_id_or_slug: example }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://us.sentry.io/api/0/projects/example/example/"
+      query: {}
+      headers: { authorization: "Bearer test-token" }
+    answer:
+      status: 200
+      body:
+        stats: [example]
+        transactionStats: [[1]]
+        sessionStats: { currentCrashFreeRate: 1, previousCrashFreeRate: 1, hasHealthData: true }
+        id: id_1
+        slug: example
+        name: example
+        platform: example
+        dateCreated: "2026-01-15T09:30:00Z"
+        isBookmarked: true
+        isMember: true
+        features: [example]
+        firstEvent: "2026-01-15T09:30:00Z"
+result:
+  stats: [example]
+  transactionStats: [[1]]
+  sessionStats: { currentCrashFreeRate: 1, previousCrashFreeRate: 1, hasHealthData: true }
+  id: id_1
+  slug: example
+  name: example
+  platform: example
+  dateCreated: "2026-01-15T09:30:00Z"
+  isBookmarked: true
+  isMember: true
+  features: [example]
+  firstEvent: "2026-01-15T09:30:00Z"

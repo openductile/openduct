@@ -1,0 +1,10 @@
+description: Contacts over two pages, the next from where the first ended
+action: list_contacts
+credential: { api_key: xkeysib-test-1 }
+input: { list_ids: "3" }
+exchanges:
+  - sent: { method: GET, url: https://api.brevo.com/v3/contacts, query: { listIds: "3", limit: "1000" } }
+    answer: { body: { contacts: [{ id: 42, email: ann@example.com, attributes: { FIRSTNAME: Ann, LASTNAME: Lee }, listIds: [3], emailBlacklisted: false, smsBlacklisted: false, createdAt: "2026-11-27T09:00:00.000+01:00", modifiedAt: "2026-11-27T09:00:00.000+01:00" }], count: 2 } }
+  - sent: { url: https://api.brevo.com/v3/contacts, query: { listIds: "3", limit: "1000", offset: "1000" } }
+    answer: { body: { contacts: [{ id: 43, email: kim@example.com, attributes: { FIRSTNAME: Kim }, listIds: [], emailBlacklisted: false, smsBlacklisted: false, createdAt: "2026-11-27T10:00:00.000+01:00", modifiedAt: "2026-11-27T10:00:00.000+01:00" }], count: 2 } }
+result: [{ id: 42, email: ann@example.com, attributes: { FIRSTNAME: Ann, LASTNAME: Lee }, listIds: [3], emailBlacklisted: false, smsBlacklisted: false, createdAt: "2026-11-27T09:00:00.000+01:00", modifiedAt: "2026-11-27T09:00:00.000+01:00" }, { id: 43, email: kim@example.com, attributes: { FIRSTNAME: Kim }, listIds: [], emailBlacklisted: false, smsBlacklisted: false, createdAt: "2026-11-27T10:00:00.000+01:00", modifiedAt: "2026-11-27T10:00:00.000+01:00" }]

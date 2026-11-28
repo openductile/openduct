@@ -1,0 +1,14 @@
+description: A result a model's webhook sends, signed with the webhook's secret
+trigger: document_read
+credential: { api_key: md_test_1, webhook_secret: whsec_mindee_test_1 }
+delivery:
+  headers: { x-signature: 70a0e3392550e3c7b1cc80263e90fb124f86805401f87bf93caaf465f2c1cdbb }
+  body: '{"inference":{"id":"6c2f2a8e-0000-4000-8000-0000000000a1","job":{"id":"1b7e3c2d-0000-4000-8000-0000000000b1"},"model":{"id":"9a1d6f3e-0000-4000-8000-0000000000c1"},"file":{"name":"invoice-1001.pdf","alias":"order-1001","page_count":1,"mime_type":"application/pdf"},"result":{"fields":{"supplier_name":{"value":"Example Supplies Ltd"},"total_amount":{"value":120.5},"invoice_number":{"value":"INV-1001"}}}}}'
+  at: 1795773600
+runs:
+  - id: 6c2f2a8e-0000-4000-8000-0000000000a1
+    job: { id: 1b7e3c2d-0000-4000-8000-0000000000b1 }
+    model: { id: 9a1d6f3e-0000-4000-8000-0000000000c1 }
+    file: { name: invoice-1001.pdf, alias: order-1001, page_count: 1, mime_type: application/pdf }
+    result: { fields: { supplier_name: { value: Example Supplies Ltd }, total_amount: { value: 120.5 }, invoice_number: { value: INV-1001 } } }
+ids: [6c2f2a8e-0000-4000-8000-0000000000a1]

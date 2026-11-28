@@ -1,0 +1,24 @@
+description: A text's language, from the detections list
+action: detect_language
+credential:
+  api_key: test-key
+input:
+  text: Hola, ¿cómo estás?
+exchanges:
+- sent:
+    method: POST
+    url: https://api-gl.lingvanex.com/language/translate/v2/detect
+    headers:
+      authorization: test-key
+    body:
+      q: Hola, ¿cómo estás?
+  answer:
+    status: 200
+    body:
+      data:
+        detections:
+        - - confidence: 1
+            language: es
+            isReliable: false
+result:
+  language: es

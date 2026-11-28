@@ -1,0 +1,356 @@
+# Copyright 2026 Ductile AI, Inc
+# SPDX-License-Identifier: Apache-2.0
+# Mautic: written by hand from Mautic's developer documentation, https://devdocs.mautic.org/en/7.2/ - its source,
+# https://github.com/mautic/developer-documentation-new at aa63e2eb9e58 (Apache-2.0): docs/rest_api/*.rst and
+# docs/webhooks/*.rst. Labels and descriptions are our own words.
+app: mautic
+name: Mautic
+category: email
+description: Contacts, segments, campaigns and emails of a Mautic marketing site, on your own server.
+docs: https://devdocs.mautic.org/en/7.2/rest_api/getting_started.html
+base_url_field: site_url
+sign_in:
+  - id: mautic
+    label: A Mautic user name and password
+    fields:
+      - { name: site_url, label: "The Mautic site's address, such as https://mautic.example.com" }
+      - { name: username, label: "A Mautic user's name" }
+      - { name: password, label: Their password, secret: true }
+      - { name: webhook_secret, label: "A webhook's secret, for one added in Mautic by hand", secret: true, optional: true }
+    basic: { username: "{{ credential.username }}", password: "{{ credential.password }}" }
+error: "status < 400 ? null : (has(value.errors) && size(value.errors) > 0 ? value.errors[0].message : (has(value.error) ? string(value.error) : null))"
+actions:
+  list_contacts:
+    label: List contacts
+    description: The site's contacts, newest first, or those a search finds (such as email:ann@example.com, or tag:customer).
+    method: GET
+    path: /api/contacts
+    inputs:
+      - { name: search, label: "A search, such as ann@example.com, tag:customer or segment:newsletter" }
+    query: { search: "{{ input.search }}", orderBy: id, orderByDir: desc, limit: "100" }
+    items: "(type(value.contacts) == list ? value.contacts : value.contacts.map(k, value.contacts[k])).map(c, {'id': c.id, 'email': has(c.fields.all.email) ? c.fields.all.email : null, 'first_name': has(c.fields.all.firstname) ? c.fields.all.firstname : null, 'last_name': has(c.fields.all.lastname) ? c.fields.all.lastname : null, 'company': has(c.fields.all.company) ? c.fields.all.company : null, 'phone': has(c.fields.all.phone) ? c.fields.all.phone : null, 'points': has(c.points) ? c.points : 0, 'tags': has(c.tags) ? c.tags.map(t, t.tag) : [], 'date_added': has(c.dateAdded) ? c.dateAdded : null, 'date_modified': has(c.dateModified) ? c.dateModified : null, 'fields': c.fields.all})"
+    next: "(page == null ? 0 : int(page.start)) + size(value.contacts) < int(value.total) ? {'start': (page == null ? 0 : int(page.start)) + size(value.contacts)} : null"
+    max_pages: 50
+    output: { id: number, email: text, first_name: text, last_name: text, company: text, phone: text, points: number, tags: list, date_added: text, date_modified: text, fields: record }
+  get_contact:
+    label: Look up a contact
+    description: One contact, with its fields, points and tags.
+    method: GET
+    path: "/api/contacts/{{ input.contact_id }}"
+    inputs: [{ name: contact_id, label: "The contact's id", required: true, kind: number }]
+    result: "{'id': value.contact.id, 'email': has(value.contact.fields.all.email) ? value.contact.fields.all.email : null, 'first_name': has(value.contact.fields.all.firstname) ? value.contact.fields.all.firstname : null, 'last_name': has(value.contact.fields.all.lastname) ? value.contact.fields.all.lastname : null, 'company': has(value.contact.fields.all.company) ? value.contact.fields.all.company : null, 'phone': has(value.contact.fields.all.phone) ? value.contact.fields.all.phone : null, 'points': has(value.contact.points) ? value.contact.points : 0, 'tags': has(value.contact.tags) ? value.contact.tags.map(t, t.tag) : [], 'date_added': has(value.contact.dateAdded) ? value.contact.dateAdded : null, 'date_modified': has(value.contact.dateModified) ? value.contact.dateModified : null, 'fields': value.contact.fields.all}"
+    output: { id: number, email: text, first_name: text, last_name: text, company: text, phone: text, points: number, tags: list, date_added: text, date_modified: text, fields: record }
+  create_contact:
+    label: Add a contact
+    description: A new contact, with its fields; one with the same email is changed instead, as Mautic's settings say.
+    write: true
+    method: POST
+    path: /api/contacts/new
+    inputs:
+      - { name: email, label: Email }
+      - { name: first_name, label: First name }
+      - { name: last_name, label: Last name }
+      - { name: company, label: Company }
+      - { name: phone, label: Phone }
+      - { name: mobile, label: Mobile }
+      - { name: city, label: City }
+      - { name: country, label: Country }
+      - { name: website, label: Website }
+      - { name: owner_id, label: "Its owner: a Mautic user's id", kind: number }
+    send:
+      email: "{{ input.email }}"
+      firstname: "{{ input.first_name }}"
+      lastname: "{{ input.last_name }}"
+      company: "{{ input.company }}"
+      phone: "{{ input.phone }}"
+      mobile: "{{ input.mobile }}"
+      city: "{{ input.city }}"
+      country: "{{ input.country }}"
+      website: "{{ input.website }}"
+      owner: "{{ input.owner_id }}"
+    result: "{'id': value.contact.id, 'email': has(value.contact.fields.all.email) ? value.contact.fields.all.email : null, 'first_name': has(value.contact.fields.all.firstname) ? value.contact.fields.all.firstname : null, 'last_name': has(value.contact.fields.all.lastname) ? value.contact.fields.all.lastname : null, 'company': has(value.contact.fields.all.company) ? value.contact.fields.all.company : null, 'phone': has(value.contact.fields.all.phone) ? value.contact.fields.all.phone : null, 'points': has(value.contact.points) ? value.contact.points : 0, 'tags': has(value.contact.tags) ? value.contact.tags.map(t, t.tag) : [], 'date_added': has(value.contact.dateAdded) ? value.contact.dateAdded : null, 'date_modified': has(value.contact.dateModified) ? value.contact.dateModified : null, 'fields': value.contact.fields.all}"
+    output: { id: number, email: text, first_name: text, last_name: text, company: text, phone: text, points: number, tags: list, date_added: text, date_modified: text, fields: record }
+  update_contact:
+    label: Change a contact
+    description: The fields given changed; the others stay as they are.
+    write: true
+    method: PATCH
+    path: "/api/contacts/{{ input.contact_id }}/edit"
+    inputs:
+      - { name: contact_id, label: "The contact's id", required: true, kind: number }
+      - { name: email, label: Email }
+      - { name: first_name, label: First name }
+      - { name: last_name, label: Last name }
+      - { name: company, label: Company }
+      - { name: phone, label: Phone }
+      - { name: mobile, label: Mobile }
+      - { name: city, label: City }
+      - { name: country, label: Country }
+      - { name: website, label: Website }
+      - { name: owner_id, label: "Its owner: a Mautic user's id", kind: number }
+    send:
+      email: "{{ input.email }}"
+      firstname: "{{ input.first_name }}"
+      lastname: "{{ input.last_name }}"
+      company: "{{ input.company }}"
+      phone: "{{ input.phone }}"
+      mobile: "{{ input.mobile }}"
+      city: "{{ input.city }}"
+      country: "{{ input.country }}"
+      website: "{{ input.website }}"
+      owner: "{{ input.owner_id }}"
+    result: "{'id': value.contact.id, 'email': has(value.contact.fields.all.email) ? value.contact.fields.all.email : null, 'first_name': has(value.contact.fields.all.firstname) ? value.contact.fields.all.firstname : null, 'last_name': has(value.contact.fields.all.lastname) ? value.contact.fields.all.lastname : null, 'company': has(value.contact.fields.all.company) ? value.contact.fields.all.company : null, 'phone': has(value.contact.fields.all.phone) ? value.contact.fields.all.phone : null, 'points': has(value.contact.points) ? value.contact.points : 0, 'tags': has(value.contact.tags) ? value.contact.tags.map(t, t.tag) : [], 'date_added': has(value.contact.dateAdded) ? value.contact.dateAdded : null, 'date_modified': has(value.contact.dateModified) ? value.contact.dateModified : null, 'fields': value.contact.fields.all}"
+    output: { id: number, email: text, first_name: text, last_name: text, company: text, phone: text, points: number, tags: list, date_added: text, date_modified: text, fields: record }
+  delete_contact:
+    label: Delete a contact
+    description: A contact removed from Mautic.
+    write: true
+    method: DELETE
+    path: "/api/contacts/{{ input.contact_id }}/delete"
+    inputs: [{ name: contact_id, label: "The contact's id", required: true, kind: number }]
+    result: "{'deleted': true}"
+    output: { deleted: boolean }
+  add_points:
+    label: Add points to a contact
+    description: A contact's points raised, as for something they did.
+    write: true
+    method: POST
+    path: "/api/contacts/{{ input.contact_id }}/points/plus/{{ input.points }}"
+    inputs:
+      - { name: contact_id, label: "The contact's id", required: true, kind: number }
+      - { name: points, label: "How many points", required: true, kind: number }
+      - { name: event_name, label: "What for (shown in the contact's history)" }
+    send: { eventName: "{{ input.event_name }}" }
+    output: { success: boolean }
+  do_not_contact:
+    label: Mark a contact do-not-contact
+    description: No more marketing email (or texts) to a contact, as when they unsubscribe.
+    write: true
+    method: POST
+    path: "/api/contacts/{{ input.contact_id }}/dnc/{{ has(input.channel) && input.channel != null ? input.channel : 'email' }}/add"
+    inputs:
+      - { name: contact_id, label: "The contact's id", required: true, kind: number }
+      - { name: channel, label: "Which: email (the default) or sms" }
+      - { name: comments, label: "Why" }
+    send: { comments: "{{ input.comments }}" }
+    result: "has(value.contact) ? {'id': value.contact.id, 'email': has(value.contact.fields.all.email) ? value.contact.fields.all.email : null, 'first_name': has(value.contact.fields.all.firstname) ? value.contact.fields.all.firstname : null, 'last_name': has(value.contact.fields.all.lastname) ? value.contact.fields.all.lastname : null, 'company': has(value.contact.fields.all.company) ? value.contact.fields.all.company : null, 'phone': has(value.contact.fields.all.phone) ? value.contact.fields.all.phone : null, 'points': has(value.contact.points) ? value.contact.points : 0, 'tags': has(value.contact.tags) ? value.contact.tags.map(t, t.tag) : [], 'date_added': has(value.contact.dateAdded) ? value.contact.dateAdded : null, 'date_modified': has(value.contact.dateModified) ? value.contact.dateModified : null, 'fields': value.contact.fields.all} : value"
+    output: { id: number, email: text, first_name: text, last_name: text, company: text, phone: text, points: number, tags: list, date_added: text, date_modified: text, fields: record }
+  remove_do_not_contact:
+    label: Remove a do-not-contact mark
+    description: A contact who may get marketing email (or texts) again.
+    write: true
+    method: POST
+    path: "/api/contacts/{{ input.contact_id }}/dnc/{{ has(input.channel) && input.channel != null ? input.channel : 'email' }}/remove"
+    body: none
+    inputs:
+      - { name: contact_id, label: "The contact's id", required: true, kind: number }
+      - { name: channel, label: "Which: email (the default) or sms" }
+    result: "has(value.contact) ? {'id': value.contact.id, 'email': has(value.contact.fields.all.email) ? value.contact.fields.all.email : null, 'first_name': has(value.contact.fields.all.firstname) ? value.contact.fields.all.firstname : null, 'last_name': has(value.contact.fields.all.lastname) ? value.contact.fields.all.lastname : null, 'company': has(value.contact.fields.all.company) ? value.contact.fields.all.company : null, 'phone': has(value.contact.fields.all.phone) ? value.contact.fields.all.phone : null, 'points': has(value.contact.points) ? value.contact.points : 0, 'tags': has(value.contact.tags) ? value.contact.tags.map(t, t.tag) : [], 'date_added': has(value.contact.dateAdded) ? value.contact.dateAdded : null, 'date_modified': has(value.contact.dateModified) ? value.contact.dateModified : null, 'fields': value.contact.fields.all} : value"
+    output: { id: number, email: text, first_name: text, last_name: text, company: text, phone: text, points: number, tags: list, date_added: text, date_modified: text, fields: record }
+  add_note:
+    label: Add a note to a contact
+    description: A note in a contact's history.
+    write: true
+    method: POST
+    path: /api/notes/new
+    inputs:
+      - { name: contact_id, label: "The contact's id", required: true, kind: number }
+      - { name: text, label: "The note", required: true }
+      - { name: type, label: "Its kind: general (the default), email, call or meeting" }
+    send: { lead: "{{ input.contact_id }}", text: "{{ input.text }}", type: "{{ has(input.type) && input.type != null ? input.type : 'general' }}" }
+    result: value.note
+    output: { id: number, text: text, type: text, dateTime: text, lead: record }
+  list_segments:
+    label: List segments
+    description: The site's segments (lists of contacts).
+    method: GET
+    path: /api/segments
+    query: { limit: "100" }
+    items: "(type(value.lists) == list ? value.lists : value.lists.map(k, value.lists[k]))"
+    next: "(page == null ? 0 : int(page.start)) + size(value.lists) < int(value.total) ? {'start': (page == null ? 0 : int(page.start)) + size(value.lists)} : null"
+    output: { id: number, name: text, alias: text, description: text, isPublished: boolean, isGlobal: boolean }
+  add_to_segment:
+    label: Add a contact to a segment
+    description: A contact put in a segment.
+    write: true
+    method: POST
+    path: "/api/segments/{{ input.segment_id }}/contact/{{ input.contact_id }}/add"
+    body: none
+    inputs:
+      - { name: segment_id, label: "The segment's id", required: true, kind: number }
+      - { name: contact_id, label: "The contact's id", required: true, kind: number }
+    output: { success: boolean }
+  remove_from_segment:
+    label: Take a contact out of a segment
+    description: A contact taken out of a segment.
+    write: true
+    method: POST
+    path: "/api/segments/{{ input.segment_id }}/contact/{{ input.contact_id }}/remove"
+    body: none
+    inputs:
+      - { name: segment_id, label: "The segment's id", required: true, kind: number }
+      - { name: contact_id, label: "The contact's id", required: true, kind: number }
+    output: { success: boolean }
+  list_campaigns:
+    label: List campaigns
+    description: The site's campaigns.
+    method: GET
+    path: /api/campaigns
+    query: { limit: "100" }
+    items: "(type(value.campaigns) == list ? value.campaigns : value.campaigns.map(k, value.campaigns[k]))"
+    next: "(page == null ? 0 : int(page.start)) + size(value.campaigns) < int(value.total) ? {'start': (page == null ? 0 : int(page.start)) + size(value.campaigns)} : null"
+    output: { id: number, name: text, description: text, isPublished: boolean, publishUp: text, publishDown: text }
+  add_to_campaign:
+    label: Add a contact to a campaign
+    description: A contact put in a campaign, which then runs its steps for them.
+    write: true
+    method: POST
+    path: "/api/campaigns/{{ input.campaign_id }}/contact/{{ input.contact_id }}/add"
+    body: none
+    inputs:
+      - { name: campaign_id, label: "The campaign's id", required: true, kind: number }
+      - { name: contact_id, label: "The contact's id", required: true, kind: number }
+    output: { success: boolean }
+  remove_from_campaign:
+    label: Take a contact out of a campaign
+    description: A contact taken out of a campaign.
+    write: true
+    method: POST
+    path: "/api/campaigns/{{ input.campaign_id }}/contact/{{ input.contact_id }}/remove"
+    body: none
+    inputs:
+      - { name: campaign_id, label: "The campaign's id", required: true, kind: number }
+      - { name: contact_id, label: "The contact's id", required: true, kind: number }
+    output: { success: boolean }
+  list_emails:
+    label: List emails
+    description: The site's emails, those sent to segments and those sent one by one (templates).
+    method: GET
+    path: /api/emails
+    query: { limit: "100" }
+    items: "(type(value.emails) == list ? value.emails : value.emails.map(k, value.emails[k]))"
+    next: "(page == null ? 0 : int(page.start)) + size(value.emails) < int(value.total) ? {'start': (page == null ? 0 : int(page.start)) + size(value.emails)} : null"
+    output: { id: number, name: text, subject: text, emailType: text, isPublished: boolean, sentCount: number, readCount: number }
+  send_email:
+    label: Send an email to a contact
+    description: One of the site's template emails sent to a contact, with any tokens filled in; Mautic skips a do-not-contact contact.
+    write: true
+    method: POST
+    path: "/api/emails/{{ input.email_id }}/contact/{{ input.contact_id }}/send"
+    inputs:
+      - { name: email_id, label: "The email's id", required: true, kind: number }
+      - { name: contact_id, label: "The contact's id", required: true, kind: number }
+      - { name: tokens, label: "Tokens to fill in, such as {\"{{order}}\": \"1042\"}", kind: record }
+    send: { tokens: "{{ input.tokens }}" }
+    output: { success: boolean }
+  list_companies:
+    label: List companies
+    description: The site's companies, or those a search finds.
+    method: GET
+    path: /api/companies
+    inputs:
+      - { name: search, label: "A search, such as a company's name" }
+    query: { search: "{{ input.search }}", limit: "100" }
+    items: "(type(value.companies) == list ? value.companies : value.companies.map(k, value.companies[k]))"
+    next: "(page == null ? 0 : int(page.start)) + size(value.companies) < int(value.total) ? {'start': (page == null ? 0 : int(page.start)) + size(value.companies)} : null"
+    output: { id: number, fields: record, score: number }
+  create_company:
+    label: Add a company
+    description: A new company.
+    write: true
+    method: POST
+    path: /api/companies/new
+    inputs:
+      - { name: name, label: "Its name", required: true }
+      - { name: email, label: Email }
+      - { name: website, label: Website }
+      - { name: phone, label: Phone }
+      - { name: city, label: City }
+      - { name: country, label: Country }
+    send:
+      companyname: "{{ input.name }}"
+      companyemail: "{{ input.email }}"
+      companywebsite: "{{ input.website }}"
+      companyphone: "{{ input.phone }}"
+      companycity: "{{ input.city }}"
+      companycountry: "{{ input.country }}"
+    result: value.company
+    output: { id: number, fields: record, score: number }
+  add_to_company:
+    label: Link a contact to a company
+    description: A contact counted as one of a company's people.
+    write: true
+    method: POST
+    path: "/api/companies/{{ input.company_id }}/contact/{{ input.contact_id }}/add"
+    body: none
+    inputs:
+      - { name: company_id, label: "The company's id", required: true, kind: number }
+      - { name: contact_id, label: "The contact's id", required: true, kind: number }
+    output: { success: boolean }
+triggers:
+  new_contact:
+    label: A new contact
+    description: >-
+      Each contact Mautic identifies (made by hand, by import, through a form or the API), as Mautic sends it, signed. Turning the workflow on adds a webhook to Mautic, and turning it off deletes it.
+    webhook:
+      signature: { header: webhook-signature, encoding: base64 }
+      secret: webhook_secret
+      only: "'mautic.lead_post_save_new' in value"
+      events: "value['mautic.lead_post_save_new'].map(e, {'id': e.contact.id, 'email': type(e.contact.fields) == map && 'core' in e.contact.fields && type(e.contact.fields.core) == map && 'email' in e.contact.fields.core ? e.contact.fields.core.email.value : null, 'first_name': type(e.contact.fields) == map && 'core' in e.contact.fields && type(e.contact.fields.core) == map && 'firstname' in e.contact.fields.core ? e.contact.fields.core.firstname.value : null, 'last_name': type(e.contact.fields) == map && 'core' in e.contact.fields && type(e.contact.fields.core) == map && 'lastname' in e.contact.fields.core ? e.contact.fields.core.lastname.value : null, 'company': type(e.contact.fields) == map && 'core' in e.contact.fields && type(e.contact.fields.core) == map && 'company' in e.contact.fields.core ? e.contact.fields.core.company.value : null, 'phone': type(e.contact.fields) == map && 'core' in e.contact.fields && type(e.contact.fields.core) == map && 'phone' in e.contact.fields.core ? e.contact.fields.core.phone.value : null, 'points': has(e.contact.points) ? e.contact.points : 0, 'date_added': has(e.contact.dateAdded) ? e.contact.dateAdded : null, 'date_modified': has(e.contact.dateModified) ? e.contact.dateModified : null, 'contact': e.contact})"
+      id: "string(item.id)"
+      register:
+        - method: POST
+          path: /api/hooks/new
+          send:
+            name: "OpenDuct workflow {{ input.workflow }}"
+            webhookUrl: "{{ input.address }}"
+            triggers: ["mautic.lead_post_save_new"]
+            secret: "{{ input.secret }}"
+            isPublished: true
+      keep: { webhook_secret: input.secret, webhook_id: string(value.hook.id) }
+      unregister:
+        - { method: DELETE, path: "/api/hooks/{{ input.registered.webhook_id }}/delete" }
+  changed_contact:
+    label: A contact changed
+    description: >-
+      Each change to a contact, as Mautic sends it, signed. Turning the workflow on adds a webhook to Mautic, and turning it off deletes it.
+    webhook:
+      signature: { header: webhook-signature, encoding: base64 }
+      secret: webhook_secret
+      only: "'mautic.lead_post_save_update' in value"
+      events: "value['mautic.lead_post_save_update'].map(e, {'id': e.contact.id, 'email': type(e.contact.fields) == map && 'core' in e.contact.fields && type(e.contact.fields.core) == map && 'email' in e.contact.fields.core ? e.contact.fields.core.email.value : null, 'first_name': type(e.contact.fields) == map && 'core' in e.contact.fields && type(e.contact.fields.core) == map && 'firstname' in e.contact.fields.core ? e.contact.fields.core.firstname.value : null, 'last_name': type(e.contact.fields) == map && 'core' in e.contact.fields && type(e.contact.fields.core) == map && 'lastname' in e.contact.fields.core ? e.contact.fields.core.lastname.value : null, 'company': type(e.contact.fields) == map && 'core' in e.contact.fields && type(e.contact.fields.core) == map && 'company' in e.contact.fields.core ? e.contact.fields.core.company.value : null, 'phone': type(e.contact.fields) == map && 'core' in e.contact.fields && type(e.contact.fields.core) == map && 'phone' in e.contact.fields.core ? e.contact.fields.core.phone.value : null, 'points': has(e.contact.points) ? e.contact.points : 0, 'date_added': has(e.contact.dateAdded) ? e.contact.dateAdded : null, 'date_modified': has(e.contact.dateModified) ? e.contact.dateModified : null, 'contact': e.contact})"
+      id: "string(item.id) + '@' + string(item.date_modified)"
+      register:
+        - method: POST
+          path: /api/hooks/new
+          send:
+            name: "OpenDuct workflow {{ input.workflow }}"
+            webhookUrl: "{{ input.address }}"
+            triggers: ["mautic.lead_post_save_update"]
+            secret: "{{ input.secret }}"
+            isPublished: true
+      keep: { webhook_secret: input.secret, webhook_id: string(value.hook.id) }
+      unregister:
+        - { method: DELETE, path: "/api/hooks/{{ input.registered.webhook_id }}/delete" }
+  form_answered:
+    label: A form answered
+    description: >-
+      Each answer to one of the site's forms, as Mautic sends it, signed. Turning the workflow on adds a webhook to Mautic, and turning it off deletes it.
+    webhook:
+      signature: { header: webhook-signature, encoding: base64 }
+      secret: webhook_secret
+      only: "'mautic.form_on_submit' in value"
+      events: "value['mautic.form_on_submit'].map(e, e.submission)"
+      id: "string(item.id)"
+      register:
+        - method: POST
+          path: /api/hooks/new
+          send:
+            name: "OpenDuct workflow {{ input.workflow }}"
+            webhookUrl: "{{ input.address }}"
+            triggers: ["mautic.form_on_submit"]
+            secret: "{{ input.secret }}"
+            isPublished: true
+      keep: { webhook_secret: input.secret, webhook_id: string(value.hook.id) }
+      unregister:
+        - { method: DELETE, path: "/api/hooks/{{ input.registered.webhook_id }}/delete" }

@@ -1,0 +1,31 @@
+name: Answer from documents kept in Qdrant
+description: >-
+  When a question comes in over a webhook ({"question": ..., "team": ...}), find the passages of that team's documents
+  nearest it in a Qdrant collection, have a model answer from those passages only, and answer the caller with the
+  answer and every passage it was given. The same steps keep and search documents in Weaviate, Milvus, Chroma,
+  Pinecone, Redis, MongoDB Atlas or PostgreSQL: change the store and its credential.
+category: AI
+trigger:
+  webhook: {}
+# What a test runs on: an event as this trigger gives it.
+sample:
+  question: How long does a refund take?
+  team: support
+steps:
+  - name: answer
+    ask_documents:
+      store: qdrant
+      credential: vectors
+      collection: handbook
+      embed_with: model
+      question: "{{ value.question }}"
+      filter:
+        team: "{{ value.team }}"
+      top_k: 4
+      max_tokens: 500
+  - name: reply
+    respond:
+      status: 200
+      body:
+        answer: "{{ steps.answer.text }}"
+        sources: "{{ steps.answer.sources }}"

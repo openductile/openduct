@@ -1,0 +1,111 @@
+# Copyright 2026 Ductile AI, Inc
+# SPDX-License-Identifier: Apache-2.0
+app: apify
+name: Apify
+category: data
+description: Web scrapers and other Actors run on Apify, and the records they gathered.
+docs: https://docs.apify.com/api/v2
+hosts: [api.apify.com]
+base_url: https://api.apify.com/v2
+sign_in:
+  - id: apify
+    label: An API token
+    fields:
+      - { name: api_token, label: "The API token (Apify Console, Settings, API & Integrations)", secret: true }
+    headers: { Authorization: "Bearer {{ credential.api_token }}" }
+default_action: run_and_get_items
+error: value.error.message
+actions:
+  run_and_get_items:
+    label: Run an Actor and get its records
+    description: >-
+      Runs the Actor, waits for it to finish (at most 5 minutes) and gives the records it gathered. For a longer run,
+      start it with Run an Actor and read its records later.
+    # A run spends the account's credit: a preview shows it and does not send it.
+    write: true
+    method: POST
+    # Apify answers when the run is done, or after 300 seconds with 408.
+    timeout: 300
+    path: "/actors/{{ input.actor.replace('/', '~') }}/run-sync-get-dataset-items"
+    inputs:
+      - { name: actor, label: "The Actor: its name as apify/web-scraper, or its id", required: true }
+      - { name: input, label: "What the Actor is given (its input, as the Actor's page shows it)", kind: record }
+      - { name: limit, label: "At most this many records", kind: number }
+      - { name: max_total_charge_usd, label: "Spend at most this many US dollars on the run", kind: number }
+      - { name: memory_mb, label: "Memory for the run, in megabytes (128, 256, 512 ...)", kind: number }
+    query:
+      format: json
+      clean: "true"
+      limit: "{{ input.limit }}"
+      maxTotalChargeUsd: "{{ input.max_total_charge_usd }}"
+      memory: "{{ input.memory_mb }}"
+    send: "{{ has(input.input) && input.input != null ? input.input : {} }}"
+  run_actor:
+    label: Run an Actor
+    description: Starts the Actor and gives its run (its status, and where its records go) without waiting for it to end.
+    write: true
+    method: POST
+    timeout: 90
+    path: "/actors/{{ input.actor.replace('/', '~') }}/runs"
+    inputs:
+      - { name: actor, label: "The Actor: its name as apify/web-scraper, or its id", required: true }
+      - { name: input, label: "What the Actor is given (its input)", kind: record }
+      - { name: wait_seconds, label: "Wait this many seconds for it to finish (0 to 60)", kind: number }
+      - { name: max_total_charge_usd, label: "Spend at most this many US dollars on the run", kind: number }
+      - { name: memory_mb, label: "Memory for the run, in megabytes", kind: number }
+    query:
+      waitForFinish: "{{ input.wait_seconds }}"
+      maxTotalChargeUsd: "{{ input.max_total_charge_usd }}"
+      memory: "{{ input.memory_mb }}"
+    send: "{{ has(input.input) && input.input != null ? input.input : {} }}"
+    result: value.data
+  run_task:
+    label: Run a saved task
+    description: Starts one of the account's saved tasks (an Actor with its input) without waiting for it to end.
+    write: true
+    method: POST
+    timeout: 90
+    path: "/actor-tasks/{{ input.task.replace('/', '~') }}/runs"
+    inputs:
+      - { name: task, label: "The task: its name as me/my-task, or its id", required: true }
+      - { name: input, label: "Changes to the task's input", kind: record }
+      - { name: wait_seconds, label: "Wait this many seconds for it to finish (0 to 60)", kind: number }
+    query: { waitForFinish: "{{ input.wait_seconds }}" }
+    send: "{{ has(input.input) && input.input != null ? input.input : {} }}"
+    result: value.data
+  get_run:
+    label: Look up a run
+    description: A run's status (READY, RUNNING, SUCCEEDED, FAILED, TIMED-OUT, ABORTED) and where its records are.
+    method: GET
+    timeout: 90
+    path: "/actor-runs/{{ input.run_id }}"
+    inputs:
+      - { name: run_id, label: "The run's id", required: true }
+      - { name: wait_seconds, label: "Wait this many seconds for it to finish (0 to 60)", kind: number }
+    query: { waitForFinish: "{{ input.wait_seconds }}" }
+    result: value.data
+  get_items:
+    label: Get the records of a dataset
+    description: The records a run gathered (its defaultDatasetId), every page of them up to 10,000.
+    method: GET
+    path: "/datasets/{{ input.dataset_id }}/items"
+    inputs:
+      - { name: dataset_id, label: "The dataset's id (a run's defaultDatasetId)", required: true }
+      - { name: fields, label: "Only these fields, with commas (url,title,price)" }
+    query: { format: json, clean: "true", limit: "1000", fields: "{{ input.fields }}" }
+    items: value
+    # The answer's headers say where this page started, how long a page is and how many records there are in all
+    # (a page may hold fewer, the empty ones left out).
+    next: >-
+      size(value) == 0 || !('x-apify-pagination-total' in headers) ? null
+      : int(headers['x-apify-pagination-offset']) + int(headers['x-apify-pagination-limit'])
+      >= int(headers['x-apify-pagination-total']) ? null
+      : {'offset': int(headers['x-apify-pagination-offset']) + int(headers['x-apify-pagination-limit'])}
+  get_record:
+    label: Get a record of a key-value store
+    description: One record a run kept, such as its OUTPUT.
+    method: GET
+    path: "/key-value-stores/{{ input.store_id }}/records/{{ input.key }}"
+    inputs:
+      - { name: store_id, label: "The store's id (a run's defaultKeyValueStoreId)", required: true }
+      - { name: key, label: "The record's key, such as OUTPUT", required: true }

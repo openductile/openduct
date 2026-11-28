@@ -1,0 +1,41 @@
+description: A contact added, its fields sent as Agile CRM's properties
+action: create_contact
+credential: {domain: shopexample, email: dana@shop.example, api_key: agile-test-key}
+input:
+  first_name: Ann
+  last_name: Example
+  email: ann@example.com
+  tags: [Lead]
+  custom_fields:
+  - {name: Plan, value: Gold}
+exchanges:
+- sent:
+    method: POST
+    url: https://shopexample.agilecrm.com/dev/api/contacts
+    headers: {authorization: Basic ZGFuYUBzaG9wLmV4YW1wbGU6YWdpbGUtdGVzdC1rZXk=, accept: application/json}
+    query: {}
+    body:
+      tags: [Lead]
+      properties:
+      - {type: SYSTEM, name: first_name, value: Ann}
+      - {type: SYSTEM, name: last_name, value: Example}
+      - {type: SYSTEM, name: email, value: ann@example.com, subtype: work}
+      - {type: CUSTOM, name: Plan, value: Gold}
+  answer:
+    status: 200
+    body: &id001
+      id: '5629585249009664'
+      type: PERSON
+      created_time: '1764237600'
+      updated_time: 1764237600
+      star_value: 4
+      lead_score: 10
+      tags: [Lead]
+      properties:
+      - {type: SYSTEM, name: first_name, value: Ann}
+      - {type: SYSTEM, name: last_name, value: Example}
+      - {type: SYSTEM, name: email, value: ann@example.com, subtype: work}
+      contact_company_id: null
+      owner: {id: 6263975862861824, email: dana@shop.example, name: Dana Example}
+      campaignStatus: []
+result: *id001

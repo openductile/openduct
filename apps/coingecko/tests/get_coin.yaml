@@ -1,0 +1,7 @@
+action: get_coin
+credential: { api_key: CG-test1 }
+input: { id: bitcoin, tickers: false, localization: false }
+exchanges:
+  - sent: { method: GET, url: https://api.coingecko.com/api/v3/coins/bitcoin, query: { tickers: "false", localization: "false" } }
+    answer: { body: { id: bitcoin, symbol: btc, name: Bitcoin, market_cap_rank: 1, market_data: { current_price: { usd: 76975 } } } }
+result: { id: bitcoin, symbol: btc, name: Bitcoin, market_cap_rank: 1, market_data: { current_price: { usd: 76975 } } }

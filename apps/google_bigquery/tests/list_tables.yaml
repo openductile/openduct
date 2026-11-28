@@ -1,0 +1,7 @@
+action: list_tables
+credential: { access_token: ya29.bq-test }
+input: { project_id: example-shop-1, dataset_id: shop }
+exchanges:
+  - sent: { method: GET, url: https://bigquery.googleapis.com/bigquery/v2/projects/example-shop-1/datasets/shop/tables }
+    answer: { body: { tables: [{ id: "example-shop-1:shop.orders", tableReference: { projectId: example-shop-1, datasetId: shop, tableId: orders }, type: TABLE, creationTime: "1795000000000" }], totalItems: 1 } }
+result: [{ id: orders, kind: TABLE, created: "1795000000000" }]

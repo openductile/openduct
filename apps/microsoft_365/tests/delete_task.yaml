@@ -1,0 +1,10 @@
+description: "A To Do task removed"
+action: delete_task
+credential: { access_token: eyJ0 }
+input: { list_id: AAMkShop2, task_id: AlMKXwbQ1 }
+exchanges:
+  - sent:
+      method: DELETE
+      url: https://graph.microsoft.com/v1.0/me/todo/lists/AAMkShop2/tasks/AlMKXwbQ1
+    answer: { status: 204 }
+result: { deleted: true }

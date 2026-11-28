@@ -1,0 +1,20 @@
+description: "Failed deliveries, newest first, page after page"
+action: list_events
+credential: {"api_key": "key-test", "domain": "mg.example.com"}
+input: {"event": "failed"}
+exchanges:
+  - sent:
+      method: GET
+      url: "https://api.mailgun.net/v3/mg.example.com/events"
+      query: {"event": "failed", "ascending": "no", "limit": "300"}
+      headers: {"authorization": "Basic YXBpOmtleS10ZXN0"}
+    answer: {"status": 200, "body": {"items": [{"id": "ev_3", "event": "failed", "timestamp": 1764237600.5, "recipient": "zed@example.com", "severity": "permanent", "reason": "bounce", "message": {"headers": {"subject": "Your order"}}}], "paging": {"next": "https://api.mailgun.net/v3/mg.example.com/events/W3siYSI6IGZhbHNlfV0="}}}
+  - sent:
+      method: GET
+      url: "https://api.mailgun.net/v3/mg.example.com/events/W3siYSI6IGZhbHNlfV0="
+    answer: {"status": 200, "body": {"items": [{"id": "ev_2", "event": "failed", "timestamp": 1764230000.1, "recipient": "yan@example.com", "severity": "temporary", "reason": "generic", "message": {"headers": {"subject": "Your order"}}}], "paging": {"next": "https://api.mailgun.net/v3/mg.example.com/events/W3siYSI6IGZhbHNlfV0=x"}}}
+  - sent:
+      method: GET
+      url: "https://api.mailgun.net/v3/mg.example.com/events/W3siYSI6IGZhbHNlfV0=x"
+    answer: {"status": 200, "body": {"items": [], "paging": {"next": "https://api.mailgun.net/v3/mg.example.com/events/W3siYSI6IGZhbHNlfV0=y"}}}
+result: [{"id": "ev_3", "event": "failed", "timestamp": 1764237600.5, "recipient": "zed@example.com", "severity": "permanent", "reason": "bounce", "message": {"headers": {"subject": "Your order"}}}, {"id": "ev_2", "event": "failed", "timestamp": 1764230000.1, "recipient": "yan@example.com", "severity": "temporary", "reason": "generic", "message": {"headers": {"subject": "Your order"}}}]

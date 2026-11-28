@@ -1,0 +1,11 @@
+description: Graph checks the address with a validation token, and gets it back as plain text
+trigger: new_message
+workflow: wf1
+sign_in: teams
+credential: { access_token: eyJ0.teams }
+delivery:
+  query: "validationToken=Validation%3A%20Testing%20client%20application%20reachability%20for%20subscription%20Request-Id%3A%2025ac2f4c"
+  content_type: "text/plain; charset=utf-8"
+  body: ""
+  at: 1700000000
+answer: "Validation: Testing client application reachability for subscription Request-Id: 25ac2f4c"

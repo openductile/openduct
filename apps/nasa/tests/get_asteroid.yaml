@@ -1,0 +1,25 @@
+description: One asteroid by its SPK-ID
+action: get_asteroid
+credential: { api_key: nasa-test-key }
+input: { asteroid_id: "3000001" }
+exchanges:
+  - sent:
+      method: GET
+      url: https://api.nasa.gov/neo/rest/v1/neo/3000001
+      query: { api_key: nasa-test-key }
+    answer:
+      status: 200
+      body:
+        neo_reference_id: "3000001"
+        name: (2026 XA1)
+        nasa_jpl_url: https://ssd.jpl.nasa.gov/tools/sbdb_lookup.html#/?sstr=3000001
+        absolute_magnitude_h: 24.1
+        is_potentially_hazardous_asteroid: false
+        close_approach_data: [{ close_approach_date: "2026-11-27", orbiting_body: Earth }]
+result:
+  neo_reference_id: "3000001"
+  name: (2026 XA1)
+  nasa_jpl_url: https://ssd.jpl.nasa.gov/tools/sbdb_lookup.html#/?sstr=3000001
+  absolute_magnitude_h: 24.1
+  is_potentially_hazardous_asteroid: false
+  close_approach_data: [{ close_approach_date: "2026-11-27", orbiting_body: Earth }]

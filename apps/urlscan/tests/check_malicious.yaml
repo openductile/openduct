@@ -1,0 +1,7 @@
+action: check_malicious
+credential: { api_key: us_test_1 }
+input: { type: domain, value: shop.example.com }
+exchanges:
+  - sent: { method: GET, url: https://urlscan.io/api/v1/malicious/domain/shop.example.com }
+    answer: { body: { observable: shop.example.com, type: domain, count: 3, firstSeen: "2026-11-20T08:00:00Z", lastSeen: "2026-11-27T10:00:00Z" } }
+result: { observable: shop.example.com, type: domain, count: 3, firstSeen: "2026-11-20T08:00:00Z", lastSeen: "2026-11-27T10:00:00Z" }

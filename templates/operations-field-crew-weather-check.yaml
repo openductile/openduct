@@ -1,0 +1,98 @@
+name: A weather check for field crews on Telegram
+description: >-
+  For roofers, landscapers, installers and anyone working outside: a crew member shares their location with your
+  Telegram bot, and gets the next ten hours there from Open-Meteo - gusts, rain, heat and frost worked out hour by
+  hour by a short script against your safety limits - with a three-line note from a model on what that means for the
+  day's work. Only the figures reach the model, never the location. Needs: crew_bot (telegram), model (ai).
+category: Operations
+trigger:
+  telegram: { when: message, credential: crew_bot }
+# What a test runs on: a shared location as this trigger gives it.
+sample:
+  message_id: 88
+  date: 1795762800
+  chat: { id: 731004412, type: private }
+  from: { id: 731004412, first_name: Sam }
+  location: { latitude: 39.7392, longitude: -104.9903 }
+steps:
+  - name: no_location
+    if:
+      when: "!has(value.location) || value.location == null"
+      then:
+        - name: ask_for_it
+          telegram:
+            credential: crew_bot
+            chat_id: "{{ value.chat.id }}"
+            text: "Share your location (the paperclip, then Location) and I send you the next ten hours of weather there."
+        - stop: {}
+  - name: forecast
+    http:
+      url: https://api.open-meteo.com/v1/forecast
+      query:
+        latitude: "{{ string(value.location.latitude) }}"
+        longitude: "{{ string(value.location.longitude) }}"
+        hourly: temperature_2m,precipitation_probability,wind_gusts_10m
+        forecast_hours: "10"
+        timezone: auto
+        wind_speed_unit: mph
+        temperature_unit: fahrenheit
+      sample:
+        timezone: America/Denver
+        hourly:
+          time: ["2026-11-27T08:00", "2026-11-27T09:00", "2026-11-27T10:00", "2026-11-27T11:00", "2026-11-27T12:00", "2026-11-27T13:00"]
+          temperature_2m: [28.4, 31.0, 35.6, 39.2, 41.0, 41.9]
+          precipitation_probability: [5, 5, 10, 35, 60, 70]
+          wind_gusts_10m: [12.0, 18.5, 26.0, 38.4, 44.1, 31.0]
+    retry: { attempts: 3, wait: 10s }
+  - name: limits
+    javascript: |
+      // Your safety limits: change them to your own rules.
+      const GUSTS_MPH = 35;      // no ladders, lifts or roof work above this
+      const RAIN_CHANCE = 50;    // plan covered work above this
+      const HEAT_F = 90;         // water and shade breaks above this
+      const FROST_F = 32;        // icy surfaces at or below this
+
+      const h = (steps.forecast.body || {}).hourly || {};
+      const time = h.time || [];
+      const at = (i) => String(time[i] || "").slice(11, 16);
+      const hours = (list, test) => (list || []).map((v, i) => (test(v) ? at(i) : null)).filter(Boolean);
+      const gusty = hours(h.wind_gusts_10m, (v) => v > GUSTS_MPH);
+      const wet = hours(h.precipitation_probability, (v) => v >= RAIN_CHANCE);
+      const hot = hours(h.temperature_2m, (v) => v >= HEAT_F);
+      const frost = hours(h.temperature_2m, (v) => v <= FROST_F);
+      const max = (list) => (list && list.length ? Math.max(...list) : null);
+      const min = (list) => (list && list.length ? Math.min(...list) : null);
+      return {
+        from: at(0),
+        to: at(time.length - 1),
+        max_gust_mph: max(h.wind_gusts_10m),
+        max_rain_chance: max(h.precipitation_probability),
+        high_f: max(h.temperature_2m),
+        low_f: min(h.temperature_2m),
+        gusty_hours: gusty,
+        wet_hours: wet,
+        hot_hours: hot,
+        frost_hours: frost,
+        safe: gusty.length === 0 && wet.length === 0 && hot.length === 0 && frost.length === 0,
+      };
+  - name: note
+    ai:
+      credential: model
+      system: >-
+        You brief an outdoor work crew on the weather in three short lines: what to expect, which hours are a problem
+        and why (the limits are already applied: gusty hours mean no ladders, lifts or roof work; wet hours mean
+        covered work; hot hours mean water and shade breaks; frost hours mean icy surfaces), and one practical tip.
+        Plain words, no emoji.
+      prompt: "Hours {{ steps.limits.from }} to {{ steps.limits.to }}: {{ steps.limits }}"
+      max_tokens: 200
+  - name: reply
+    telegram:
+      credential: crew_bot
+      chat_id: "{{ value.chat.id }}"
+      text: >-
+        {{ steps.limits.safe ? 'No weather limits crossed until ' + steps.limits.to + '.' : 'Some hours cross your limits: see the note below.' }}
+        Gusts up to {{ steps.limits.max_gust_mph }} mph, rain chance up to {{ steps.limits.max_rain_chance }}%,
+        {{ steps.limits.low_f }}-{{ steps.limits.high_f }} F.
+
+        {{ steps.note.text }}
+    retry: { attempts: 3, wait: 5s }

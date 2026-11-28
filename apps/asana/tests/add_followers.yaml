@@ -1,0 +1,11 @@
+description: Two people who follow a task
+action: add_followers
+credential: { token: "2/1200000000000001/1209999999999999:0a1b2c3d4e5f" }
+input: { task_id: "1204000000000001", followers: "ann@example.com, 1200000000000003" }
+exchanges:
+  - sent:
+      method: POST
+      url: https://app.asana.com/api/1.0/tasks/1204000000000001/addFollowers
+      body: { data: { followers: [ann@example.com, "1200000000000003"] } }
+    answer: { body: { data: { gid: "1204000000000001", name: Send the March invoices, followers: [{ gid: "1200000000000002", name: Ann Example }, { gid: "1200000000000003", name: Bo Example }] } } }
+result: { gid: "1204000000000001", name: Send the March invoices, followers: [{ gid: "1200000000000002", name: Ann Example }, { gid: "1200000000000003", name: Bo Example }] }

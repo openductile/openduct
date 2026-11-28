@@ -1,0 +1,12 @@
+description: A task added since the poll before
+trigger: new_task
+credential: { access_token: ya29.test }
+input: { list_id: "@default" }
+seen: { items: [["dGFzazE", ""]] }
+exchanges:
+  - sent:
+      method: GET
+      url: https://tasks.googleapis.com/tasks/v1/lists/@default/tasks
+      query: { showCompleted: "false", maxResults: "100" }
+    answer: { body: { items: [{ id: dGFzazE, title: Order more boxes, status: needsAction }, { id: dGFzazY, title: Book the van, status: needsAction }] } }
+runs: [{ id: dGFzazY, title: Book the van, status: needsAction }]

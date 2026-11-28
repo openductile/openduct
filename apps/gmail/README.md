@@ -24,8 +24,16 @@ Under Credentials, add a Gmail credential and **Connect**.
 - **Find emails** (`find_emails`): as Gmail searches (`from:shop@example.com newer_than:7d`); every page.
 - **Read an email** (`read_email`).
 
+## Triggers
+
+- **A new email** (`new_email`, asked every 5 minutes): each email that arrives, or that a search finds (`q`,
+  as Gmail searches), read in full. The run gets `from`, `to`, `subject`, `date`, `snippet`, `labels` and the whole
+  `message`. Needs the gmail.readonly permission (the sign-in asks for it).
+
 ## Tested
 
 Recorded exchanges from Google's documented requests and answers (`tests/`).
 
 Run against a Google account on 2026-11-16: Find emails (every page) and Read an email worked. Send was not tried (it sends mail).
+
+Triggers are tested with recorded exchanges and signed deliveries (`tests/trigger_*.yaml`), signatures made as the app documents them; none was run against a live account.

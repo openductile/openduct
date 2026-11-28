@@ -1,0 +1,67 @@
+name: Look up the competitors near you on Google Maps
+description: >-
+  Run it by hand with a search such as "bakery in Portland, OR": it asks the Google Places API for the businesses that
+  match, and keeps each one in the competitors data table - its name, address, rating, how many reviews and its
+  website - brought up to date when you run it again, so you can watch who is growing. Make the table once, under
+  Tables: competitors, with the columns place_id, name, address, website and search (text), rating and reviews
+  (number), and seen_at (datetime). Needs: google_places (a header credential: X-Goog-Api-Key and your API key).
+category: Marketing
+trigger: manual
+# What a test runs on: what you give it when you press Run.
+sample:
+  search: bakery in Portland, OR
+  most: 10
+steps:
+  - name: now
+    datetime: {}
+  - name: found
+    http:
+      method: POST
+      url: https://places.googleapis.com/v1/places:searchText
+      credential: google_places
+      headers:
+        # Only the fields kept: Google charges by the fields asked for.
+        X-Goog-FieldMask: places.id,places.displayName,places.formattedAddress,places.rating,places.userRatingCount,places.websiteUri
+      json:
+        textQuery: "{{ value.search }}"
+        pageSize: "{{ has(value.most) ? value.most : 10 }}"
+      timeout: 20s
+      sample:
+        places:
+          - id: ChIJexample0001
+            displayName: { text: Rosewood Bakery, languageCode: en }
+            formattedAddress: 100 Example Ave, Portland, OR 97201, USA
+            rating: 4.6
+            userRatingCount: 812
+            websiteUri: https://rosewood-bakery.example.com
+          - id: ChIJexample0002
+            displayName: { text: Corner Crumb, languageCode: en }
+            formattedAddress: 22 Sample St, Portland, OR 97205, USA
+            rating: 4.3
+            userRatingCount: 240
+    retry: { attempts: 3, wait: 10s }
+  - name: each
+    for_each:
+      items: "steps.found.body.places == null ? [] : steps.found.body.places"
+      steps:
+        - name: kept
+          table:
+            name: competitors
+            action: upsert
+            key: place_id
+            row:
+              place_id: "{{ item.id }}"
+              name: "{{ item.displayName.text }}"
+              address: "{{ item.formattedAddress }}"
+              rating: "{{ has(item.rating) ? item.rating : null }}"
+              reviews: "{{ has(item.userRatingCount) ? item.userRatingCount : 0 }}"
+              website: "{{ has(item.websiteUri) ? item.websiteUri : '' }}"
+              search: "{{ value.search }}"
+              seen_at: "{{ steps.now.utc }}"
+  - name: done
+    set:
+      search: value.search
+      found: size(steps.each)
+      top_rated: >-
+        size(steps.each) == 0 ? '' : steps.found.body.places.filter(p, has(p.rating)).map(p, p.displayName.text + ' ('
+        + string(p.rating) + ')').join(', ')

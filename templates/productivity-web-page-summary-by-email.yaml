@@ -1,0 +1,67 @@
+name: A web page summed up and sent to you as a file
+description: >-
+  Paste a web page's address into a form - an article, a competitor's announcement, a long policy page: the page is
+  fetched, its text read (menus and scripts left out), summed up by a model in the depth you choose, and e-mailed to
+  you as a tidy HTML file with the page's title and address, ready to forward or file. For anyone who saves long
+  reads "for later". Needs: model, mail.
+category: Productivity
+trigger:
+  form:
+    title: Sum up a web page
+    fields:
+      - { name: url, label: "The page's address", type: text, required: true, max_length: 500, placeholder: "https://..." }
+      - { name: email, label: Send it to, type: email, required: true }
+      - { name: depth, label: How much, type: dropdown, required: true, options: [The gist, A page, Every point] }
+    thanks: Thank you - the summary is on its way to your inbox.
+# What a test runs on: an answer as the form gives it.
+sample:
+  url: https://www.example.com/blog/four-day-week-results
+  email: sam.rivera@example.com
+  depth: A page
+steps:
+  - where: value.url.startsWith('https://') || value.url.startsWith('http://')
+  - name: page
+    http:
+      url: "{{ value.url.trim() }}"
+      headers: { accept: "text/html" }
+      response: file
+      timeout: 30s
+      sample: >-
+        <html><head><title>Our four-day week, one year on</title></head><body><nav>Home | Blog</nav><article>
+        <h1>Our four-day week, one year on</h1><p>A year ago our 32 people moved to a four-day week with the same
+        pay.</p><p>Output held: we shipped 11 releases against 10 the year before, and support answered within a
+        day 96% of the time.</p><p>Sick days fell by a third. Two roles were harder to cover: on-call and sales
+        demos, which now rotate.</p></article><script>track()</script></body></html>
+    retry: { attempts: 2, wait: 10s }
+  - name: text
+    extract_file: { file: steps.page.body, format: html }
+  - where: steps.text.text.trim() != ''
+  - name: summary
+    summarise:
+      credential: model
+      text: "{{ steps.text.text }}"
+      length: "{{ value.depth == 'The gist' ? '3 sentences' : value.depth == 'A page' ? 'medium' : 'long' }}"
+      style: "{{ value.depth == 'Every point' ? 'bullets, every point the page makes, in its order' : 'prose, plain words' }}"
+  # The page's words are written as text, never as HTML: what a page says cannot run in the file.
+  - name: safe
+    set:
+      title: "(has(steps.text.title) && steps.text.title != null ? steps.text.title : 'Summary').replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')"
+      url: "value.url.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;').replace('\"', '&quot;')"
+      summary: "string(steps.summary.summary).replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')"
+  - name: file
+    convert:
+      format: html
+      name: summary.html
+      text: >-
+        <!doctype html><html><head><meta charset="utf-8"><title>{{ steps.safe.title }}</title>
+        <style>body{font-family:system-ui,sans-serif;max-width:42rem;margin:2rem auto;line-height:1.5;padding:0 1rem}</style></head>
+        <body><h1>{{ steps.safe.title }}</h1>
+        <p><a href="{{ steps.safe.url }}">{{ steps.safe.url }}</a></p>
+        <div style="white-space:pre-wrap">{{ steps.safe.summary }}</div></body></html>
+  - name: send
+    email:
+      credential: mail
+      to: "{{ value.email }}"
+      subject: "Summary: {{ has(steps.text.title) ? steps.text.title : value.url }}"
+      text: "The summary of {{ value.url }} is attached.\n\n{{ steps.summary.summary }}"
+      attachments: steps.file

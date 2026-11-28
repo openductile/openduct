@@ -1,0 +1,11 @@
+description: Two placeholders filled on every slide; Google leaves out the count of one found nowhere
+action: fill_placeholders
+credential: { access_token: ya29.test }
+input: { presentation: 1CoPyOfTheTemplate0123456789abcdefg, values: { "{{company}}": Example Co } }
+exchanges:
+  - sent:
+      method: POST
+      url: https://slides.googleapis.com/v1/presentations/1CoPyOfTheTemplate0123456789abcdefg:batchUpdate
+      body: { requests: [{ replaceAllText: { containsText: { text: "{{company}}", matchCase: true }, replaceText: Example Co } }] }
+    answer: { body: { presentationId: 1CoPyOfTheTemplate0123456789abcdefg, replies: [{ replaceAllText: { occurrencesChanged: 3 } }], writeControl: { requiredRevisionId: r2 } } }
+result: { id: 1CoPyOfTheTemplate0123456789abcdefg, replaced: 3 }

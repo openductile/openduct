@@ -1,0 +1,83 @@
+name: A weekly digest of your competitors in the news
+description: >-
+  Every Monday at 7:30, asks NewsAPI for the last week's articles naming your competitors, drops the same story
+  syndicated by many sites (titles compared word by word), keeps the three most-covered stories per competitor, and
+  posts the digest to your sales team's Slack channel and e-mails it to leadership from Gmail. For sales and
+  strategy teams who should hear competitors' news before a prospect mentions it. Needs: newsapi (an API key, sent
+  as X-Api-Key), slack, gmail.
+category: Sales
+trigger:
+  schedule: { every: week, on: [monday], at: "07:30", timezone: Europe/Berlin }
+# What a test runs on: an event as this trigger gives it.
+sample:
+  scheduled_at: "2026-11-30T06:30:00Z"
+steps:
+  - name: watch
+    set:
+      # Your competitors, as the press names them.
+      names: "['Acme Analytics', 'Northwind Data', 'Globex Cloud']"
+      since: "string(timestamp(value.scheduled_at) - duration('168h')).substring(0, 10)"
+  - name: news
+    http:
+      url: https://newsapi.org/v2/everything
+      credential: newsapi
+      query:
+        q: "{{ steps.watch.names.map(n, '\"' + n + '\"').join(' OR ') }}"
+        from: "{{ steps.watch.since }}"
+        language: en
+        sortBy: publishedAt
+        pageSize: "100"
+      sample:
+        status: ok
+        articles:
+          - { title: "Acme Analytics raises $40M to expand in Europe", url: "https://news.example.com/acme-40m", source: { name: Example Wire }, publishedAt: "2026-11-26T09:00:00Z" }
+          - { title: "Acme Analytics raises $40 million to expand into Europe", url: "https://biz.example.org/acme-raise", source: { name: Biz Daily }, publishedAt: "2026-11-26T11:20:00Z" }
+          - { title: "Northwind Data cuts prices for small teams", url: "https://tech.example.net/northwind-prices", source: { name: Tech Today }, publishedAt: "2026-11-25T14:05:00Z" }
+    retry: { attempts: 3, wait: 1m }
+  # Groups the articles into stories, per competitor, the most-covered first.
+  - name: digest
+    javascript: |
+      const names = steps.watch.names;
+      const articles = (steps.news.body && steps.news.body.articles) || [];
+      const words = t => new Set(String(t || "").toLowerCase().replace(/[^a-z0-9 ]/g, " ").split(/\s+/).filter(w => w.length > 2));
+      const alike = (a, b) => {
+        let shared = 0;
+        for (const w of a) if (b.has(w)) shared++;
+        return shared / Math.max(1, Math.min(a.size, b.size)) >= 0.6;
+      };
+      const stories = [];
+      for (const a of articles) {
+        if (!a.title || a.title === "[Removed]") continue;
+        const w = words(a.title);
+        const same = stories.find(s => alike(s.words, w));
+        if (same) { same.sources.add(a.source && a.source.name); continue; }
+        stories.push({ title: a.title, url: a.url, words: w, sources: new Set([a.source && a.source.name]) });
+      }
+      const sections = [];
+      let count = 0;
+      for (const name of names) {
+        const mine = stories
+          .filter(s => s.title.toLowerCase().includes(name.toLowerCase()))
+          .sort((x, y) => y.sources.size - x.sources.size)
+          .slice(0, 3);
+        if (mine.length === 0) continue;
+        count += mine.length;
+        sections.push(`*${name}*\n` + mine.map(s => `- ${s.title} (${s.sources.size} source${s.sources.size > 1 ? "s" : ""})\n  ${s.url}`).join("\n"));
+      }
+      return { count, text: sections.join("\n\n") };
+  - where: steps.digest.count > 0
+  - name: slack
+    slack:
+      action: send
+      credential: slack
+      channel: "#sales"
+      text: "Competitors in the news this week:\n\n{{ steps.digest.text }}"
+    retry: { attempts: 3, wait: 15s }
+  - name: mail
+    gmail:
+      action: send_email
+      credential: gmail
+      to: leadership@example.com
+      subject: "Competitors in the news, week of {{ steps.watch.since }}"
+      text: "{{ steps.digest.count }} stories this week.\n\n{{ steps.digest.text.replace('*', '') }}"
+    retry: { attempts: 3, wait: 15s }

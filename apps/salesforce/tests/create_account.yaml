@@ -1,0 +1,12 @@
+description: "An account"
+action: create_account
+credential: { access_token: "00D000000000001!AQ.test", instance: examplecorp.my.salesforce.com }
+input: { name: Example Co, website: "https://www.example.com", industry: Retail }
+exchanges:
+  - sent:
+      method: POST
+      url: https://examplecorp.my.salesforce.com/services/data/v67.0/sobjects/Account/
+      headers: { authorization: Bearer 00D000000000001!AQ.test }
+      body: { Name: Example Co, Website: "https://www.example.com", Industry: Retail }
+    answer: { status: 201, body: { id: 0015e00000AbCdEAAV, success: true, errors: [] } }
+result: { id: 0015e00000AbCdEAAV, success: true, errors: [] }

@@ -1,0 +1,11 @@
+description: Two pages joined into one PDF
+action: create_pdf
+credential: { api_key: bb_ak_v5_test }
+input: { urls: ["https://files.example.com/page1.png", "https://files.example.com/page2.pdf"] }
+exchanges:
+  - sent:
+      method: POST
+      url: "https://api.bannerbear.com/v5/tools/create_pdf"
+      body: { urls: ["https://files.example.com/page1.png", "https://files.example.com/page2.pdf"] }
+    answer: { status: 202, body: { uid: job_P2, tool: create_pdf, status: pending, progress: 0, outputs: {} } }
+result: { uid: job_P2, tool: create_pdf, status: pending, progress: 0, outputs: {} }

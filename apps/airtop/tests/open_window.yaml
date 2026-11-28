@@ -1,0 +1,23 @@
+description: "Open a page in a new window"
+action: open_window
+credential: { token: test-token }
+input: { session_id: session_1 }
+exchanges:
+  - sent:
+      method: POST
+      url: "https://api.airtop.ai/api/v1/sessions/session_1/windows"
+      query: {}
+      headers: { authorization: "Bearer test-token" }
+      body: {}
+    answer:
+      status: 201
+      body:
+        data: { targetId: target_1, title: example, url: example, windowId: window_1 }
+        errors: [{ code: example, details: {}, message: example, reason: example }]
+        meta: { requestId: request_1 }
+        warnings: [{ code: example, details: {}, message: example, reason: example }]
+result:
+  data: { targetId: target_1, title: example, url: example, windowId: window_1 }
+  errors: [{ code: example, details: {}, message: example, reason: example }]
+  meta: { requestId: request_1 }
+  warnings: [{ code: example, details: {}, message: example, reason: example }]

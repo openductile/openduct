@@ -1,0 +1,17 @@
+description: Every page of items, followed by the pagination Webflow gives
+action: list_items
+credential: { token: test-token }
+input: { collection_id: col_1 }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://api.webflow.com/v2/collections/col_1/items"
+      query: { limit: "100" }
+      headers: { authorization: "Bearer test-token" }
+    answer: { status: 200, body: { items: [{ id: itm_1, isDraft: false, isArchived: false, fieldData: { name: Spring menu, slug: spring-menu } }], pagination: { limit: 1, offset: 0, total: 2 } } }
+  - sent:
+      method: GET
+      url: "https://api.webflow.com/v2/collections/col_1/items"
+      query: { limit: "100", offset: "1" }
+    answer: { status: 200, body: { items: [{ id: itm_2, isDraft: true, isArchived: false, fieldData: { name: Summer menu, slug: summer-menu } }], pagination: { limit: 1, offset: 1, total: 2 } } }
+result: [{ id: itm_1, isDraft: false, isArchived: false, fieldData: { name: Spring menu, slug: spring-menu } }, { id: itm_2, isDraft: true, isArchived: false, fieldData: { name: Summer menu, slug: summer-menu } }]

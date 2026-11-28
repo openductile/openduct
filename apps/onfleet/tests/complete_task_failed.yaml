@@ -1,0 +1,22 @@
+description: A task marked failed, with a note
+action: complete_task
+credential:
+  api_key: test-key
+input:
+  task_id: uO2vKr07h6zg7Fzf~2NC3KLg
+  failed: true
+  notes: Nobody home
+exchanges:
+- sent:
+    method: POST
+    url: https://onfleet.com/api/v2/tasks/uO2vKr07h6zg7Fzf~2NC3KLg/complete
+    headers:
+      authorization: Basic dGVzdC1rZXk6
+    body:
+      completionDetails:
+        success: false
+        notes: Nobody home
+  answer:
+    status: 200
+result:
+  completed: true

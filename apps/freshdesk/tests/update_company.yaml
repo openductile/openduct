@@ -1,0 +1,45 @@
+description: A company with a new renewal date
+action: update_company
+credential:
+  domain: acme
+  api_key: test-key
+input:
+  company_id: '8'
+  renewal_date: '2027-12-31'
+exchanges:
+- sent:
+    method: PUT
+    url: https://acme.freshdesk.com/api/v2/companies/8
+    headers:
+      authorization: Basic dGVzdC1rZXk6WA==
+    body:
+      renewal_date: '2027-12-31'
+  answer:
+    status: 200
+    body:
+      id: 8
+      name: Sample Supplies
+      description: Office supply reseller
+      domains: &id001
+      - example.com
+      note: null
+      health_score: Happy
+      account_tier: Premium
+      renewal_date: '2027-12-31T00:00:00Z'
+      industry: Retail
+      custom_fields: &id002 {}
+      created_at: '2026-01-08T09:08:53Z'
+      updated_at: '2026-01-08T09:08:53Z'
+result:
+  id: 8
+  name: Sample Supplies
+  description: Office supply reseller
+  domains: *id001
+  note: null
+  health_score: Happy
+  account_tier: Premium
+  renewal_date: '2027-12-31T00:00:00Z'
+  industry: Retail
+  custom_fields: *id002
+  created_at: '2026-01-08T09:08:53Z'
+  updated_at: '2026-01-08T09:08:53Z'

@@ -1,0 +1,28 @@
+description: Turning the workflow on subscribes its address to one service's new incidents, and keeps the secret PagerDuty makes
+trigger: incident_changed
+register: true
+workflow: wf1
+address: https://studio.example/hooks/h1
+credential: { api_key: pd_test_1 }
+input: { service_id: PSVC001 }
+exchanges:
+  - sent:
+      method: POST
+      url: https://api.pagerduty.com/webhook_subscriptions
+      body:
+        webhook_subscription:
+          type: webhook_subscription
+          description: OpenDuct workflow wf1
+          delivery_method: { type: http_delivery_method, url: https://studio.example/hooks/h1 }
+          events: [incident.triggered]
+          filter: { id: PSVC001, type: service_reference }
+    answer:
+      body:
+        webhook_subscription:
+          id: PWHSUB1
+          type: webhook_subscription
+          active: true
+          delivery_method: { id: PDM0001, type: http_delivery_method, url: https://studio.example/hooks/h1, secret: pd_whsec_test_1 }
+          events: [incident.triggered]
+          filter: { id: PSVC001, type: service_reference }
+kept: { webhook_secret: pd_whsec_test_1, webhook_id: PWHSUB1 }

@@ -1,0 +1,71 @@
+name: Your stock watchlist, summed up on Telegram after the close
+description: >-
+  Each weekday at 4:30 in the afternoon, New York time, read your watchlist from a Google Sheet (Ticker, Shares, Paid -
+  the price you paid), have an AI agent look up each stock's quote and the day's company news with the Finnhub API,
+  and send you a short brief on Telegram: how the list did today, what moved most and why, in plain words. It is a
+  summary of public figures, not advice. Needs: google_sheets, model (an AI credential), finnhub (a header
+  credential: X-Finnhub-Token and your key), telegram (your bot's token).
+category: Finance
+trigger:
+  schedule: { every: weekday, at: "16:30", timezone: America/New_York }
+# What a test runs on: an event as this trigger gives it.
+sample:
+  scheduled_at: '2026-11-27T21:30:00Z'
+steps:
+  - name: today
+    datetime: { value: value.scheduled_at, timezone: America/New_York }
+  - name: sheet
+    google_sheets:
+      action: read_rows
+      credential: google_sheets
+      spreadsheet_id: your-spreadsheet-id
+      range: Watchlist!A1:C50
+  - name: list
+    set:
+      lines: >-
+        type(steps.sheet) == list && size(steps.sheet) > 1
+          ? steps.sheet.filter(r, size(r) > 0 && r[0] != 'Ticker').map(r, r.join(' / ')).join('; ')
+          : ''
+  - where: steps.list.lines != ''
+  - name: brief
+    agent:
+      credential: model
+      instructions: >-
+        You write a short evening brief on a personal stock watchlist, for its owner, on a phone. For each ticker,
+        look up its quote, and the company's news of today for the two that moved most. Then write at most eight short
+        lines: how the whole list did today (worked out from shares and prices), the biggest moves with the news
+        behind them, and anything to read tomorrow. Plain words and numbers, no advice to buy or sell.
+      input: "Today is {{ steps.today.date }}. The watchlist (ticker / shares / paid): {{ steps.list.lines }}"
+      tools:
+        - name: quote
+          description: "A stock's quote: c is the current price, d the change today, dp the change in percent, pc the close before."
+          parameters:
+            type: object
+            properties:
+              symbol: { type: string, description: "The ticker, as AAPL" }
+            required: [symbol]
+          http:
+            url: https://finnhub.io/api/v1/quote
+            credential: finnhub
+            query: { symbol: "{{ args.symbol }}" }
+        - name: company_news
+          description: The company's news headlines of a day, with their sources.
+          parameters:
+            type: object
+            properties:
+              symbol: { type: string, description: "The ticker, as AAPL" }
+            required: [symbol]
+          http:
+            url: https://finnhub.io/api/v1/company-news
+            credential: finnhub
+            query: { symbol: "{{ args.symbol }}", from: "{{ steps.today.date }}", to: "{{ steps.today.date }}" }
+      allow: [quote, company_news]
+      max_turns: 10
+      max_tool_calls: 30
+  - name: send
+    telegram:
+      credential: telegram
+      # Your own chat's id with the bot.
+      chat_id: "123456789"
+      text: "Watchlist, {{ steps.today.date }}:\n{{ steps.brief.text }}"
+    retry: { attempts: 3, wait: 30s }

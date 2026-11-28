@@ -1,0 +1,219 @@
+# Copyright 2026 Ductile AI, Inc
+# SPDX-License-Identifier: Apache-2.0
+# Home Assistant: written by hand from its REST API reference, https://developers.home-assistant.io/docs/api/rest/
+# (docs/api/rest.md in github.com/home-assistant/developers.home-assistant at 50b518898989, CC BY-NC-SA 4.0: facts
+# only, every word here our own). Each installation has its own address, given in the credential.
+app: home_assistant
+name: Home Assistant
+category: iot
+description: A Home Assistant installation's devices - read and set states, turn things on and off, call any service, fire events, read history.
+docs: "https://developers.home-assistant.io/docs/api/rest/"
+base_url_field: url
+sign_in:
+  - id: home_assistant
+    label: "A long-lived access token"
+    fields:
+      - { name: url, label: "The installation's address, such as http://homeassistant.local:8123" }
+      - { name: token, label: "A long-lived access token (your profile, Security)", secret: true }
+    headers: { Authorization: "Bearer {{ credential.token }}" }
+error: "type(value) == map && has(value.message) && status >= 400 ? value.message : null"
+actions:
+  check_api:
+    label: "Check the connection"
+    description: "Whether the installation's API answers: a message saying it is running."
+    method: GET
+    path: "/api/"
+    output: { message: text }
+  get_config:
+    label: "Installation settings"
+    description: "The installation's name, location, time zone, units, version and loaded integrations."
+    method: GET
+    path: "/api/config"
+    output:
+      location_name: text
+      latitude: number
+      longitude: number
+      elevation: number
+      time_zone: text
+      unit_system: record
+      version: text
+      components: list
+      config_dir: text
+      whitelist_external_dirs: list
+  list_states:
+    label: "List every entity's state"
+    description: "Every entity - lights, sensors, switches, people - with its state, attributes and when it last changed."
+    method: GET
+    path: "/api/states"
+    items: value
+    output: { entity_id: text, state: text, attributes: record, last_changed: text, last_updated: text }
+  get_state:
+    label: "An entity's state"
+    description: "One entity's state and attributes, such as a sensor's reading or whether a light is on."
+    method: GET
+    path: "/api/states/{{ input.entity_id }}"
+    inputs:
+      - { name: entity_id, label: "The entity, such as sensor.kitchen_temperature", required: true }
+    output: { entity_id: text, state: text, attributes: record, last_changed: text, last_updated: text }
+  set_state:
+    label: "Set an entity's state as shown"
+    description: >-
+      Sets the state Home Assistant shows for an entity (made if new), with its attributes. The device itself is not
+      told: to switch something, use Turn on, Turn off or Call a service.
+    write: true
+    method: POST
+    path: "/api/states/{{ input.entity_id }}"
+    inputs:
+      - { name: entity_id, label: "The entity, such as sensor.orders_today", required: true }
+      - { name: state, label: "The state, such as 25 or on", required: true }
+      - { name: attributes, label: "Attributes, such as {unit_of_measurement: orders}", kind: record }
+    send: { state: "{{ input.state }}", attributes: "{{ input.attributes }}" }
+    output: { entity_id: text, state: text, attributes: record, last_changed: text, last_updated: text }
+  turn_on:
+    label: "Turn on"
+    description: "Turns on one entity or several (a light, a switch, a fan...). Gives the states that changed."
+    write: true
+    method: POST
+    path: "/api/services/homeassistant/turn_on"
+    inputs:
+      - { name: entity_id, label: "The entity, or several with commas, such as light.porch", required: true }
+    send: { entity_id: "{{ input.entity_id }}" }
+    items: value
+    output: { entity_id: text, state: text, attributes: record, last_changed: text }
+  turn_off:
+    label: "Turn off"
+    description: "Turns off one entity or several. Gives the states that changed."
+    write: true
+    method: POST
+    path: "/api/services/homeassistant/turn_off"
+    inputs:
+      - { name: entity_id, label: "The entity, or several with commas, such as light.porch", required: true }
+    send: { entity_id: "{{ input.entity_id }}" }
+    items: value
+    output: { entity_id: text, state: text, attributes: record, last_changed: text }
+  toggle:
+    label: "Switch over"
+    description: "Turns an entity off if it is on, and on if it is off. Gives the states that changed."
+    write: true
+    method: POST
+    path: "/api/services/homeassistant/toggle"
+    inputs:
+      - { name: entity_id, label: "The entity, or several with commas, such as switch.coffee_maker", required: true }
+    send: { entity_id: "{{ input.entity_id }}" }
+    items: value
+    output: { entity_id: text, state: text, attributes: record, last_changed: text }
+  call_service:
+    label: "Call a service"
+    description: >-
+      Runs any service (an action) of an integration - light.turn_on with a brightness, notify.mobile_app_phone with a
+      message, climate.set_temperature - and gives the states that changed, and the service's answer when asked.
+    write: true
+    method: POST
+    path: "/api/services/{{ input.domain }}/{{ input.service }}"
+    inputs:
+      - { name: domain, label: "The integration, such as light, notify or climate", required: true }
+      - { name: service, label: "The service, such as turn_on or set_temperature", required: true }
+      - { name: data, label: "Its data, such as {entity_id: light.porch, brightness_pct: 50}", kind: record }
+      - { name: return_response, label: "Give the service's answer too (only for services that answer)", kind: boolean }
+    query: { return_response: "{{ input.return_response == true ? 'true' : '' }}" }
+    send: "{{ has(input.data) && input.data != null ? input.data : {} }}"
+    output: { changed_states: list, service_response: record }
+  list_services:
+    label: "List services"
+    description: "Every integration and the services it offers."
+    method: GET
+    path: "/api/services"
+    items: value
+    output: { domain: text, services: record }
+  fire_event:
+    label: "Fire an event"
+    description: "Fires an event of the type given, with its data, for automations that wait for it."
+    write: true
+    method: POST
+    path: "/api/events/{{ input.event_type }}"
+    inputs:
+      - { name: event_type, label: "The event's type, such as order_shipped", required: true }
+      - { name: data, label: "Its data, such as {order: A-1042}", kind: record }
+    send: "{{ has(input.data) && input.data != null ? input.data : {} }}"
+    output: { message: text }
+  history:
+    label: "An entity's history"
+    description: >-
+      How one entity's state (or several, with commas) changed over a period - the past day unless a start is given -
+      as one list of changes for each entity.
+    method: GET
+    path: "/api/history/period{{ has(input.start) && input.start != null ? '/' + input.start : '' }}"
+    inputs:
+      - { name: entity_id, label: "The entity, or several with commas", required: true }
+      - { name: start, label: "From, such as 2026-11-26T00:00:00Z (a day ago if left out)" }
+      - { name: end, label: "To, such as 2026-11-27T00:00:00Z" }
+      - { name: minimal, label: "Only the time and state of the changes between the first and last", kind: boolean }
+    query:
+      filter_entity_id: "{{ input.entity_id }}"
+      end_time: "{{ input.end }}"
+      minimal_response: "{{ input.minimal == true ? 'true' : '' }}"
+    items: value
+  logbook:
+    label: "Logbook"
+    description: "What happened over a period - the past day unless a start is given - for one entity or all."
+    method: GET
+    path: "/api/logbook{{ has(input.start) && input.start != null ? '/' + input.start : '' }}"
+    inputs:
+      - { name: start, label: "From, such as 2026-11-26T00:00:00Z (a day ago if left out)" }
+      - { name: end, label: "To, such as 2026-11-27T00:00:00Z" }
+      - { name: entity_id, label: "Only this entity" }
+    query: { end_time: "{{ input.end }}", entity: "{{ input.entity_id }}" }
+    items: value
+    output: { when: text, name: text, message: text, domain: text, entity_id: text, context_user_id: text }
+  render_template:
+    label: "Fill in a template"
+    description: "Has Home Assistant fill in a template with its states, such as The door is {{ states('lock.front') }}."
+    method: POST
+    path: "/api/template"
+    inputs:
+      - { name: template, label: "The template, in Home Assistant's template language", required: true }
+    send: { template: "{{ input.template }}" }
+    result: "{'text': value}"
+    output: { text: text }
+  list_calendars:
+    label: "List calendars"
+    description: "Every calendar entity, with its name."
+    method: GET
+    path: "/api/calendars"
+    items: value
+    output: { entity_id: text, name: text }
+  calendar_events:
+    label: "A calendar's events"
+    description: "A calendar's events between two times; an all-day one has a date, the others a date and time."
+    method: GET
+    path: "/api/calendars/{{ input.calendar }}"
+    inputs:
+      - { name: calendar, label: "The calendar entity, such as calendar.family", required: true }
+      - { name: start, label: "From, such as 2026-11-27T00:00:00Z", required: true }
+      - { name: end, label: "To, such as 2026-12-04T00:00:00Z", required: true }
+    query: { start: "{{ input.start }}", end: "{{ input.end }}" }
+    items: value
+    output: { summary: text, start: record, end: record, description: text, location: text }
+  check_config:
+    label: "Check the configuration"
+    description: "Checks configuration.yaml: valid, or the errors found."
+    method: POST
+    path: "/api/config/core/check_config"
+    body: none
+    output: { result: text, errors: text }
+triggers:
+  state_changed:
+    label: An entity changed
+    description: >-
+      Each time an entity's state or attributes change - a door opens, a sensor passes a reading - asked for every
+      minute. The run gets the entity's new state and attributes.
+    inputs:
+      - { name: entity_id, label: "The entity, such as binary_sensor.front_door", required: true }
+    poll:
+      method: GET
+      path: "/api/states/{{ input.entity_id }}"
+      # One entity: its state is the one item, new again each time it is updated.
+      items: "[value]"
+      id: item.entity_id
+      version: item.last_updated
+      every: 1m

@@ -1,0 +1,11 @@
+description: "A campaign set running"
+action: start_campaign
+credential: {"api_key": "test-key"}
+input: {"campaign_id": "cam_A1"}
+exchanges:
+  - sent:
+      method: POST
+      url: "https://api.lemlist.com/api/campaigns/cam_A1/start"
+      headers: {"authorization": "Basic OnRlc3Qta2V5"}
+    answer: {"status": 200, "body": {"_id": "cam_A1", "state": "running"}}
+result: {"_id": "cam_A1", "state": "running"}

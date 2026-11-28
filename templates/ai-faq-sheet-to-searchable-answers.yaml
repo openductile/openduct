@@ -1,0 +1,77 @@
+name: Keep your help answers searchable, from a sheet
+description: >-
+  For support teams who keep their answers in a Google Sheet (on each row under the header: the question in column A,
+  its answer in B, a topic in C and a link in D): every night, the rows that are new or changed are cut into pieces,
+  turned into vectors and kept in Postgres with pgvector, and the rows taken out of the sheet are taken out of the
+  search too - so chats and assistants that answer from these pieces answer from today's sheet. Only what changed is
+  sent to the model. Needs: a Google Sheets sign-in called sheets, a Postgres credential called docs_db (with pgvector),
+  and an AI credential called model with an embedding model.
+category: AI
+trigger:
+  schedule: { every: day, at: "03:00", timezone: UTC }
+# What a test runs on: an event as this trigger gives it.
+sample:
+  scheduled_at: "2026-11-27T03:00:00Z"
+steps:
+  - name: settings
+    set:
+      # Change this to your own spreadsheet.
+      spreadsheet: "'your-spreadsheet-id'"
+  - name: faq
+    google_sheets:
+      credential: sheets
+      action: read_rows
+      spreadsheet_id: "{{ steps.settings.spreadsheet }}"
+      range: FAQ!A2:D
+    retry: { attempts: 3, wait: 10s }
+  - name: changes
+    javascript:
+      # Given the state to read what was kept last time; the state is changed only once the store is.
+      state: true
+      code: |
+        // A short fingerprint of a text (FNV-1a), to tell a changed row from an unchanged one.
+        const print = s => { let h = 2166136261; for (const c of s) { h ^= c.codePointAt(0); h = Math.imul(h, 16777619) >>> 0; } return h.toString(16); };
+        const cell = (r, i) => String(r[i] ?? "").trim();
+        // One document a row: "Q: ... A: ...", known by its question, with its topic and link to filter and cite by.
+        const docs = (steps.faq || [])
+          .map(r => ({ question: cell(r, 0), answer: cell(r, 1), topic: cell(r, 2), link: cell(r, 3) }))
+          .filter(d => d.question && d.answer)
+          .map(d => ({ source: "faq:" + d.question.toLowerCase().replace(/\s+/g, " ").slice(0, 200),
+                       text: `Q: ${d.question}\nA: ${d.answer}`, metadata: { topic: d.topic, link: d.link } }));
+        const before = state.prints || {};
+        const prints = {};
+        for (const d of docs) prints[d.source] = print(d.text + JSON.stringify(d.metadata));
+        const changed = docs.filter(d => before[d.source] !== prints[d.source]);
+        const removed = Object.keys(before).filter(s => !(s in prints));
+        return { changed, removed, prints, rows: docs.length };
+  - name: add_changed
+    if:
+      when: size(steps.changes.changed) > 0
+      then:
+        - name: pieces
+          split_text:
+            documents: steps.changes.changed
+            by: paragraphs
+            size: 1500
+            overlap: 150
+        - name: keep
+          vector_store:
+            action: add
+            credential: docs_db
+            table: help_pieces
+            create: true
+            embed_with: model
+            pieces: steps.pieces.pieces
+  - name: take_out_removed
+    if:
+      when: size(steps.changes.removed) > 0
+      then:
+        - name: forget
+          vector_store:
+            action: delete
+            credential: docs_db
+            table: help_pieces
+            source: steps.changes.removed
+  - name: remember
+    state:
+      set: { prints: "{{ steps.changes.prints }}" }

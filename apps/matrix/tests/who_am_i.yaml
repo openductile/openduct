@@ -1,0 +1,9 @@
+description: The user the token belongs to
+action: who_am_i
+credential: { homeserver: "https://matrix.example.org", token: syt_test_token }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://matrix.example.org/_matrix/client/v3/account/whoami"
+    answer: { status: 200, body: { user_id: "@shopbot:example.org", device_id: OPENDUCT1, is_guest: false } }
+result: { user_id: "@shopbot:example.org", device_id: OPENDUCT1, is_guest: false }

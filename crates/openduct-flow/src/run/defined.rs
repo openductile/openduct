@@ -71,10 +71,15 @@ pub(super) async fn run(effects: &dyn Effects, d: &Defined, env: &Env<'_>) -> Re
     {
         credential = fresh(effects, d, &credential).await?;
     }
+    // app generator: an action that calls a tool of the app's MCP server, not a request of its own.
+    if action.mcp.is_some() {
+        return crate::app_files::mcp_action::run(effects, d.app, action, &credential, &inputs).await;
+    }
     let mut page = Value::Null;
     let mut items: Vec<Value> = Vec::new();
     for _ in 0..action.max_pages {
-        let request = crate::app_files::request(d.app, action, &credential, &inputs, &page)?;
+        let mut request = crate::app_files::request(d.app, action, &credential, &inputs, &page)?;
+        crate::app_files::follow_ups::load_file_body(effects, &mut request).await?; // messaging
         let mut answer = effects.http(request).await?;
         // A token the vendor no longer takes: a fresh one, and the request once more.
         if status_of(&answer) == 401
@@ -92,6 +97,9 @@ pub(super) async fn run(effects: &dyn Effects, d: &Defined, env: &Env<'_>) -> Re
             return Ok(answer);
         }
         let got = crate::app_files::answer(d.app, action, &credential, &answer, &page)?;
+        if action.items.is_none() && !action.then.is_empty() {
+            return follow_up(effects, d, action, &credential, &inputs, got.result).await; // messaging
+        }
         if action.items.is_none() {
             return Ok(got.result);
         }
@@ -102,4 +110,31 @@ pub(super) async fn run(effects: &dyn Effects, d: &Defined, env: &Env<'_>) -> Re
         page = got.next;
     }
     Ok(Value::list(items))
+}
+
+// messaging
+/// The requests that follow an action's own, in order, each reading `input.previous` (what the one before gave):
+/// the last one's result. A test run stops at the first, answered with what it would send.
+async fn follow_up(
+    effects: &dyn Effects,
+    d: &Defined,
+    action: &crate::app_files::Action,
+    credential: &Credential,
+    inputs: &Value,
+    first: Value,
+) -> Result<Value, String> {
+    let mut answers = vec![first];
+    for next in &action.then {
+        let given = crate::app_files::follow_ups::with_previous(inputs, &answers);
+        let mut request = crate::app_files::request(d.app, next, credential, &given, &Value::Null)?;
+        crate::app_files::follow_ups::load_file_body(effects, &mut request).await?;
+        let answer = effects.http(request).await?;
+        if let Value::Record(r) = &answer
+            && r.get("test").is_some()
+        {
+            return Ok(answer);
+        }
+        answers.push(crate::app_files::answer(d.app, next, credential, &answer, &Value::Null)?.result);
+    }
+    Ok(answers.pop().unwrap_or(Value::Null))
 }

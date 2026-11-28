@@ -1,0 +1,67 @@
+name: Describe each new product photo in your product sheet
+description: >-
+  When a product is added to your Products sheet with a photo's address, Google Cloud Vision says what the photo
+  shows and reads any text on it, and a model writes the product's alt text, a short description and search tags,
+  written back into the same row (columns D to F). For shops that list many products and want every photo described
+  for search and screen readers. Needs: google_sheets, google_vision (an API key, sent as x-goog-api-key), model.
+category: E-commerce
+trigger:
+  # Set your spreadsheet's id (in its address). The sheet's first row names the columns: sku, name, image_url, ...
+  google_sheets: { when: new_row, credential: google_sheets, spreadsheet_id: your-spreadsheet-id, sheet: Products, every: 5m }
+# What a test runs on: a row as this trigger gives it.
+sample:
+  sku: TOTE-GRN
+  name: Canvas tote, green
+  image_url: https://cdn.example.com/products/tote-green.jpg
+  alt_text: ""
+  row_number: 7
+steps:
+  - where: has(value.image_url) && value.image_url != '' && (!has(value.alt_text) || value.alt_text == '')
+  - name: look
+    http:
+      method: POST
+      url: https://vision.googleapis.com/v1/images:annotate
+      credential: google_vision
+      json:
+        requests:
+          - image: { source: { imageUri: "{{ value.image_url }}" } }
+            features:
+              - { type: LABEL_DETECTION, maxResults: 10 }
+              - { type: TEXT_DETECTION, maxResults: 1 }
+      sample:
+        responses:
+          - labelAnnotations:
+              - { description: Bag, score: 0.96 }
+              - { description: Tote bag, score: 0.93 }
+              - { description: Green, score: 0.88 }
+              - { description: Canvas, score: 0.71 }
+            textAnnotations:
+              - { description: "MARKET DAY" }
+    retry: { attempts: 3, wait: 10s }
+  - name: words
+    ai:
+      credential: model
+      system: >-
+        You write product copy for an online shop. Plain, accurate words; describe only what the photo and the
+        product's name say, never invent materials or sizes.
+      prompt: >-
+        Product: {{ value.name }} ({{ value.sku }}).
+        The photo shows: {{ steps.look.body.responses[0].labelAnnotations.map(l, l.description).join(', ') }}.
+        Text on it: {{ has(steps.look.body.responses[0].textAnnotations) ? steps.look.body.responses[0].textAnnotations[0].description : 'none' }}.
+        Write the alt text (one sentence), a description of two sentences, and five search tags.
+      schema:
+        type: object
+        properties:
+          alt_text: { type: string, maxLength: 125 }
+          description: { type: string, maxLength: 400 }
+          tags: { type: array, items: { type: string }, maxItems: 5 }
+        required: [alt_text, description, tags]
+      max_tokens: 400
+  - name: save
+    google_sheets:
+      action: set_rows
+      credential: google_sheets
+      spreadsheet_id: your-spreadsheet-id
+      range: "Products!D{{ value.row_number }}:F{{ value.row_number }}"
+      rows: "{{ [[steps.words.json.alt_text, steps.words.json.description, steps.words.json.tags != null ? steps.words.json.tags.join(', ') : '']] }}"
+    retry: { attempts: 3, wait: 10s }

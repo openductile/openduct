@@ -1,0 +1,24 @@
+description: A case closed as a true positive
+action: update_case
+credential:
+  url: https://thehive.example.com
+  api_key: test-key
+input:
+  case_id: ~8192
+  status: TruePositive
+  summary: Phishing confirmed; sender blocked.
+  impact_status: NoImpact
+exchanges:
+- sent:
+    method: PATCH
+    url: https://thehive.example.com/api/v1/case/~8192
+    headers:
+      authorization: Bearer test-key
+    body:
+      status: TruePositive
+      summary: Phishing confirmed; sender blocked.
+      impactStatus: NoImpact
+  answer:
+    status: 204
+result:
+  updated: true

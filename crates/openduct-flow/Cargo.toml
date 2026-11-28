@@ -15,10 +15,21 @@ workspace = true
 
 [dependencies]
 base64 = "0.23.1"
+# vector stores: MongoDB's documents, and its mongodb+srv:// clusters' hosts in DNS (both in the workspace already,
+# for the MongoDB connector).
+bson = "3.1.0"
+hickory-resolver = "0.26.3"
 bytes = "1.12.1"
 chrono = { version = "0.4.45", default-features = false, features = ["std", "clock"] }
 # Time zones, for the date-and-time step.
 chrono-tz = { version = "0.10.4", default-features = false, features = ["std"] }
+# Files between steps: spreadsheets' ZIP archives and PDFs' streams unpacked, checked and written (already in the
+# workspace for the broker's compression); a multipart body's boundaries found.
+crc32fast = "1.5.5"
+# web: a page's bytes read in the character set it is in (already in the workspace, through the YAML reader).
+encoding_rs = "0.8.35"
+flate2 = "1.1.11"
+memchr = "2.8.3"
 kafka-protocol = { version = "0.18.0", default-features = false }
 # E-mail over SMTP: rustls on ring, Mozilla's roots built in.
 lettre = { version = "0.11.23", default-features = false, features = ["builder", "smtp-transport", "tokio1-rustls", "ring", "webpki-roots"] }
@@ -27,14 +38,23 @@ openduct-connect = { version = "0.1.0", path = "../openduct-connect" }
 openduct-expr = { version = "0.1.0", path = "../openduct-expr" }
 serde = { version = "1.0.229", features = ["derive"] }
 ring = "0.17.14"
+# The `pattern` of a JSON schema an AI step's answer must meet (already in the workspace, for expressions).
+regex = { version = "1.13.1", default-features = false, features = ["std", "unicode"] }
 reqwest = { version = "0.13.5", default-features = false, features = ["rustls-no-provider", "http2", "stream"] }
 rust_decimal = { version = "1.43.0", default-features = false, features = ["std"] }
 rustls = { version = "0.23.46", default-features = false, features = ["ring", "std", "tls12"] }
+# storage: FTPS and Redis over TLS, trusting what the system trusts (both already in the workspace, for e-mail and
+# the connectors).
+rustls-platform-verifier = "0.7.1"
+tokio-rustls = { version = "0.26.6", default-features = false, features = ["tls12"] }
 serde_json = { version = "1.0.154", features = ["preserve_order"] }
-tokio = { version = "1.54.1", features = ["rt-multi-thread", "macros", "net", "time", "sync"] }
+tokio = { version = "1.54.1", features = ["rt-multi-thread", "macros", "net", "time", "sync", "io-util"] }
 tracing = "0.1.44"
 yaml-rust2 = "0.13.0"
 
 [dev-dependencies]
 # The schedule tests run a broker in memory (tests/schedule.rs).
 openduct-storage = { version = "0.1.0", path = "../openduct-storage" }
+# sql databases: the SQL Server stand-in's TLS, with a certificate of its own making (tests/databases.rs).
+rcgen = "0.14.10"
+tokio-rustls = { version = "0.26.6", default-features = false, features = ["tls12"] }

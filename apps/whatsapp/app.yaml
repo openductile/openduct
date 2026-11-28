@@ -16,6 +16,8 @@ sign_in:
       - { name: phone_number_id, label: "The business number's id" }
       - { name: api_version, label: "The Graph API version, such as v21.0" }
       - { name: base_url, label: "Another address for the Graph API", optional: true }
+      - { name: app_secret, label: "The Meta app's secret (it signs messages sent to the number)", secret: true, optional: true }
+      - { name: verify_token, label: "A token of your choice, given to Meta with the workflow's address", optional: true }
     headers:
       Authorization: "Bearer {{ credential.access_token }}"
 default_action: send
@@ -34,3 +36,131 @@ actions:
       type: text
       text: { body: "{{ input.text }}" }
     result: "{'sent': true, 'answer': value}"
+    description: A text message, within the 24 hours after the customer last wrote.
+    output: { sent: boolean, answer: record }
+  send_template:
+    label: Send a template message
+    description: >-
+      A message template WhatsApp approved, by its name and language, its body's placeholders filled in order - the
+      only kind that may start a conversation.
+    write: true
+    method: POST
+    path: "/{{ credential.api_version }}/{{ credential.phone_number_id }}/messages"
+    inputs:
+      - { name: to, label: The number it goes to, required: true, description: "With its country code, digits only" }
+      - { name: template, label: "The template's name", required: true }
+      - { name: language, label: "Its language, such as en_US", required: true }
+      - { name: values, label: "The body's placeholders, in order (as a list)", kind: list }
+    send:
+      messaging_product: whatsapp
+      recipient_type: individual
+      to: "{{ input.to }}"
+      type: template
+      template:
+        name: "{{ input.template }}"
+        language: { code: "{{ input.language }}" }
+        components: "{{ has(input.values) && input.values != null && size(input.values) > 0 ? [{'type': 'body', 'parameters': input.values.map(v, {'type': 'text', 'text': string(v)})}] : null }}"
+    output: { messaging_product: text, contacts: list, messages: list }
+  send_media:
+    label: Send a picture, document, video or sound
+    description: >-
+      Media by its address on the internet (link) or the id of one uploaded to WhatsApp, with a caption; a document
+      with its file name.
+    write: true
+    method: POST
+    path: "/{{ credential.api_version }}/{{ credential.phone_number_id }}/messages"
+    inputs:
+      - { name: to, label: The number it goes to, required: true, description: "With its country code, digits only" }
+      - { name: kind, label: "image, document, video or audio", required: true }
+      - { name: link, label: "Its address (https://...)" }
+      - { name: media_id, label: "Or the id of media uploaded to WhatsApp" }
+      - { name: caption, label: "A caption (not for audio)" }
+      - { name: filename, label: "A document's file name" }
+    send: >-
+      {{ {'messaging_product': 'whatsapp', 'recipient_type': 'individual', 'to': input.to, 'type': input.kind,
+          input.kind: {'link': has(input.link) ? input.link : null, 'id': has(input.media_id) ? input.media_id : null,
+                       'caption': has(input.caption) && input.kind != 'audio' ? input.caption : null,
+                       'filename': has(input.filename) && input.kind == 'document' ? input.filename : null} } }}
+    output: { messaging_product: text, contacts: list, messages: list }
+  send_buttons:
+    label: Send a message with reply buttons
+    description: A message with up to three buttons; a person's choice comes back as a new message with its id.
+    write: true
+    method: POST
+    path: "/{{ credential.api_version }}/{{ credential.phone_number_id }}/messages"
+    inputs:
+      - { name: to, label: The number it goes to, required: true, description: "With its country code, digits only" }
+      - { name: text, label: "The message (up to 1024 characters)", required: true }
+      - { name: buttons, label: "The buttons: titles (up to 20 characters), or {id, title} records", required: true, kind: list }
+      - { name: footer, label: "A footer (up to 60 characters)" }
+    send:
+      messaging_product: whatsapp
+      recipient_type: individual
+      to: "{{ input.to }}"
+      type: interactive
+      interactive:
+        type: button
+        body: { text: "{{ input.text }}" }
+        footer: "{{ has(input.footer) && input.footer != null ? {'text': input.footer} : null }}"
+        action:
+          buttons: "{{ input.buttons.map(b, type(b) == string ? {'type': 'reply', 'reply': {'id': b, 'title': b} } : {'type': 'reply', 'reply': {'id': string(b.id), 'title': b.title} }) }}"
+    output: { messaging_product: text, contacts: list, messages: list }
+  send_list:
+    label: Send a message with a list to choose from
+    description: >-
+      A message whose button opens a list of up to ten rows in sections; a person's choice comes back as a new
+      message with the row's id.
+    write: true
+    method: POST
+    path: "/{{ credential.api_version }}/{{ credential.phone_number_id }}/messages"
+    inputs:
+      - { name: to, label: The number it goes to, required: true, description: "With its country code, digits only" }
+      - { name: text, label: "The message (up to 4096 characters)", required: true }
+      - { name: button, label: "The button's text (up to 20 characters)", required: true }
+      - { name: sections, label: "The sections: each a title and rows of id, title and description", required: true, kind: list }
+      - { name: header, label: "A header (up to 60 characters)" }
+      - { name: footer, label: "A footer (up to 60 characters)" }
+    send:
+      messaging_product: whatsapp
+      recipient_type: individual
+      to: "{{ input.to }}"
+      type: interactive
+      interactive:
+        type: list
+        header: "{{ has(input.header) && input.header != null ? {'type': 'text', 'text': input.header} : null }}"
+        body: { text: "{{ input.text }}" }
+        footer: "{{ has(input.footer) && input.footer != null ? {'text': input.footer} : null }}"
+        action: { button: "{{ input.button }}", sections: "{{ input.sections }}" }
+    output: { messaging_product: text, contacts: list, messages: list }
+  mark_read:
+    label: Mark a message as read
+    description: A message the business number received, shown to its sender as read.
+    write: true
+    method: POST
+    path: "/{{ credential.api_version }}/{{ credential.phone_number_id }}/messages"
+    inputs:
+      - { name: message_id, label: "The message's id (wamid..., from the trigger)", required: true }
+    send:
+      messaging_product: whatsapp
+      status: read
+      message_id: "{{ input.message_id }}"
+    output: { success: boolean }
+triggers:
+  new_message:
+    label: A new message to the business number
+    description: >-
+      Each message sent to the number, as Meta sends it, signed with the app's secret. Each message runs by itself,
+      with who sent it.
+    webhook:
+      confirm: { token: "query['hub.verify_token']", field: verify_token, answer: "query['hub.challenge']" }
+      signature: { header: x-hub-signature-256, prefix: "sha256=" }
+      secret: app_secret
+      # A delivery holds the messages of one number (Meta may also send other news, such as a message read: no runs).
+      events: >-
+        cel.bind(v, value.entry[0].changes[0].value,
+          has(v.messages) ? v.messages.map(m, {'message': m, 'from': m.from,
+            'name': has(v.contacts) ? v.contacts[0].profile.name : '', 'phone_number_id': v.metadata.phone_number_id}) : [])
+      id: item.message.id
+      setup: >-
+        In the Meta app's WhatsApp settings (Configuration): give the workflow's address as the callback URL, and the
+        credential's verify token; then subscribe to the messages field.

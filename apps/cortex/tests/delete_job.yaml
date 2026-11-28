@@ -1,0 +1,10 @@
+description: "A job marked deleted"
+action: delete_job
+credential: { base_url: "https://cortex.example.com:9001", api_key: test-key }
+input: { job_id: AWNei4vH3rJ8unegCPB9 }
+exchanges:
+  - sent:
+      method: DELETE
+      url: "https://cortex.example.com:9001/api/job/AWNei4vH3rJ8unegCPB9"
+    answer: { status: 200 }
+result: { deleted: true }

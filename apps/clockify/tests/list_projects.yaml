@@ -1,0 +1,55 @@
+description: "List projects: what it sends, and an answer shaped as Clockify's API description says"
+action: list_projects
+credential: { api_key: test-key }
+input: { workspace_id: "64a687e29ae1f428e7ebe303" }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://api.clockify.me/api/v1/workspaces/64a687e29ae1f428e7ebe303/projects"
+      query: { page-size: "50" }
+      headers: { x-api-key: test-key }
+    answer:
+      status: 200
+      body:
+        - archived: true
+          billable: true
+          budgetEstimate:
+            active: true
+            estimate: 600000
+            includeExpenses: true
+            resetOption: WEEKLY
+            type: AUTO
+          color: example
+          costRate: { amount: 10500, currency: USD }
+          duration: "60000"
+          estimate: { estimate: PT1H30M, type: AUTO }
+          hourlyRate: { amount: 10500, currency: USD }
+          id: "5b641568b07987035750505e"
+          memberships:
+            - costRate: { amount: 10500, currency: USD }
+              hourlyRate: { amount: 10500, currency: USD }
+              membershipStatus: PENDING
+              membershipType: WORKSPACE
+              targetId: "64c777ddd3fcab07cfbb210c"
+              userId: "5a0ab5acb07987125438b60f"
+          name: example
+          note: example
+result:
+  - archived: true
+    billable: true
+    budgetEstimate: { active: true, estimate: 600000, includeExpenses: true, resetOption: WEEKLY, type: AUTO }
+    color: example
+    costRate: { amount: 10500, currency: USD }
+    duration: "60000"
+    estimate: { estimate: PT1H30M, type: AUTO }
+    hourlyRate: { amount: 10500, currency: USD }
+    id: "5b641568b07987035750505e"
+    memberships:
+      - costRate: { amount: 10500, currency: USD }
+        hourlyRate: { amount: 10500, currency: USD }
+        membershipStatus: PENDING
+        membershipType: WORKSPACE
+        targetId: "64c777ddd3fcab07cfbb210c"
+        userId: "5a0ab5acb07987125438b60f"
+    name: example
+    note: example

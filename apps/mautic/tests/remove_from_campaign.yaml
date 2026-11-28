@@ -1,0 +1,11 @@
+description: "A contact taken out of a campaign"
+action: remove_from_campaign
+credential: {"site_url": "https://mautic.example.com", "username": "admin", "password": "pw-test"}
+input: {"campaign_id": 2, "contact_id": 47}
+exchanges:
+  - sent:
+      method: POST
+      url: "https://mautic.example.com/api/campaigns/2/contact/47/remove"
+      headers: {"authorization": "Basic YWRtaW46cHctdGVzdA=="}
+    answer: {"status": 200, "body": {"success": true}}
+result: {"success": true}

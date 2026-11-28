@@ -63,3 +63,22 @@ actions:
       - { name: record_id, label: "The record's id (rec...)", required: true }
       - { name: fields, label: "The fields to change, by name", required: true, kind: record }
     send: { fields: "{{ input.fields }}", typecast: true }
+triggers:
+  new_record:
+    label: A new record
+    description: >-
+      Each record added to a table, asked for every few minutes (those made since the poll before, with five minutes
+      to spare for clocks that differ).
+    inputs:
+      - { name: base_id, label: "The base's id (app..., in its address)", required: true }
+      - { name: table, label: "The table's name or id", required: true }
+    poll:
+      method: GET
+      path: "/{{ input.base_id }}/{{ input.table }}"
+      query:
+        filterByFormula: "{{ input.cursor == null ? '' : \"IS_AFTER(CREATED_TIME(), DATEADD('\" + input.cursor + \"', -5, 'minutes'))\" }}"
+        pageSize: "100"
+      items: value.records
+      next: "value.offset == null ? null : {'offset': value.offset}"
+      id: item.id
+      cursor: input.now

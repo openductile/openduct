@@ -1,0 +1,27 @@
+# Made by `openduct app from-openapi`: Retrieve a single contact import.
+description: "Retrieve a single contact import, made from the API description's schemas"
+action: get_import
+credential: { token: test-token }
+input: { id: "00000000-0000-4000-8000-000000000001" }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://api.resend.com/contacts/imports/00000000-0000-4000-8000-000000000001"
+      query: {}
+      headers: { authorization: "Bearer test-token" }
+    answer:
+      status: 200
+      body:
+        object: contact_import
+        id: "479e3145-dd38-476b-932c-529ceb705947"
+        status: queued
+        created_at: example
+        completed_at: example
+        counts: { total: 100, created: 80, updated: 10, skipped: 5, failed: 5 }
+result:
+  object: contact_import
+  id: "479e3145-dd38-476b-932c-529ceb705947"
+  status: queued
+  created_at: example
+  completed_at: example
+  counts: { total: 100, created: 80, updated: 10, skipped: 5, failed: 5 }

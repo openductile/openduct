@@ -1,0 +1,12 @@
+description: "A contact group made"
+action: create_group
+credential: {"access_token": "ya29.test"}
+input: {"name": "Wholesale"}
+exchanges:
+  - sent:
+      method: POST
+      url: "https://people.googleapis.com/v1/contactGroups"
+      headers: {"authorization": "Bearer ya29.test"}
+      body: {"contactGroup": {"name": "Wholesale"}}
+    answer: {"status": 200, "body": {"resourceName": "contactGroups/8c3d", "etag": "e3", "name": "Wholesale", "formattedName": "Wholesale", "groupType": "USER_CONTACT_GROUP"}}
+result: {"resourceName": "contactGroups/8c3d", "etag": "e3", "name": "Wholesale", "formattedName": "Wholesale", "groupType": "USER_CONTACT_GROUP"}

@@ -1,0 +1,8 @@
+description: Someone added as a member (the role by default)
+action: add_member
+credential: { access_token: ya29.test }
+input: { group: sales@example.com, email: dan@example.com }
+exchanges:
+  - sent: { method: POST, url: https://admin.googleapis.com/admin/directory/v1/groups/sales@example.com/members, body: { email: dan@example.com, role: MEMBER } }
+    answer: { body: { id: "100000000000000000004", email: dan@example.com, role: MEMBER, type: USER, status: ACTIVE } }
+result: { id: "100000000000000000004", email: dan@example.com, role: MEMBER, type: USER, status: ACTIVE }

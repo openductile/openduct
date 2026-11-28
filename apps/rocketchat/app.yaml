@@ -1,0 +1,332 @@
+# Copyright 2026 Ductile AI, Inc
+# SPDX-License-Identifier: Apache-2.0
+#
+# Written by hand from Rocket.Chat's own OpenAPI descriptions (github.com/RocketChat/Rocket.Chat-Open-API at
+# d286ec7f7b62: messaging.yaml, rooms.yaml, user-management.yaml, authentication.yaml); they sign in with header
+# parameters rather than a security scheme, which the generator would make inputs of.
+app: rocketchat
+name: Rocket.Chat
+category: communication
+description: Messages, channels, private groups and direct messages in a Rocket.Chat workspace, and its people.
+docs: https://developer.rocket.chat/apidocs
+hosts: ["*.rocket.chat"]
+base_url: "https://{{ credential.workspace }}.rocket.chat"
+base_url_field: url
+sign_in:
+  - id: rocketchat
+    label: A personal access token (Rocket.Chat Cloud)
+    fields:
+      - { name: workspace, label: "Your workspace's name: the acme of acme.rocket.chat" }
+      - { name: user_id, label: "Your user id (shown with the token)" }
+      - { name: token, label: "The personal access token (My Account, Personal Access Tokens)", secret: true }
+    headers: { X-User-Id: "{{ credential.user_id }}", X-Auth-Token: "{{ credential.token }}" }
+  - id: rocketchat_self_hosted
+    label: A personal access token (your own server)
+    fields:
+      - { name: url, label: "Your Rocket.Chat's address, such as https://chat.example.com" }
+      - { name: user_id, label: "Your user id (shown with the token)" }
+      - { name: token, label: "The personal access token (My Account, Personal Access Tokens)", secret: true }
+    headers: { X-User-Id: "{{ credential.user_id }}", X-Auth-Token: "{{ credential.token }}" }
+error: "value.success == false ? value.error : null"
+default_action: send_message
+actions:
+  send_message:
+    label: Send a message
+    description: >-
+      Posts a message to a channel (#general), a private group, or a person (@ann), by name or room id; with an
+      emoji or a name of its own if your user may.
+    write: true
+    method: POST
+    path: /api/v1/chat.postMessage
+    inputs:
+      - { name: channel, label: "Where: #channel, @username, or a room's id", required: true }
+      - { name: text, label: The message, required: true }
+      - { name: alias, label: "A name to show instead of yours (a bot's)" }
+      - { name: emoji, label: "An emoji to show as the picture (such as :rocket:)" }
+      - { name: avatar, label: "A picture's address to show instead of yours" }
+      - { name: attachments, label: "Attachments (a list of records: title, text, color, image_url...)", kind: list }
+    send:
+      roomId: "{{ input.channel }}"
+      text: "{{ input.text }}"
+      alias: "{{ input.alias }}"
+      emoji: "{{ input.emoji }}"
+      avatar: "{{ input.avatar }}"
+      attachments: "{{ input.attachments }}"
+    result: value.message
+    output: &message { _id: text, rid: text, msg: text, ts: text, u: record, attachments: list, mentions: list, tmid: text, _updatedAt: text }
+  reply_in_thread:
+    label: Reply in a thread
+    description: Posts a message in the thread of another message.
+    write: true
+    method: POST
+    path: /api/v1/chat.sendMessage
+    inputs:
+      - { name: room_id, label: "The room's id", required: true }
+      - { name: thread_id, label: "The message the thread is under (its id)", required: true }
+      - { name: text, label: The reply, required: true }
+    send: { message: { rid: "{{ input.room_id }}", tmid: "{{ input.thread_id }}", msg: "{{ input.text }}" } }
+    result: value.message
+    output: *message
+  update_message:
+    label: Change a message
+    description: "Changes the text of a message already sent."
+    write: true
+    method: POST
+    path: /api/v1/chat.update
+    inputs:
+      - { name: room_id, label: "The room's id", required: true }
+      - { name: message_id, label: "The message's id", required: true }
+      - { name: text, label: The new text, required: true }
+    send: { roomId: "{{ input.room_id }}", msgId: "{{ input.message_id }}", text: "{{ input.text }}" }
+    result: value.message
+    output: *message
+  delete_message:
+    label: Remove a message
+    description: "Removes a message from a room."
+    write: true
+    method: POST
+    path: /api/v1/chat.delete
+    inputs:
+      - { name: room_id, label: "The room's id", required: true }
+      - { name: message_id, label: "The message's id", required: true }
+    send: { roomId: "{{ input.room_id }}", msgId: "{{ input.message_id }}" }
+    output: { _id: text, ts: number, success: boolean }
+  get_message:
+    label: Get a message
+    description: "One message, by its id."
+    method: GET
+    path: /api/v1/chat.getMessage
+    inputs:
+      - { name: message_id, label: "The message's id", required: true }
+    query: { msgId: "{{ input.message_id }}" }
+    result: value.message
+    output: *message
+  search_messages:
+    label: Find messages in a room
+    description: The messages of a room holding the words given, every page.
+    method: GET
+    path: /api/v1/chat.search
+    inputs:
+      - { name: room_id, label: "The room's id", required: true }
+      - { name: text, label: "What to look for", required: true }
+    query: { roomId: "{{ input.room_id }}", searchText: "{{ input.text }}", count: "100" }
+    items: value.messages
+    next: "size(value.messages) < 100 ? null : {'offset': (page == null ? 0 : int(page.offset)) + size(value.messages)}"
+    output: *message
+  react:
+    label: React to a message
+    description: Adds an emoji reaction to a message (or takes it away).
+    write: true
+    method: POST
+    path: /api/v1/chat.react
+    inputs:
+      - { name: message_id, label: "The message's id", required: true }
+      - { name: emoji, label: "The emoji (such as :thumbsup:)", required: true }
+      - { name: should_react, label: "Add it (true, the default) or take it away (false)", kind: boolean }
+    send: { messageId: "{{ input.message_id }}", emoji: "{{ input.emoji }}", shouldReact: "{{ input.should_react }}" }
+    output: { success: boolean }
+  channel_history:
+    label: A channel's messages
+    description: The latest messages of a public channel (the newest first), between two times if given; every page up to the most.
+    method: GET
+    path: /api/v1/channels.history
+    inputs:
+      - { name: room_id, label: "The channel's id" }
+      - { name: room_name, label: "Or its name (such as general)" }
+      - { name: oldest, label: "Only after this time (such as 2026-11-27T00:00:00Z)" }
+      - { name: latest, label: "Only before this time" }
+    query: { roomId: "{{ input.room_id }}", roomName: "{{ input.room_name }}", oldest: "{{ input.oldest }}", latest: "{{ input.latest }}", count: "100" }
+    items: value.messages
+    next: "size(value.messages) < 100 ? null : {'offset': (page == null ? 0 : int(page.offset)) + size(value.messages)}"
+    output: *message
+  group_history:
+    label: A private group's messages
+    description: The latest messages of a private group (the newest first), every page up to the most.
+    method: GET
+    path: /api/v1/groups.history
+    inputs:
+      - { name: room_id, label: "The group's id", required: true }
+      - { name: oldest, label: "Only after this time" }
+      - { name: latest, label: "Only before this time" }
+    query: { roomId: "{{ input.room_id }}", oldest: "{{ input.oldest }}", latest: "{{ input.latest }}", count: "100" }
+    items: value.messages
+    next: "size(value.messages) < 100 ? null : {'offset': (page == null ? 0 : int(page.offset)) + size(value.messages)}"
+    output: *message
+  list_channels:
+    label: List channels
+    description: The workspace's public channels, every page.
+    method: GET
+    path: /api/v1/channels.list
+    query: { count: "100" }
+    items: value.channels
+    next: "value.offset + size(value.channels) >= value.total ? null : {'offset': value.offset + size(value.channels)}"
+    output: &room { _id: text, name: text, fname: text, t: text, topic: text, msgs: number, usersCount: number, ro: boolean, default: boolean, ts: text, u: record }
+  get_channel:
+    label: Get a channel
+    description: "One public channel, by id or name: its topic and how many are in it."
+    method: GET
+    path: /api/v1/channels.info
+    inputs:
+      - { name: room_id, label: "The channel's id" }
+      - { name: room_name, label: "Or its name" }
+    query: { roomId: "{{ input.room_id }}", roomName: "{{ input.room_name }}" }
+    result: value.channel
+    output: *room
+  create_channel:
+    label: Make a channel
+    description: A public channel, with its first members (usernames) if given.
+    write: true
+    method: POST
+    path: /api/v1/channels.create
+    inputs:
+      - { name: name, label: "Its name (no spaces)", required: true }
+      - { name: members, label: "Its members' usernames, separated by commas" }
+      - { name: read_only, label: "Only some may write", kind: boolean }
+      - { name: topic, label: Its topic }
+    send:
+      name: "{{ input.name }}"
+      members: "{{ input.members.split(',').map(m, m.trim()) }}"
+      readOnly: "{{ input.read_only }}"
+      extraData: { topic: "{{ input.topic }}" }
+    result: value.channel
+    output: *room
+  create_group:
+    label: Make a private group
+    description: A private room, with its first members (usernames) if given.
+    write: true
+    method: POST
+    path: /api/v1/groups.create
+    inputs:
+      - { name: name, label: "Its name (no spaces)", required: true }
+      - { name: members, label: "Its members' usernames, separated by commas" }
+      - { name: read_only, label: "Only some may write", kind: boolean }
+    send:
+      name: "{{ input.name }}"
+      members: "{{ input.members.split(',').map(m, m.trim()) }}"
+      readOnly: "{{ input.read_only }}"
+    result: value.group
+    output: *room
+  invite_to_channel:
+    label: Add someone to a channel
+    description: "Adds a person to a public channel, by username."
+    write: true
+    method: POST
+    path: /api/v1/channels.invite
+    inputs:
+      - { name: room_id, label: "The channel's id", required: true }
+      - { name: username, label: "Their username", required: true }
+    send: { roomId: "{{ input.room_id }}", username: "{{ input.username }}" }
+    result: value.channel
+    output: *room
+  remove_from_channel:
+    label: Take someone out of a channel
+    description: "Takes a person out of a public channel."
+    write: true
+    method: POST
+    path: /api/v1/channels.kick
+    inputs:
+      - { name: room_id, label: "The channel's id", required: true }
+      - { name: user_id, label: "Their user id", required: true }
+    send: { roomId: "{{ input.room_id }}", userId: "{{ input.user_id }}" }
+    result: value.channel
+    output: *room
+  set_channel_topic:
+    label: Set a channel's topic
+    description: "The line shown at the top of a channel."
+    write: true
+    method: POST
+    path: /api/v1/channels.setTopic
+    inputs:
+      - { name: room_id, label: "The channel's id", required: true }
+      - { name: topic, label: The topic, required: true }
+    send: { roomId: "{{ input.room_id }}", topic: "{{ input.topic }}" }
+    output: { topic: text, success: boolean }
+  open_direct_message:
+    label: Open a direct conversation
+    description: The direct-message room with someone (made if there is none), whose id the other actions take.
+    write: true
+    method: POST
+    path: /api/v1/dm.create
+    inputs:
+      - { name: username, label: "Their username", required: true }
+    send: { username: "{{ input.username }}" }
+    result: value.room
+    output: { _id: text, rid: text, t: text, usernames: list }
+  list_users:
+    label: List people
+    description: The workspace's people (an admin's token), of an email or username if given; every page.
+    method: GET
+    path: /api/v1/users.list
+    inputs:
+      - { name: email, label: "Only this email address" }
+      - { name: username, label: "Only usernames holding this" }
+    query: { email: "{{ input.email }}", username: "{{ input.username }}", count: "100" }
+    items: value.users
+    next: "value.offset + size(value.users) >= value.total ? null : {'offset': value.offset + size(value.users)}"
+    output: &user { _id: text, username: text, name: text, emails: list, status: text, active: boolean, roles: list, type: text, lastLogin: text }
+  get_user:
+    label: Get a person
+    description: "One person, by user id or username: name, status, roles."
+    method: GET
+    path: /api/v1/users.info
+    inputs:
+      - { name: user_id, label: "Their user id" }
+      - { name: username, label: "Or their username" }
+    query: { userId: "{{ input.user_id }}", username: "{{ input.username }}" }
+    result: value.user
+    output: *user
+  create_user:
+    label: Add a person
+    description: Makes an account in the workspace (an admin's token), with a welcome email if asked.
+    write: true
+    method: POST
+    path: /api/v1/users.create
+    inputs:
+      - { name: email, label: Email address, required: true }
+      - { name: name, label: Name, required: true }
+      - { name: username, label: Username, required: true }
+      - { name: password, label: "A first password", required: true }
+      - { name: require_password_change, label: "Ask for a new password at the first sign-in", kind: boolean }
+      - { name: send_welcome_email, label: "Send a welcome email", kind: boolean }
+      - { name: roles, label: "Roles, separated by commas (user by default)" }
+    send:
+      email: "{{ input.email }}"
+      name: "{{ input.name }}"
+      username: "{{ input.username }}"
+      password: "{{ input.password }}"
+      requirePasswordChange: "{{ input.require_password_change }}"
+      sendWelcomeEmail: "{{ input.send_welcome_email }}"
+      roles: "{{ input.roles.split(',').map(r, r.trim()) }}"
+    result: value.user
+    output: *user
+  me:
+    label: Who I am
+    description: The user the token belongs to.
+    method: GET
+    path: /api/v1/me
+    output: *user
+triggers:
+  new_channel_message:
+    label: A new message in a channel
+    description: Each new message in a public channel, the newest asked for every few minutes.
+    inputs:
+      - { name: room_name, label: "The channel's name (such as general)", required: true }
+    poll:
+      method: GET
+      path: /api/v1/channels.history
+      query: { roomName: "{{ input.room_name }}", count: "100" }
+      items: value.messages
+      newest_first: true
+      id: item._id
+  new_group_message:
+    label: A new message in a private group
+    description: Each new message in a private group, the newest asked for every few minutes.
+    inputs:
+      - { name: room_id, label: "The group's id", required: true }
+    poll:
+      method: GET
+      path: /api/v1/groups.history
+      query: { roomId: "{{ input.room_id }}", count: "100" }
+      items: value.messages
+      newest_first: true
+      id: item._id

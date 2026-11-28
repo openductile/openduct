@@ -1,0 +1,34 @@
+description: A new contact added
+action: create_contact
+credential:
+  account: shopexample
+  api_key: test-key
+input:
+  email: ann@example.com
+  first_name: Ann
+  phone: '+15555550100'
+exchanges:
+- sent:
+    method: POST
+    url: https://shopexample.api-us1.com/api/3/contacts
+    headers:
+      api-token: test-key
+    body:
+      contact:
+        email: ann@example.com
+        firstName: Ann
+        phone: '+15555550100'
+  answer:
+    status: 201
+    body:
+      fieldValues: []
+      contact: &id001
+        id: '113'
+        email: ann@example.com
+        firstName: Ann
+        lastName: Example
+        phone: '+15555550100'
+        cdate: '2026-11-27T10:00:00-06:00'
+        udate: '2026-11-27T10:00:00-06:00'
+        orgid: '0'
+result: *id001

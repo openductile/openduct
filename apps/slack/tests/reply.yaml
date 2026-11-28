@@ -1,0 +1,12 @@
+description: A reply in a message's thread, shown in the channel too
+action: reply
+credential: { bot_token: xoxb-1 }
+input: { channel: C0123456, thread_ts: "1700000000.000100", text: "On it", also_in_channel: true }
+exchanges:
+  - sent:
+      method: POST
+      url: https://slack.com/api/chat.postMessage
+      headers: { authorization: Bearer xoxb-1 }
+      body: { channel: C0123456, thread_ts: "1700000000.000100", text: "On it", reply_broadcast: true }
+    answer: { body: { ok: true, channel: C0123456, ts: "1700000050.000200", message: { text: "On it", thread_ts: "1700000000.000100" } } }
+result: { ok: true, channel: C0123456, ts: "1700000050.000200", message: { text: "On it", thread_ts: "1700000000.000100" } }

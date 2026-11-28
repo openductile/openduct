@@ -1,0 +1,11 @@
+description: Nothing changed since the poll before - nothing runs
+trigger: state_changed
+credential: { url: "http://home.example:8123", token: ha-test-token }
+input: { entity_id: binary_sensor.front_door }
+seen: { items: [[binary_sensor.front_door, caef6b18abc4bb9b]] }
+exchanges:
+  - sent: { method: GET, url: "http://home.example:8123/api/states/binary_sensor.front_door" }
+    answer:
+      status: 200
+      body: { entity_id: binary_sensor.front_door, state: "on", attributes: {}, last_changed: "2026-11-27T08:15:00+00:00", last_updated: "2026-11-27T08:15:00+00:00" }
+runs: []

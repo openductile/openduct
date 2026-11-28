@@ -1,0 +1,47 @@
+description: What a text to a country costs
+action: get_prices
+credential:
+  api_key: abcd1234
+  api_secret: test-secret
+input:
+  country: CA
+exchanges:
+- sent:
+    method: GET
+    url: https://rest.nexmo.com/account/get-pricing/outbound/sms
+    query:
+      country: CA
+    headers:
+      authorization: Basic YWJjZDEyMzQ6dGVzdC1zZWNyZXQ=
+  answer:
+    status: 200
+    body:
+      countryCode: CA
+      countryName: Canada
+      countryDisplayName: Canada
+      currency: EUR
+      defaultPrice: '0.00620000'
+      dialingPrefix: '1'
+      networks:
+      - type: mobile
+        price: '0.00590000'
+        currency: EUR
+        mcc: '302'
+        mnc: '720'
+        networkCode: '302720'
+        networkName: Sample Mobile
+result:
+  countryCode: CA
+  countryName: Canada
+  countryDisplayName: Canada
+  currency: EUR
+  defaultPrice: '0.00620000'
+  dialingPrefix: '1'
+  networks:
+  - type: mobile
+    price: '0.00590000'
+    currency: EUR
+    mcc: '302'
+    mnc: '720'
+    networkCode: '302720'
+    networkName: Sample Mobile

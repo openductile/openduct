@@ -1,0 +1,63 @@
+name: A call brief from your mail and your CRM
+description: >-
+  Before a sales call, press Run with the contact's e-mail and company: an AI agent reads your last six months of
+  mail with them in Gmail and their person and open deals in Pipedrive, and sends you a one-page brief - who they
+  are, what was promised, what is still open, and three questions worth asking. For account managers with back-to-back
+  calls. Needs: model, gmail, pipedrive (an API token, sent as x-api-token).
+category: Sales
+trigger: manual
+# What a test runs on: what you give when you press Run.
+sample:
+  email: dana.whitfield@northwind.example
+  company: Northwind Outfitters
+  send_to: me@example.com
+steps:
+  - where: value.email != null && value.email.contains('@')
+  - name: brief
+    agent:
+      credential: model
+      instructions: >-
+        You prepare a salesperson for a call. First find the mail with the contact and read the five most recent
+        messages; then look the contact up in the CRM and read their open deals. Write a brief of at most 250 words
+        with four parts: who they are, what was promised on each side, what is still open (deals with their value
+        and stage), and three questions worth asking. Say plainly when something was not found; never invent it.
+      input: "Contact: {{ value.email }} at {{ value.company }}."
+      tools:
+        - name: find_mail
+          description: The e-mails with the contact in the last six months, newest first (their ids).
+          gmail:
+            action: find_emails
+            credential: gmail
+            q: "from:{{ value.email }} OR to:{{ value.email }} newer_than:180d"
+        - name: read_mail
+          description: One e-mail in full, by its id (from find_mail).
+          gmail: { action: read_email, credential: gmail }
+        - name: find_person
+          description: The contact's person record in the CRM, found by their e-mail.
+          http:
+            url: https://api.pipedrive.com/v1/persons/search
+            credential: pipedrive
+            query: { term: "{{ value.email }}", fields: email, exact_match: "true" }
+        - name: open_deals
+          description: A person's open deals in the CRM, by the person's id (from find_person).
+          parameters:
+            type: object
+            properties:
+              person_id: { type: integer, description: "The person's id" }
+            required: [person_id]
+          http:
+            url: "https://api.pipedrive.com/v1/persons/{{ args.person_id }}/deals"
+            credential: pipedrive
+            query: { status: open }
+      allow: [find_mail, read_mail, find_person, open_deals]
+      max_turns: 10
+      max_tool_calls: 12
+      max_tokens: 900
+  - name: send
+    gmail:
+      action: send_email
+      credential: gmail
+      to: "{{ value.send_to }}"
+      subject: "Call brief: {{ value.company }}"
+      text: "{{ steps.brief.text }}"
+    retry: { attempts: 3, wait: 10s }

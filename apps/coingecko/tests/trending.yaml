@@ -1,0 +1,6 @@
+action: trending
+credential: { api_key: CG-test1 }
+exchanges:
+  - sent: { method: GET, url: https://api.coingecko.com/api/v3/search/trending }
+    answer: { body: { coins: [{ item: { id: example-token, name: Example Token, symbol: EXT, market_cap_rank: 103, score: 0 } }], nfts: [], categories: [] } }
+result: { coins: [{ item: { id: example-token, name: Example Token, symbol: EXT, market_cap_rank: 103, score: 0 } }], nfts: [], categories: [] }

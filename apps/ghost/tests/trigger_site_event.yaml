@@ -1,0 +1,12 @@
+description: A post published, as a Ghost webhook sends it, signed with the integration's secret over the body and time
+trigger: site_event
+credential: { site: acme, content_key: 22444f78447824223cefc48aaa, webhook_secret: gh_whsec_test_1 }
+delivery:
+  headers: { x-ghost-signature: "sha256=244fe70236f6f6fadcaf8105d089e4a23314a0d522867a95d694131614b6c7f0, t=1795773600000" }
+  body: '{"event":"post.published","post":{"current":{"id":"6744a1b2c3d4e5f600000001","title":"Our winter opening hours","slug":"winter-opening-hours","status":"published","url":"https://acme.ghost.io/winter-opening-hours/","published_at":"2026-11-27T10:00:00.000Z"},"previous":{"status":"draft","published_at":null}}}'
+  at: 1795773601
+runs:
+  - event: post.published
+    post:
+      current: { id: 6744a1b2c3d4e5f600000001, title: Our winter opening hours, slug: winter-opening-hours, status: published, url: "https://acme.ghost.io/winter-opening-hours/", published_at: "2026-11-27T10:00:00.000Z" }
+      previous: { status: draft, published_at: null }

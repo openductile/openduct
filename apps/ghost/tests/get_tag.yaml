@@ -1,0 +1,7 @@
+action: get_tag
+credential: { site: acme, content_key: 22444f78447824223cefc48aaa }
+input: { slug: news }
+exchanges:
+  - sent: { method: GET, url: https://acme.ghost.io/ghost/api/content/tags/slug/news/ }
+    answer: { body: { tags: [{ id: 6744a1b2c3d4e5f600000030, name: News, slug: news, description: Shop news }] } }
+result: { id: 6744a1b2c3d4e5f600000030, name: News, slug: news, description: Shop news }

@@ -1,0 +1,20 @@
+description: The latest day's true-color pictures of the Earth, when no day is given
+action: earth_pictures
+credential: { api_key: nasa-test-key }
+exchanges:
+  - sent:
+      method: GET
+      url: https://api.nasa.gov/EPIC/api/natural/images
+      query: { api_key: nasa-test-key }
+    answer:
+      status: 200
+      body:
+        - image: epic_1b_20261126001751
+          caption: This image was taken by the EPIC camera onboard the DSCOVR spacecraft
+          date: "2026-11-26 00:13:03"
+          centroid_coordinates: { lat: -21.5, lon: 168.2 }
+result:
+  - image: epic_1b_20261126001751
+    caption: This image was taken by the EPIC camera onboard the DSCOVR spacecraft
+    date: "2026-11-26 00:13:03"
+    centroid_coordinates: { lat: -21.5, lon: 168.2 }

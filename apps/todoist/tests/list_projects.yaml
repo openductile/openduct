@@ -1,0 +1,6 @@
+action: list_projects
+credential: { token: todoist-test-token }
+exchanges:
+  - sent: { method: GET, url: https://api.todoist.com/api/v1/projects, query: { limit: "200" } }
+    answer: { body: { results: [{ id: 6Xproj0000000001, name: Orders, description: Supplier orders, color: blue, parent_id: null, is_favorite: false, is_shared: false, is_archived: false, inbox_project: false, view_style: list }], next_cursor: null } }
+result: [{ id: 6Xproj0000000001, name: Orders, description: Supplier orders, color: blue, parent_id: null, is_favorite: false, is_shared: false, is_archived: false, inbox_project: false, view_style: list }]

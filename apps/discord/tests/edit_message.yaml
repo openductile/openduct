@@ -1,0 +1,12 @@
+description: A message the bot sent, its text changed
+action: edit_message
+sign_in: discord_bot
+credential: { bot_token: test-bot-token }
+input: { channel_id: "910000000000000001", message_id: "950000000000000002", text: "Order A-100 shipped" }
+exchanges:
+  - sent:
+      method: PATCH
+      url: https://discord.com/api/v10/channels/910000000000000001/messages/950000000000000002
+      body: { content: "Order A-100 shipped" }
+    answer: { body: { id: "950000000000000002", content: "Order A-100 shipped", edited_timestamp: "2026-11-23T10:05:00.000000+00:00" } }
+result: { id: "950000000000000002", content: "Order A-100 shipped", edited_timestamp: "2026-11-23T10:05:00.000000+00:00" }

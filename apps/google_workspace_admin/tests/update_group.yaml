@@ -1,0 +1,7 @@
+action: update_group
+credential: { access_token: ya29.test }
+input: { group: support@example.com, description: Questions from customers and partners }
+exchanges:
+  - sent: { method: PATCH, url: https://admin.googleapis.com/admin/directory/v1/groups/support@example.com, body: { description: Questions from customers and partners } }
+    answer: { body: { id: 03abc0002, email: support@example.com, description: Questions from customers and partners } }
+result: { id: 03abc0002, email: support@example.com, description: Questions from customers and partners }

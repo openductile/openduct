@@ -12,8 +12,22 @@ use serde_json::{Map, Value as Json};
 
 use crate::template::Template;
 
+mod agent; // G2 AI agents
+mod ai_steps; // G7 more AI steps
+mod app_trigger; // G3 app triggers
+mod files; // G6 files
 mod kinds;
+mod mailbox; // messaging
+pub(crate) use kinds::KINDS;
+mod mcp; // MCP
 mod more;
+mod retrieval; // retrieval
+mod storage; // storage
+pub(crate) mod tables; // data tables
+mod waits; // forms-and-resume
+mod web; // web
+
+pub use app_trigger::AppTrigger; // G3 app triggers
 
 /// The most steps a workflow has, branches and loops included.
 pub const MAX_STEPS: usize = 200;
@@ -31,6 +45,8 @@ pub struct Workflow {
     /// How many of its runs go at once on each node (`runs_at_once`, 1 to 50; 1 runs each record after the one
     /// before). Records with the same key always run in order.
     pub runs_at_once: u32,
+    /// MCP: offered as a tool (`tool:`), to AI assistants through the studio's MCP server and to agents.
+    pub tool: Option<crate::tool::Tool>,
 }
 
 /// What starts a run.
@@ -40,12 +56,32 @@ pub enum Trigger {
     Webhook { token: Option<String> },
     /// A run at each interval, counted from midnight UTC (`every: 15m` runs at :00, :15, :30, :45).
     Every(Duration),
+    // cron-schedules
+    /// A run at set times - a cron expression, or every day, weekday, week or month at a time, or every hour at a
+    /// minute - in the schedule's time zone.
+    Calendar(crate::calendar::Calendar),
     /// A run for every message of a topic.
     Topic { name: String, earliest: bool },
     /// A run when someone asks for one: the studio's Run button, or `POST /api/workflows/<id>/run`.
     Manual,
     /// A run for each record another workflow sends to CatchErr: that record, with why its run failed.
     Failed { workflow: String },
+    /// A run for each message of a conversation, on the studio's chat page, a site's or a front end's: see
+    /// [`crate::chat`]. // chat trigger (G8)
+    Chat(Box<crate::chat::Chat>),
+    /// A run for each answer to a form the studio serves at `/forms/<hook>`: the answers, by field.
+    // forms-and-resume
+    Form(Box<crate::forms::Form>),
+    /// A trigger of an app's: a poll for new items, or the app's own webhook deliveries. // G3 app triggers
+    App(AppTrigger),
+    /// A table's new or changed rows, polled by a cursor column. // sql databases
+    Rows(Box<crate::databases::trigger::RowsTrigger>),
+    /// New files in a folder, polled, or a Redis channel's messages (see [`crate::storage::Watch`]). // storage
+    Storage(Box<crate::storage::Watch>),
+    /// A feed's new items, polled (see [`crate::web::FeedTrigger`]). // web
+    Feed(Box<crate::web::FeedTrigger>),
+    /// New messages in a folder of any mailbox, over IMAP (see [`crate::mailbox::MailWatch`]). // messaging
+    Mailbox(Box<crate::mailbox::MailWatch>),
 }
 
 /// One step.
@@ -99,6 +135,8 @@ pub enum Kind {
         language: &'static str,
         code: String,
         time: Duration,
+        /// It is given the workflow's state (`state`), and what it leaves there is kept. // data tables
+        state: bool,
     },
     /// An e-mail, through the mail server a credential names.
     Email(Email),
@@ -141,6 +179,35 @@ pub enum Kind {
     Stop {
         error: Option<Template>,
     },
+    /// An AI step with a task of its own: classify, sentiment, extract, summarise, or `ai` with a schema. // G7
+    Ai(Box<crate::ai_steps::AiStep>),
+    // G2 AI agents
+    /// A model that chooses tools to reach a goal, over several turns (see [`crate::agent`]).
+    Agent(Box<crate::agent::Agent>),
+    /// MCP: a tool of an MCP server called, or its tools listed (see [`crate::mcp`]).
+    Mcp(crate::mcp::McpStep),
+    /// Text split into pieces, a vector store's pieces added, found or deleted, an answer from documents.
+    Retrieval(crate::retrieval::Retrieval), // retrieval
+    /// The run stops here until an answer comes - a form, an approval, a call, a time - and goes on from here.
+    // forms-and-resume
+    Pause(crate::waits::Pause),
+    /// Rows of a workspace's data table: got, counted, added, changed, taken away. // data tables
+    Table(tables::TableStep),
+    /// The workflow's own values, kept between its runs. // data tables
+    State(tables::StateAction),
+    /// Rows, a value or text read from a file. // G6 files
+    Extract(crate::files::Extract),
+    /// A file made of rows, a value, text or Base64. // G6 files
+    Convert(crate::files::Convert),
+    /// A file's details, and the file again - renamed when asked. // G6 files
+    FileDetails(crate::files::Details),
+    Database(Box<crate::databases::Query>), // sql databases: MySQL, SQL Server, newer PostgreSQL
+    /// Files in a folder or on a server, an archive, or Redis's keys (see [`crate::storage`]). // storage
+    Storage(crate::storage::StorageStep),
+    /// A page fetched, fields picked out of it, a site crawled, a sitemap or a feed read (see [`crate::web`]). // web
+    Web(Box<crate::web::WebStep>),
+    /// A mailbox's messages over IMAP: listed, read, marked, moved, deleted (see [`crate::mailbox`]). // messaging
+    Mailbox(Box<crate::mailbox::MailboxStep>),
 }
 
 /// One case of a switch: its label, its condition, its steps.
@@ -208,6 +275,8 @@ pub struct Email {
     pub subject: Template,
     pub text: Option<Template>,
     pub html: Option<Template>,
+    /// Files it carries: each expression a file or a list of files. // G6 files
+    pub attachments: Vec<Compiled>,
 }
 
 /// A step that talks to an app.
@@ -242,6 +311,9 @@ pub struct Http {
     pub timeout: Duration,
     /// An answer of 400 or above fails the step (unless false: the answer is the result either way).
     pub fail_on_status: bool,
+    /// What its answer's body is made: a file when it is one (auto), always a file, or always text. // G6 files
+    pub response: crate::files::Response,
+    pub sample: Option<Json>, // test runs: the answer's body a test run gives, sending nothing
 }
 
 #[derive(Debug, Clone)]
@@ -250,6 +322,10 @@ pub enum Body {
     Json(Tree),
     Text(Template),
     Form(Vec<(String, Template)>),
+    /// A file's bytes, with its media type. // G6 files
+    File(Compiled),
+    /// A multipart form: text fields and files. // G6 files
+    Multipart(Vec<(String, crate::files::Part)>),
 }
 
 /// JSON with templates in its text: what a step sends.
@@ -285,6 +361,7 @@ impl Workflow {
                     | "category"
                     | "runs_at_once"
                     | "sample"
+                    | "tool" // MCP
             ) {
                 return Err(format!(
                     "{key:?} is not a workflow setting: name, trigger, steps, description, category, language, \
@@ -323,6 +400,12 @@ impl Workflow {
             count: 0,
         };
         let steps = reader.steps(top.get("steps"), "steps")?;
+        let tool = crate::tool::offered(top.get("tool"), &name, &trigger)?; // MCP
+        if let Trigger::Chat(chat) = &trigger {
+            chat.check(&steps)?; // chat trigger (G8)
+        }
+        // forms-and-resume
+        crate::waits::check(&trigger, &steps)?;
         let runs_at_once = match top.get("runs_at_once") {
             None | Some(Json::Null) => crate::runner::RUNS_AT_ONCE,
             Some(n) => n
@@ -342,6 +425,7 @@ impl Workflow {
             trigger,
             steps,
             runs_at_once,
+            tool, // MCP
         })
     }
 }
@@ -400,6 +484,10 @@ fn trigger(value: Option<&Json>) -> Result<Trigger, String> {
             })
         }
         "schedule" => {
+            // cron-schedules: set times (cron, or every: day with at, ...) are the calendar's to read.
+            if let Some(calendar) = crate::calendar::Calendar::from_settings(&settings)? {
+                return Ok(Trigger::Calendar(calendar));
+            }
             only(&["every"])?;
             let every = text(settings.get("every")).ok_or("schedule.every: how often, as 15m, 1h or 1d")?;
             let every = duration(every)
@@ -425,6 +513,8 @@ fn trigger(value: Option<&Json>) -> Result<Trigger, String> {
             only(&[])?;
             Ok(Trigger::Manual)
         }
+        // forms-and-resume
+        "form" => Ok(Trigger::Form(Box::new(crate::forms::trigger(&settings, "form")?))),
         "failed" => {
             only(&["workflow"])?;
             let workflow = text(settings.get("workflow"))
@@ -434,8 +524,17 @@ fn trigger(value: Option<&Json>) -> Result<Trigger, String> {
                 workflow: workflow.to_owned(),
             })
         }
+        "chat" => Ok(Trigger::Chat(Box::new(crate::chat::Chat::parse(&settings)?))), // chat trigger (G8)
+        "postgres" | "mysql" | "sqlserver" => crate::databases::trigger::read(kind, &settings), // sql databases
+        "storage" | "redis" => crate::storage::watch::trigger(kind, &settings),                 // storage
+        "feed" => crate::web::trigger::read(&settings),                                         // web
+        "mailbox" => crate::mailbox::watch::trigger(&settings),                                 // messaging
+        // G3 app triggers: an app's own trigger, as `gmail: {when: new_email, credential: ...}`.
+        app if crate::app_files::find(app).is_some() => {
+            app_trigger::read(app, &settings).unwrap_or_else(|| Err(format!("{app:?} is not an app")))
+        }
         other => Err(format!(
-            "{other:?} is not a trigger: webhook, schedule, topic or manual"
+            "{other:?} is not a trigger: webhook, schedule, topic, manual, form or failed"
         )),
     }
 }
@@ -456,28 +555,6 @@ pub fn duration(text: &str) -> Option<Duration> {
     Some(Duration::from_millis(millis))
 }
 
-const KINDS: &[&str] = &[
-    "set",
-    "where",
-    "if",
-    "for_each",
-    "http",
-    "lookup",
-    "postgres",
-    "javascript",
-    "python",
-    "email",
-    "switch",
-    "merge",
-    "list",
-    "group",
-    "respond",
-    "run_workflow",
-    "datetime",
-    "topic",
-    "wait",
-    "stop",
-];
 /// The longest script, and how long one runs: by default and at most.
 const MAX_SCRIPT: usize = 256 * 1024;
 const SCRIPT_TIME: Duration = Duration::from_secs(10);
@@ -674,6 +751,14 @@ impl Reader {
             "respond" => self.respond(body, at)?,
             "run_workflow" => self.run_workflow(body, at)?,
             "datetime" => self.datetime(body, at)?,
+            // G7 more AI steps
+            "classify" | "extract" | "summarise" | "sentiment" => self.ai_step(kind, body, at)?,
+            "ai" if body.get("schema").is_some() => self.ai_step(kind, body, at)?,
+            "mcp" => self.mcp(body, at)?, // MCP
+            "split_text" | "vector_store" | "ask_documents" => self.retrieval(kind, body, at)?, // retrieval
+            "table" => self.table(body, at)?, // data tables
+            "state" => self.state(body, at)?, // data tables
+            "mysql" | "sqlserver" => self.database(kind, body, at)?, // sql databases
             "topic" => {
                 let s = settings()?;
                 let name = text(s.get("name"))
@@ -692,6 +777,10 @@ impl Reader {
                 }
             }
             "wait" => {
+                // forms-and-resume: a wait for a call, until a time, or longer than an hour is kept on the log.
+                if let Some(kept) = self.durable_wait(body, at)? {
+                    return Ok(kept);
+                }
                 let written = match body {
                     Json::String(s) => s.as_str(),
                     Json::Object(o) => text(o.get("for")).unwrap_or_default(),
@@ -703,12 +792,19 @@ impl Reader {
                 }
                 Kind::Wait(wait)
             }
+            // forms-and-resume
+            "form" | "approval" => self.form_step(kind, body, at)?,
             "stop" => Kind::Stop {
                 error: body
                     .get("error")
                     .map(|e| self.template(e, &format!("{at}.error")))
                     .transpose()?,
             },
+            "agent" => self.agent(body, at)?, // G2 AI agents
+            "extract_file" | "convert" | "file_details" => self.file_step(kind, body, at)?, // G6 files
+            "storage" | "compress" | "redis" => self.storage(kind, body, at)?, // storage
+            "web" => self.web(body, at)?,     // web
+            "mailbox" => self.mailbox(body, at)?, // messaging
             other => match (crate::app_files::find(other), crate::apps::app(other)) {
                 (Some(def), _) => Kind::Defined(self.defined(def, settings()?, at)?),
                 (None, Some(spec)) => Kind::App(self.app(spec, settings()?, at)?),
@@ -833,6 +929,11 @@ impl Reader {
             "form",
             "timeout",
             "fail_on_status",
+            // G6 files
+            "file",
+            "multipart",
+            "response",
+            "sample", // test runs
         ];
         if let Some(k) = s.keys().find(|k| !SETTINGS.contains(&k.as_str())) {
             return Err(format!(
@@ -854,14 +955,17 @@ impl Reader {
                 .ok_or_else(|| format!("{at}.url: the address to call"))?,
             &format!("{at}.url"),
         )?;
-        let bodies = ["json", "body", "form"]
+        let bodies = ["json", "body", "form", "file", "multipart"] // G6 files: a file or multipart body
             .iter()
             .filter(|b| s.contains_key(**b))
             .count();
         if bodies > 1 {
-            return Err(format!("{at}: one of json, body or form"));
+            return Err(format!("{at}: one of json, body, form, file or multipart"));
         }
-        let body = if let Some(j) = s.get("json") {
+        let (file_body, response) = self.http_files(s, at)?; // G6 files
+        let body = if let Some(b) = file_body {
+            b
+        } else if let Some(j) = s.get("json") {
             Body::Json(self.tree(j, &format!("{at}.json"))?)
         } else if let Some(b) = s.get("body") {
             Body::Text(self.template(b, &format!("{at}.body"))?)
@@ -885,6 +989,9 @@ impl Reader {
             body,
             timeout,
             fail_on_status: s.get("fail_on_status").and_then(Json::as_bool).unwrap_or(true),
+            response, // G6 files
+            // test runs
+            sample: crate::run::http_sample(s.get("sample"), at)?,
         })
     }
 }

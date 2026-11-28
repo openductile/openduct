@@ -1,0 +1,12 @@
+description: "The account the token belongs to"
+action: get_user
+credential: { token: test-token }
+exchanges:
+  - sent:
+      method: GET
+      url: https://api.raindrop.io/rest/v1/user
+    answer:
+      body:
+        result: true
+        user: { _id: 32, fullName: Ann Example, email: ann@example.com, pro: true, registered: "2025-02-01T09:00:00.000Z", groups: [{ title: Work, hidden: false, sort: 0, collections: [77, 78] }] }
+result: { _id: 32, fullName: Ann Example, email: ann@example.com, pro: true, registered: "2025-02-01T09:00:00.000Z", groups: [{ title: Work, hidden: false, sort: 0, collections: [77, 78] }] }

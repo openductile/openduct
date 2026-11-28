@@ -1,0 +1,11 @@
+description: A running Phantom stopped softly, keeping what it found
+action: stop_agent
+credential: { api_key: pb_test_key_1 }
+input: { id: "7345678901234568", soft_abort: true }
+exchanges:
+  - sent:
+      method: POST
+      url: "https://api.phantombuster.com/api/v2/agents/stop"
+      body: { id: "7345678901234568", softAbort: true }
+    answer: { status: 200, body: {} }
+result: {}

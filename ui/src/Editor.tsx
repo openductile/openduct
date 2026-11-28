@@ -6,6 +6,8 @@
 import { Sym } from "./Sym";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { TriggerSettings } from "./Trigger";
+// forms-and-resume
+import { WaitingRuns } from "./FormBuilder";
 import {
   api,
   type CredentialSummary,
@@ -26,6 +28,10 @@ import { Icon } from "./flow/Icon";
 import { triggerSummary } from "./flow/look";
 import { insertAt, moveAt, removeAt, replaceAt, stepAt, type StepPath } from "./flow/paths";
 import { CredentialsContext, JsonField, StepCard, fresh, names, registerApps } from "./Steps";
+import { Promote, SourceOf } from "./Promote"; // developer CI/CD
+import { AgentCalls } from "./StepsAgent"; // G2 AI agents
+import { FilesIn } from "./StepsFiles"; // G6 files
+import { TestNote } from "./TestNote"; // test runs
 
 type Tab = "build" | "history" | "aside" | "versions";
 
@@ -160,6 +166,7 @@ export function Editor(props: {
         </span>
         {record.active ? "On" : "Off"}
       </label>
+      <Promote name={record.definition.name} dirty={dirty} /> {/* developer CI/CD */}
       <button className="save" onClick={save} disabled={!dirty}>
         Save
       </button>
@@ -506,6 +513,7 @@ export function RunView({ run }: { run: Run }) {
         <span className={`status ${run.status}`}>{run.status}</span> in {run.ms} ms
         {run.error && <span className="error"> - {run.error}</span>}
       </p>
+      <FilesIn value={run.event} label="Files it was given" /> {/* G6 files */}
       <ol className="results">
         {run.steps.map((s, i) => (
           <li key={i} className={s.error ? "failed" : ""}>
@@ -516,6 +524,8 @@ export function RunView({ run }: { run: Run }) {
                 {s.error && <span className="error"> - {s.error}</span>}
               </summary>
               {isAi(s) ? <AiResult step={s} /> : <pre>{JSON.stringify(s.result, null, 2)}</pre>}
+              <FilesIn value={s.result} /> {/* G6 files */}
+              <TestNote step={s} /> {/* test runs */}
               {s.logs && s.logs.length > 0 && (
                 <>
                   <p className="hint">What it logged</p>
@@ -551,6 +561,8 @@ function History({ id }: { id: string }) {
   return (
     <>
     <MetricsView id={id} />
+    {/* forms-and-resume */}
+    <WaitingRuns id={id} />
     <table className="runs">
       <thead>
         <tr>
@@ -644,7 +656,8 @@ type AiShown = {
 };
 
 export function isAi(step: StepRun) {
-  return step.kind === "ai" && Array.isArray((step.result as AiShown | null)?.transcript);
+  const ai = step.kind === "ai" || step.kind === "agent" || ["classify", "sentiment", "extract", "summarise"].includes(step.kind); // G7 more AI steps, G2 AI agents
+  return ai && Array.isArray((step.result as AiShown | null)?.transcript);
 }
 
 /** An AI step's result: its transcript as a conversation, and what it cost. */
@@ -673,6 +686,7 @@ export function AiResult({ step }: { step: StepRun }) {
         {r.metrics?.ignored_settings?.length ? <span className="warn">ignored: {r.metrics.ignored_settings.join(", ")}</span> : null}
       </p>
       {r.json !== undefined && <pre>{JSON.stringify(r.json, null, 2)}</pre>}
+      {step.kind === "agent" && <AgentCalls step={step} />}
     </div>
   );
 }
@@ -737,6 +751,7 @@ function Versions(props: { id: string; onOpen: (d: Definition) => void }) {
         <tr>
           <th>Version</th>
           <th>Saved</th>
+          <th>From</th>
           <th>Steps</th>
           <th />
         </tr>
@@ -746,6 +761,9 @@ function Versions(props: { id: string; onOpen: (d: Definition) => void }) {
           <tr key={v.number}>
             <td>{v.number}</td>
             <td>{new Date(v.created * 1000).toLocaleString()}</td>
+            <td>
+              <SourceOf source={v.source} /> {/* developer CI/CD */}
+            </td>
             <td>{v.definition?.steps?.length ?? 0}</td>
             <td className="actions">
               <button className="quiet" onClick={() => props.onOpen(v.definition)}>

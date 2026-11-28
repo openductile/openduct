@@ -1,0 +1,38 @@
+# Made by `openduct app from-openapi`: Retrieve companies.
+description: "Retrieve companies, made from the API description's schemas"
+action: get_companies
+credential: { token: test-token }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://api.intercom.io/companies"
+      query: {}
+      headers: { authorization: "Bearer test-token" }
+    answer:
+      status: 200
+      body:
+        type: company
+        id: "531ee472cce572a6ec000006"
+        name: example
+        app_id: ecahpwf5
+        plan: { type: plan, id: "269315", name: Pro }
+        company_id: "6"
+        remote_created_at: 1663597223
+        created_at: 1663597223
+        updated_at: 1663597223
+        last_request_at: 1663597223
+        size: 100
+        website: example
+result:
+  type: company
+  id: "531ee472cce572a6ec000006"
+  name: example
+  app_id: ecahpwf5
+  plan: { type: plan, id: "269315", name: Pro }
+  company_id: "6"
+  remote_created_at: 1663597223
+  created_at: 1663597223
+  updated_at: 1663597223
+  last_request_at: 1663597223
+  size: 100
+  website: example

@@ -1,0 +1,115 @@
+name: After a sales call, a recap and a follow-up email to approve
+description: >-
+  For salespeople who record their calls with AssemblyAI: when a call's transcript is ready, AssemblyAI calls this
+  workflow's address; a model writes the recap - what was said, what the customer needs, the next steps - and drafts the
+  follow-up email. The call is logged in a Calls sheet, and the salesperson gets the recap by email with a link to a
+  short form holding the draft: add the customer's address, change what you like, send - or let it lapse after two days
+  and nothing is sent. Needs: an AssemblyAI key as a header credential called assemblyai (authorization), an AI
+  credential called model, a Google Sheets sign-in called sheets, and a Gmail sign-in called gmail.
+category: Sales
+trigger:
+  # Left empty here: each workflow made from the template is given a token of its own. Give AssemblyAI the
+  # address with ?token=... as the transcript's webhook_url.
+  webhook: { token: "" }
+# What a test runs on: an event as this trigger gives it (what AssemblyAI sends when a transcript is done).
+sample:
+  transcript_id: 5552c6f1-8b0e-4d0a-9c4e-0f9e7a1b2c3d
+  status: completed
+steps:
+  - name: settings
+    set:
+      # Change these to your own.
+      spreadsheet: "'your-spreadsheet-id'"
+      rep: "'rep@example.com'"
+      company: "'Your Company'"
+  - where: value.status == 'completed'
+  - name: transcript
+    http:
+      method: GET
+      url: "https://api.assemblyai.com/v2/transcript/{{ value.transcript_id }}"
+      credential: assemblyai
+      fail_on_status: true
+      sample:
+        id: 5552c6f1-8b0e-4d0a-9c4e-0f9e7a1b2c3d
+        status: completed
+        audio_duration: 1260
+        text: >-
+          Thanks for making time. So we run four warehouses and the pickers still print lists every morning. We would
+          like scanning on phones, and it has to work offline in the cold store. Price matters but the bigger worry is
+          training forty people before peak season in March. Can you send something on the offline mode and a rough
+          quote for forty users? Our finance lead, Maria, will need to see it too.
+    retry: { attempts: 3, wait: 20s }
+  - name: recap
+    ai:
+      credential: model
+      system: >-
+        You write up a sales call for the salesperson of {{ steps.settings.company }}: a recap of three sentences,
+        what the customer needs, the next steps (who does what), and a short, friendly follow-up email to the
+        customer that thanks them, confirms what was agreed and lists what we will send. Only what was said. Answer as
+        JSON.
+      prompt: "{{ steps.transcript.body.text.substring(0, math.least(size(steps.transcript.body.text), 60000)) }}"
+      schema:
+        type: object
+        properties:
+          recap: { type: string }
+          needs: { type: array, items: { type: string } }
+          next_steps: { type: array, items: { type: string } }
+          subject: { type: string }
+          follow_up: { type: string }
+        required: [recap, needs, next_steps, subject, follow_up]
+      max_tokens: 1200
+  - name: written
+    set:
+      recap: "steps.recap.json.recap != null ? steps.recap.json.recap : steps.recap.text"
+      next_steps: "steps.recap.json.next_steps != null ? steps.recap.json.next_steps.join('; ') : ''"
+      subject: "steps.recap.json.subject != null ? steps.recap.json.subject : 'Thank you for your time'"
+      follow_up: "steps.recap.json.follow_up != null ? steps.recap.json.follow_up : ''"
+      minutes: "round(double(steps.transcript.body.audio_duration) / 60.0, 0)"
+  - name: today
+    datetime: {}
+  - name: log
+    google_sheets:
+      credential: sheets
+      action: add_row
+      spreadsheet_id: "{{ steps.settings.spreadsheet }}"
+      sheet: Calls
+      values: ["{{ steps.today.date }}", "{{ value.transcript_id }}", "{{ steps.written.minutes }}", "{{ steps.written.recap }}", "{{ steps.written.next_steps }}"]
+    retry: { attempts: 3, wait: 10s }
+  - name: tell_the_rep
+    gmail:
+      credential: gmail
+      action: send_email
+      to: "{{ steps.settings.rep }}"
+      subject: "Call recap ({{ steps.written.minutes }} min): {{ steps.written.subject }}"
+      text: >-
+        {{ steps.written.recap }}
+
+
+        Next steps: {{ steps.written.next_steps }}
+
+
+        The follow-up email is drafted: add the customer's address, change it if you like and send it here (within
+        two days): {{ links.follow_up }}
+    retry: { attempts: 3, wait: 30s }
+  - name: follow_up
+    form:
+      title: Send the follow-up
+      description: Drafted from the call. Nothing is sent until you press the button.
+      fields:
+        - { name: to, label: "The customer's email", type: email, required: true }
+        - { name: subject, label: Subject, type: text, required: true, max_length: 200, default: "{{ steps.written.subject }}" }
+        - { name: text, label: The email, type: long_text, required: true, max_length: 8000, default: "{{ steps.written.follow_up }}" }
+      timeout: 2d
+      on_timeout: continue
+  - name: send
+    if:
+      when: "!steps.follow_up.timed_out"
+      then:
+        - name: to_customer
+          gmail:
+            credential: gmail
+            action: send_email
+            to: "{{ steps.follow_up.to }}"
+            subject: "{{ steps.follow_up.subject }}"
+            text: "{{ steps.follow_up.text }}"
+          retry: { attempts: 3, wait: 30s }

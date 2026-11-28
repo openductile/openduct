@@ -1,0 +1,23 @@
+description: A commenter by username
+action: get_user
+credential: {api_key: pubkey-test-1, api_secret: secret-test-1, access_token: token-test-1}
+input: {username: ann_example}
+exchanges:
+- sent:
+    method: GET
+    url: https://disqus.com/api/3.0/users/details.json
+    query: {api_key: pubkey-test-1, api_secret: secret-test-1, access_token: token-test-1, 'user:username': ann_example}
+  answer:
+    status: 200
+    body:
+      code: 0
+      response: &id001
+        id: '101'
+        username: ann_example
+        name: Ann Example
+        about: ''
+        url: ''
+        profileUrl: https://disqus.com/by/ann_example/
+        avatar: {permalink: 'https://disqus.com/api/users/avatars/ann_example.jpg'}
+        isAnonymous: false
+result: *id001

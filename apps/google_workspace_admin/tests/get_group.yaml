@@ -1,0 +1,7 @@
+action: get_group
+credential: { access_token: ya29.test }
+input: { group: sales@example.com }
+exchanges:
+  - sent: { method: GET, url: https://admin.googleapis.com/admin/directory/v1/groups/sales@example.com }
+    answer: { body: { id: 03abc0001, email: sales@example.com, name: Sales, description: The sales team, adminCreated: true } }
+result: { id: 03abc0001, email: sales@example.com, name: Sales, description: The sales team, adminCreated: true }

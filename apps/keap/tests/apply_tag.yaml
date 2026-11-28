@@ -1,0 +1,14 @@
+# Made by `openduct app from-openapi`: Apply a tag to contacts.
+description: "Apply a tag to contacts, made from the API description's schemas"
+action: apply_tag
+credential: { access_token: test-access-token }
+input: { tag_id: tag_1, contact_ids: [example] }
+exchanges:
+  - sent:
+      method: POST
+      url: "https://api.keap.com/crm/rest/v2/tags/tag_1/contacts:applyTags"
+      query: {}
+      headers: { authorization: "Bearer test-access-token" }
+      body: { contact_ids: [example] }
+    answer: { status: 200, body: { results: {} } }
+result: { results: {} }

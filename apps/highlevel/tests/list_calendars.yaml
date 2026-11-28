@@ -1,0 +1,63 @@
+description: "List calendars"
+action: list_calendars
+credential: { token: test-token }
+input: { location_id: ve9EPM428h8vShlRW1KT }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://services.leadconnectorhq.com/calendars/"
+      query: { locationId: ve9EPM428h8vShlRW1KT }
+      headers: { authorization: "Bearer test-token", version: "2021-04-15" }
+    answer:
+      status: 200
+      body:
+        calendars:
+          - isActive: true
+            notifications:
+              - type: email
+                shouldSendToContact: true
+                shouldSendToGuest: true
+                shouldSendToUser: true
+                shouldSendToSelectedUsers: true
+                selectedUsers: example
+            locationId: ocQHyuzHvysMo5N5VsXc
+            groupId: BqTwX8QFwXzpegMve9EQ
+            teamMembers:
+              - userId: ocQHyuzHvysMo5N5VsXc
+                priority: 0
+                meetingLocationType: custom
+                meetingLocation: example
+                isPrimary: true
+                locationConfigurations: [{}]
+            eventType: RoundRobin_OptimizeForAvailability
+            name: example
+            description: example
+            slug: test1
+            widgetSlug: test1
+            calendarType: round_robin
+            widgetType: default
+result:
+  - isActive: true
+    notifications:
+      - type: email
+        shouldSendToContact: true
+        shouldSendToGuest: true
+        shouldSendToUser: true
+        shouldSendToSelectedUsers: true
+        selectedUsers: example
+    locationId: ocQHyuzHvysMo5N5VsXc
+    groupId: BqTwX8QFwXzpegMve9EQ
+    teamMembers:
+      - userId: ocQHyuzHvysMo5N5VsXc
+        priority: 0
+        meetingLocationType: custom
+        meetingLocation: example
+        isPrimary: true
+        locationConfigurations: [{}]
+    eventType: RoundRobin_OptimizeForAvailability
+    name: example
+    description: example
+    slug: test1
+    widgetSlug: test1
+    calendarType: round_robin
+    widgetType: default

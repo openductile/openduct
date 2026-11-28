@@ -1,0 +1,26 @@
+description: HTML translated, its tags kept; the language it is in found
+action: translate_text
+credential:
+  api_key: test-key
+input:
+  text: <p>Hello world</p>
+  to: de_DE
+  html: true
+exchanges:
+- sent:
+    method: POST
+    url: https://api-b2b.backenster.com/b1/api/v3/translate
+    headers:
+      authorization: test-key
+    body:
+      platform: api
+      to: de_DE
+      data: <p>Hello world</p>
+      translateMode: html
+  answer:
+    status: 200
+    body:
+      err: null
+      result: <p>Hallo Welt</p>
+result:
+  text: <p>Hallo Welt</p>

@@ -1,0 +1,11 @@
+description: A task in a workspace's My Tasks - no project is sent
+action: create_task
+sign_in: asana_oauth
+credential: { access_token: "2/1200000000000001/oauth-test" }
+input: { name: Call the printer, workspace: "1200000000000099", assignee: me }
+exchanges:
+  - sent:
+      headers: { authorization: "Bearer 2/1200000000000001/oauth-test" }
+      body: { data: { name: Call the printer, workspace: "1200000000000099", assignee: me } }
+    answer: { status: 201, body: { data: { gid: "1204000000000002", name: Call the printer, completed: false } } }
+result: { gid: "1204000000000002", name: Call the printer, completed: false }

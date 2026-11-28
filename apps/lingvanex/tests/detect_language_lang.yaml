@@ -1,0 +1,21 @@
+description: A text's language, from a lang field
+action: detect_language
+credential:
+  api_key: test-key
+input:
+  text: Hello, how are you?
+exchanges:
+- sent:
+    method: POST
+    url: https://api-gl.lingvanex.com/language/translate/v2/detect
+    headers:
+      authorization: test-key
+    body:
+      q: Hello, how are you?
+  answer:
+    status: 200
+    body:
+      result:
+        lang: en
+result:
+  language: en

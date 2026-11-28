@@ -24,6 +24,8 @@ use openduct_connect::postgres::sql::{Database, Refusal, query};
 use crate::apps::Credential;
 use crate::run::{Effects, HttpRequest, SqlRequest, WRITES};
 
+mod stream; // chat trigger (G8): an answer read as it comes
+
 /// The largest answer an HTTP step reads.
 pub const MAX_ANSWER: usize = 10 * 1024 * 1024;
 type Pending<'a> = std::pin::Pin<Box<dyn std::future::Future<Output = Result<Value, String>> + Send + 'a>>;
@@ -62,6 +64,15 @@ pub trait Scripts: Send + Sync + std::fmt::Debug {
     fn run<'a>(&'a self, request: crate::run::ScriptRequest) -> Pending<'a>;
 }
 
+// G2 AI agents: where agents' memories are kept.
+/// Where agents' conversations are kept between runs: [`crate::LogMemory`], on the broker.
+pub trait Memory: Send + Sync + std::fmt::Debug {
+    /// The conversation under `key`: its turns, or null.
+    fn recall<'a>(&'a self, key: &'a str) -> Pending<'a>;
+    /// Keeps `turns` under `key` until `keep` after now; with none, forgets it.
+    fn remember<'a>(&'a self, key: &'a str, turns: Option<Value>, keep: Duration) -> Pending<'a>;
+}
+
 /// Effects that reach outside.
 #[derive(Debug)]
 pub struct Live {
@@ -73,10 +84,20 @@ pub struct Live {
     files: Option<Arc<dyn Files>>,
     scripts: Option<Arc<dyn Scripts>>,
     workflows: Option<Arc<dyn Workflows>>,
+    tables: Option<Arc<dyn crate::tables::Tables>>, // data tables
     /// What the topics a run names are named on the broker: a workspace's own, kept apart from every other's.
     topic_prefix: String,
     /// The node's connections, shared: a topic step borrows one instead of keeping its own.
     shared: Option<Arc<openduct_broker::client::Shared>>,
+    // G2 AI agents: where agents' memories are kept.
+    memory: Option<Arc<dyn Memory>>,
+    // forms-and-resume: where its runs that wait are kept.
+    waits: Option<Arc<crate::waits::Waits>>,
+    /// Where its runs' files are kept. // G6 files
+    file_store: Option<Arc<dyn crate::files::FileStore>>,
+    /// The folders its storage steps may reach, and whether servers on this machine's network may be. // storage
+    storage: crate::storage::Places,
+    web: crate::web::Net, // web
 }
 
 /// The name on the broker of a workspace's topic `name`: its topics kept apart from every other workspace's, so two
@@ -109,9 +130,48 @@ impl Live {
             files: None,
             scripts: None,
             workflows: None,
+            tables: None, // data tables
             topic_prefix: String::new(),
             shared: None,
+            memory: None,     // G2 AI agents
+            waits: None,      // forms-and-resume
+            file_store: None, // G6 files
+            storage: crate::storage::Places {
+                roots: Arc::default(),
+                allow_private,
+            }, // storage
+            web: crate::web::Net::new(allow_private), // web
         })
+    }
+
+    // G2 AI agents: where agents' memories are kept.
+    /// These effects, with agents' memories kept in `memory` - each workspace's apart, under its own keys.
+    #[must_use]
+    pub fn with_memory(mut self, memory: Arc<dyn Memory>) -> Self {
+        self.memory = Some(memory);
+        self
+    }
+
+    /// These effects, with their runs that wait kept in `waits`.
+    // forms-and-resume
+    #[must_use]
+    pub fn with_waits(mut self, waits: Arc<crate::waits::Waits>) -> Self {
+        self.waits = Some(waits);
+        self
+    }
+
+    /// These effects, with their runs' files kept in `store`. // G6 files
+    #[must_use]
+    pub fn with_file_store(mut self, store: Arc<dyn crate::files::FileStore>) -> Self {
+        self.file_store = Some(store);
+        self
+    }
+
+    /// These effects, with the folders of this machine the admin allows for storage steps. // storage
+    #[must_use]
+    pub fn with_storage_roots(mut self, roots: Arc<crate::storage::Roots>) -> Self {
+        self.storage.roots = roots;
+        self
     }
 
     /// These effects, with their runs' lookup files read from `files`.
@@ -142,6 +202,13 @@ impl Live {
         self
     }
 
+    /// These effects, with their runs' data tables and workflow state kept in `tables`. // data tables
+    #[must_use]
+    pub fn with_tables(mut self, tables: Arc<dyn crate::tables::Tables>) -> Self {
+        self.tables = Some(tables);
+        self
+    }
+
     /// These effects, with their runs' scripts run by `scripts`.
     #[must_use]
     pub fn with_scripts(mut self, scripts: Arc<dyn Scripts>) -> Self {
@@ -157,6 +224,20 @@ impl Live {
     }
 
     async fn send(&self, r: HttpRequest) -> Result<Value, String> {
+        // G6 files: the request is sent by send_raw; its answer read as before.
+        let raw = self.send_raw(r).await?;
+        let (status, headers, body) = raw;
+        let body = crate::files::body_value(&headers, &body);
+        Ok(Value::from_json(
+            &json!({ "status": status, "headers": headers, "body": body }),
+        ))
+    }
+
+    /// Sends a request; answers its status, its headers and its body's bytes as they came. // G6 files
+    async fn send_raw(
+        &self,
+        r: HttpRequest,
+    ) -> Result<(u16, serde_json::Map<String, Json>, Vec<u8>), String> {
         let mut url = reqwest::Url::parse(&r.url).map_err(|e| format!("{:?} is not a URL: {e}", r.url))?;
         if !r.query.is_empty() {
             url.query_pairs_mut()
@@ -188,10 +269,6 @@ impl Live {
                 headers.insert(name.as_str().to_owned(), Json::String(v.to_owned()));
             }
         }
-        let is_json = headers
-            .get("content-type")
-            .and_then(Json::as_str)
-            .is_some_and(|c| c.contains("json"));
         let mut body = Vec::new();
         while let Some(chunk) = answer.chunk().await.map_err(|e| describe(&e))? {
             if body.len() + chunk.len() > MAX_ANSWER {
@@ -199,15 +276,7 @@ impl Live {
             }
             body.extend_from_slice(&chunk);
         }
-        let text = String::from_utf8_lossy(&body).into_owned();
-        let body = if is_json {
-            serde_json::from_str::<Json>(&text).unwrap_or(Json::String(text))
-        } else {
-            Json::String(text)
-        };
-        Ok(Value::from_json(
-            &json!({ "status": status, "headers": headers, "body": body }),
-        ))
+        Ok((status, headers, body))
     }
 
     async fn produce(&self, topic: &str, key: Option<String>, value: String) -> Result<Value, String> {
@@ -323,8 +392,27 @@ impl Live {
 }
 
 impl Effects for Live {
+    // forms-and-resume
+    fn waits(&self) -> Option<Arc<crate::waits::Waits>> {
+        self.waits.clone()
+    }
+
+    // storage
+    fn storage(&self) -> crate::storage::Reach<'_> {
+        crate::storage::Reach::Live(&self.storage)
+    }
+
+    // web
+    fn web(&self) -> crate::web::Reach<'_> {
+        crate::web::Reach::Live(&self.web)
+    }
+
     fn sql<'a>(&'a self, request: SqlRequest) -> Pending<'a> {
         Box::pin(self.run_sql(request))
+    }
+
+    fn database<'a>(&'a self, request: crate::databases::DatabaseRequest) -> Pending<'a> {
+        Box::pin(crate::databases::run_live(request, self.allow_private)) // sql databases
     }
 
     fn email<'a>(&'a self, request: crate::run::EmailRequest) -> Pending<'a> {
@@ -347,6 +435,11 @@ impl Effects for Live {
 
     fn http<'a>(&'a self, request: HttpRequest) -> Pending<'a> {
         Box::pin(self.send(request))
+    }
+
+    // chat trigger (G8): a model's answer handed over as it is made
+    fn http_parts<'a>(&'a self, request: HttpRequest, part: crate::chat::Parts<'a>) -> Pending<'a> {
+        Box::pin(self.send_parts(request, part))
     }
 
     fn write<'a>(&'a self, topic: &'a str, key: Option<String>, value: String) -> Pending<'a> {
@@ -374,10 +467,77 @@ impl Effects for Live {
         self.secrets.as_ref()?.registration(app)
     }
 
+    // data tables
+    fn tables(&self) -> crate::tables::Access<'_> {
+        self.tables
+            .as_deref()
+            .map_or(crate::tables::Access::None, crate::tables::Access::Write)
+    }
+
     fn keep_credential<'a>(&'a self, name: &'a str, fields: BTreeMap<String, String>) -> Pending<'a> {
         match &self.secrets {
             Some(s) => s.keep(name, fields),
             None => Box::pin(async { Err("credentials cannot be changed here".to_owned()) }),
+        }
+    }
+
+    // G2 AI agents: a memory's keys are the workspace's own (`w.<workspace>.<workflow>/<step>/<key>`).
+    fn recall<'a>(&'a self, key: &'a str) -> Pending<'a> {
+        match &self.memory {
+            Some(m) => Box::pin(async move { m.recall(&format!("{}{key}", self.topic_prefix)).await }),
+            None => Box::pin(async { Err("agents' memory is not set up here".to_owned()) }),
+        }
+    }
+
+    // G2 AI agents: a memory's keys are the workspace's own.
+    fn remember<'a>(&'a self, key: &'a str, turns: Option<Value>, keep: Duration) -> Pending<'a> {
+        match &self.memory {
+            Some(m) => Box::pin(async move {
+                m.remember(&format!("{}{key}", self.topic_prefix), turns, keep)
+                    .await
+            }),
+            None => Box::pin(async { Err("agents' memory is not set up here".to_owned()) }),
+        }
+    }
+
+    // vector stores: a memory kept in a store of the workflow's own has the broker's keys, the workspace's own.
+    fn memory_prefix(&self) -> String {
+        self.topic_prefix.clone()
+    }
+
+    // G6 files: an answer's bytes as they came; files kept in the store, and read back from it.
+    fn http_bytes<'a>(
+        &'a self,
+        request: HttpRequest,
+    ) -> std::pin::Pin<Box<dyn Future<Output = Result<crate::files::RawAnswer, String>> + Send + 'a>> {
+        Box::pin(async move {
+            let (status, headers, body) = self.send_raw(request).await?;
+            Ok(crate::files::RawAnswer {
+                answer: Value::from_json(&json!({ "status": status, "headers": headers })),
+                body: Some(body),
+            })
+        })
+    }
+
+    fn keep_file<'a>(
+        &'a self,
+        bytes: Arc<Vec<u8>>,
+    ) -> std::pin::Pin<Box<dyn Future<Output = Result<Option<String>, String>> + Send + 'a>> {
+        Box::pin(async move {
+            match &self.file_store {
+                Some(store) => store.keep(bytes).await.map(Some),
+                None => Ok(None),
+            }
+        })
+    }
+
+    fn load_file<'a>(
+        &'a self,
+        place: &'a str,
+    ) -> std::pin::Pin<Box<dyn Future<Output = Result<Vec<u8>, String>> + Send + 'a>> {
+        match &self.file_store {
+            Some(store) => store.load(place),
+            None => Box::pin(async { Err("no files are kept here".to_owned()) }),
         }
     }
 }

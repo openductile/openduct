@@ -1,0 +1,7 @@
+action: delete_saved_search
+credential: { api_key: us_test_1 }
+input: { id: s-1 }
+exchanges:
+  - sent: { method: DELETE, url: https://urlscan.io/api/v1/user/searches/s-1/ }
+    answer: { body: {} }
+result: { deleted: true }

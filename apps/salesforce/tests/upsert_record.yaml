@@ -1,0 +1,12 @@
+description: A record made by its outside id, since none had it
+action: upsert_record
+credential: { access_token: "00D000000000001!AQ.test", instance: examplecorp.my.salesforce.com }
+input: { object: Account, id_field: Customer_Number__c, id_value: C-1042, fields: { Name: Example Co, Phone: "+1 555 0100" } }
+exchanges:
+  - sent:
+      method: PATCH
+      url: https://examplecorp.my.salesforce.com/services/data/v67.0/sobjects/Account/Customer_Number__c/C-1042
+      query: {}
+      body: { Name: Example Co, Phone: "+1 555 0100" }
+    answer: { status: 201, body: { id: 0015e00000AbCdEAAV, success: true, errors: [], created: true } }
+result: { id: 0015e00000AbCdEAAV, success: true, errors: [], created: true }

@@ -1,0 +1,58 @@
+description: Calls of a week with their people and brief, the next page by the cursor Gong gives, at the company's own address
+action: list_calls_with_details
+credential: {access_key: ann, access_key_secret: test-password, api_url: 'https://us-12345.api.gong.io/'}
+input:
+  from_date_time: '2026-11-23T00:00:00Z'
+  to_date_time: '2026-11-30T00:00:00Z'
+  content_selector:
+    exposedFields:
+      parties: true
+      content: {brief: true}
+exchanges:
+- sent:
+    method: POST
+    url: https://us-12345.api.gong.io/v2/calls/extensive
+    headers: &id001 {authorization: Basic YW5uOnRlc3QtcGFzc3dvcmQ=}
+    body:
+      filter: {fromDateTime: '2026-11-23T00:00:00Z', toDateTime: '2026-11-30T00:00:00Z'}
+      contentSelector:
+        exposedFields:
+          parties: true
+          content: {brief: true}
+  answer:
+    status: 200
+    body:
+      requestId: 4al018gzaztcr8nbukw
+      records: {totalRecords: 2, currentPageSize: 1, currentPageNumber: 0, cursor: eyJhbGciOiJIUzI1NiJ9.page2}
+      calls:
+      - &id002
+        metaData: {id: '7782342274025937895', title: Intro with Shop Example, started: '2026-11-27T10:00:00Z', duration: 1800,
+          primaryUserId: '234599484848423', direction: Conference, system: Zoom, scope: External}
+        parties:
+        - {id: '1', emailAddress: ann@example.com, name: Ann Example, affiliation: External}
+        content: {brief: Ann asked about pricing for ten seats.}
+- sent:
+    method: POST
+    url: https://us-12345.api.gong.io/v2/calls/extensive
+    headers: *id001
+    body:
+      filter: {fromDateTime: '2026-11-23T00:00:00Z', toDateTime: '2026-11-30T00:00:00Z'}
+      contentSelector:
+        exposedFields:
+          parties: true
+          content: {brief: true}
+      cursor: eyJhbGciOiJIUzI1NiJ9.page2
+  answer:
+    status: 200
+    body:
+      requestId: 4al018gzaztcr8nbukx
+      records: {totalRecords: 2, currentPageSize: 1, currentPageNumber: 0}
+      calls:
+      - &id003
+        metaData: {id: '7782342274025937896', title: Demo for Bob, started: '2026-11-27T14:00:00Z', duration: 2400, primaryUserId: '234599484848423',
+          direction: Conference, system: Zoom, scope: External}
+        parties:
+        - {id: '2', emailAddress: bob@example.com, name: Bob Example, affiliation: External}
+result:
+- *id002
+- *id003

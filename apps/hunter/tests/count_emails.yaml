@@ -1,0 +1,11 @@
+description: How many addresses a website has
+action: count_emails
+credential: { api_key: hunter-test-key }
+input: { domain: example.com }
+exchanges:
+  - sent: { method: GET, url: https://api.hunter.io/v2/email-count, query: { domain: example.com } }
+    answer:
+      body:
+        data: { total: 42, personal_emails: 38, generic_emails: 4, department: { sales: 9, marketing: 5, finance: 2 }, seniority: { junior: 10, senior: 20, executive: 8 } }
+        meta: { params: { domain: example.com, company: null, type: null } }
+result: { total: 42, personal_emails: 38, generic_emails: 4, department: { sales: 9, marketing: 5, finance: 2 }, seniority: { junior: 10, senior: 20, executive: 8 } }

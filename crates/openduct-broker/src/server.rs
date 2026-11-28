@@ -159,6 +159,9 @@ fn validate(config: &BrokerConfig) -> Result<(), BrokerError> {
     Ok(())
 }
 
+/// How long a stopping broker lets requests in flight finish before it closes their connections.
+const DRAIN: std::time::Duration = std::time::Duration::from_secs(5);
+
 async fn run(listener: TcpListener, state: Arc<State>, mut stopped: watch::Receiver<bool>) {
     let permits = Arc::new(Semaphore::new(state.config.max_connections));
     let mut background = tokio::task::JoinSet::new();
@@ -203,7 +206,18 @@ async fn run(listener: TcpListener, state: Arc<State>, mut stopped: watch::Recei
         }
     }
     tracing::info!("OpenDuct is stopping: letting requests in flight finish");
-    while connections.join_next().await.is_some() {}
+    // BOUNDED (UAT restart drill, 2026-11-24): a request waiting on something that will not come - a write to a
+    // partition whose leader is going - held a stopping broker until its pod was killed sixty seconds later, and
+    // nothing after this point ever ran. What has not finished in DRAIN is closed: its client asks again elsewhere.
+    let drained =
+        tokio::time::timeout(DRAIN, async { while connections.join_next().await.is_some() {} }).await;
+    if drained.is_err() {
+        tracing::warn!(
+            open = connections.len(),
+            "requests still in flight after the drain: their connections are closed"
+        );
+        connections.shutdown().await;
+    }
     background.shutdown().await;
 }
 

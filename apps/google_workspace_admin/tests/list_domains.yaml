@@ -1,0 +1,6 @@
+action: list_domains
+credential: { access_token: ya29.test }
+exchanges:
+  - sent: { method: GET, url: https://admin.googleapis.com/admin/directory/v1/customer/my_customer/domains }
+    answer: { body: { domains: [{ domainName: example.com, isPrimary: true, verified: true }, { domainName: shop.example.com, isPrimary: false, verified: true }] } }
+result: [{ domainName: example.com, isPrimary: true, verified: true }, { domainName: shop.example.com, isPrimary: false, verified: true }]

@@ -1,0 +1,81 @@
+# OpenDuct workflows through CI/CD on GitLab: copy this file to .gitlab-ci.yml of the project that keeps your
+# workflow files in workflows/ (as `openduct workflow pull workflows` writes them).
+#
+# - Every merge request: each workflow file checked, those with a sample run (nothing is sent), and what a push to
+#   test would change.
+# - A merge to the default branch: the folder pushed to the test workspace.
+# - A tag release-*, or a pipeline run by hand: the workflows promoted from test to production. Protect the
+#   `production` environment (Settings > CI/CD > Protected environments) so a person approves it.
+#
+# Set up (Settings > CI/CD > Variables, masked and protected):
+#   OPENDUCT_STUDIO              the studio's address, as https://flows.example.com
+#   OPENDUCT_TEST_WORKSPACE, OPENDUCT_PRODUCTION_WORKSPACE   the two workspaces' names
+#   OPENDUCT_TEST_TOKEN          an editor's API token of the test workspace (studio Settings > API tokens)
+#   OPENDUCT_PRODUCTION_TOKEN    an editor's API token of the production workspace
+#
+# Every job runs in the released container, which has `openduct` on its path.
+
+variables:
+  # The release your studio runs: one with the CI/CD commands (pull, diff, push, promote: after v0.1.2).
+  OPENDUCT_VERSION: v0.1.3
+
+default:
+  image:
+    name: ghcr.io/openductile/openduct:$OPENDUCT_VERSION
+    entrypoint: [""]
+
+stages: [check, test, production]
+
+check:
+  stage: check
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - if: $CI_COMMIT_TAG =~ /^release-/
+    - if: $CI_PIPELINE_SOURCE == "web"
+  script:
+    - |
+      set -eu
+      for f in workflows/*.yaml workflows/*.yml workflows/*.json; do
+        [ -e "$f" ] || continue
+        openduct workflow check "$f"
+        if grep -q '^sample:' "$f"; then openduct workflow test "$f" > /dev/null; fi
+      done
+
+diff:
+  stage: check
+  needs: [check]
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+  variables:
+    OPENDUCT_TOKEN: $OPENDUCT_TEST_TOKEN
+  script:
+    - openduct workflow diff workflows
+
+push-to-test:
+  stage: test
+  needs: [check]
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+  environment: test
+  resource_group: openduct-test
+  variables:
+    OPENDUCT_TOKEN: $OPENDUCT_TEST_TOKEN
+  # Exit codes: 2 a file is wrong or the workspace lacks a credential (nothing changed), 4 saved in part.
+  script:
+    - openduct workflow push workflows --prune
+
+promote-to-production:
+  stage: production
+  needs: [check]
+  rules:
+    - if: $CI_COMMIT_TAG =~ /^release-/
+    - if: $CI_PIPELINE_SOURCE == "web"
+      when: manual
+  environment: production
+  resource_group: openduct-production
+  variables:
+    OPENDUCT_TOKEN: $OPENDUCT_PRODUCTION_TOKEN
+  script:
+    - openduct workflow promote --all --from "$OPENDUCT_TEST_WORKSPACE" --to "$OPENDUCT_PRODUCTION_WORKSPACE" --dry-run
+    - openduct workflow promote --all --from "$OPENDUCT_TEST_WORKSPACE" --to "$OPENDUCT_PRODUCTION_WORKSPACE"

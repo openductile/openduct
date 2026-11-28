@@ -1,0 +1,7 @@
+action: get_issue
+credential: { api_key: lin_api_test1 }
+input: { issue: ENG-101 }
+exchanges:
+  - sent: { method: POST, url: https://api.linear.app/graphql, body: { query: "query($id: String!) { issue(id: $id) { id identifier title description priority priorityLabel url dueDate estimate createdAt updatedAt completedAt state { id name type } assignee { id name } creator { id name } team { id key } project { id name } labels { nodes { id name } } comments(first: 50) { nodes { id body createdAt user { id name } } } } }", variables: { id: ENG-101 } } }
+    answer: { body: { data: { issue: { id: 0b1e6a52-0000-4000-8000-000000000001, identifier: ENG-101, title: Checkout button does nothing, priority: 2, priorityLabel: High, url: "https://linear.app/example/issue/ENG-101", state: { id: st-1, name: Todo, type: unstarted }, assignee: { id: u-1, name: Ann Lee }, team: { id: tm-1, key: ENG } } } } }
+result: { id: 0b1e6a52-0000-4000-8000-000000000001, identifier: ENG-101, title: Checkout button does nothing, priority: 2, priorityLabel: High, url: "https://linear.app/example/issue/ENG-101", state: { id: st-1, name: Todo, type: unstarted }, assignee: { id: u-1, name: Ann Lee }, team: { id: tm-1, key: ENG } }

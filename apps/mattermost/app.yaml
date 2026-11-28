@@ -1,0 +1,285 @@
+# Copyright 2026 Ductile AI, Inc
+# SPDX-License-Identifier: Apache-2.0
+# Written by hand from Mattermost's API v4 description (api/v4/source of github.com/mattermost/mattermost) and its
+# incoming webhook documentation.
+app: mattermost
+name: Mattermost
+category: messaging
+description: Post, reply, react and search in a Mattermost server's channels; find teams, channels and people.
+docs: https://developers.mattermost.com/api-documentation/
+# Every Mattermost is its owner's: the server's address is the credential's.
+base_url_field: server_url
+sign_in:
+  - id: mattermost
+    label: A personal access token (or a bot's)
+    fields:
+      - { name: server_url, label: "Your Mattermost's address, such as https://chat.example.com" }
+      - { name: token, label: "A personal access token (Profile, Security) or a bot account's token", secret: true }
+    headers: { Authorization: "Bearer {{ credential.token }}" }
+  - id: mattermost_webhook
+    label: A Mattermost incoming webhook
+    fields:
+      - { name: url, label: "The webhook's address (https://.../hooks/...)", secret: true }
+    url_field: url
+# Mattermost says what was wrong in message, with its id.
+error: >-
+  status >= 400 && type(value) == map && has(value.message) && value.message != null
+  ? string(value.message) + (has(value.id) && value.id != null && value.id != '' ? ' (' + string(value.id) + ')' : '') : null
+default_action: post_message
+actions:
+  post_message:
+    label: Post a message
+    description: A message (Markdown) in a channel, or a reply in a thread; through a webhook, to its channel or another.
+    write: true
+    method: POST
+    path: /api/v4/posts
+    inputs:
+      - { name: channel_id, label: "The channel's id (with a token)" }
+      - { name: message, label: "The message (Markdown)", required: true }
+      - { name: root_id, label: "Reply in the thread of this post (its id)" }
+      - { name: channel, label: "The channel's name, or @someone (with a webhook; the webhook's own when empty)" }
+      - { name: username, label: "Post as this name (with a webhook, where the server allows it)" }
+      - { name: icon_url, label: "With this picture (with a webhook, where the server allows it)" }
+      - { name: props, label: "More of the post's properties: a record, as Mattermost takes them", kind: record }
+    send:
+      channel_id: "{{ input.channel_id }}"
+      message: "{{ input.message }}"
+      root_id: "{{ input.root_id }}"
+      props: "{{ input.props }}"
+    output: { id: text, create_at: number, user_id: text, channel_id: text, root_id: text, message: text, type: text, props: record }
+    by:
+      mattermost_webhook:
+        send: { text: "{{ input.message }}", channel: "{{ input.channel }}", username: "{{ input.username }}", icon_url: "{{ input.icon_url }}", props: "{{ input.props }}" }
+        # The webhook answers ok, as plain text.
+        result: "{'sent': status < 300}"
+  get_post:
+    label: Look up a post
+    description: One post, by its id.
+    method: GET
+    path: "/api/v4/posts/{{ input.post_id }}"
+    inputs:
+      - { name: post_id, label: "The post's id", required: true }
+    output: { id: text, create_at: number, update_at: number, user_id: text, channel_id: text, root_id: text, message: text, type: text, props: record, is_pinned: boolean }
+  update_post:
+    label: Change a post
+    description: Its text changed, or it pinned; only what is given changes.
+    write: true
+    method: PUT
+    path: "/api/v4/posts/{{ input.post_id }}/patch"
+    inputs:
+      - { name: post_id, label: "The post's id", required: true }
+      - { name: message, label: "Its new text (Markdown)" }
+      - { name: is_pinned, label: "Pinned to the channel", kind: boolean }
+    send: { message: "{{ input.message }}", is_pinned: "{{ input.is_pinned }}" }
+    output: { id: text, update_at: number, edit_at: number, channel_id: text, message: text, is_pinned: boolean }
+  delete_post:
+    label: Remove a post
+    description: The post is removed from its channel.
+    write: true
+    method: DELETE
+    path: "/api/v4/posts/{{ input.post_id }}"
+    inputs:
+      - { name: post_id, label: "The post's id", required: true }
+    output: { status: text }
+  pin_post:
+    label: Pin a post
+    description: The post pinned to its channel.
+    write: true
+    method: POST
+    path: "/api/v4/posts/{{ input.post_id }}/pin"
+    inputs:
+      - { name: post_id, label: "The post's id", required: true }
+    output: { status: text }
+  add_reaction:
+    label: React to a post
+    description: An emoji on a post, as the token's owner.
+    write: true
+    method: POST
+    path: /api/v4/reactions
+    inputs:
+      - { name: user_id, label: "Your user id (Look up a user gives it)", required: true }
+      - { name: post_id, label: "The post's id", required: true }
+      - { name: emoji_name, label: "The emoji's name, such as thumbsup", required: true }
+    send: { user_id: "{{ input.user_id }}", post_id: "{{ input.post_id }}", emoji_name: "{{ input.emoji_name }}" }
+    output: { user_id: text, post_id: text, emoji_name: text, create_at: number }
+  list_posts:
+    label: List a channel's posts
+    description: The channel's posts, the newest first (since a time, if given); every page, up to 2,000.
+    method: GET
+    path: "/api/v4/channels/{{ input.channel_id }}/posts"
+    inputs:
+      - { name: channel_id, label: "The channel's id", required: true }
+      - { name: since, label: "Only those made or changed since (Unix time in milliseconds)", kind: number }
+    query: { since: "{{ input.since }}", per_page: "200" }
+    # Mattermost gives the posts by id, and their order apart.
+    items: "value.order.map(id, value.posts[id])"
+    next: "size(value.order) < 200 ? null : {'page': (page == null ? 0 : int(page.page)) + 1}"
+    output: { id: text, create_at: number, update_at: number, user_id: text, channel_id: text, root_id: text, message: text, type: text, props: record }
+  get_thread:
+    label: Read a thread
+    description: A post and its replies, oldest first.
+    method: GET
+    path: "/api/v4/posts/{{ input.post_id }}/thread"
+    inputs:
+      - { name: post_id, label: "Any post of the thread (its id)", required: true }
+    items: "value.order.map(id, value.posts[id])"
+    output: { id: text, create_at: number, user_id: text, channel_id: text, root_id: text, message: text }
+  search_posts:
+    label: Search posts
+    description: "Posts of a team that hold the words, as Mattermost searches them (from:, in:, on:, before: and after: too)."
+    write: false
+    method: POST
+    path: "/api/v4/teams/{{ input.team_id }}/posts/search"
+    inputs:
+      - { name: team_id, label: "The team's id", required: true }
+      - { name: terms, label: "What to look for, such as invoice in:sales after:2026-11-01", required: true }
+      - { name: any_word, label: "Any of the words, not all", kind: boolean }
+    send: { terms: "{{ input.terms }}", is_or_search: "{{ has(input.any_word) && input.any_word == true }}" }
+    items: "value.order.map(id, value.posts[id])"
+    output: { id: text, create_at: number, user_id: text, channel_id: text, root_id: text, message: text }
+  get_channel:
+    label: Look up a channel
+    description: A channel by its id - its name, purpose, header and kind.
+    method: GET
+    path: "/api/v4/channels/{{ input.channel_id }}"
+    inputs:
+      - { name: channel_id, label: "The channel's id", required: true }
+    output: { id: text, team_id: text, type: text, name: text, display_name: text, purpose: text, header: text, create_at: number, last_post_at: number }
+  find_channel:
+    label: Find a channel by name
+    description: A channel by its team's name and its own (as in its address, such as town-square).
+    method: GET
+    path: "/api/v4/teams/name/{{ input.team_name }}/channels/name/{{ input.channel_name }}"
+    inputs:
+      - { name: team_name, label: "The team's name (as in its address)", required: true }
+      - { name: channel_name, label: "The channel's name (as in its address)", required: true }
+    output: { id: text, team_id: text, type: text, name: text, display_name: text, purpose: text, header: text, create_at: number, last_post_at: number }
+  list_channels:
+    label: List a team's public channels
+    description: The team's public channels, with their ids; every page, up to 2,000.
+    method: GET
+    path: "/api/v4/teams/{{ input.team_id }}/channels"
+    inputs:
+      - { name: team_id, label: "The team's id", required: true }
+    query: { per_page: "200" }
+    items: value
+    next: "size(value) < 200 ? null : {'page': (page == null ? 0 : int(page.page)) + 1}"
+    output: { id: text, team_id: text, type: text, name: text, display_name: text, purpose: text, header: text, create_at: number, last_post_at: number }
+  list_my_channels:
+    label: List a user's channels in a team
+    description: The channels a user is in, private ones and direct messages too.
+    method: GET
+    path: "/api/v4/users/{{ input.user_id }}/teams/{{ input.team_id }}/channels"
+    inputs:
+      - { name: user_id, label: "The user's id (me for the token's owner)", required: true }
+      - { name: team_id, label: "The team's id", required: true }
+    items: value
+    output: { id: text, team_id: text, type: text, name: text, display_name: text, purpose: text, header: text, create_at: number, last_post_at: number }
+  create_channel:
+    label: Create a channel
+    description: A new public or private channel in a team.
+    write: true
+    method: POST
+    path: /api/v4/channels
+    inputs:
+      - { name: team_id, label: "The team's id", required: true }
+      - { name: name, label: "Its handle, as in its address (lowercase, such as q4-launch)", required: true }
+      - { name: display_name, label: "Its name, as people see it", required: true }
+      - { name: private, label: "Private (public unless said)", kind: boolean }
+      - { name: purpose, label: "What it is for" }
+      - { name: header, label: "Its header (Markdown)" }
+    send:
+      team_id: "{{ input.team_id }}"
+      name: "{{ input.name }}"
+      display_name: "{{ input.display_name }}"
+      type: "{{ has(input.private) && input.private == true ? 'P' : 'O' }}"
+      purpose: "{{ input.purpose }}"
+      header: "{{ input.header }}"
+    output: { id: text, team_id: text, type: text, name: text, display_name: text, purpose: text, header: text, create_at: number, last_post_at: number }
+  add_to_channel:
+    label: Add people to a channel
+    description: Users made members of the channel.
+    write: true
+    method: POST
+    path: "/api/v4/channels/{{ input.channel_id }}/members"
+    inputs:
+      - { name: channel_id, label: "The channel's id", required: true }
+      - { name: user_ids, label: "The users: a list of their ids", required: true, kind: list }
+    send: { user_ids: "{{ input.user_ids }}" }
+    output: { channel_id: text, user_id: text, roles: text }
+  open_direct_channel:
+    label: Open a direct message channel
+    description: The direct message channel between two users (made if there is none); post to it with its id.
+    write: true
+    method: POST
+    path: /api/v4/channels/direct
+    inputs:
+      - { name: user_id, label: "One user's id (yours, for a message from you)", required: true }
+      - { name: other_user_id, label: "The other user's id", required: true }
+    send: "{{ [input.user_id, input.other_user_id] }}"
+    output: { id: text, team_id: text, type: text, name: text, display_name: text, purpose: text, header: text, create_at: number, last_post_at: number }
+  get_user_by_email:
+    label: Find a user by email
+    description: A user's id, user name and name, by their email.
+    method: GET
+    path: "/api/v4/users/email/{{ input.email }}"
+    inputs:
+      - { name: email, label: "Their email", required: true }
+    output: { id: text, username: text, first_name: text, last_name: text, nickname: text, email: text, position: text, roles: text, locale: text }
+  get_user_by_username:
+    label: Find a user by user name
+    description: A user's id and details, by their user name (me for the token's owner works with Look up a user).
+    method: GET
+    path: "/api/v4/users/username/{{ input.username }}"
+    inputs:
+      - { name: username, label: "Their user name, without @", required: true }
+    output: { id: text, username: text, first_name: text, last_name: text, nickname: text, email: text, position: text, roles: text, locale: text }
+  get_user:
+    label: Look up a user
+    description: A user by their id; me for the token's owner.
+    method: GET
+    path: "/api/v4/users/{{ input.user_id }}"
+    inputs:
+      - { name: user_id, label: "The user's id, or me", required: true }
+    output: { id: text, username: text, first_name: text, last_name: text, nickname: text, email: text, position: text, roles: text, locale: text }
+  search_users:
+    label: Search users
+    description: Users whose user name, name, nickname or email begin with the words; in a team or channel, if given.
+    method: POST
+    path: /api/v4/users/search
+    inputs:
+      - { name: term, label: "What to look for", required: true }
+      - { name: team_id, label: "Only in this team (its id)" }
+      - { name: in_channel_id, label: "Only in this channel (its id)" }
+    send: { term: "{{ input.term }}", team_id: "{{ input.team_id }}", in_channel_id: "{{ input.in_channel_id }}" }
+    items: value
+    output: { id: text, username: text, first_name: text, last_name: text, nickname: text, email: text, position: text, roles: text, locale: text }
+  get_team_by_name:
+    label: Find a team by name
+    description: A team's id and details, by its name (as in its address).
+    method: GET
+    path: "/api/v4/teams/name/{{ input.team_name }}"
+    inputs:
+      - { name: team_name, label: "The team's name", required: true }
+    output: { id: text, name: text, display_name: text, description: text, type: text, create_at: number }
+  list_teams:
+    label: List a user's teams
+    description: The teams a user is in; me for the token's owner.
+    method: GET
+    path: "/api/v4/users/{{ input.user_id }}/teams"
+    inputs:
+      - { name: user_id, label: "The user's id, or me", required: true }
+    items: value
+    output: { id: text, name: text, display_name: text, description: text, type: text, create_at: number }
+triggers:
+  new_post:
+    label: A new message in a channel
+    description: Each post made in the channel (replies too), the newest asked for every minute.
+    inputs:
+      - { name: channel_id, label: "The channel's id", required: true }
+    poll:
+      action: list_posts
+      input: { channel_id: "{{ input.channel_id }}" }
+      newest_first: true
+      id: item.id
+      every: 1m

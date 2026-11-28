@@ -1,0 +1,10 @@
+description: "The profile"
+action: get_profile
+credential: {"api_key": "up-test-key"}
+exchanges:
+  - sent:
+      method: GET
+      url: "https://api.uproc.io/api/v1/external/profile"
+      headers: {"authorization": "Bearer up-test-key"}
+    answer: {"status": 200, "body": {"success": true, "message": "User data loaded OK", "data": {"id": 7, "first_name": "Ann", "last_name": "Lee", "email": "ann@example.com", "language": "en", "default_app": "data-process"}}}
+result: {"id": 7, "first_name": "Ann", "last_name": "Lee", "email": "ann@example.com", "language": "en", "default_app": "data-process"}

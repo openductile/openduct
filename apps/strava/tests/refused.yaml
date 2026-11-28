@@ -1,0 +1,6 @@
+description: A token Strava no longer takes, in its words
+action: me
+credential: { access_token: expired }
+exchanges:
+  - answer: { status: 401, body: { message: Authorization Error, errors: [{ resource: Athlete, field: access_token, code: invalid }] } }
+error: "Strava answered 401: Authorization Error"

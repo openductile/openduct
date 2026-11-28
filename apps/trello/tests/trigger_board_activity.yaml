@@ -1,0 +1,22 @@
+description: Cards made on the board since the last poll, the newest asked for first
+trigger: board_activity
+credential: { api_key: testkey0123456789, token: ATTAtesttoken0123 }
+input: { board_id: 6567a1b2c3d4e5f6000000b1 }
+seen: { items: [["6567a1b2c3d4e5f600000a01", ""]] }
+exchanges:
+  - sent:
+      method: GET
+      url: https://api.trello.com/1/boards/6567a1b2c3d4e5f6000000b1/actions
+      query: { key: testkey0123456789, token: ATTAtesttoken0123, filter: createCard, limit: "100" }
+    answer: { body: [{ id: 6567a1b2c3d4e5f600000a02, type: createCard, date: "2026-11-27T10:05:00.000Z", idMemberCreator: 6567a1b2c3d4e5f600000m01, data: { card: { id: 6567a1b2c3d4e5f600000002, name: Send the invoice }, list: { id: 6567a1b2c3d4e5f6000000a1, name: To do }, board: { id: 6567a1b2c3d4e5f6000000b1, name: Orders } }, memberCreator: { id: 6567a1b2c3d4e5f600000m01, fullName: Ann Example } }, { id: 6567a1b2c3d4e5f600000a01, type: createCard, date: "2026-11-27T09:00:00.000Z", idMemberCreator: 6567a1b2c3d4e5f600000m01, data: { card: { id: 6567a1b2c3d4e5f600000001, name: Call the supplier } } }] }
+runs:
+  - id: 6567a1b2c3d4e5f600000a02
+    type: createCard
+    date: "2026-11-27T10:05:00.000Z"
+    by: { id: 6567a1b2c3d4e5f600000m01, fullName: Ann Example }
+    card: { id: 6567a1b2c3d4e5f600000002, name: Send the invoice }
+    list: { id: 6567a1b2c3d4e5f6000000a1, name: To do }
+    board: { id: 6567a1b2c3d4e5f6000000b1, name: Orders }
+    text: null
+    data: { card: { id: 6567a1b2c3d4e5f600000002, name: Send the invoice }, list: { id: 6567a1b2c3d4e5f6000000a1, name: To do }, board: { id: 6567a1b2c3d4e5f6000000b1, name: Orders } }
+ids: ["6567a1b2c3d4e5f600000a02"]

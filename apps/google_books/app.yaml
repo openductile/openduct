@@ -1,0 +1,219 @@
+# Copyright 2026 Ductile AI, Inc
+# SPDX-License-Identifier: Apache-2.0
+# Google Books: written by hand from Google's discovery document for books v1
+# (https://www.googleapis.com/discovery/v1/apis/books/v1/rest, revision 20261119) and its reference pages.
+app: google_books
+name: Google Books
+category: productivity
+description: Find books in Google Books, read their details, and keep them on your bookshelves.
+docs: https://developers.google.com/books/docs/v1/reference
+hosts: [books.googleapis.com]
+base_url: https://books.googleapis.com/books/v1
+sign_in:
+  - id: google_books
+    label: Sign in with Google
+    oauth2:
+      authorize: https://accounts.google.com/o/oauth2/v2/auth
+      token: https://oauth2.googleapis.com/token
+      scopes: [https://www.googleapis.com/auth/books]
+      extra: { access_type: offline, prompt: consent }
+    headers:
+      Authorization: "Bearer {{ credential.access_token }}"
+  - id: google_books_key
+    label: An API key (searching and public bookshelves only)
+    fields:
+      - { name: api_key, label: "An API key from the Google Cloud console, with the Books API allowed", secret: true }
+    query: { key: "{{ credential.api_key }}" }
+error: value.error.message
+actions:
+  search_books:
+    label: Search for books
+    description: Books and magazines that match a search, such as a title, an author (inauthor:) or an ISBN (isbn:); up to 200.
+    method: GET
+    path: /volumes
+    inputs:
+      - { name: q, label: "What to look for, such as flowers inauthor:keyes or isbn:9780000000001", required: true }
+      - { name: order_by, label: "Order: relevance (the default) or newest" }
+      - { name: print_type, label: "Only: all, books or magazines" }
+      - { name: filter, label: "Only: partial, full, free-ebooks, paid-ebooks or ebooks" }
+      - { name: language, label: "Only books in this language (a code such as en or fr)" }
+    query:
+      q: "{{ input.q }}"
+      orderBy: "{{ input.order_by }}"
+      printType: "{{ input.print_type }}"
+      filter: "{{ input.filter }}"
+      langRestrict: "{{ input.language }}"
+      maxResults: "40"
+    items: "has(value.items) ? value.items : []"
+    next: "has(value.items) && size(value.items) == 40 ? {'startIndex': (page == null ? 0 : int(page.startIndex)) + 40} : null"
+    max_pages: 5
+    output:
+      id: text
+      selfLink: text
+      volumeInfo: record
+      saleInfo: record
+      accessInfo: record
+      searchInfo: record
+  get_book:
+    label: Get a book
+    description: One book's details - title, authors, publisher, date, description, ISBNs, pages, links - by its Google Books id.
+    method: GET
+    path: "/volumes/{{ input.volume_id }}"
+    inputs:
+      - { name: volume_id, label: "The book's Google Books id (Search for books gives it)", required: true }
+    output:
+      id: text
+      selfLink: text
+      volumeInfo: record
+      saleInfo: record
+      accessInfo: record
+      searchInfo: record
+  list_bookshelves:
+    label: List my bookshelves
+    description: The signed-in user's bookshelves, with how many books each holds.
+    method: GET
+    path: /mylibrary/bookshelves
+    items: "has(value.items) ? value.items : []"
+    output:
+      id: number
+      title: text
+      description: text
+      access: text
+      volumeCount: number
+      updated: text
+      created: text
+      volumesLastUpdated: text
+      selfLink: text
+  get_bookshelf:
+    label: Get one of my bookshelves
+    description: "One of the signed-in user's bookshelves: 0 Favorites, 1 Purchased, 2 To read, 3 Reading now, 4 Have read, or one of their own."
+    method: GET
+    path: "/mylibrary/bookshelves/{{ input.shelf }}"
+    inputs:
+      - { name: shelf, label: "The shelf's id: 0 Favorites, 2 To read, 3 Reading now, 4 Have read ...", required: true }
+    output:
+      id: number
+      title: text
+      description: text
+      access: text
+      volumeCount: number
+      updated: text
+      created: text
+      volumesLastUpdated: text
+      selfLink: text
+  list_bookshelf_books:
+    label: List the books on one of my bookshelves
+    description: Every book on one of the signed-in user's bookshelves, or those matching a search.
+    method: GET
+    path: "/mylibrary/bookshelves/{{ input.shelf }}/volumes"
+    inputs:
+      - { name: shelf, label: "The shelf's id: 0 Favorites, 2 To read, 3 Reading now, 4 Have read ...", required: true }
+      - { name: q, label: "Only books that match this search" }
+    query: { q: "{{ input.q }}", maxResults: "40" }
+    items: "has(value.items) ? value.items : []"
+    next: "has(value.items) && size(value.items) == 40 ? {'startIndex': (page == null ? 0 : int(page.startIndex)) + 40} : null"
+    output:
+      id: text
+      selfLink: text
+      volumeInfo: record
+      saleInfo: record
+      accessInfo: record
+      searchInfo: record
+  add_to_bookshelf:
+    label: Put a book on one of my bookshelves
+    description: Adds a book to one of the signed-in user's bookshelves.
+    write: true
+    method: POST
+    path: "/mylibrary/bookshelves/{{ input.shelf }}/addVolume"
+    body: none
+    inputs:
+      - { name: shelf, label: "The shelf's id: 0 Favorites, 2 To read, 3 Reading now, 4 Have read ...", required: true }
+      - { name: volume_id, label: "The book's Google Books id", required: true }
+    query: { volumeId: "{{ input.volume_id }}" }
+    result: "{'added': status < 300}"
+    output: { added: boolean }
+  remove_from_bookshelf:
+    label: Take a book off one of my bookshelves
+    description: Removes a book from one of the signed-in user's bookshelves.
+    write: true
+    method: POST
+    path: "/mylibrary/bookshelves/{{ input.shelf }}/removeVolume"
+    body: none
+    inputs:
+      - { name: shelf, label: "The shelf's id", required: true }
+      - { name: volume_id, label: "The book's Google Books id", required: true }
+    query: { volumeId: "{{ input.volume_id }}" }
+    result: "{'removed': status < 300}"
+    output: { removed: boolean }
+  move_on_bookshelf:
+    label: Move a book on one of my bookshelves
+    description: Puts a book at another place on its bookshelf (0 is the first).
+    write: true
+    method: POST
+    path: "/mylibrary/bookshelves/{{ input.shelf }}/moveVolume"
+    body: none
+    inputs:
+      - { name: shelf, label: "The shelf's id", required: true }
+      - { name: volume_id, label: "The book's Google Books id", required: true }
+      - { name: position, label: "Its new place, 0 for the first", required: true, kind: number }
+    query: { volumeId: "{{ input.volume_id }}", volumePosition: "{{ input.position }}" }
+    result: "{'moved': status < 300}"
+    output: { moved: boolean }
+  clear_bookshelf:
+    label: Empty one of my bookshelves
+    description: Takes every book off one of the signed-in user's bookshelves.
+    write: true
+    method: POST
+    path: "/mylibrary/bookshelves/{{ input.shelf }}/clearVolumes"
+    body: none
+    inputs:
+      - { name: shelf, label: "The shelf's id", required: true }
+    result: "{'cleared': status < 300}"
+    output: { cleared: boolean }
+  list_public_bookshelves:
+    label: List someone's public bookshelves
+    description: The public bookshelves of a Google Books user, by their user id.
+    method: GET
+    path: "/users/{{ input.user_id }}/bookshelves"
+    inputs:
+      - { name: user_id, label: "Their Google Books user id (in their shelf's address)", required: true }
+    items: "has(value.items) ? value.items : []"
+    output:
+      id: number
+      title: text
+      description: text
+      access: text
+      volumeCount: number
+      updated: text
+      created: text
+      volumesLastUpdated: text
+      selfLink: text
+  list_public_bookshelf_books:
+    label: List the books on someone's public bookshelf
+    description: Every book on a public bookshelf of a Google Books user.
+    method: GET
+    path: "/users/{{ input.user_id }}/bookshelves/{{ input.shelf }}/volumes"
+    inputs:
+      - { name: user_id, label: "Their Google Books user id", required: true }
+      - { name: shelf, label: "The shelf's id", required: true }
+    query: { maxResults: "40" }
+    items: "has(value.items) ? value.items : []"
+    next: "has(value.items) && size(value.items) == 40 ? {'startIndex': (page == null ? 0 : int(page.startIndex)) + 40} : null"
+    output:
+      id: text
+      selfLink: text
+      volumeInfo: record
+      saleInfo: record
+      accessInfo: record
+      searchInfo: record
+triggers:
+  new_book_on_shelf:
+    label: A book put on one of my bookshelves
+    description: Each book that is added to one of the signed-in user's bookshelves, asked for every few minutes.
+    inputs:
+      - { name: shelf, label: "The shelf's id: 0 Favorites, 2 To read, 3 Reading now, 4 Have read ...", required: true }
+    poll:
+      action: list_bookshelf_books
+      input: { shelf: "{{ input.shelf }}" }
+      id: item.id
+      every: 15m

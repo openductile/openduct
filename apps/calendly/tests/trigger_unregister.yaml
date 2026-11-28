@@ -1,0 +1,9 @@
+description: Turning the workflow off ends the subscription
+trigger: new_booking
+unregister: true
+workflow: wf1
+credential: { token: cal_1, "webhook_secret@wf1": k, "webhook_id@wf1": S1 }
+exchanges:
+  - sent: { method: DELETE, url: https://api.calendly.com/webhook_subscriptions/S1 }
+    answer: { status: 204 }
+kept: { webhook_secret: "", webhook_id: "" }

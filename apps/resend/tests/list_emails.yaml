@@ -1,0 +1,76 @@
+# Made by `openduct app from-openapi`: Retrieve a list of emails.
+description: "Retrieve a list of emails, made from the API description's schemas"
+action: list_emails
+credential: { token: test-token }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://api.resend.com/emails"
+      query: { limit: "100" }
+      headers: { authorization: "Bearer test-token" }
+    answer:
+      status: 200
+      body:
+        object: list
+        has_more: true
+        data:
+          - object: email
+            id: "4ef9a417-02e9-4d39-ad75-9611e0fcc33c"
+            message_id: message_1
+            to: [example]
+            from: example
+            created_at: example
+            subject: example
+            html: example
+            text: example
+            bcc: [example]
+            cc: [example]
+            reply_to: [example]
+  - sent:
+      method: GET
+      url: "https://api.resend.com/emails"
+      query: { limit: "100", after: "4ef9a417-02e9-4d39-ad75-9611e0fcc33c" }
+      headers: { authorization: "Bearer test-token" }
+    answer:
+      status: 200
+      body:
+        object: list
+        has_more: false
+        data:
+          - object: email
+            id: id_2
+            message_id: message_1
+            to: [example]
+            from: example
+            created_at: example
+            subject: example
+            html: example
+            text: example
+            bcc: [example]
+            cc: [example]
+            reply_to: [example]
+result:
+  - object: email
+    id: "4ef9a417-02e9-4d39-ad75-9611e0fcc33c"
+    message_id: message_1
+    to: [example]
+    from: example
+    created_at: example
+    subject: example
+    html: example
+    text: example
+    bcc: [example]
+    cc: [example]
+    reply_to: [example]
+  - object: email
+    id: id_2
+    message_id: message_1
+    to: [example]
+    from: example
+    created_at: example
+    subject: example
+    html: example
+    text: example
+    bcc: [example]
+    cc: [example]
+    reply_to: [example]

@@ -1,0 +1,39 @@
+description: Customers by email, the next page from the cursor link
+action: list_customers
+credential: {access_token: hs-test-token}
+input: {email: ann@example.com}
+exchanges:
+- sent:
+    method: GET
+    url: https://api.helpscout.net/v3/customers
+    query: {email: ann@example.com}
+    headers: {authorization: Bearer hs-test-token}
+  answer:
+    status: 200
+    body:
+      _embedded:
+        customers:
+        - &id001
+          id: 29418
+          firstName: Ann
+          lastName: Example
+          jobTitle: Owner
+          conversationCount: 3
+          createdAt: '2026-11-20T09:00:00Z'
+          updatedAt: '2026-11-27T09:00:00Z'
+          _embedded:
+            emails:
+            - {id: 1, type: work, value: ann@example.com}
+            phones: []
+      _links:
+        self: {href: 'https://api.helpscout.net/v2/x'}
+        next: {href: 'https://api.helpscout.net/v3/customers?email=ann%40example.com&cursor=eyJpZCI6Mjk0MTh9'}
+- sent: {url: 'https://api.helpscout.net/v3/customers?email=ann%40example.com&cursor=eyJpZCI6Mjk0MTh9'}
+  answer:
+    body:
+      _embedded:
+        customers: []
+      _links:
+        self: {href: 'https://api.helpscout.net/v2/x'}
+result:
+- *id001

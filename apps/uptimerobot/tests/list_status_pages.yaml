@@ -1,0 +1,6 @@
+action: list_status_pages
+credential: { api_key: ur_test_1 }
+exchanges:
+  - sent: { method: GET, url: https://api.uptimerobot.com/v3/psps, query: { limit: "200" } }
+    answer: { body: { nextLink: null, data: [{ id: 12, friendlyName: Shop status, urlKey: aB3dE, status: ENABLED, monitorIds: [801, 802] }] } }
+result: [{ id: 12, friendlyName: Shop status, urlKey: aB3dE, status: ENABLED, monitorIds: [801, 802] }]

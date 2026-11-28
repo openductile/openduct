@@ -12,6 +12,7 @@ sign_in:
     label: An access token
     fields:
       - { name: access_token, label: "The access token (production)", secret: true }
+      - { name: webhook_secret, label: "A webhook subscription's signature key, for one added by hand", secret: true, optional: true }
     headers:
       Authorization: "Bearer {{ credential.access_token }}"
       Square-Version: "2025-01-23"
@@ -20,6 +21,7 @@ sign_in:
     base_url: https://connect.squareupsandbox.com/v2
     fields:
       - { name: access_token, label: "The sandbox access token", secret: true }
+      - { name: webhook_secret, label: "A webhook subscription's signature key, for one added by hand", secret: true, optional: true }
     headers:
       Authorization: "Bearer {{ credential.access_token }}"
       Square-Version: "2025-01-23"
@@ -50,3 +52,30 @@ actions:
     query: { begin_time: "{{ input.begin_time }}" }
     items: value.payments
     next: "value.cursor == null ? null : {'cursor': value.cursor}"
+triggers:
+  payment:
+    label: A payment made (or changed)
+    description: >-
+      Each payment of the kinds chosen, as Square sends it, signed with the subscription's key over the workflow's
+      address and the delivery. Turning the workflow on subscribes its address, and turning it off deletes the
+      subscription.
+    inputs:
+      - { name: events, label: "Which, separated by commas: payment.created, payment.updated", description: "payment.created when empty" }
+    webhook:
+      signature: { header: x-square-hmacsha256-signature, encoding: base64, signed: "{address}{body}" }
+      secret: webhook_secret
+      id: value.event_id
+      only: "(input.events == null ? ['payment.created'] : input.events.split(',').map(e, e.trim())).exists(e, e == value.type)"
+      event: value.data.object.payment
+      register:
+        - method: POST
+          path: /webhooks/subscriptions
+          send:
+            idempotency_key: "openduct-{{ input.workflow }}-{{ input.secret }}"
+            subscription:
+              name: "OpenDuct workflow {{ input.workflow }}"
+              event_types: "{{ input.events == null ? ['payment.created'] : input.events.split(',').map(e, e.trim()) }}"
+              notification_url: "{{ input.address }}"
+      keep: { webhook_secret: value.subscription.signature_key, webhook_id: value.subscription.id }
+      unregister:
+        - { method: DELETE, path: "/webhooks/subscriptions/{{ input.registered.webhook_id }}" }

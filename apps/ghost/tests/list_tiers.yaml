@@ -1,0 +1,6 @@
+action: list_tiers
+credential: { site: acme, content_key: 22444f78447824223cefc48aaa }
+exchanges:
+  - sent: { method: GET, url: https://acme.ghost.io/ghost/api/content/tiers/, query: { key: 22444f78447824223cefc48aaa, include: "monthly_price,yearly_price,benefits", limit: "100" } }
+    answer: { body: { tiers: [{ id: 6744a1b2c3d4e5f600000050, name: Supporter, type: paid, currency: USD, monthly_price: 500, yearly_price: 5000, benefits: [Monthly letter] }], meta: { pagination: { page: 1, limit: 100, pages: 1, total: 1, next: null, prev: null } } } }
+result: [{ id: 6744a1b2c3d4e5f600000050, name: Supporter, type: paid, currency: USD, monthly_price: 500, yearly_price: 5000, benefits: [Monthly letter] }]

@@ -1,0 +1,14 @@
+# Made by `openduct app from-openapi`: Update an existing broadcast.
+description: "Update an existing broadcast, made from the API description's schemas"
+action: update_broadcast
+credential: { token: test-token }
+input: { id: id_1 }
+exchanges:
+  - sent:
+      method: PATCH
+      url: "https://api.resend.com/broadcasts/id_1"
+      query: {}
+      headers: { authorization: "Bearer test-token" }
+      body: {}
+    answer: { status: 200, body: { id: "78261eea-8f8b-4381-83c6-79fa7120f1cf", object: broadcast } }
+result: { id: "78261eea-8f8b-4381-83c6-79fa7120f1cf", object: broadcast }

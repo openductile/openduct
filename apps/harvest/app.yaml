@@ -1,0 +1,774 @@
+# Copyright 2026 Ductile AI, Inc
+# SPDX-License-Identifier: Apache-2.0
+# Harvest: written by hand from Harvest's API v2 reference, https://help.getharvest.com/api-v2/ (read 2026-11-27;
+# Harvest publishes no API description file).
+app: harvest
+name: Harvest
+category: productivity
+description: >-
+  Time tracking in Harvest: time entries logged, changed, started and stopped; projects, clients, contacts, tasks,
+  invoices and expenses.
+docs: https://help.getharvest.com/api-v2/
+hosts: [api.harvestapp.com, id.getharvest.com]
+base_url: https://api.harvestapp.com/v2
+sign_in:
+  - id: harvest
+    label: A personal access token
+    fields:
+      - { name: access_token, label: "The personal access token (Harvest ID, Developers)", secret: true }
+      - { name: account_id, label: "The Harvest account's id (listed beside the token)" }
+    headers:
+      Authorization: "Bearer {{ credential.access_token }}"
+      Harvest-Account-Id: "{{ credential.account_id }}"
+      # Harvest asks every request to name the application and a way to reach it.
+      User-Agent: "OpenDuct (https://github.com/openductile/openduct)"
+  - id: harvest_oauth
+    label: Sign in with Harvest
+    oauth2:
+      authorize: https://id.getharvest.com/oauth2/authorize
+      token: https://id.getharvest.com/api/v2/oauth2/token
+      scopes: []
+      # The Harvest account the person chose: the first Harvest one of those Harvest ID gives.
+      after_connect:
+        url: https://id.getharvest.com/api/v2/accounts
+        keep: { account_id: "value.accounts.filter(a, a.product == 'harvest')[0].id" }
+    headers:
+      Authorization: "Bearer {{ credential.access_token }}"
+      Harvest-Account-Id: "{{ credential.account_id }}"
+      User-Agent: "OpenDuct (https://github.com/openductile/openduct)"
+actions:
+  list_time_entries:
+    label: List time entries
+    description: Time entries, by person, client, project, task, dates or when changed; every page.
+    method: GET
+    path: /time_entries
+    inputs:
+      - { name: user_id, label: "Only this person's (their id)" }
+      - { name: client_id, label: "Only this client's (its id)" }
+      - { name: project_id, label: "Only this project's (its id)" }
+      - { name: task_id, label: "Only this task's (its id)" }
+      - { name: from, label: "Spent on or after (such as 2026-11-01)" }
+      - { name: to, label: "Spent on or before (such as 2026-11-30)" }
+      - { name: updated_since, label: "Only those changed since (such as 2026-11-01T00:00:00Z)" }
+      - { name: is_billed, label: "Invoiced (true) or not yet (false)", kind: boolean }
+      - { name: is_running, label: "Timer running (true) or stopped (false)", kind: boolean }
+      - { name: approval_status, label: "unsubmitted, submitted or approved" }
+    query:
+      user_id: "{{ input.user_id }}"
+      client_id: "{{ input.client_id }}"
+      project_id: "{{ input.project_id }}"
+      task_id: "{{ input.task_id }}"
+      from: "{{ input.from }}"
+      to: "{{ input.to }}"
+      updated_since: "{{ input.updated_since }}"
+      is_billed: "{{ input.is_billed }}"
+      is_running: "{{ input.is_running }}"
+      approval_status: "{{ input.approval_status }}"
+    items: value.time_entries
+    next: value.links.next
+    output:
+      id: number
+      spent_date: text
+      user: record
+      client: record
+      project: record
+      task: record
+      invoice: record
+      hours: number
+      rounded_hours: number
+      notes: text
+      is_locked: boolean
+      approval_status: text
+      is_billed: boolean
+      timer_started_at: text
+      started_time: text
+      ended_time: text
+      is_running: boolean
+      billable: boolean
+      billable_rate: number
+      cost_rate: number
+      created_at: text
+      updated_at: text
+  get_time_entry:
+    label: Look up a time entry
+    description: One time entry.
+    method: GET
+    path: "/time_entries/{{ input.time_entry_id }}"
+    inputs:
+      - { name: time_entry_id, label: "The time entry's id", required: true }
+    output:
+      id: number
+      spent_date: text
+      user: record
+      client: record
+      project: record
+      task: record
+      invoice: record
+      hours: number
+      rounded_hours: number
+      notes: text
+      is_locked: boolean
+      approval_status: text
+      is_billed: boolean
+      timer_started_at: text
+      started_time: text
+      ended_time: text
+      is_running: boolean
+      billable: boolean
+      billable_rate: number
+      cost_rate: number
+      created_at: text
+      updated_at: text
+  create_time_entry:
+    label: Log time
+    description: >-
+      A new time entry on a project's task: hours spent (an account that tracks by duration), or a start and end time
+      (one that tracks by start and end); with neither, its timer starts running.
+    write: true
+    method: POST
+    path: /time_entries
+    inputs:
+      - { name: project_id, label: "The project (its id)", required: true, kind: number }
+      - { name: task_id, label: "The task (its id; one assigned to the project)", required: true, kind: number }
+      - { name: spent_date, label: "The day (such as 2026-11-27)", required: true }
+      - { name: hours, label: "Hours spent (such as 1.5)", kind: number }
+      - { name: started_time, label: "Or the time it started (such as 8:00am)" }
+      - { name: ended_time, label: "And the time it ended (such as 9:30am)" }
+      - { name: notes, label: Notes }
+      - { name: user_id, label: "For this person (their id); the signed-in one by default", kind: number }
+    send:
+      project_id: "{{ input.project_id }}"
+      task_id: "{{ input.task_id }}"
+      spent_date: "{{ input.spent_date }}"
+      hours: "{{ input.hours }}"
+      started_time: "{{ input.started_time }}"
+      ended_time: "{{ input.ended_time }}"
+      notes: "{{ input.notes }}"
+      user_id: "{{ input.user_id }}"
+    output:
+      id: number
+      spent_date: text
+      user: record
+      client: record
+      project: record
+      task: record
+      invoice: record
+      hours: number
+      rounded_hours: number
+      notes: text
+      is_locked: boolean
+      approval_status: text
+      is_billed: boolean
+      timer_started_at: text
+      started_time: text
+      ended_time: text
+      is_running: boolean
+      billable: boolean
+      billable_rate: number
+      cost_rate: number
+      created_at: text
+      updated_at: text
+  update_time_entry:
+    label: Change a time entry
+    description: Changes the fields given of a time entry; the others stay.
+    write: true
+    method: PATCH
+    path: "/time_entries/{{ input.time_entry_id }}"
+    inputs:
+      - { name: time_entry_id, label: "The time entry's id", required: true }
+      - { name: project_id, label: "Another project (its id)", kind: number }
+      - { name: task_id, label: "Another task (its id)", kind: number }
+      - { name: spent_date, label: "Another day (such as 2026-11-27)" }
+      - { name: hours, label: "Hours spent", kind: number }
+      - { name: started_time, label: "The time it started (such as 8:00am)" }
+      - { name: ended_time, label: "The time it ended" }
+      - { name: notes, label: Notes }
+    send:
+      project_id: "{{ input.project_id }}"
+      task_id: "{{ input.task_id }}"
+      spent_date: "{{ input.spent_date }}"
+      hours: "{{ input.hours }}"
+      started_time: "{{ input.started_time }}"
+      ended_time: "{{ input.ended_time }}"
+      notes: "{{ input.notes }}"
+    output:
+      id: number
+      spent_date: text
+      user: record
+      client: record
+      project: record
+      task: record
+      invoice: record
+      hours: number
+      rounded_hours: number
+      notes: text
+      is_locked: boolean
+      approval_status: text
+      is_billed: boolean
+      timer_started_at: text
+      started_time: text
+      ended_time: text
+      is_running: boolean
+      billable: boolean
+      billable_rate: number
+      cost_rate: number
+      created_at: text
+      updated_at: text
+  delete_time_entry:
+    label: Delete a time entry
+    description: Removes a time entry (one not approved, on a project and task not archived).
+    write: true
+    method: DELETE
+    path: "/time_entries/{{ input.time_entry_id }}"
+    inputs:
+      - { name: time_entry_id, label: "The time entry's id", required: true }
+    result: "{'deleted': true}"
+    output: { deleted: boolean }
+  restart_time_entry:
+    label: "Restart a time entry's timer"
+    description: Starts the timer of a stopped time entry again.
+    write: true
+    method: PATCH
+    path: "/time_entries/{{ input.time_entry_id }}/restart"
+    body: none
+    inputs:
+      - { name: time_entry_id, label: "The time entry's id", required: true }
+    output:
+      id: number
+      spent_date: text
+      user: record
+      client: record
+      project: record
+      task: record
+      invoice: record
+      hours: number
+      rounded_hours: number
+      notes: text
+      is_locked: boolean
+      approval_status: text
+      is_billed: boolean
+      timer_started_at: text
+      started_time: text
+      ended_time: text
+      is_running: boolean
+      billable: boolean
+      billable_rate: number
+      cost_rate: number
+      created_at: text
+      updated_at: text
+  stop_time_entry:
+    label: "Stop a time entry's timer"
+    description: Stops the timer of a running time entry.
+    write: true
+    method: PATCH
+    path: "/time_entries/{{ input.time_entry_id }}/stop"
+    body: none
+    inputs:
+      - { name: time_entry_id, label: "The time entry's id", required: true }
+    output:
+      id: number
+      spent_date: text
+      user: record
+      client: record
+      project: record
+      task: record
+      invoice: record
+      hours: number
+      rounded_hours: number
+      notes: text
+      is_locked: boolean
+      approval_status: text
+      is_billed: boolean
+      timer_started_at: text
+      started_time: text
+      ended_time: text
+      is_running: boolean
+      billable: boolean
+      billable_rate: number
+      cost_rate: number
+      created_at: text
+      updated_at: text
+  list_projects:
+    label: List projects
+    description: Projects, active or archived, of a client if given; every page.
+    method: GET
+    path: /projects
+    inputs:
+      - { name: is_active, label: "Active (true) or archived (false)", kind: boolean }
+      - { name: client_id, label: "Only this client's (its id)" }
+      - { name: updated_since, label: "Only those changed since (such as 2026-11-01T00:00:00Z)" }
+    query: { is_active: "{{ input.is_active }}", client_id: "{{ input.client_id }}", updated_since: "{{ input.updated_since }}" }
+    items: value.projects
+    next: value.links.next
+    output:
+      id: number
+      client: record
+      name: text
+      code: text
+      is_active: boolean
+      is_billable: boolean
+      is_fixed_fee: boolean
+      bill_by: text
+      hourly_rate: number
+      budget: number
+      budget_by: text
+      cost_budget: number
+      fee: number
+      notes: text
+      starts_on: text
+      ends_on: text
+      created_at: text
+      updated_at: text
+  get_project:
+    label: Look up a project
+    description: One project.
+    method: GET
+    path: "/projects/{{ input.project_id }}"
+    inputs:
+      - { name: project_id, label: "The project's id", required: true }
+    output:
+      id: number
+      client: record
+      name: text
+      code: text
+      is_active: boolean
+      is_billable: boolean
+      is_fixed_fee: boolean
+      bill_by: text
+      hourly_rate: number
+      budget: number
+      budget_by: text
+      cost_budget: number
+      fee: number
+      notes: text
+      starts_on: text
+      ends_on: text
+      created_at: text
+      updated_at: text
+  create_project:
+    label: Create a project
+    description: A new project for a client, with how it is billed and budgeted.
+    write: true
+    method: POST
+    path: /projects
+    inputs:
+      - { name: client_id, label: "The client (its id)", required: true, kind: number }
+      - { name: name, label: Name, required: true }
+      - { name: is_billable, label: Billable, required: true, kind: boolean }
+      - { name: bill_by, label: "Invoiced by: Project, Tasks, People or none", required: true }
+      - name: budget_by
+        label: "Budgeted by: project (hours), project_cost (fees), task (hours per task), task_fees, person or none"
+        required: true
+      - { name: code, label: Code }
+      - { name: hourly_rate, label: "Hourly rate (when invoiced by project)", kind: number }
+      - { name: budget, label: "Budget in hours", kind: number }
+      - { name: cost_budget, label: "Budget in money", kind: number }
+      - { name: is_fixed_fee, label: Fixed fee, kind: boolean }
+      - { name: fee, label: "The fixed fee", kind: number }
+      - { name: starts_on, label: "Starts (such as 2026-12-01)" }
+      - { name: ends_on, label: "Ends" }
+      - { name: notes, label: Notes }
+    send:
+      client_id: "{{ input.client_id }}"
+      name: "{{ input.name }}"
+      is_billable: "{{ input.is_billable }}"
+      bill_by: "{{ input.bill_by }}"
+      budget_by: "{{ input.budget_by }}"
+      code: "{{ input.code }}"
+      hourly_rate: "{{ input.hourly_rate }}"
+      budget: "{{ input.budget }}"
+      cost_budget: "{{ input.cost_budget }}"
+      is_fixed_fee: "{{ input.is_fixed_fee }}"
+      fee: "{{ input.fee }}"
+      starts_on: "{{ input.starts_on }}"
+      ends_on: "{{ input.ends_on }}"
+      notes: "{{ input.notes }}"
+    output:
+      id: number
+      client: record
+      name: text
+      code: text
+      is_active: boolean
+      is_billable: boolean
+      is_fixed_fee: boolean
+      bill_by: text
+      hourly_rate: number
+      budget: number
+      budget_by: text
+      cost_budget: number
+      fee: number
+      notes: text
+      starts_on: text
+      ends_on: text
+      created_at: text
+      updated_at: text
+  update_project:
+    label: Change a project
+    description: Changes the fields given of a project, or archives it; the others stay.
+    write: true
+    method: PATCH
+    path: "/projects/{{ input.project_id }}"
+    inputs:
+      - { name: project_id, label: "The project's id", required: true }
+      - { name: name, label: Name }
+      - { name: code, label: Code }
+      - { name: is_active, label: "Active (false archives it)", kind: boolean }
+      - { name: hourly_rate, label: Hourly rate, kind: number }
+      - { name: budget, label: "Budget in hours", kind: number }
+      - { name: cost_budget, label: "Budget in money", kind: number }
+      - { name: ends_on, label: "Ends (such as 2026-12-31)" }
+      - { name: notes, label: Notes }
+    send:
+      name: "{{ input.name }}"
+      code: "{{ input.code }}"
+      is_active: "{{ input.is_active }}"
+      hourly_rate: "{{ input.hourly_rate }}"
+      budget: "{{ input.budget }}"
+      cost_budget: "{{ input.cost_budget }}"
+      ends_on: "{{ input.ends_on }}"
+      notes: "{{ input.notes }}"
+    output:
+      id: number
+      client: record
+      name: text
+      code: text
+      is_active: boolean
+      is_billable: boolean
+      is_fixed_fee: boolean
+      bill_by: text
+      hourly_rate: number
+      budget: number
+      budget_by: text
+      cost_budget: number
+      fee: number
+      notes: text
+      starts_on: text
+      ends_on: text
+      created_at: text
+      updated_at: text
+  list_project_tasks:
+    label: "List a project's tasks"
+    description: "The tasks assigned to a project (time is logged on these), with their rates and budgets."
+    method: GET
+    path: "/projects/{{ input.project_id }}/task_assignments"
+    inputs:
+      - { name: project_id, label: "The project's id", required: true }
+      - { name: is_active, label: "Active (true) or archived (false)", kind: boolean }
+    query: { is_active: "{{ input.is_active }}" }
+    items: value.task_assignments
+    next: value.links.next
+    output: { id: number, billable: boolean, is_active: boolean, hourly_rate: number, budget: number, task: record, project: record, created_at: text, updated_at: text }
+  list_clients:
+    label: List clients
+    description: Clients, active or archived; every page.
+    method: GET
+    path: /clients
+    inputs:
+      - { name: is_active, label: "Active (true) or archived (false)", kind: boolean }
+      - { name: updated_since, label: "Only those changed since (such as 2026-11-01T00:00:00Z)" }
+    query: { is_active: "{{ input.is_active }}", updated_since: "{{ input.updated_since }}" }
+    items: value.clients
+    next: value.links.next
+    output: { id: number, name: text, is_active: boolean, address: text, currency: text, created_at: text, updated_at: text }
+  create_client:
+    label: Add a client
+    description: A new client.
+    write: true
+    method: POST
+    path: /clients
+    inputs:
+      - { name: name, label: Name, required: true }
+      - { name: address, label: Address }
+      - { name: currency, label: "Currency (such as USD); the company's by default" }
+    send: { name: "{{ input.name }}", address: "{{ input.address }}", currency: "{{ input.currency }}" }
+    output: { id: number, name: text, is_active: boolean, address: text, currency: text, created_at: text, updated_at: text }
+  list_contacts:
+    label: List contacts
+    description: "Clients' contacts, of one client if given; every page."
+    method: GET
+    path: /contacts
+    inputs:
+      - { name: client_id, label: "Only this client's (its id)" }
+      - { name: updated_since, label: "Only those changed since (such as 2026-11-01T00:00:00Z)" }
+    query: { client_id: "{{ input.client_id }}", updated_since: "{{ input.updated_since }}" }
+    items: value.contacts
+    next: value.links.next
+    output: { id: number, client: record, title: text, first_name: text, last_name: text, email: text, phone_office: text, phone_mobile: text, fax: text, created_at: text, updated_at: text }
+  create_contact:
+    label: Add a contact
+    description: "A new contact of a client, and whether invoices go to them."
+    write: true
+    method: POST
+    path: /contacts
+    inputs:
+      - { name: client_id, label: "The client (its id)", required: true, kind: number }
+      - { name: first_name, label: First name, required: true }
+      - { name: last_name, label: Last name }
+      - { name: email, label: Email }
+      - { name: title, label: Title }
+      - { name: phone_office, label: Office phone }
+      - { name: phone_mobile, label: Mobile phone }
+      - { name: invoice_recipient_status, label: "On the client's invoices: none, recipient, cc or bcc" }
+    send:
+      client_id: "{{ input.client_id }}"
+      first_name: "{{ input.first_name }}"
+      last_name: "{{ input.last_name }}"
+      email: "{{ input.email }}"
+      title: "{{ input.title }}"
+      phone_office: "{{ input.phone_office }}"
+      phone_mobile: "{{ input.phone_mobile }}"
+      invoice_recipient_status: "{{ input.invoice_recipient_status }}"
+    output: { id: number, client: record, title: text, first_name: text, last_name: text, email: text, phone_office: text, phone_mobile: text, fax: text, created_at: text, updated_at: text }
+  list_tasks:
+    label: List tasks
+    description: "The account's tasks (the kinds of work time is logged on); every page."
+    method: GET
+    path: /tasks
+    inputs:
+      - { name: is_active, label: "Active (true) or archived (false)", kind: boolean }
+    query: { is_active: "{{ input.is_active }}" }
+    items: value.tasks
+    next: value.links.next
+    output: { id: number, name: text, billable_by_default: boolean, default_hourly_rate: number, is_default: boolean, is_active: boolean, created_at: text, updated_at: text }
+  create_task:
+    label: Add a task
+    description: A new kind of work to log time on.
+    write: true
+    method: POST
+    path: /tasks
+    inputs:
+      - { name: name, label: Name, required: true }
+      - { name: billable_by_default, label: "Billable on new projects (true by default)", kind: boolean }
+      - { name: default_hourly_rate, label: Default hourly rate, kind: number }
+      - { name: is_default, label: "Added to new projects", kind: boolean }
+    send:
+      name: "{{ input.name }}"
+      billable_by_default: "{{ input.billable_by_default }}"
+      default_hourly_rate: "{{ input.default_hourly_rate }}"
+      is_default: "{{ input.is_default }}"
+    output: { id: number, name: text, billable_by_default: boolean, default_hourly_rate: number, is_default: boolean, is_active: boolean, created_at: text, updated_at: text }
+  list_users:
+    label: List people
+    description: "The account's people, active or not; every page."
+    method: GET
+    path: /users
+    inputs:
+      - { name: is_active, label: "Active (true) or not (false)", kind: boolean }
+    query: { is_active: "{{ input.is_active }}" }
+    items: value.users
+    next: value.links.next
+    output: { id: number, first_name: text, last_name: text, email: text, timezone: text, is_contractor: boolean, is_active: boolean, weekly_capacity: number, default_hourly_rate: number, cost_rate: number, roles: list, access_roles: list, created_at: text, updated_at: text }
+  get_me:
+    label: Who is signed in
+    description: The person the credential acts as.
+    method: GET
+    path: /users/me
+    output: { id: number, first_name: text, last_name: text, email: text, timezone: text, is_contractor: boolean, is_active: boolean, weekly_capacity: number, default_hourly_rate: number, cost_rate: number, roles: list, access_roles: list, created_at: text, updated_at: text }
+  list_invoices:
+    label: List invoices
+    description: Invoices, by client, project, state or dates; every page.
+    method: GET
+    path: /invoices
+    inputs:
+      - { name: client_id, label: "Only this client's (its id)" }
+      - { name: project_id, label: "Only this project's (its id)" }
+      - { name: state, label: "draft, open, paid or closed" }
+      - { name: from, label: "Issued on or after (such as 2026-11-01)" }
+      - { name: to, label: "Issued on or before" }
+      - { name: updated_since, label: "Only those changed since (such as 2026-11-01T00:00:00Z)" }
+    query:
+      client_id: "{{ input.client_id }}"
+      project_id: "{{ input.project_id }}"
+      state: "{{ input.state }}"
+      from: "{{ input.from }}"
+      to: "{{ input.to }}"
+      updated_since: "{{ input.updated_since }}"
+      per_page: "2000"
+    items: value.invoices
+    next: value.links.next
+    output:
+      id: number
+      client: record
+      number: text
+      purchase_order: text
+      amount: number
+      due_amount: number
+      tax: number
+      discount: number
+      subject: text
+      notes: text
+      currency: text
+      state: text
+      issue_date: text
+      due_date: text
+      payment_term: text
+      sent_at: text
+      paid_at: text
+      line_items: list
+      created_at: text
+      updated_at: text
+  get_invoice:
+    label: Look up an invoice
+    description: One invoice, with its line items.
+    method: GET
+    path: "/invoices/{{ input.invoice_id }}"
+    inputs:
+      - { name: invoice_id, label: "The invoice's id", required: true }
+    output:
+      id: number
+      client: record
+      number: text
+      purchase_order: text
+      amount: number
+      due_amount: number
+      tax: number
+      discount: number
+      subject: text
+      notes: text
+      currency: text
+      state: text
+      issue_date: text
+      due_date: text
+      payment_term: text
+      sent_at: text
+      paid_at: text
+      line_items: list
+      created_at: text
+      updated_at: text
+  create_invoice:
+    label: Create an invoice
+    description: A new draft invoice for a client, with its line items.
+    write: true
+    method: POST
+    path: /invoices
+    inputs:
+      - { name: client_id, label: "The client (its id)", required: true, kind: number }
+      - name: line_items
+        label: "Its lines (as JSON): each a kind (such as Service), a description, a quantity and a unit_price"
+        kind: list
+      - { name: subject, label: Subject }
+      - { name: notes, label: Notes }
+      - { name: number, label: "Its number (made for it if not given)" }
+      - { name: purchase_order, label: Purchase order }
+      - { name: issue_date, label: "Issued (such as 2026-11-27); today by default" }
+      - { name: payment_term, label: "Payment term: upon receipt, net 15, net 30, net 45, net 60 or custom" }
+      - { name: due_date, label: "Due (with a custom payment term)" }
+      - { name: tax, label: "Tax, a percentage (10.0 for 10%)", kind: number }
+      - { name: discount, label: "Discount, a percentage", kind: number }
+      - { name: currency, label: "Currency; the client's by default" }
+    send:
+      client_id: "{{ input.client_id }}"
+      line_items: "{{ input.line_items }}"
+      subject: "{{ input.subject }}"
+      notes: "{{ input.notes }}"
+      number: "{{ input.number }}"
+      purchase_order: "{{ input.purchase_order }}"
+      issue_date: "{{ input.issue_date }}"
+      payment_term: "{{ input.payment_term }}"
+      due_date: "{{ input.due_date }}"
+      tax: "{{ input.tax }}"
+      discount: "{{ input.discount }}"
+      currency: "{{ input.currency }}"
+    output:
+      id: number
+      client: record
+      number: text
+      purchase_order: text
+      amount: number
+      due_amount: number
+      tax: number
+      discount: number
+      subject: text
+      notes: text
+      currency: text
+      state: text
+      issue_date: text
+      due_date: text
+      payment_term: text
+      sent_at: text
+      paid_at: text
+      line_items: list
+      created_at: text
+      updated_at: text
+  list_expenses:
+    label: List expenses
+    description: Expenses, by person, client, project or dates; every page.
+    method: GET
+    path: /expenses
+    inputs:
+      - { name: user_id, label: "Only this person's (their id)" }
+      - { name: client_id, label: "Only this client's (its id)" }
+      - { name: project_id, label: "Only this project's (its id)" }
+      - { name: from, label: "Spent on or after (such as 2026-11-01)" }
+      - { name: to, label: "Spent on or before" }
+      - { name: updated_since, label: "Only those changed since (such as 2026-11-01T00:00:00Z)" }
+    query:
+      user_id: "{{ input.user_id }}"
+      client_id: "{{ input.client_id }}"
+      project_id: "{{ input.project_id }}"
+      from: "{{ input.from }}"
+      to: "{{ input.to }}"
+      updated_since: "{{ input.updated_since }}"
+    items: value.expenses
+    next: value.links.next
+    output: { id: number, client: record, project: record, expense_category: record, user: record, spent_date: text, notes: text, units: number, total_cost: number, billable: boolean, is_billed: boolean, approval_status: text, created_at: text, updated_at: text }
+  create_expense:
+    label: Log an expense
+    description: A new expense on a project, in an expense category.
+    write: true
+    method: POST
+    path: /expenses
+    inputs:
+      - { name: project_id, label: "The project (its id)", required: true, kind: number }
+      - { name: expense_category_id, label: "The expense category (its id)", required: true, kind: number }
+      - { name: spent_date, label: "The day (such as 2026-11-27)", required: true }
+      - { name: total_cost, label: "What it cost", kind: number }
+      - { name: units, label: "Or how many units (a category priced by the unit)", kind: number }
+      - { name: notes, label: Notes }
+      - { name: billable, label: "Billable (true by default)", kind: boolean }
+      - { name: user_id, label: "For this person (their id); the signed-in one by default", kind: number }
+    send:
+      project_id: "{{ input.project_id }}"
+      expense_category_id: "{{ input.expense_category_id }}"
+      spent_date: "{{ input.spent_date }}"
+      total_cost: "{{ input.total_cost }}"
+      units: "{{ input.units }}"
+      notes: "{{ input.notes }}"
+      billable: "{{ input.billable }}"
+      user_id: "{{ input.user_id }}"
+    output: { id: number, client: record, project: record, expense_category: record, user: record, spent_date: text, notes: text, units: number, total_cost: number, billable: boolean, is_billed: boolean, approval_status: text, created_at: text, updated_at: text }
+triggers:
+  time_entry_changed:
+    label: A time entry logged or changed
+    description: >-
+      Each time entry added or changed, asked for every few minutes (those changed since the poll before, with five
+      minutes to spare for clocks that differ).
+    inputs:
+      - { name: project_id, label: "Only this project's (its id)" }
+    poll:
+      method: GET
+      path: /time_entries
+      query:
+        project_id: "{{ input.project_id }}"
+        updated_since: "{{ string(timestamp(input.cursor == null ? input.now : input.cursor) - duration('5m')) }}"
+      items: value.time_entries
+      next: value.links.next
+      id: string(item.id)
+      version: item.updated_at
+      cursor: input.now
+      every: 5m
+  invoice_changed:
+    label: An invoice created or changed
+    description: >-
+      Each invoice created or changed (sent, paid, closed), asked for every few minutes; with five minutes to spare
+      for clocks that differ.
+    poll:
+      method: GET
+      path: /invoices
+      query: { updated_since: "{{ string(timestamp(input.cursor == null ? input.now : input.cursor) - duration('5m')) }}" }
+      items: value.invoices
+      next: value.links.next
+      id: string(item.id)
+      version: item.updated_at
+      cursor: input.now
+      every: 5m

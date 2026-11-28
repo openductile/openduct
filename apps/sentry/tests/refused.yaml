@@ -1,0 +1,6 @@
+# Made by `openduct app from-openapi`: a refusal.
+description: "Sentry refuses list_organizations: the step fails in its words"
+action: list_organizations
+credential: { token: test-token }
+exchanges: [{ answer: { status: 404, body: { message: "Not found" } } }]
+error: "Sentry answered 404: Not found"

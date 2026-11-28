@@ -1,0 +1,7 @@
+action: list_templates
+credential: { api_key: xkeysib-test-1 }
+input: { active_only: true }
+exchanges:
+  - sent: { method: GET, url: https://api.brevo.com/v3/smtp/templates, query: { templateStatus: "true", limit: "1000" } }
+    answer: { body: { count: 1, templates: [{ id: 12, name: Order shipped, subject: "Your order {{params.ORDER}}", isActive: true, sender: { name: Example Shop, email: shop@example.com, id: 1 }, tag: orders, htmlContent: "<p>...</p>", modifiedAt: "2026-11-01T09:00:00.000Z", testSent: false, replyTo: shop@example.com, toField: "", createdAt: "2026-10-01T09:00:00.000Z", doiTemplate: false }] } }
+result: [{ id: 12, name: Order shipped, subject: "Your order {{params.ORDER}}", isActive: true, sender: { name: Example Shop, email: shop@example.com, id: 1 }, tag: orders, modifiedAt: "2026-11-01T09:00:00.000Z" }]

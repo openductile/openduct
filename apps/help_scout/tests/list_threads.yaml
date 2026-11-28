@@ -1,0 +1,27 @@
+description: A conversation's threads
+action: list_threads
+credential: {access_token: hs-test-token}
+input: {conversation_id: '3443157477'}
+exchanges:
+- sent:
+    method: GET
+    url: https://api.helpscout.net/v2/conversations/3443157477/threads
+    query: {}
+    headers: {authorization: Bearer hs-test-token}
+  answer:
+    status: 200
+    body:
+      _embedded:
+        threads:
+        - &id001
+          id: 5541
+          type: customer
+          status: active
+          state: published
+          body: I ordered last week and nothing came.
+          customer: {id: 29418, email: ann@example.com}
+          createdAt: '2026-11-27T10:00:00Z'
+      _links:
+        self: {href: 'https://api.helpscout.net/v2/x'}
+result:
+- *id001

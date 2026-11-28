@@ -1,0 +1,8 @@
+description: Contacts by email
+action: search_records
+credential: { access_token: 1000.test.token }
+input: { module: Contacts, email: ann@example.com }
+exchanges:
+  - sent: { method: GET, url: https://www.zohoapis.com/crm/v8/Contacts/search, query: { email: ann@example.com, per_page: "200" } }
+    answer: { body: { data: [{ id: "1000000000000000201", Last_Name: Lee, Email: ann@example.com }], info: { page: 1, per_page: 200, count: 1, more_records: false } } }
+result: [{ id: "1000000000000000201", Last_Name: Lee, Email: ann@example.com }]

@@ -1,0 +1,462 @@
+# Copyright 2026 Ductile AI, Inc
+# SPDX-License-Identifier: Apache-2.0
+#
+# Started with `openduct app from-openapi` from PagerDuty's REST API description
+# (https://github.com/PagerDuty/api-schema/blob/229d990fd0c8916df2254340088a3e559afc055e/reference/REST/openapiv3.json)
+# and its Events API v2 description (reference/events-v2/openapiv3.json, same commit); finished by hand.
+app: pagerduty
+name: PagerDuty
+category: developer_tools
+description: Incidents, who is on call, and alerts sent to a service.
+docs: https://developer.pagerduty.com/api-reference/
+hosts: [api.pagerduty.com, events.pagerduty.com]
+base_url: https://api.pagerduty.com
+sign_in:
+  - id: pagerduty
+    label: An API key
+    fields:
+      - { name: api_key, label: "The API key (Integrations, API Access Keys; or your own, under My Profile, User Settings)", secret: true }
+    headers:
+      Authorization: "Token token={{ credential.api_key }}"
+      Accept: application/vnd.pagerduty+json;version=2
+  - id: pagerduty_oauth
+    label: Sign in with PagerDuty
+    oauth2:
+      authorize: https://identity.pagerduty.com/oauth/authorize
+      token: https://identity.pagerduty.com/oauth/token
+      scopes: [write]
+    headers:
+      Authorization: "Bearer {{ credential.access_token }}"
+      Accept: application/vnd.pagerduty+json;version=2
+actions:
+  list_incidents:
+    label: Find incidents
+    description: Incidents of the last month (or the dates given), newest or oldest first, every page.
+    method: GET
+    path: /incidents
+    inputs:
+      - { name: statuses, label: "Only of this status: triggered, acknowledged or resolved" }
+      - { name: urgencies, label: "Only of this urgency: high or low" }
+      - { name: service_id, label: "Only of this service (its id)" }
+      - { name: team_id, label: "Only of this team (its id)" }
+      - { name: user_id, label: "Only assigned to this user (its id)" }
+      - { name: since, label: "From (such as 2026-11-01T00:00:00Z)" }
+      - { name: until, label: "Until (such as 2026-11-30T00:00:00Z)" }
+      - { name: date_range, label: "all: of every date, the two above left aside" }
+      - { name: incident_key, label: "Only with this de-duplication key" }
+      - { name: sort_by, label: "In this order, such as created_at:desc" }
+    query:
+      limit: "100"
+      "statuses[]": "{{ input.statuses }}"
+      "urgencies[]": "{{ input.urgencies }}"
+      "service_ids[]": "{{ input.service_id }}"
+      "team_ids[]": "{{ input.team_id }}"
+      "user_ids[]": "{{ input.user_id }}"
+      since: "{{ input.since }}"
+      until: "{{ input.until }}"
+      date_range: "{{ input.date_range }}"
+      incident_key: "{{ input.incident_key }}"
+      sort_by: "{{ input.sort_by }}"
+    items: value.incidents
+    next: "value.more ? {'offset': value.offset + size(value.incidents)} : null"
+    output: &incident
+      id: text
+      incident_number: number
+      title: text
+      status: text
+      urgency: text
+      created_at: text
+      updated_at: text
+      html_url: text
+      incident_key: text
+      service: record
+      assignments: list
+      escalation_policy: record
+      priority: record
+      teams: list
+  get_incident:
+    label: Get an incident
+    description: One incident, by its id or its number.
+    method: GET
+    path: "/incidents/{{ input.id }}"
+    inputs:
+      - { name: id, label: "The incident's id (or number)", required: true }
+    result: value.incident
+    output: *incident
+  create_incident:
+    label: Open an incident
+    description: Opens an incident on a service now, rather than through an alert from a monitoring tool.
+    write: true
+    method: POST
+    path: /incidents
+    inputs:
+      - { name: from, label: "Your PagerDuty login email (who opens it)", required: true }
+      - { name: title, label: Title, required: true }
+      - { name: service_id, label: "The service's id", required: true }
+      - { name: urgency, label: "high or low" }
+      - { name: details, label: "What happened, in more words" }
+      - { name: incident_key, label: "A de-duplication key (a second incident with it is refused)" }
+      - { name: priority_id, label: "A priority's id (from List priorities)" }
+      - { name: escalation_policy_id, label: "An escalation policy's id, in place of the service's" }
+      - { name: assignee_id, label: "A user's id to assign it to, in place of the escalation policy" }
+    headers: { From: "{{ input.from }}" }
+    send:
+      incident:
+        type: incident
+        title: "{{ input.title }}"
+        service: "{{ {'id': input.service_id, 'type': 'service_reference'} }}"
+        urgency: "{{ input.urgency }}"
+        incident_key: "{{ input.incident_key }}"
+        body: "{{ {'type': 'incident_body', 'details': input.details} }}"
+        priority: "{{ {'id': input.priority_id, 'type': 'priority_reference'} }}"
+        escalation_policy: "{{ {'id': input.escalation_policy_id, 'type': 'escalation_policy_reference'} }}"
+        assignments: "{{ [{'assignee': {'id': input.assignee_id, 'type': 'user_reference'} }] }}"
+    result: value.incident
+    output: *incident
+  update_incident:
+    label: Acknowledge, resolve or change an incident
+    description: Sets an incident's status, title, urgency, priority, escalation level or who it is assigned to.
+    write: true
+    method: PUT
+    path: "/incidents/{{ input.id }}"
+    inputs:
+      - { name: id, label: "The incident's id", required: true }
+      - { name: from, label: "Your PagerDuty login email (who changes it)", required: true }
+      - { name: status, label: "acknowledged, resolved (or triggered)" }
+      - { name: resolution, label: "How it was resolved (a note added with the status)" }
+      - { name: title, label: New title }
+      - { name: urgency, label: "high or low" }
+      - { name: priority_id, label: "A priority's id" }
+      - { name: escalation_level, label: "Escalate to this level of its escalation policy", kind: number }
+      - { name: assignee_id, label: "A user's id to reassign it to" }
+    headers: { From: "{{ input.from }}" }
+    send:
+      incident:
+        type: incident_reference
+        status: "{{ input.status }}"
+        resolution: "{{ input.resolution }}"
+        title: "{{ input.title }}"
+        urgency: "{{ input.urgency }}"
+        priority: "{{ {'id': input.priority_id, 'type': 'priority_reference'} }}"
+        escalation_level: "{{ input.escalation_level }}"
+        assignments: "{{ [{'assignee': {'id': input.assignee_id, 'type': 'user_reference'} }] }}"
+    result: value.incident
+    output: *incident
+  snooze_incident:
+    label: Snooze an incident
+    description: Puts an acknowledged incident to sleep for a while; it is triggered again after.
+    write: true
+    method: POST
+    path: "/incidents/{{ input.id }}/snooze"
+    inputs:
+      - { name: id, label: "The incident's id", required: true }
+      - { name: from, label: "Your PagerDuty login email", required: true }
+      - { name: duration, label: "For how long, in seconds", required: true, kind: number }
+    headers: { From: "{{ input.from }}" }
+    send: { duration: "{{ input.duration }}" }
+    result: value.incident
+    output: *incident
+  merge_incidents:
+    label: Merge incidents
+    description: Moves the alerts of other incidents into this one, and resolves the others.
+    write: true
+    method: PUT
+    path: "/incidents/{{ input.id }}/merge"
+    inputs:
+      - { name: id, label: "The incident that stays (its id)", required: true }
+      - { name: from, label: "Your PagerDuty login email", required: true }
+      - { name: source_ids, label: "The incidents merged into it (ids, separated by commas)", required: true }
+    headers: { From: "{{ input.from }}" }
+    send:
+      source_incidents: "{{ input.source_ids.split(',').map(i, {'id': i.trim(), 'type': 'incident_reference'}) }}"
+    result: value.incident
+    output: *incident
+  list_incident_notes:
+    label: An incident's notes
+    description: "The notes responders wrote on an incident, oldest first."
+    method: GET
+    path: "/incidents/{{ input.id }}/notes"
+    inputs:
+      - { name: id, label: "The incident's id", required: true }
+    items: value.notes
+    output: { id: text, content: text, created_at: text, user: record, channel: record }
+  add_incident_note:
+    label: Add a note to an incident
+    description: A note on the incident's timeline, for the responders.
+    write: true
+    method: POST
+    path: "/incidents/{{ input.id }}/notes"
+    inputs:
+      - { name: id, label: "The incident's id", required: true }
+      - { name: from, label: "Your PagerDuty login email", required: true }
+      - { name: content, label: The note, required: true }
+    headers: { From: "{{ input.from }}" }
+    send: { note: { content: "{{ input.content }}" } }
+    result: value.note
+    output: { id: text, content: text, created_at: text, user: record }
+  list_incident_alerts:
+    label: An incident's alerts
+    description: The alerts grouped into an incident, every page.
+    method: GET
+    path: "/incidents/{{ input.id }}/alerts"
+    inputs:
+      - { name: id, label: "The incident's id", required: true }
+      - { name: statuses, label: "Only of this status: triggered or resolved" }
+    query: { limit: "100", "statuses[]": "{{ input.statuses }}" }
+    items: value.alerts
+    next: "value.more ? {'offset': value.offset + size(value.alerts)} : null"
+    output: { id: text, summary: text, status: text, severity: text, alert_key: text, created_at: text, service: record, incident: record, body: record }
+  list_incident_log:
+    label: An incident's timeline
+    description: Everything that happened to an incident (triggered, notified, acknowledged...), every page.
+    method: GET
+    path: "/incidents/{{ input.id }}/log_entries"
+    inputs:
+      - { name: id, label: "The incident's id", required: true }
+      - { name: is_overview, label: "Only the main changes", kind: boolean }
+    query: { limit: "100", is_overview: "{{ input.is_overview }}" }
+    items: value.log_entries
+    next: "value.more ? {'offset': value.offset + size(value.log_entries)} : null"
+    output: { id: text, type: text, summary: text, created_at: text, agent: record, channel: record }
+  post_status_update:
+    label: Post a status update on an incident
+    description: Sends a status update to the incident's subscribers (by email, and in PagerDuty).
+    write: true
+    method: POST
+    path: "/incidents/{{ input.id }}/status_updates"
+    inputs:
+      - { name: id, label: "The incident's id", required: true }
+      - { name: from, label: "Your PagerDuty login email", required: true }
+      - { name: message, label: The update, required: true }
+      - { name: subject, label: "An email subject (for an update written in HTML)" }
+      - { name: html_message, label: "The update in HTML, for email" }
+    headers: { From: "{{ input.from }}" }
+    send: { message: "{{ input.message }}", subject: "{{ input.subject }}", html_message: "{{ input.html_message }}" }
+    result: value.status_update
+    output: { id: text, message: text, created_at: text, sender: record }
+  send_alert:
+    label: Send an alert to a service
+    description: >-
+      Triggers an alert on a service through its Events API v2 integration (or acknowledges or resolves one, by its
+      de-duplication key); PagerDuty opens an incident as the service's rules say.
+    write: true
+    method: POST
+    path: /v2/enqueue
+    inputs:
+      - { name: routing_key, label: "The service's integration key (an Events API v2 integration)", required: true }
+      - { name: event_action, label: "trigger (the default), acknowledge or resolve" }
+      - { name: summary, label: "What is wrong (needed to trigger)" }
+      - { name: severity, label: "critical, error, warning or info (needed to trigger)" }
+      - { name: source, label: "Where it happened, such as a host name (needed to trigger)" }
+      - { name: dedup_key, label: "A de-duplication key: alerts with the same one are one alert" }
+      - { name: component, label: "The part that is wrong, such as a database" }
+      - { name: group, label: "A group of sources, such as prod-web" }
+      - { name: class, label: "The kind of event, such as ping failure" }
+      - { name: details, label: "More details (a record)", kind: record }
+    send:
+      routing_key: "{{ input.routing_key }}"
+      event_action: "{{ has(input.event_action) && input.event_action != null ? input.event_action : 'trigger' }}"
+      dedup_key: "{{ input.dedup_key }}"
+      payload:
+        summary: "{{ input.summary }}"
+        severity: "{{ input.severity }}"
+        source: "{{ input.source }}"
+        component: "{{ input.component }}"
+        group: "{{ input.group }}"
+        class: "{{ input.class }}"
+        custom_details: "{{ input.details }}"
+    by:
+      pagerduty: { url: https://events.pagerduty.com/v2/enqueue }
+      pagerduty_oauth: { url: https://events.pagerduty.com/v2/enqueue }
+    output: { status: text, message: text, dedup_key: text }
+  list_services:
+    label: List services
+    description: "The services of the account (each system PagerDuty watches over), every page."
+    method: GET
+    path: /services
+    inputs:
+      - { name: query, label: "Only those whose name holds this" }
+      - { name: team_id, label: "Only of this team (its id)" }
+    query: { limit: "100", query: "{{ input.query }}", "team_ids[]": "{{ input.team_id }}" }
+    items: value.services
+    next: "value.more ? {'offset': value.offset + size(value.services)} : null"
+    output: &service { id: text, name: text, description: text, status: text, html_url: text, created_at: text, last_incident_timestamp: text, escalation_policy: record, teams: list, integrations: list }
+  get_service:
+    label: Get a service
+    description: "One service: its status, escalation policy and integrations."
+    method: GET
+    path: "/services/{{ input.id }}"
+    inputs:
+      - { name: id, label: "The service's id", required: true }
+    result: value.service
+    output: *service
+  list_users:
+    label: List users
+    description: "The account's users, every page."
+    method: GET
+    path: /users
+    inputs:
+      - { name: query, label: "Only those whose name or email holds this" }
+      - { name: team_id, label: "Only of this team (its id)" }
+    query: { limit: "100", query: "{{ input.query }}", "team_ids[]": "{{ input.team_id }}" }
+    items: value.users
+    next: "value.more ? {'offset': value.offset + size(value.users)} : null"
+    output: &user { id: text, name: text, email: text, role: text, job_title: text, time_zone: text, html_url: text, teams: list, contact_methods: list }
+  get_user:
+    label: Get a user
+    description: "One user: name, email, role, contact methods."
+    method: GET
+    path: "/users/{{ input.id }}"
+    inputs:
+      - { name: id, label: "The user's id", required: true }
+    result: value.user
+    output: *user
+  me:
+    label: Who I am
+    description: The user signed in (with a user's own key or a sign-in; an account-wide key has no user).
+    method: GET
+    path: /users/me
+    result: value.user
+    output: *user
+  list_oncalls:
+    label: Who is on call
+    description: Who is on call now (or between the times given), for which escalation policy and level.
+    method: GET
+    path: /oncalls
+    inputs:
+      - { name: schedule_id, label: "Only for this schedule (its id)" }
+      - { name: escalation_policy_id, label: "Only for this escalation policy (its id)" }
+      - { name: user_id, label: "Only this user (its id)" }
+      - { name: since, label: "From (by default now)" }
+      - { name: until, label: "Until (by default now)" }
+      - { name: earliest, label: "Only the next on-call of each user, policy and level", kind: boolean }
+    query:
+      limit: "100"
+      "schedule_ids[]": "{{ input.schedule_id }}"
+      "escalation_policy_ids[]": "{{ input.escalation_policy_id }}"
+      "user_ids[]": "{{ input.user_id }}"
+      since: "{{ input.since }}"
+      until: "{{ input.until }}"
+      earliest: "{{ input.earliest }}"
+    items: value.oncalls
+    next: "value.more ? {'offset': value.offset + size(value.oncalls)} : null"
+    output: { user: record, schedule: record, escalation_policy: record, escalation_level: number, start: text, end: text }
+  list_schedules:
+    label: List schedules
+    description: "The on-call schedules, every page."
+    method: GET
+    path: /schedules
+    inputs:
+      - { name: query, label: "Only those whose name holds this" }
+    query: { limit: "100", query: "{{ input.query }}" }
+    items: value.schedules
+    next: "value.more ? {'offset': value.offset + size(value.schedules)} : null"
+    output: { id: text, name: text, description: text, time_zone: text, html_url: text, users: list, escalation_policies: list, teams: list }
+  list_schedule_users:
+    label: Who is on a schedule
+    description: The users on call on a schedule between two times.
+    method: GET
+    path: "/schedules/{{ input.id }}/users"
+    inputs:
+      - { name: id, label: "The schedule's id", required: true }
+      - { name: since, label: "From (such as 2026-11-27T00:00:00Z)" }
+      - { name: until, label: "Until" }
+    query: { since: "{{ input.since }}", until: "{{ input.until }}" }
+    items: value.users
+    output: *user
+  list_escalation_policies:
+    label: List escalation policies
+    description: "Who is called, in which order, for each service; every page."
+    method: GET
+    path: /escalation_policies
+    inputs:
+      - { name: query, label: "Only those whose name holds this" }
+    query: { limit: "100", query: "{{ input.query }}" }
+    items: value.escalation_policies
+    next: "value.more ? {'offset': value.offset + size(value.escalation_policies)} : null"
+    output: { id: text, name: text, description: text, num_loops: number, html_url: text, escalation_rules: list, services: list, teams: list }
+  list_priorities:
+    label: List priorities
+    description: The account's priorities, the most severe first.
+    method: GET
+    path: /priorities
+    query: { limit: "100" }
+    items: value.priorities
+    next: "value.more ? {'offset': value.offset + size(value.priorities)} : null"
+    output: { id: text, name: text, description: text }
+  list_teams:
+    label: List teams
+    description: "The account's teams, every page."
+    method: GET
+    path: /teams
+    inputs:
+      - { name: query, label: "Only those whose name holds this" }
+    query: { limit: "100", query: "{{ input.query }}" }
+    items: value.teams
+    next: "value.more ? {'offset': value.offset + size(value.teams)} : null"
+    output: { id: text, name: text, description: text, html_url: text }
+  create_maintenance_window:
+    label: Start a maintenance window
+    description: While it lasts, the services given open no incidents.
+    write: true
+    method: POST
+    path: /maintenance_windows
+    inputs:
+      - { name: from, label: "Your PagerDuty login email", required: true }
+      - { name: start_time, label: "From (such as 2026-11-28T22:00:00Z)", required: true }
+      - { name: end_time, label: "Until", required: true }
+      - { name: service_ids, label: "The services (ids, separated by commas)", required: true }
+      - { name: description, label: "Why" }
+    headers: { From: "{{ input.from }}" }
+    send:
+      maintenance_window:
+        type: maintenance_window
+        start_time: "{{ input.start_time }}"
+        end_time: "{{ input.end_time }}"
+        description: "{{ input.description }}"
+        services: "{{ input.service_ids.split(',').map(i, {'id': i.trim(), 'type': 'service_reference'}) }}"
+    result: value.maintenance_window
+    output: { id: text, start_time: text, end_time: text, description: text, html_url: text, services: list }
+triggers:
+  incident_changed:
+    label: An incident opened or changed
+    description: >-
+      Each incident event PagerDuty sends, signed: opened, acknowledged, resolved, reassigned, escalated, a note
+      added. Turning the workflow on subscribes its address (for the whole account, or one service), and turning it
+      off removes the subscription.
+    inputs:
+      - name: events
+        label: "Which, separated by commas (incident.triggered when empty)"
+        description: "incident.triggered, incident.acknowledged, incident.resolved, incident.reassigned, incident.escalated, incident.annotated, incident.priority_updated, incident.reopened"
+      - { name: service_id, label: "Only this service's incidents (its id; all when empty)" }
+    webhook:
+      signature: { header: x-pagerduty-signature, pairs: { signature: v1 }, signed: "{body}", encoding: hex }
+      secret: webhook_secret
+      id: value.event.id
+      only: "(input.events == null ? ['incident.triggered'] : input.events.split(',').map(e, e.trim())).exists(e, e == value.event.event_type)"
+      event: "{'event_type': value.event.event_type, 'occurred_at': value.event.occurred_at, 'agent': value.event.agent, 'incident': value.event.data}"
+      register:
+        - method: POST
+          path: /webhook_subscriptions
+          send:
+            webhook_subscription:
+              type: webhook_subscription
+              description: "{{ 'OpenDuct workflow ' + input.workflow }}"
+              delivery_method: { type: http_delivery_method, url: "{{ input.address }}" }
+              events: "{{ input.events == null ? ['incident.triggered'] : input.events.split(',').map(e, e.trim()) }}"
+              filter: "{{ input.service_id == null ? {'type': 'account_reference'} : {'id': input.service_id, 'type': 'service_reference'} }}"
+      keep:
+        webhook_secret: value.webhook_subscription.delivery_method.secret
+        webhook_id: value.webhook_subscription.id
+      unregister:
+        - { method: DELETE, path: "/webhook_subscriptions/{{ input.registered.webhook_id }}" }
+  new_incident:
+    label: A new incident (asked every few minutes)
+    description: Each incident opened, the newest asked for every few minutes; for a key that may not subscribe to webhooks.
+    inputs:
+      - { name: service_id, label: "Only this service's incidents (its id)" }
+    poll:
+      action: list_incidents
+      input: { service_id: "{{ input.service_id }}", sort_by: "created_at:desc" }
+      newest_first: true
+      id: item.id

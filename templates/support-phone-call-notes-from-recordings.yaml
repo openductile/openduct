@@ -1,0 +1,82 @@
+name: Summarise support calls from their recordings
+description: >-
+  When your phone system posts a finished call to this workflow's webhook ({"call_id", "agent", "recording_url",
+  "duration_seconds"}), the recording is sent to AssemblyAI to be written out; the run waits for AssemblyAI to call
+  back (up to two hours), then a model writes what the call was about, how it ended and what follow-up is owed, and a
+  row goes into your Calls sheet for the team lead. Only the transcript reaches the model. Needs: assemblyai
+  (header: Authorization and your AssemblyAI key), model (ai), sheets (google_sheets).
+category: Support
+trigger:
+  # Left empty here: each workflow made from the template is given a token of its own.
+  webhook: { token: "" }
+# What a test runs on: an event as this trigger gives it.
+sample:
+  call_id: CA-20931
+  agent: Priya
+  recording_url: https://recordings.example.com/calls/CA-20931.mp3
+  duration_seconds: 312
+steps:
+  - where: value.recording_url != null && value.recording_url.startsWith('https://')
+  # AssemblyAI is told where to call back: this run's one-time address for the wait below.
+  - name: start
+    http:
+      method: POST
+      url: https://api.assemblyai.com/v2/transcript
+      credential: assemblyai
+      json:
+        audio_url: "{{ value.recording_url }}"
+        speaker_labels: true
+        webhook_url: "{{ links.written }}"
+      sample: { id: 5551722-f677-48a7-9c1d-0d1a2b3c4d5e, status: queued }
+    retry: { attempts: 3, wait: 20s }
+  - name: written
+    wait: { webhook: true, timeout: 2h, on_timeout: fail }
+  - name: transcript
+    http:
+      url: "https://api.assemblyai.com/v2/transcript/{{ steps.start.body.id }}"
+      credential: assemblyai
+      sample:
+        id: 5551722-f677-48a7-9c1d-0d1a2b3c4d5e
+        status: completed
+        text: >-
+          Thanks for calling, this is Priya. Hi, my standing desk arrived with one leg missing. I'm sorry about that -
+          can you read me the order number? It's D-55102. I've found it; I'll send the missing leg today by express,
+          it should be with you Thursday. If it is not there by Friday, call back and we refund the shipping. Great,
+          thank you.
+    retry: { attempts: 3, wait: 20s }
+  - name: unwritten
+    if:
+      when: steps.transcript.body.status != 'completed'
+      then:
+        - stop: { error: "AssemblyAI could not write out call {{ value.call_id }}: {{ steps.transcript.body.error }}" }
+  - name: notes
+    ai:
+      credential: model
+      system: >-
+        You read the transcript of a customer support call and write notes for the team lead. Plain words, no names
+        of the customer, no phone numbers.
+      prompt: "{{ steps.transcript.body.text }}"
+      schema:
+        type: object
+        properties:
+          about: { type: string, description: "what the call was about, in one sentence" }
+          outcome: { type: string, enum: [solved, follow_up, escalate, unclear] }
+          follow_up: { type: string, description: "what is owed to the customer and by when, or empty" }
+          order: { type: string, description: "an order number mentioned, or empty" }
+        required: [about, outcome, follow_up, order]
+      max_tokens: 300
+  - name: log
+    google_sheets:
+      action: add_row
+      credential: sheets
+      spreadsheet_id: your-spreadsheet-id
+      sheet: Calls
+      values:
+        - "{{ value.call_id }}"
+        - "{{ value.agent }}"
+        - "{{ round(double(value.duration_seconds) / 60.0, 1) }}"
+        - "{{ steps.notes.json.outcome }}"
+        - "{{ steps.notes.json.about }}"
+        - "{{ steps.notes.json.follow_up }}"
+        - "{{ steps.notes.json.order }}"
+    retry: { attempts: 3, wait: 30s }

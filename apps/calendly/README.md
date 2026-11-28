@@ -13,8 +13,16 @@ credential.
 - **List bookings** (`list_bookings`): active or canceled, from a time on; every page.
 - **Who booked a booking** (`list_invitees`): every page.
 
+## Triggers
+
+- **A new booking (or one cancelled)** (`new_booking`): each booking (`invitee.created`) or cancellation
+  (`invitee.canceled`, if asked for in `events`), as Calendly sends it, signed. Turning the workflow on subscribes the
+  address to your bookings (a paid Calendly plan has webhooks); turning it off ends the subscription.
+
 ## Tested
 
 Recorded exchanges from Calendly's documented requests and answers (`tests/`).
 
 Run against a Calendly account on 2026-11-16: Who I am, List bookings and Who booked a booking worked.
+
+Triggers are tested with recorded exchanges and signed deliveries (`tests/trigger_*.yaml`), signatures made as the app documents them; none was run against a live account.

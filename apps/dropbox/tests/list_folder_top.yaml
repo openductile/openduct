@@ -1,0 +1,9 @@
+description: The top of Dropbox - its path is empty, as Dropbox asks
+action: list_folder
+credential: { access_token: sl.test-token }
+input: { recursive: true }
+exchanges:
+  - sent:
+      body: { path: "", recursive: true, limit: 2000 }
+    answer: { body: { entries: [{ ".tag": folder, id: "id:a4ayc_80_OEAAAAAAAAAYb", name: Invoices, path_display: /Invoices }], cursor: c1, has_more: false } }
+result: [{ ".tag": folder, id: "id:a4ayc_80_OEAAAAAAAAAYb", name: Invoices, path_display: /Invoices }]

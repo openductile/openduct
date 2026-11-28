@@ -1,0 +1,6 @@
+action: me
+credential: { workspace: acme, user_id: uAbC123, token: rc_test_1 }
+exchanges:
+  - sent: { method: GET, url: https://acme.rocket.chat/api/v1/me }
+    answer: { body: { _id: uAbC123, username: shop-bot, name: Shop Bot, active: true, roles: [bot], success: true } }
+result: { _id: uAbC123, username: shop-bot, name: Shop Bot, active: true, roles: [bot], success: true }

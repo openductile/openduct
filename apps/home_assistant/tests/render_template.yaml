@@ -1,0 +1,11 @@
+description: A template filled in - Home Assistant answers with plain text
+action: render_template
+credential: { url: "http://home.example:8123", token: ha-test-token }
+input: { template: "The front door is {{ states('lock.front') }}." }
+exchanges:
+  - sent:
+      method: POST
+      url: "http://home.example:8123/api/template"
+      body: { template: "The front door is {{ states('lock.front') }}." }
+    answer: { status: 200, headers: { content-type: text/plain }, body: The front door is locked. }
+result: { text: The front door is locked. }

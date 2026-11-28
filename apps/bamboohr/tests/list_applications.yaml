@@ -1,0 +1,73 @@
+description: Applications over two pages, newest first
+action: list_applications
+credential:
+  company_domain: acme
+  api_key: test-key
+input:
+  job_id: '21'
+exchanges:
+- sent:
+    method: GET
+    url: https://acme.bamboohr.com/api/v1/applicant_tracking/applications
+    query:
+      jobId: '21'
+      sortBy: created_date
+      sortOrder: DESC
+    headers:
+      authorization: Basic dGVzdC1rZXk6eA==
+      accept: application/json
+  answer:
+    status: 200
+    body:
+      paginationComplete: false
+      nextPageUrl: https://acme.bamboohr.com/api/v1/applicant_tracking/applications?jobId=21&sortBy=created_date&sortOrder=DESC&page=2
+      applications:
+      - &id001
+        id: 5001
+        appliedDate: '2026-11-14T21:40:00Z'
+        status:
+          id: 1
+          label: New
+        rating: null
+        applicant:
+          id: 900
+          firstName: Cleo
+          lastName: Candidate
+          avatar: null
+          email: cleo@example.com
+          source: Careers page
+        job:
+          id: 21
+          title:
+            id: 3
+            label: Barista
+- sent:
+    url: https://acme.bamboohr.com/api/v1/applicant_tracking/applications?jobId=21&sortBy=created_date&sortOrder=DESC&page=2
+  answer:
+    status: 200
+    body:
+      paginationComplete: true
+      nextPageUrl: null
+      applications:
+      - &id002
+        id: 5000
+        appliedDate: '2026-11-13T10:05:00Z'
+        status:
+          id: 2
+          label: Reviewed
+        rating: 4
+        applicant:
+          id: 899
+          firstName: Dev
+          lastName: Applicant
+          avatar: null
+          email: dev@example.com
+          source: Referral
+        job:
+          id: 21
+          title:
+            id: 3
+            label: Barista
+result:
+- *id001
+- *id002

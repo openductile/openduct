@@ -1,0 +1,87 @@
+name: New sign-ups scored, logged, and followed up after three days
+description: >-
+  For software companies with a free trial or a free plan: each new row in your app's signups table (PostgreSQL) is
+  scored - a work email, a company and a role on the person's public Gravatar profile all count - and added to a Leads
+  sheet. Three days later the run looks again: if the person has not started using the product, the sales channel in
+  Slack is told, with the score, so someone reaches out while the trial is still fresh. Needs: a Postgres credential
+  called app_db (a user that may read signups is enough), a Google Sheets sign-in called sheets, and a Slack credential
+  called slack.
+category: Sales
+trigger:
+  postgres: { credential: app_db, table: signups, cursor: id, every: 1m }
+# What a test runs on: an event as this trigger gives it (the new row, by its columns).
+sample:
+  id: 48213
+  email: Dana.Kim@northwind-bikes.example
+  name: Dana Kim
+  plan: trial
+  created_at: "2026-11-27T09:14:02Z"
+  activated_at: null
+steps:
+  - name: settings
+    set:
+      # Change these to your own.
+      spreadsheet: "'your-spreadsheet-id'"
+      channel: "'#sales'"
+  - name: profile
+    http:
+      method: GET
+      # Gravatar finds a public profile by the SHA-256 of the email, so the address itself is not sent.
+      url: "https://api.gravatar.com/v3/profiles/{{ sha256(value.email.trim().lowerAscii()) }}"
+      timeout: 10s
+      sample: { display_name: Dana Kim, job_title: Head of Operations, company: Northwind Bikes, location: "Portland, OR" }
+    # No public profile is an answer too (404): the score goes on without it.
+    on_error: continue
+  - name: score
+    javascript: |
+      // A score out of 100: a work email counts most, then what the public profile says.
+      const email = String(value.email || "").trim().toLowerCase();
+      const domain = email.split("@")[1] || "";
+      const free = ["gmail.com", "googlemail.com", "yahoo.com", "outlook.com", "hotmail.com", "live.com", "icloud.com",
+                    "me.com", "aol.com", "proton.me", "protonmail.com", "gmx.com", "gmx.de", "mail.com", "yandex.com"];
+      const work = domain !== "" && !free.includes(domain);
+      const p = (steps.profile && steps.profile.status === 200 && steps.profile.body) || {};
+      const senior = /\b(head|chief|director|vp|vice president|founder|owner|lead|manager|ceo|cto|coo|cfo)\b/i;
+      let points = 0;
+      const why = [];
+      if (work) { points += 50; why.push("work email"); }
+      if (p.company) { points += 15; why.push(`works at ${p.company}`); }
+      if (p.job_title) { points += senior.test(p.job_title) ? 25 : 10; why.push(p.job_title); }
+      if (value.plan && value.plan !== "free") { points += 10; why.push(`${value.plan} plan`); }
+      return { points: Math.min(points, 100), why: why.join(", ") || "nothing known", domain, work,
+               company: p.company || (work ? domain : ""), title: p.job_title || "" };
+  - name: log
+    google_sheets:
+      credential: sheets
+      action: add_row
+      spreadsheet_id: "{{ steps.settings.spreadsheet }}"
+      sheet: Leads
+      values:
+        - "{{ value.created_at }}"
+        - "{{ value.name }}"
+        - "{{ value.email }}"
+        - "{{ steps.score.company }}"
+        - "{{ steps.score.title }}"
+        - "{{ steps.score.points }}"
+        - "{{ steps.score.why }}"
+    retry: { attempts: 3, wait: 10s }
+  - name: three_days
+    wait: 3d
+  - name: now
+    postgres:
+      credential: app_db
+      read_only: true
+      sql: SELECT activated_at FROM signups WHERE id = $1
+      params: [value.id]
+  - name: follow_up
+    if:
+      when: steps.now.count > 0 && steps.now.rows[0].activated_at == null
+      then:
+        - name: tell
+          slack:
+            credential: slack
+            channel: "{{ steps.settings.channel }}"
+            text: >-
+              {{ value.name }} ({{ value.email }}) signed up three days ago and has not started yet. Score
+              {{ steps.score.points }}: {{ steps.score.why }}. Worth a personal note?
+          retry: { attempts: 3, wait: 10s }

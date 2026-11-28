@@ -1,0 +1,7 @@
+action: send_campaign
+credential: { api_key: xkeysib-test-1 }
+input: { campaign_id: "21" }
+exchanges:
+  - sent: { method: POST, url: https://api.brevo.com/v3/emailCampaigns/21/sendNow }
+    answer: { status: 204 }
+result: { sent: true }

@@ -1,0 +1,499 @@
+# Copyright 2026 Ductile AI, Inc
+# SPDX-License-Identifier: Apache-2.0
+# Freshdesk: written by hand from Freshdesk's API reference, https://developers.freshdesk.com/api/ (read 2026-11-27).
+app: freshdesk
+name: Freshdesk
+category: support
+description: Support tickets, contacts and companies in Freshdesk.
+docs: https://developers.freshdesk.com/api/
+hosts: ["*.freshdesk.com"]
+base_url: "https://{{ credential.domain }}.freshdesk.com/api/v2"
+sign_in:
+  - id: freshdesk
+    label: An API key
+    fields:
+      - { name: domain, label: "The helpdesk's name in its address, as in mycompany.freshdesk.com" }
+      - { name: api_key, label: The API key, secret: true }
+    # Freshdesk takes the key as the user name of HTTP basic sign-in, with any password.
+    basic: { username: "{{ credential.api_key }}", password: X }
+# Freshdesk says what is wrong in a description, and field by field.
+error: >-
+  status < 400 ? null
+  : (has(value.errors) && size(value.errors) > 0
+    ? value.description + ': ' + value.errors.map(e, (has(e.field) ? e.field + ' - ' : '') + e.message).join('; ')
+    : (has(value.description) ? value.description : (has(value.message) ? value.message : null)))
+actions:
+  create_ticket:
+    label: Open a ticket
+    description: "A new ticket for a customer, by their email (a new contact is added if there is none)."
+    write: true
+    method: POST
+    path: /tickets
+    inputs:
+      - { name: email, label: "The customer's email", required: true }
+      - { name: name, label: "The customer's name" }
+      - { name: subject, label: Subject, required: true }
+      - { name: description, label: "What it is about (HTML may be used)", required: true }
+      - { name: priority, label: "How urgent: low, medium, high or urgent (low by default)" }
+      - { name: status, label: "open, pending, resolved or closed (open by default)" }
+      - { name: type, label: "Its type, as the helpdesk names them" }
+      - { name: group_id, label: "The group's ID", kind: number }
+      - { name: responder_id, label: "The agent's ID", kind: number }
+      - { name: tags, label: Tags, kind: list }
+      - { name: cc_emails, label: Copied to (emails), kind: list }
+      - name: custom_fields
+        label: Custom fields
+        description: "A record of each custom field's name and its value, such as {\"cf_order_number\": \"A-100\"}."
+        kind: record
+    send:
+      email: "{{ input.email }}"
+      name: "{{ input.name }}"
+      subject: "{{ input.subject }}"
+      description: "{{ input.description }}"
+      priority: "{{ has(input.priority) && input.priority != null ? (string(input.priority).lowerAscii() in {'low': 1, 'medium': 2, 'high': 3, 'urgent': 4} ? {'low': 1, 'medium': 2, 'high': 3, 'urgent': 4}[string(input.priority).lowerAscii()] : int(input.priority)) : 1 }}"
+      status: "{{ has(input.status) && input.status != null ? (string(input.status).lowerAscii() in {'open': 2, 'pending': 3, 'resolved': 4, 'closed': 5} ? {'open': 2, 'pending': 3, 'resolved': 4, 'closed': 5}[string(input.status).lowerAscii()] : int(input.status)) : 2 }}"
+      type: "{{ input.type }}"
+      group_id: "{{ input.group_id }}"
+      responder_id: "{{ input.responder_id }}"
+      tags: "{{ input.tags }}"
+      cc_emails: "{{ input.cc_emails }}"
+      custom_fields: "{{ input.custom_fields }}"
+    output: &ticket
+      id: number
+      subject: text
+      description_text: text
+      status: number
+      priority: number
+      source: number
+      type: text
+      requester_id: number
+      responder_id: number
+      group_id: number
+      company_id: number
+      tags: list
+      cc_emails: list
+      custom_fields: record
+      due_by: text
+      fr_due_by: text
+      created_at: text
+      updated_at: text
+  send_outbound_email:
+    label: Email a customer first
+    description: "An email from the helpdesk to a customer, kept as a ticket (closed by default, until they answer)."
+    write: true
+    method: POST
+    path: /tickets/outbound_email
+    inputs:
+      - { name: email, label: "The customer's email", required: true }
+      - { name: name, label: "The customer's name" }
+      - { name: subject, label: Subject, required: true }
+      - { name: description, label: "The message (HTML may be used)", required: true }
+      - { name: email_config_id, label: "Which support address sends it (its ID)", required: true, kind: number }
+      - { name: group_id, label: "The group's ID", kind: number }
+      - { name: tags, label: Tags, kind: list }
+    send:
+      email: "{{ input.email }}"
+      name: "{{ input.name }}"
+      subject: "{{ input.subject }}"
+      description: "{{ input.description }}"
+      email_config_id: "{{ input.email_config_id }}"
+      group_id: "{{ input.group_id }}"
+      tags: "{{ input.tags }}"
+      priority: 1
+      status: 5
+    output: *ticket
+  get_ticket:
+    label: Get a ticket
+    description: "One ticket, with its requester, company, conversations or stats when asked for."
+    method: GET
+    path: "/tickets/{{ input.ticket_id }}"
+    inputs:
+      - { name: ticket_id, label: "The ticket's number", required: true }
+      - { name: include, label: "Also: conversations, requester, company or stats (with commas)" }
+    query: { include: "{{ input.include }}" }
+    output: *ticket
+  list_tickets:
+    label: List tickets
+    description: "Tickets, newest first: those of the last 30 days, or changed since a time; every page."
+    method: GET
+    path: /tickets
+    inputs:
+      - { name: email, label: "Only this customer's (their email)" }
+      - { name: requester_id, label: "Only this contact's (their ID)" }
+      - { name: company_id, label: "Only this company's (its ID)" }
+      - { name: updated_since, label: "Changed since (such as 2026-11-01T00:00:00Z)" }
+      - { name: filter, label: "A ready-made view: new_and_my_open, watching, spam or deleted" }
+      - { name: order_by, label: "Sorted by created_at (the default), updated_at, due_by or status" }
+      - { name: include, label: "Also: requester, stats or description" }
+    query:
+      email: "{{ input.email }}"
+      requester_id: "{{ input.requester_id }}"
+      company_id: "{{ input.company_id }}"
+      updated_since: "{{ input.updated_since }}"
+      filter: "{{ input.filter }}"
+      order_by: "{{ input.order_by }}"
+      order_type: desc
+      include: "{{ input.include }}"
+      per_page: "100"
+    items: value
+    next: links.next
+    output: *ticket
+  update_ticket:
+    label: Change a ticket
+    description: "Changes a ticket's status, priority, agent, group, type, tags or subject."
+    write: true
+    method: PUT
+    path: "/tickets/{{ input.ticket_id }}"
+    inputs:
+      - { name: ticket_id, label: "The ticket's number", required: true }
+      - { name: status, label: "open, pending, resolved or closed" }
+      - { name: priority, label: "low, medium, high or urgent" }
+      - { name: responder_id, label: "The agent's ID", kind: number }
+      - { name: group_id, label: "The group's ID", kind: number }
+      - { name: type, label: Its type }
+      - { name: subject, label: Subject }
+      - { name: tags, label: "Tags (these take the place of its tags)", kind: list }
+      - { name: custom_fields, label: "Custom fields (a record of names and values)", kind: record }
+    send:
+      status: "{{ has(input.status) && input.status != null ? (string(input.status).lowerAscii() in {'open': 2, 'pending': 3, 'resolved': 4, 'closed': 5} ? {'open': 2, 'pending': 3, 'resolved': 4, 'closed': 5}[string(input.status).lowerAscii()] : int(input.status)) : null }}"
+      priority: "{{ has(input.priority) && input.priority != null ? (string(input.priority).lowerAscii() in {'low': 1, 'medium': 2, 'high': 3, 'urgent': 4} ? {'low': 1, 'medium': 2, 'high': 3, 'urgent': 4}[string(input.priority).lowerAscii()] : int(input.priority)) : null }}"
+      responder_id: "{{ input.responder_id }}"
+      group_id: "{{ input.group_id }}"
+      type: "{{ input.type }}"
+      subject: "{{ input.subject }}"
+      tags: "{{ input.tags }}"
+      custom_fields: "{{ input.custom_fields }}"
+    output: *ticket
+  delete_ticket:
+    label: Delete a ticket
+    description: "Moves a ticket to the trash, from where it can be brought back."
+    write: true
+    method: DELETE
+    path: "/tickets/{{ input.ticket_id }}"
+    inputs:
+      - { name: ticket_id, label: "The ticket's number", required: true }
+    result: "{'deleted': true}"
+    output: { deleted: boolean }
+  search_tickets:
+    label: Find tickets
+    description: "Tickets that match a query of their fields, such as status:2 AND priority:4 (up to 300)."
+    method: GET
+    path: /search/tickets
+    inputs:
+      - name: query
+        label: "The query, such as status:2 AND tag:'refund'"
+        required: true
+        description: "Fields and values joined by AND and OR; text in single quotes; dates as 'YYYY-MM-DD' with :> and :<."
+    query: { query: "{{ '\"' + input.query + '\"' }}" }
+    items: value.results
+    next: "size(value.results) < 30 || (page == null ? 1 : int(page.page)) >= 10 ? null : {'page': string((page == null ? 1 : int(page.page)) + 1)}"
+    output: *ticket
+  reply_to_ticket:
+    label: Reply to a ticket
+    description: An answer to the customer, sent by email from the helpdesk.
+    write: true
+    method: POST
+    path: "/tickets/{{ input.ticket_id }}/reply"
+    inputs:
+      - { name: ticket_id, label: "The ticket's number", required: true }
+      - { name: body, label: "The answer (HTML may be used)", required: true }
+      - { name: from_email, label: "Sent from (one of the helpdesk's addresses)" }
+      - { name: cc_emails, label: Copied to (emails), kind: list }
+    send:
+      body: "{{ input.body }}"
+      from_email: "{{ input.from_email }}"
+      cc_emails: "{{ input.cc_emails }}"
+    output: &conversation
+      id: number
+      ticket_id: number
+      body_text: text
+      body: text
+      user_id: number
+      from_email: text
+      private: boolean
+      incoming: boolean
+      created_at: text
+  add_note:
+    label: Add a note to a ticket
+    description: "A note on a ticket: for agents only (the default), or seen by the customer."
+    write: true
+    method: POST
+    path: "/tickets/{{ input.ticket_id }}/notes"
+    inputs:
+      - { name: ticket_id, label: "The ticket's number", required: true }
+      - { name: body, label: "The note (HTML may be used)", required: true }
+      - { name: private, label: "For agents only (true, the default) or seen by the customer (false)", kind: boolean }
+      - { name: notify_emails, label: "Agents to tell (their emails)", kind: list }
+    send:
+      body: "{{ input.body }}"
+      private: "{{ input.private }}"
+      notify_emails: "{{ input.notify_emails }}"
+    output: *conversation
+  list_conversations:
+    label: "List a ticket's conversation"
+    description: "Every reply and note on a ticket, oldest first."
+    method: GET
+    path: "/tickets/{{ input.ticket_id }}/conversations"
+    inputs:
+      - { name: ticket_id, label: "The ticket's number", required: true }
+    query: { per_page: "100" }
+    items: value
+    next: links.next
+    output: *conversation
+  list_ticket_fields:
+    label: List ticket fields
+    description: "The fields a ticket has, custom ones too, with their names and choices."
+    method: GET
+    path: /ticket_fields
+    items: value
+    output: { id: number, name: text, label: text, type: text, required_for_agents: boolean, choices: list }
+  create_contact:
+    label: Add a contact
+    description: "A new customer contact, with an email, phone, mobile or an ID of your own."
+    write: true
+    method: POST
+    path: /contacts
+    inputs:
+      - { name: name, label: Name, required: true }
+      - { name: email, label: Email }
+      - { name: phone, label: Phone }
+      - { name: mobile, label: Mobile }
+      - { name: unique_external_id, label: "An ID of your own for them" }
+      - { name: company_id, label: "Their company's ID", kind: number }
+      - { name: job_title, label: Job title }
+      - { name: address, label: Address }
+      - { name: description, label: About them }
+      - { name: tags, label: Tags, kind: list }
+      - { name: custom_fields, label: "Custom fields (a record of names and values)", kind: record }
+    send:
+      name: "{{ input.name }}"
+      email: "{{ input.email }}"
+      phone: "{{ input.phone }}"
+      mobile: "{{ input.mobile }}"
+      unique_external_id: "{{ input.unique_external_id }}"
+      company_id: "{{ input.company_id }}"
+      job_title: "{{ input.job_title }}"
+      address: "{{ input.address }}"
+      description: "{{ input.description }}"
+      tags: "{{ input.tags }}"
+      custom_fields: "{{ input.custom_fields }}"
+    output: &contact
+      id: number
+      name: text
+      email: text
+      phone: text
+      mobile: text
+      company_id: number
+      job_title: text
+      address: text
+      active: boolean
+      language: text
+      time_zone: text
+      tags: list
+      custom_fields: record
+      created_at: text
+      updated_at: text
+  get_contact:
+    label: Get a contact
+    method: GET
+    description: One contact by their ID.
+    path: "/contacts/{{ input.contact_id }}"
+    inputs:
+      - { name: contact_id, label: "The contact's ID", required: true }
+    output: *contact
+  list_contacts:
+    label: List contacts
+    description: "Contacts, or those with an email, phone or company, or changed since a time; every page."
+    method: GET
+    path: /contacts
+    inputs:
+      - { name: email, label: "Only with this email" }
+      - { name: phone, label: "Only with this phone" }
+      - { name: mobile, label: "Only with this mobile" }
+      - { name: company_id, label: "Only this company's (its ID)" }
+      - { name: state, label: "Only these: verified, unverified, blocked or deleted" }
+      - { name: updated_since, label: "Changed since (such as 2026-11-01T00:00:00Z)" }
+    query:
+      email: "{{ input.email }}"
+      phone: "{{ input.phone }}"
+      mobile: "{{ input.mobile }}"
+      company_id: "{{ input.company_id }}"
+      state: "{{ input.state }}"
+      updated_since: "{{ input.updated_since }}"
+      per_page: "100"
+    items: value
+    next: links.next
+    output: *contact
+  update_contact:
+    label: Change a contact
+    description: "Changes the fields given on a contact; the others stay as they are."
+    write: true
+    method: PUT
+    path: "/contacts/{{ input.contact_id }}"
+    inputs:
+      - { name: contact_id, label: "The contact's ID", required: true }
+      - { name: name, label: Name }
+      - { name: email, label: Email }
+      - { name: phone, label: Phone }
+      - { name: mobile, label: Mobile }
+      - { name: company_id, label: "Their company's ID", kind: number }
+      - { name: job_title, label: Job title }
+      - { name: address, label: Address }
+      - { name: tags, label: "Tags (these take the place of theirs)", kind: list }
+      - { name: custom_fields, label: "Custom fields (a record of names and values)", kind: record }
+    send:
+      name: "{{ input.name }}"
+      email: "{{ input.email }}"
+      phone: "{{ input.phone }}"
+      mobile: "{{ input.mobile }}"
+      company_id: "{{ input.company_id }}"
+      job_title: "{{ input.job_title }}"
+      address: "{{ input.address }}"
+      tags: "{{ input.tags }}"
+      custom_fields: "{{ input.custom_fields }}"
+    output: *contact
+  search_contacts:
+    label: Find contacts
+    description: "Contacts that match a query of their fields, such as email:'pat@example.com' (up to 300)."
+    method: GET
+    path: /search/contacts
+    inputs:
+      - { name: query, label: "The query, such as active:true AND company_id:12", required: true }
+    query: { query: "{{ '\"' + input.query + '\"' }}" }
+    items: value.results
+    next: "size(value.results) < 30 || (page == null ? 1 : int(page.page)) >= 10 ? null : {'page': string((page == null ? 1 : int(page.page)) + 1)}"
+    output: *contact
+  delete_contact:
+    label: Delete a contact
+    description: "Moves a contact to the deleted ones, from where they can be brought back."
+    write: true
+    method: DELETE
+    path: "/contacts/{{ input.contact_id }}"
+    inputs:
+      - { name: contact_id, label: "The contact's ID", required: true }
+    result: "{'deleted': true}"
+    output: { deleted: boolean }
+  create_company:
+    label: Add a company
+    description: "A new company; contacts whose email has one of its domains join it."
+    write: true
+    method: POST
+    path: /companies
+    inputs:
+      - { name: name, label: Name, required: true }
+      - { name: domains, label: "Its email domains, such as example.com", kind: list }
+      - { name: description, label: About it }
+      - { name: note, label: A note }
+      - { name: industry, label: Industry }
+      - { name: account_tier, label: "Account tier, such as Premium" }
+      - { name: renewal_date, label: "Renewal date (YYYY-MM-DD)" }
+      - { name: custom_fields, label: "Custom fields (a record of names and values)", kind: record }
+    send:
+      name: "{{ input.name }}"
+      domains: "{{ input.domains }}"
+      description: "{{ input.description }}"
+      note: "{{ input.note }}"
+      industry: "{{ input.industry }}"
+      account_tier: "{{ input.account_tier }}"
+      renewal_date: "{{ input.renewal_date }}"
+      custom_fields: "{{ input.custom_fields }}"
+    output: &company
+      id: number
+      name: text
+      description: text
+      domains: list
+      note: text
+      health_score: text
+      account_tier: text
+      renewal_date: text
+      industry: text
+      custom_fields: record
+      created_at: text
+      updated_at: text
+  get_company:
+    label: Get a company
+    description: One company by its ID.
+    method: GET
+    path: "/companies/{{ input.company_id }}"
+    inputs:
+      - { name: company_id, label: "The company's ID", required: true }
+    output: *company
+  list_companies:
+    label: List companies
+    description: Every company; every page.
+    method: GET
+    path: /companies
+    query: { per_page: "100" }
+    items: value
+    next: links.next
+    output: *company
+  update_company:
+    label: Change a company
+    description: "Changes the fields given on a company; the others stay as they are."
+    write: true
+    method: PUT
+    path: "/companies/{{ input.company_id }}"
+    inputs:
+      - { name: company_id, label: "The company's ID", required: true }
+      - { name: name, label: Name }
+      - { name: domains, label: "Its email domains (these take the place of its domains)", kind: list }
+      - { name: description, label: About it }
+      - { name: note, label: A note }
+      - { name: industry, label: Industry }
+      - { name: account_tier, label: Account tier }
+      - { name: renewal_date, label: "Renewal date (YYYY-MM-DD)" }
+      - { name: custom_fields, label: "Custom fields (a record of names and values)", kind: record }
+    send:
+      name: "{{ input.name }}"
+      domains: "{{ input.domains }}"
+      description: "{{ input.description }}"
+      note: "{{ input.note }}"
+      industry: "{{ input.industry }}"
+      account_tier: "{{ input.account_tier }}"
+      renewal_date: "{{ input.renewal_date }}"
+      custom_fields: "{{ input.custom_fields }}"
+    output: *company
+  list_agents:
+    label: List agents
+    description: "The helpdesk's agents, with their contact details; every page."
+    method: GET
+    path: /agents
+    inputs:
+      - { name: email, label: "Only with this email" }
+    query: { email: "{{ input.email }}", per_page: "100" }
+    items: value
+    next: links.next
+    output: { id: number, available: boolean, occasional: boolean, ticket_scope: number, group_ids: list, contact: record, type: text, created_at: text }
+  list_groups:
+    label: List groups
+    description: "The helpdesk's groups of agents, tickets are given to; every page."
+    method: GET
+    path: /groups
+    query: { per_page: "100" }
+    items: value
+    next: links.next
+    output: { id: number, name: text, description: text, agent_ids: list, created_at: text, updated_at: text }
+triggers:
+  new_ticket:
+    label: A new ticket
+    description: Each ticket opened, the newest asked for every few minutes.
+    poll:
+      method: GET
+      path: /tickets
+      query: { order_by: created_at, order_type: desc, per_page: "100" }
+      items: value
+      next: links.next
+      newest_first: true
+      id: string(item.id)
+  updated_ticket:
+    label: A ticket changed
+    description: "Each ticket opened or changed (a reply, a new status), the last changed asked for every few minutes."
+    poll:
+      method: GET
+      path: /tickets
+      query: { order_by: updated_at, order_type: desc, per_page: "100" }
+      items: value
+      next: links.next
+      newest_first: true
+      id: string(item.id)
+      version: item.updated_at

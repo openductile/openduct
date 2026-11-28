@@ -1,0 +1,11 @@
+description: The channels of the token's owner in a team
+action: list_my_channels
+credential: { server_url: "https://chat.example.com", token: testmmtoken0000000000000000 }
+input: { user_id: me, team_id: t1aaaaaaaaaaaaaaaaaaaaaaaa }
+exchanges:
+  - sent:
+      method: GET
+      url: https://chat.example.com/api/v4/users/me/teams/t1aaaaaaaaaaaaaaaaaaaaaaaa/channels
+      headers: { authorization: Bearer testmmtoken0000000000000000 }
+    answer: { body: [{ id: c1aaaaaaaaaaaaaaaaaaaaaaaa, team_id: t1aaaaaaaaaaaaaaaaaaaaaaaa, type: O, name: orders, display_name: Orders, purpose: Order updates, header: "" }] }
+result: [{ id: c1aaaaaaaaaaaaaaaaaaaaaaaa, team_id: t1aaaaaaaaaaaaaaaaaaaaaaaa, type: O, name: orders, display_name: Orders, purpose: Order updates, header: "" }]

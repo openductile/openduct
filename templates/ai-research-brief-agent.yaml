@@ -1,0 +1,69 @@
+name: A one-page brief on any topic, researched by an AI agent
+description: >-
+  For anyone who has to get up to speed quickly - before a meeting, a pitch or a purchase: send a topic to this
+  workflow's address ({"topic": "heat pumps for small offices"}) and an AI agent looks it up in Wikipedia for the
+  background and in Hacker News for what people are saying lately, then answers with a short brief, the points worth
+  knowing and the links it used. It is told to say so when the sources say little. Needs: an AI credential called model.
+category: AI
+trigger:
+  # Left empty here: each workflow made from the template is given a token of its own, for the caller to send.
+  webhook: { token: "" }
+# What a test runs on: an event as this trigger gives it.
+sample:
+  topic: heat pumps for small offices
+steps:
+  - where: has(value.topic) && size(string(value.topic).trim()) > 2
+  - name: researcher
+    agent:
+      credential: model
+      instructions: >-
+        You write a one-page brief for a busy business owner. Look the topic up before you write: Wikipedia for what
+        it is, Hacker News for what people have said about it lately (open a story's link only from what the search
+        gave). Use plain words. Give at most five points, each one sentence, and list every link you used. If the
+        sources say little or disagree, say so instead of guessing.
+      input: "Topic: {{ value.topic }}"
+      tools:
+        - name: wikipedia_summary
+          description: The summary of a Wikipedia article, by its title (as Heat pump).
+          parameters:
+            type: object
+            properties:
+              title: { type: string, description: "The article's title, as Heat pump" }
+            required: [title]
+          http:
+            method: GET
+            url: "https://en.wikipedia.org/api/rest_v1/page/summary/{{ args.title.trim().replace(' ', '_') }}"
+            # Wikipedia asks every program to say who it is: put your own name and address here.
+            headers: { User-Agent: "YourCompanyBriefs/1.0 (briefs@example.com)" }
+            timeout: 20s
+        - name: hacker_news_search
+          description: Recent Hacker News stories about some words, with their points, comments and links.
+          parameters:
+            type: object
+            properties:
+              words: { type: string, description: "What to search for, in a few words" }
+            required: [words]
+          http:
+            method: GET
+            url: https://hn.algolia.com/api/v1/search_by_date
+            query: { query: "{{ args.words }}", tags: story, hitsPerPage: "10" }
+            timeout: 20s
+      allow: [wikipedia_summary, hacker_news_search]
+      output:
+        schema:
+          type: object
+          properties:
+            brief: { type: string, description: "Three or four sentences" }
+            points: { type: array, items: { type: string }, maxItems: 5 }
+            sources: { type: array, items: { type: string }, description: "Every link used" }
+          required: [brief, points, sources]
+      max_turns: 8
+      max_tool_calls: 8
+  - name: reply
+    respond:
+      status: 200
+      body:
+        topic: "{{ value.topic }}"
+        brief: "{{ steps.researcher.json.brief }}"
+        points: "{{ steps.researcher.json.points }}"
+        sources: "{{ steps.researcher.json.sources }}"

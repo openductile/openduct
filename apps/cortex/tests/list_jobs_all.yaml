@@ -1,0 +1,14 @@
+description: "The newest 100 jobs, of any status"
+action: list_jobs
+credential: { base_url: "https://cortex.example.com:9001", api_key: test-key }
+exchanges:
+  - sent:
+      method: POST
+      url: "https://cortex.example.com:9001/api/job/_search"
+      query: { range: "0-100", sort: "-createdAt" }
+      body: {}
+    answer:
+      body:
+        - { id: AWNei4vH3rJ8unegCPC1, status: InProgress, data: bad.example, dataType: domain }
+result:
+  - { id: AWNei4vH3rJ8unegCPC1, status: InProgress, data: bad.example, dataType: domain }

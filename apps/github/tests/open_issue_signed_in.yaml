@@ -1,0 +1,11 @@
+description: The same, signed in with GitHub rather than a token
+action: open_issue
+sign_in: github_oauth
+credential: { access_token: gho_test1 }
+input: { owner: example-shop, repo: website, title: Typo on the About page }
+exchanges:
+  - sent:
+      headers: { authorization: Bearer gho_test1 }
+      body: { title: Typo on the About page }
+    answer: { status: 201, body: { number: 1348 } }
+result: { number: 1348 }

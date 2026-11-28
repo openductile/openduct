@@ -3,24 +3,226 @@
 app: discord
 name: Discord
 category: messaging
-description: Post messages to a Discord channel through its webhook.
-docs: https://discord.com/developers/docs/resources/webhook#execute-webhook
+description: Messages, threads, reactions and roles in a Discord server through a bot, slash commands and buttons as they are used, and a channel's webhook.
+docs: https://docs.discord.com/developers/reference
+hosts: [discord.com]
+base_url: https://discord.com/api/v10
 sign_in:
   - id: discord_webhook
     label: A Discord webhook
     fields:
       - { name: url, label: "The webhook's address", secret: true }
     url_field: url
+  - id: discord_bot
+    label: A Discord bot
+    fields:
+      - { name: bot_token, label: "The bot's token (Developer Portal, Bot)", secret: true }
+      - { name: public_key, label: "The application's public key (General Information), for slash commands and buttons", optional: true }
+    headers:
+      Authorization: "Bot {{ credential.bot_token }}"
 default_action: send
 actions:
   send:
     label: Post a message
+    description: With a webhook, to its own channel; with a bot, to the channel given.
     write: true
     method: POST
+    path: "/channels/{{ input.channel_id }}/messages"
     inputs:
       - { name: text, label: The message, required: true }
-      - { name: username, label: The name it is posted as }
+      - { name: username, label: The name it is posted as, description: "With a webhook only" }
+      - { name: channel_id, label: "The channel's id", description: "With a bot only" }
     send:
       content: "{{ input.text }}"
-      username: "{{ input.username }}"
     result: "{'sent': true, 'answer': value}"
+    output: { sent: boolean, answer: record }
+    by:
+      discord_webhook:
+        send: { content: "{{ input.text }}", username: "{{ input.username }}" }
+  send_message:
+    label: Send a message to a channel
+    description: A message in a channel the bot can post in, with embeds and buttons when given.
+    write: true
+    method: POST
+    path: "/channels/{{ input.channel_id }}/messages"
+    inputs:
+      - { name: channel_id, label: "The channel's id", required: true }
+      - { name: text, label: The message, required: true, description: "Up to 2000 characters" }
+      - { name: embeds, label: "Embeds (as JSON)", kind: list }
+      - { name: components, label: "Buttons and menus, as Discord's components (as JSON)", kind: list }
+    send:
+      content: "{{ input.text }}"
+      embeds: "{{ input.embeds }}"
+      components: "{{ input.components }}"
+    output: { id: text, channel_id: text, content: text, timestamp: text }
+  reply:
+    label: Reply to a message
+    description: A message in the channel that answers another one, shown as its reply.
+    write: true
+    method: POST
+    path: "/channels/{{ input.channel_id }}/messages"
+    inputs:
+      - { name: channel_id, label: "The channel's id", required: true }
+      - { name: message_id, label: "The id of the message it answers", required: true }
+      - { name: text, label: The reply, required: true }
+    send:
+      content: "{{ input.text }}"
+      message_reference: { message_id: "{{ input.message_id }}" }
+    output: { id: text, channel_id: text, content: text, message_reference: record }
+  edit_message:
+    label: Edit a message
+    description: The text of a message the bot sent, changed.
+    write: true
+    method: PATCH
+    path: "/channels/{{ input.channel_id }}/messages/{{ input.message_id }}"
+    inputs:
+      - { name: channel_id, label: "The channel's id", required: true }
+      - { name: message_id, label: "The message's id", required: true }
+      - { name: text, label: The new text, required: true }
+      - { name: components, label: "Buttons and menus (as JSON)", kind: list }
+    send:
+      content: "{{ input.text }}"
+      components: "{{ input.components }}"
+    output: { id: text, content: text, edited_timestamp: text }
+  react:
+    label: React to a message
+    description: The bot's reaction on a message - an emoji such as 👍, or a server's own as name:id.
+    write: true
+    method: PUT
+    path: "/channels/{{ input.channel_id }}/messages/{{ input.message_id }}/reactions/{{ input.emoji }}/@me"
+    body: none
+    inputs:
+      - { name: channel_id, label: "The channel's id", required: true }
+      - { name: message_id, label: "The message's id", required: true }
+      - { name: emoji, label: "The emoji, such as 👍 (a server's own as name:id)", required: true }
+    result: "{'reacted': true}"
+    output: { reacted: boolean }
+  create_thread:
+    label: Start a thread from a message
+    description: A thread under a message of a channel, named.
+    write: true
+    method: POST
+    path: "/channels/{{ input.channel_id }}/messages/{{ input.message_id }}/threads"
+    inputs:
+      - { name: channel_id, label: "The channel's id", required: true }
+      - { name: message_id, label: "The message it starts from", required: true }
+      - { name: name, label: "The thread's name (1 to 100 characters)", required: true }
+      - { name: auto_archive_duration, label: "Minutes without messages before it is archived: 60, 1440, 4320 or 10080", kind: number }
+    send:
+      name: "{{ input.name }}"
+      auto_archive_duration: "{{ input.auto_archive_duration }}"
+    output: { id: text, name: text, parent_id: text, type: number }
+  start_thread:
+    label: Start a thread
+    description: A public thread in a channel, not under a message.
+    write: true
+    method: POST
+    path: "/channels/{{ input.channel_id }}/threads"
+    inputs:
+      - { name: channel_id, label: "The channel's id", required: true }
+      - { name: name, label: "The thread's name (1 to 100 characters)", required: true }
+    send:
+      name: "{{ input.name }}"
+      type: 11
+    output: { id: text, name: text, parent_id: text, type: number }
+  list_channels:
+    label: List a server's channels
+    description: Every channel of a server (its threads are not listed).
+    method: GET
+    path: "/guilds/{{ input.guild_id }}/channels"
+    inputs:
+      - { name: guild_id, label: "The server's id", required: true }
+    items: value
+    output: { id: text, name: text, type: number, parent_id: text, position: number }
+  add_role:
+    label: Give a member a role
+    description: A role added to a member of a server (the bot needs Manage Roles, and a role above it).
+    write: true
+    method: PUT
+    path: "/guilds/{{ input.guild_id }}/members/{{ input.user_id }}/roles/{{ input.role_id }}"
+    body: none
+    inputs:
+      - { name: guild_id, label: "The server's id", required: true }
+      - { name: user_id, label: "The member's user id", required: true }
+      - { name: role_id, label: "The role's id", required: true }
+    result: "{'added': true}"
+    output: { added: boolean }
+  remove_role:
+    label: Take a role from a member
+    description: A role taken away from a member of a server.
+    write: true
+    method: DELETE
+    path: "/guilds/{{ input.guild_id }}/members/{{ input.user_id }}/roles/{{ input.role_id }}"
+    inputs:
+      - { name: guild_id, label: "The server's id", required: true }
+      - { name: user_id, label: "The member's user id", required: true }
+      - { name: role_id, label: "The role's id", required: true }
+    result: "{'removed': true}"
+    output: { removed: boolean }
+  answer_interaction:
+    label: Answer a slash command or a button
+    description: >-
+      The answer to an interaction the trigger took (it was answered "thinking..." at once): the original reply's
+      text set, within 15 minutes.
+    write: true
+    method: PATCH
+    path: "/webhooks/{{ input.application_id }}/{{ input.token }}/messages/@original"
+    inputs:
+      - { name: application_id, label: "The application's id (the trigger gives it)", required: true }
+      - { name: token, label: "The interaction's token (the trigger gives it)", required: true }
+      - { name: text, label: The answer, required: true }
+      - { name: components, label: "Buttons and menus (as JSON)", kind: list }
+    send:
+      content: "{{ input.text }}"
+      components: "{{ input.components }}"
+    output: { id: text, content: text, channel_id: text }
+  follow_up:
+    label: Send a follow-up to a slash command
+    description: Another message after an interaction's answer, within 15 minutes; private shows it to the person alone.
+    write: true
+    method: POST
+    path: "/webhooks/{{ input.application_id }}/{{ input.token }}"
+    inputs:
+      - { name: application_id, label: "The application's id (the trigger gives it)", required: true }
+      - { name: token, label: "The interaction's token (the trigger gives it)", required: true }
+      - { name: text, label: The message, required: true }
+      - { name: private, label: Only the person who asked sees it, kind: boolean }
+    send:
+      content: "{{ input.text }}"
+      flags: "{{ has(input.private) && input.private == true ? 64 : null }}"
+    output: { id: text, content: text, flags: number }
+triggers:
+  interaction:
+    label: A slash command or a button used
+    description: >-
+      Each slash command, button and form used with the application, as Discord sends it to the workflow's address,
+      signed with the application's key. Discord is answered at once that the bot is thinking (or, for a button,
+      that the message is being updated); the workflow then answers with "Answer a slash command or a button".
+    inputs:
+      - { name: command, label: "Only this slash command (its name)", description: "Every one, when left out" }
+      - { name: private, label: "The answer is seen by the person alone", kind: boolean }
+    webhook:
+      signature: { header: x-signature-ed25519, algorithm: ed25519, time_header: x-signature-timestamp, signed: "{time}{body}" }
+      secret: public_key
+      # Discord checks the address with a signed PING (type 1), answered with a PONG.
+      challenge: { when: "value.type == 1", answer: "{'type': 1}" }
+      id: value.id
+      only: "(value.type == 2 && (input.command == null || input.command == '' || value.data.name == input.command)) || value.type == 3 || value.type == 5"
+      event: >-
+        {'kind': value.type == 2 ? 'command' : (value.type == 3 ? 'button' : 'form'),
+         'command': value.type == 2 ? value.data.name : '',
+         'options': value.type == 2 && has(value.data.options) ? value.data.options : [],
+         'option': value.type == 2 && has(value.data.options) && size(value.data.options) > 0 && has(value.data.options[0].value) ? value.data.options[0].value : '',
+         'custom_id': value.type != 2 ? value.data.custom_id : '',
+         'values': value.type == 3 && has(value.data.values) ? value.data.values : [],
+         'user': has(value.member) ? value.member.user : (has(value.user) ? value.user : null),
+         'guild_id': has(value.guild_id) ? value.guild_id : '',
+         'channel_id': has(value.channel_id) ? value.channel_id : '',
+         'message_id': has(value.message) ? value.message.id : '',
+         'id': value.id, 'application_id': value.application_id, 'token': value.token, 'interaction': value}
+      # Within 3 seconds Discord wants an answer: "thinking" for a command or a form, "updating" for a button.
+      answer: "value.type == 3 ? {'type': 6} : (input.private == true ? {'type': 5, 'data': {'flags': 64}} : {'type': 5})"
+      setup: >-
+        In the Discord Developer Portal, the application's General Information: give the workflow's address as the
+        Interactions Endpoint URL (Discord checks it, and is answered), and copy the Public Key into the credential.
+        Register the slash commands themselves there, or with Discord's commands API.

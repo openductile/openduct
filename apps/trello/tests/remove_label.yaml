@@ -1,0 +1,10 @@
+description: A label taken off a card
+action: remove_label
+credential: { api_key: testkey0123456789, token: ATTAtesttoken0123 }
+input: { card_id: 6567a1b2c3d4e5f600000001, label_id: 6567a1b2c3d4e5f600000l01 }
+exchanges:
+  - sent:
+      method: DELETE
+      url: https://api.trello.com/1/cards/6567a1b2c3d4e5f600000001/idLabels/6567a1b2c3d4e5f600000l01
+    answer: { body: { _value: null } }
+result: { removed: true }

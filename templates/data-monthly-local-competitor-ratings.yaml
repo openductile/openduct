@@ -1,0 +1,114 @@
+name: Your local competitors' Google Maps ratings, every month
+description: >-
+  On the last day of each month, an Apify scraper reads the Google Maps places for your trade in your town - their
+  rating and number of reviews - and each is added as a row of your Ratings sheet, with how its rating and reviews
+  moved since last month's row. You get a Gmail summary: where you rank, who gained the most reviews, who slipped.
+  For cafes, salons, clinics, gyms and any business that lives on local reviews. Needs: apify (an API token),
+  google_sheets, gmail.
+category: Data
+trigger:
+  # The last day of each month, 18:00 on your clock.
+  schedule: { every: month, on: [last], at: "18:00", timezone: America/Los_Angeles }
+# What a test runs on: an event as this trigger gives it.
+sample:
+  scheduled_at: "2026-12-01T02:00:00Z"
+steps:
+  # The month the run is for, on the schedule's clock.
+  - name: month
+    datetime: { value: value.scheduled_at, timezone: America/Los_Angeles, format: "%Y-%m" }
+  - name: places
+    apify:
+      action: run_and_get_items
+      credential: apify
+      actor: compass/crawler-google-places
+      input:
+        # Your trade and your town, as you would search Google Maps.
+        searchStringsArray: [coffee shop]
+        locationQuery: Portland, Oregon, USA
+        maxCrawledPlacesPerSearch: 25
+        language: en
+      limit: 25
+      # A month's run costs cents: this caps it.
+      max_total_charge_usd: 2
+    retry: { attempts: 2, wait: 2m }
+  - name: last_month
+    google_sheets:
+      action: read_rows
+      credential: google_sheets
+      spreadsheet_id: your-spreadsheet-id
+      range: Ratings
+    retry: { attempts: 3, wait: 30s }
+  # Each place's rating and reviews now, the change since its last row, and where you rank.
+  - name: compare
+    python: |
+      OURS = "Bean There Coffee"        # your own place's name on Google Maps
+      month = steps["month"]["formatted"]
+
+      sheet = steps["last_month"] if isinstance(steps["last_month"], list) else []
+      header = [str(h).strip().lower() for h in sheet[0]] if sheet else []
+      before = {}
+      for row in sheet[1:]:
+          r = dict(zip(header, row))
+          if r.get("place"):
+              before[r["place"]] = r          # the last row of each place wins
+
+      def number(x):
+          try:
+              return float(x)
+          except (TypeError, ValueError):
+              return None
+
+      places = []
+      for p in steps["places"] if isinstance(steps["places"], list) else []:
+          key = p.get("placeId") or p.get("url")
+          if not key:
+              continue
+          rating, reviews = number(p.get("totalScore")), number(p.get("reviewsCount"))
+          old = before.get(key, {})
+          old_rating, old_reviews = number(old.get("rating")), number(old.get("reviews"))
+          places.append({
+              "place": key,
+              "name": p.get("title") or p.get("url"),
+              "rating": rating,
+              "reviews": int(reviews) if reviews is not None else None,
+              "rating_change": round(rating - old_rating, 2) if rating is not None and old_rating is not None else None,
+              "new_reviews": int(reviews - old_reviews) if reviews is not None and old_reviews is not None else None,
+          })
+
+      ranked = sorted(places, key=lambda p: (-(p["rating"] or 0), -(p["reviews"] or 0)))
+      ours = next((i + 1 for i, p in enumerate(ranked) if (p["name"] or "").lower() == OURS.lower()), None)
+      gainers = sorted([p for p in places if p["new_reviews"]], key=lambda p: -p["new_reviews"])[:3]
+      slipped = [p for p in places if (p["rating_change"] or 0) <= -0.1]
+      lines = [f"{len(places)} places checked for {month}."]
+      lines.append(f"{OURS} ranks {ours} of {len(places)} by rating." if ours else f"{OURS} was not among them.")
+      if gainers:
+          lines.append("Most new reviews: " + ", ".join(f"{p['name']} (+{p['new_reviews']})" for p in gainers) + ".")
+      if slipped:
+          lines.append("Rating down: " + ", ".join(f"{p['name']} ({p['rating_change']:+})" for p in slipped) + ".")
+      result = {
+          "rows": [[month, p["place"], p["name"], p["rating"], p["reviews"], p["rating_change"], p["new_reviews"]] for p in ranked],
+          "count": len(places),
+          "text": "\n".join(lines),
+      }
+  - where: steps.compare.count > 0
+  - name: keep
+    for_each:
+      items: steps.compare.rows
+      steps:
+        - name: row
+          google_sheets:
+            action: add_row
+            credential: google_sheets
+            spreadsheet_id: your-spreadsheet-id
+            # Its columns: month, place, name, rating, reviews, rating_change, new_reviews.
+            sheet: Ratings
+            values: "{{ item }}"
+          retry: { attempts: 3, wait: 30s }
+  - name: tell
+    gmail:
+      action: send_email
+      credential: gmail
+      to: owner@example.com
+      subject: "Local ratings for {{ steps.month.formatted }}"
+      text: "{{ steps.compare.text }}"
+    retry: { attempts: 3, wait: 30s }

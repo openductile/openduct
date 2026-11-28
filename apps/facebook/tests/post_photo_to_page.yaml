@@ -1,0 +1,10 @@
+action: post_photo_to_page
+credential: { access_token: EAAB_test }
+input: { page_id: "1029384756", image_url: "https://example.com/tote.jpg", caption: The new tote }
+exchanges:
+  - sent:
+      method: POST
+      url: https://graph.facebook.com/v25.0/1029384756/photos
+      body: { url: "https://example.com/tote.jpg", caption: The new tote }
+    answer: { body: { id: "778899", post_id: 1029384756_557 } }
+result: { id: "778899", post_id: 1029384756_557 }

@@ -1,0 +1,7 @@
+action: is_member
+credential: { access_token: ya29.test }
+input: { group: sales@example.com, member: ann@example.com }
+exchanges:
+  - sent: { method: GET, url: https://admin.googleapis.com/admin/directory/v1/groups/sales@example.com/hasMember/ann@example.com }
+    answer: { body: { isMember: true } }
+result: { isMember: true }

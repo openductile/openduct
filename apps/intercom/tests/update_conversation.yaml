@@ -1,0 +1,40 @@
+# Made by `openduct app from-openapi`: Update a conversation.
+description: "Update a conversation, made from the API description's schemas"
+action: update_conversation
+credential: { token: test-token }
+input: { conversation_id: 1 }
+exchanges:
+  - sent:
+      method: PUT
+      url: "https://api.intercom.io/conversations/1"
+      query: {}
+      headers: { authorization: "Bearer test-token" }
+      body: {}
+    answer:
+      status: 200
+      body:
+        type: conversation
+        id: "1295"
+        title: example
+        created_at: 1663597223
+        updated_at: 1663597260
+        waiting_since: 1663597260
+        snoozed_until: 1663597260
+        open: true
+        state: open
+        read: true
+        priority: none
+        admin_assignee_id: 0
+result:
+  type: conversation
+  id: "1295"
+  title: example
+  created_at: 1663597223
+  updated_at: 1663597260
+  waiting_since: 1663597260
+  snoozed_until: 1663597260
+  open: true
+  state: open
+  read: true
+  priority: none
+  admin_assignee_id: 0

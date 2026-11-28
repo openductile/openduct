@@ -1,0 +1,14 @@
+description: A group renamed
+action: update_group
+sign_in: microsoft_entra_admin
+credential: {access_token: eyJ0-admin}
+input: {group_id: 45b7d2e7-b882-4a80-ba97-10b7a63b8fa4, display_name: Sales and Marketing}
+exchanges:
+- sent:
+    method: PATCH
+    url: https://graph.microsoft.com/v1.0/groups/45b7d2e7-b882-4a80-ba97-10b7a63b8fa4
+    headers: {authorization: Bearer eyJ0-admin}
+    query: {}
+    body: {displayName: Sales and Marketing}
+  answer: {status: 204}
+result: {changed: true}

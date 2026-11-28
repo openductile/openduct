@@ -1,0 +1,87 @@
+name: A morning summary of support e-mail, in Slack and a sheet
+description: >-
+  Every weekday at 8:30 Chicago time, read the last day's e-mail to your support address in Gmail, have a model sum it
+  up - the headline, the issues and how often each came up, anything urgent - post it to your support channel in
+  Slack, and add a row to a Google Sheet, so you can see over weeks which issues grow. Needs: Gmail (gmail), Google
+  Sheets (sheets), Slack (team_slack) and an AI credential (model).
+category: Support
+trigger:
+  schedule: { every: weekday, at: "08:30", timezone: America/Chicago }
+# What a test runs on: an event as this trigger gives it.
+sample:
+  scheduled_at: '2026-11-27T14:30:00Z'
+steps:
+  - name: found
+    gmail:
+      action: find_emails
+      credential: gmail
+      q: "to:support@example.com newer_than:1d -from:me"
+    retry: { attempts: 3, wait: 30s }
+  # At most 60 a morning: enough for a summary, and quick.
+  - name: some
+    list: { items: steps.found, limit: 60 }
+  - name: each
+    for_each:
+      items: steps.some
+      steps:
+        - name: mail
+          gmail: { action: read_email, credential: gmail, message_id: "{{ item.id }}" }
+          retry: { attempts: 3, wait: 10s }
+  - name: lines
+    javascript: |
+      // Each e-mail as one line - who, subject, the start of its text - from Gmail's nested headers.
+      const header = (m, name) => {
+        const h = ((m.payload || {}).headers || []).find(x => String(x.name).toLowerCase() === name);
+        return h ? h.value : "";
+      };
+      const lines = (steps.each || []).map(r => r.mail || {}).map(m => {
+        const from = header(m, "from").replace(/<[^>]*>/, "").trim() || "someone";
+        const subject = header(m, "subject") || "(no subject)";
+        return `${from} | ${subject} | ${String(m.snippet || "").slice(0, 200)}`;
+      });
+      return { count: lines.length, text: lines.join("\n") };
+  - where: steps.lines.count > 0
+  - name: summary
+    ai:
+      credential: model
+      system: >-
+        You sum up a day of a small company's support e-mail for the team's morning. Name each issue in a few plain
+        words and count how many e-mails raised it. Urgent means a customer who cannot use what they paid for, or
+        who says they will leave.
+      prompt: "Yesterday's {{ steps.lines.count }} e-mails (from | subject | start):\n{{ steps.lines.text }}"
+      max_tokens: 700
+      schema:
+        type: object
+        properties:
+          headline: { type: string, description: "The day in one sentence" }
+          issues:
+            type: array
+            items:
+              type: object
+              properties: { issue: { type: string }, count: { type: integer } }
+              required: [issue, count]
+          urgent: { type: array, items: { type: string }, description: "Who, and what, in a few words each" }
+        required: [headline, issues, urgent]
+  - name: words
+    set:
+      issues: "steps.summary.json.issues == null ? '' : steps.summary.json.issues.map(i, '- ' + i.issue + ' (' + string(i.count) + ')').join('\\n')"
+      urgent: "steps.summary.json.urgent == null || size(steps.summary.json.urgent) == 0 ? 'nothing' : steps.summary.json.urgent.join('; ')"
+  - name: post
+    slack:
+      credential: team_slack
+      channel: "#support"
+      text: "*Support e-mail, last day: {{ steps.lines.count }}*\n{{ steps.summary.json.headline }}\n{{ steps.words.issues }}\nUrgent: {{ steps.words.urgent }}"
+    retry: { attempts: 3, wait: 30s }
+  - name: log
+    google_sheets:
+      action: add_row
+      credential: sheets
+      spreadsheet_id: your-sheet-id
+      sheet: Support days
+      values:
+        - "{{ string(timestamp(value.scheduled_at)).substring(0, 10) }}"
+        - "{{ steps.lines.count }}"
+        - "{{ steps.summary.json.headline }}"
+        - "{{ steps.words.issues }}"
+        - "{{ steps.words.urgent }}"
+    retry: { attempts: 3, wait: 30s }

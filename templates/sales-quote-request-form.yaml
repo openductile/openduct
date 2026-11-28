@@ -1,0 +1,95 @@
+name: Instant quotes from a form, in the customer's currency
+description: >-
+  A buyer asks for a quote on a form the studio serves - the product, how many, and their currency. The price comes
+  from your price list (kept in the script below, with its volume discounts), today's exchange rate from the
+  Frankfurter API (the European Central Bank's rates, free), and the quote is e-mailed to the buyer from your Gmail,
+  valid for 14 days. Each quote is a row of the Quotes sheet in Google Sheets, for your sales team to follow up.
+  Needs: gmail, google_sheets.
+category: Sales
+trigger:
+  form:
+    title: Get a quote
+    description: Prices are in your currency at today's rate, and hold for 14 days.
+    fields:
+      - { name: company, label: Your company, type: text, required: true, max_length: 120 }
+      - { name: email, label: Your e-mail, type: email, required: true }
+      - { name: product, label: Product, type: dropdown, options: [Paper cups 12 oz, Paper cups 16 oz, Lids, Sleeves], required: true }
+      - { name: quantity, label: "How many (in cases)", type: number, min: 1, max: 10000, required: true }
+      - { name: currency, label: Your currency, type: dropdown, options: [USD, EUR, GBP, CAD, AUD], required: true }
+    thanks: Thank you - your quote is in your inbox in a minute.
+# What a test runs on: an answer as the form gives it.
+sample:
+  company: Riverside Coffee House
+  email: buyer@riverside-coffee.example
+  product: Paper cups 12 oz
+  quantity: 40
+  currency: EUR
+steps:
+  - name: rate
+    http:
+      url: https://api.frankfurter.dev/v1/latest
+      # Every currency the form offers, against the dollar (a dollar is 1).
+      query: { base: USD, symbols: "EUR,GBP,CAD,AUD" }
+      timeout: 15s
+      sample: { amount: 1.0, base: USD, date: "2026-11-27", rates: { EUR: 0.9214, GBP: 0.7862, CAD: 1.3967, AUD: 1.5321 } }
+    retry: { attempts: 3, wait: 10s }
+  - name: quote
+    javascript: |
+      // Your price list, in US dollars a case, and the discounts by how many cases.
+      const prices = { "Paper cups 12 oz": 38.5, "Paper cups 16 oz": 44.0, "Lids": 21.0, "Sleeves": 17.5 };
+      const discounts = [[100, 0.12], [50, 0.08], [20, 0.04]];
+      const cents = (x) => Math.round(x * 100) / 100;
+      const unit = prices[value.product];
+      const qty = Math.floor(Number(value.quantity));
+      if (!unit || !(qty > 0)) return { ok: false };
+      const rate = value.currency === "USD" ? 1 : (steps.rate.body && steps.rate.body.rates && steps.rate.body.rates[value.currency]);
+      if (!rate) return { ok: false };
+      const off = (discounts.find(([least]) => qty >= least) || [0, 0])[1];
+      const unitThere = cents(unit * rate);
+      const subtotal = cents(unitThere * qty);
+      const discount = cents(subtotal * off);
+      const total = cents(subtotal - discount);
+      const valid = new Date(Date.now() + 14 * 86400000).toISOString().slice(0, 10);
+      const money = (x) => `${x.toFixed(2)} ${value.currency}`;
+      return {
+        ok: true, unit: unitThere, subtotal, discount, total, valid, rate,
+        text: `${qty} cases of ${value.product} at ${money(unitThere)} a case: ${money(subtotal)}` +
+          (off ? `\nVolume discount (${off * 100}%): -${money(discount)}` : "") +
+          `\nTotal: ${money(total)}, before tax and delivery.\nValid until ${valid}.`,
+      };
+  - name: send
+    if:
+      when: steps.quote.ok
+      then:
+        - name: to_buyer
+          gmail:
+            action: send_email
+            credential: gmail
+            to: "{{ value.email }}"
+            subject: "Your quote: {{ value.product }}"
+            text: "Hello {{ value.company }},\n\nThank you for asking. Here is your quote:\n\n{{ steps.quote.text }}\n\nReply to this e-mail to order, or with any question."
+          retry: { attempts: 3, wait: 10s }
+        - name: row
+          google_sheets:
+            action: add_row
+            credential: google_sheets
+            spreadsheet_id: your-spreadsheet-id
+            sheet: Quotes
+            values:
+              - "{{ steps.rate.body.date }}"
+              - "{{ value.company }}"
+              - "{{ value.email }}"
+              - "{{ value.product }}"
+              - "{{ value.quantity }}"
+              - "{{ value.currency }}"
+              - "{{ steps.quote.total }}"
+              - "{{ steps.quote.valid }}"
+          retry: { attempts: 3, wait: 10s }
+      else:
+        - name: by_hand
+          gmail:
+            action: send_email
+            credential: gmail
+            to: sales@example.com
+            subject: "A quote to write by hand: {{ value.company }}"
+            text: "{{ value.company }} ({{ value.email }}) asks for {{ value.quantity }} x {{ value.product }} in {{ value.currency }}, and no price or rate was found."

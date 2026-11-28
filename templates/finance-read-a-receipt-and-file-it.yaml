@@ -1,0 +1,104 @@
+name: Read an expense receipt and give it a trip folder
+description: >-
+  When your expenses app or a phone shortcut posts a receipt's address to this workflow (with its token), Mindee reads
+  the merchant, the date and the total; when it cannot read the total, the employee is e-mailed a one-question form
+  and the run waits up to three days for the answer. A Google Drive folder for the trip is found or made and shared
+  with the employee, and they and finance get the figures and the folder's link by Gmail. Needs: mindee (an API key,
+  sent as Authorization: Token ...), google_drive, gmail.
+category: Finance
+trigger:
+  # Left empty here: each workflow made from the template is given a token of its own.
+  webhook: { token: "" }
+# What a test runs on: an event as this trigger gives it.
+sample:
+  email: omar.haddad@example.com
+  name: Omar Haddad
+  trip: Chicago trade show 2026-12
+  receipt_url: https://files.example.com/receipts/r-20261127-0931.jpg
+steps:
+  - name: read
+    http:
+      method: POST
+      url: https://api.mindee.net/v1/products/mindee/expense_receipts/v5/predict
+      credential: mindee
+      json: { document: "{{ value.receipt_url }}" }
+      sample:
+        document:
+          inference:
+            prediction:
+              supplier_name: { value: Lakeview Diner }
+              date: { value: "2026-11-26" }
+              total_amount: { value: 48.6 }
+              locale: { currency: USD }
+    retry: { attempts: 3, wait: 15s }
+  - name: found
+    set:
+      merchant: "steps.read.body.document.inference.prediction.supplier_name.value"
+      day: "steps.read.body.document.inference.prediction.date.value"
+      total: "steps.read.body.document.inference.prediction.total_amount.value"
+      currency: "steps.read.body.document.inference.prediction.locale.currency"
+  - name: unreadable
+    if:
+      when: steps.found.total == null
+      then:
+        - name: ask_by_mail
+          gmail:
+            action: send_email
+            credential: gmail
+            to: "{{ value.email }}"
+            subject: "One question about your receipt for {{ value.trip }}"
+            text: "We could not read the total on your receipt. Please type it here (the link works once): {{ links.ask_total }}"
+        - name: ask_total
+          form:
+            title: The total of your receipt
+            description: "For {{ value.trip }}: {{ value.receipt_url }}"
+            fields:
+              - { name: total, label: The total paid, type: number, min: 0, required: true }
+              - { name: merchant, label: Where, type: text, max_length: 120 }
+            timeout: 3d
+            on_timeout: fail
+  - name: expense
+    set:
+      total: "steps.found.total != null ? steps.found.total : steps.ask_total.total"
+      merchant: "steps.found.merchant != null ? steps.found.merchant : steps.ask_total.merchant"
+      day: "steps.found.day"
+      currency: "steps.found.currency != null ? steps.found.currency : 'USD'"
+  - name: folder
+    google_drive:
+      action: find_files
+      credential: google_drive
+      q: "name = 'Receipts - {{ value.name }} - {{ value.trip }}' and mimeType = 'application/vnd.google-apps.folder' and trashed = false"
+    retry: { attempts: 3, wait: 10s }
+  - name: new_folder
+    if:
+      when: size(steps.folder) == 0
+      then:
+        - name: made
+          google_drive:
+            action: make_folder
+            credential: google_drive
+            name: "Receipts - {{ value.name }} - {{ value.trip }}"
+          retry: { attempts: 3, wait: 10s }
+        - name: shared
+          google_drive:
+            action: share_file
+            credential: google_drive
+            file_id: "{{ steps.made.id }}"
+            email: "{{ value.email }}"
+            role: writer
+          retry: { attempts: 3, wait: 10s }
+  - name: link
+    set:
+      url: >-
+        size(steps.folder) > 0 && has(steps.folder[0].webViewLink) ? steps.folder[0].webViewLink :
+        'https://drive.google.com/drive/folders/' + (size(steps.folder) > 0 ? steps.folder[0].id : steps.made.id)
+  - name: tell
+    gmail:
+      action: send_email
+      credential: gmail
+      to: "{{ value.email }}, finance@example.com"
+      subject: "Receipt: {{ steps.expense.merchant }} {{ steps.expense.total }} {{ steps.expense.currency }}"
+      text: >-
+        {{ value.name }}'s receipt for {{ value.trip }}: {{ steps.expense.merchant }}, {{ steps.expense.day }},
+        {{ steps.expense.total }} {{ steps.expense.currency }}. Put the photo in the trip folder: {{ steps.link.url }}
+    retry: { attempts: 3, wait: 10s }

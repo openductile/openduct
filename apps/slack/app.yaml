@@ -3,9 +3,9 @@
 app: slack
 name: Slack
 category: messaging
-description: Post messages to Slack, with an app's bot token or a channel's incoming webhook.
-docs: https://api.slack.com/methods/chat.postMessage
-hosts: [slack.com]
+description: Messages, threads, reactions, files and direct messages in Slack with an app's bot token, a channel's incoming webhook, and new messages as they are posted.
+docs: https://docs.slack.dev/reference/methods
+hosts: [slack.com, files.slack.com]
 base_url: https://slack.com/api
 base_url_field: base_url
 sign_in:
@@ -13,6 +13,7 @@ sign_in:
     label: "A Slack app's bot token"
     fields:
       - { name: bot_token, label: "The bot token (xoxb-...)", secret: true }
+      - { name: signing_secret, label: "The app's signing secret (for messages sent as they come)", secret: true, optional: true }
       - { name: base_url, label: "Another address for Slack's API", optional: true }
     headers:
       Authorization: "Bearer {{ credential.bot_token }}"
@@ -25,18 +26,213 @@ default_action: send
 actions:
   send:
     label: Post a message
+    description: A message in a channel - with a bot token to the channel given, with a webhook to its own.
     write: true
     method: POST
     path: /chat.postMessage
     inputs:
       - { name: text, label: The message, required: true }
       - { name: channel, label: The channel, description: "Its id, or #name (with a bot token)" }
+      - { name: blocks, label: "Block Kit blocks (as JSON)", kind: list }
     send:
       channel: "{{ input.channel }}"
       text: "{{ input.text }}"
+      blocks: "{{ input.blocks }}"
     # Slack answers 200 with ok: false when it refuses.
     error: "value.ok == false ? value.error : null"
     result: "{'sent': true, 'answer': value}"
+    output: { sent: boolean, answer: record }
     by:
       slack_webhook:
-        send: { text: "{{ input.text }}" }
+        send: { text: "{{ input.text }}", blocks: "{{ input.blocks }}" }
+  reply:
+    label: Reply in a thread
+    description: A reply under a message (its ts), in its thread; also_in_channel shows it in the channel too.
+    write: true
+    method: POST
+    path: /chat.postMessage
+    inputs:
+      - { name: channel, label: "The channel's id", required: true }
+      - { name: thread_ts, label: "The ts of the message it answers", required: true }
+      - { name: text, label: The reply, required: true }
+      - { name: also_in_channel, label: Shown in the channel too, kind: boolean }
+    send:
+      channel: "{{ input.channel }}"
+      thread_ts: "{{ input.thread_ts }}"
+      text: "{{ input.text }}"
+      reply_broadcast: "{{ input.also_in_channel }}"
+    error: "value.ok == false ? value.error : null"
+    output: { ok: boolean, channel: text, ts: text, message: record }
+  update:
+    label: Update a message
+    description: The text of a message the bot posted (its channel and ts), changed.
+    write: true
+    method: POST
+    path: /chat.update
+    inputs:
+      - { name: channel, label: "The channel's id", required: true }
+      - { name: ts, label: "The message's ts", required: true }
+      - { name: text, label: The new text, required: true }
+      - { name: blocks, label: "Block Kit blocks (as JSON)", kind: list }
+    send:
+      channel: "{{ input.channel }}"
+      ts: "{{ input.ts }}"
+      text: "{{ input.text }}"
+      blocks: "{{ input.blocks }}"
+    error: "value.ok == false ? value.error : null"
+    output: { ok: boolean, channel: text, ts: text, text: text }
+  delete:
+    label: Delete a message
+    description: A message the bot posted, taken away.
+    write: true
+    method: POST
+    path: /chat.delete
+    inputs:
+      - { name: channel, label: "The channel's id", required: true }
+      - { name: ts, label: "The message's ts", required: true }
+    send: { channel: "{{ input.channel }}", ts: "{{ input.ts }}" }
+    error: "value.ok == false ? value.error : null"
+    output: { ok: boolean, channel: text, ts: text }
+  react:
+    label: React to a message
+    description: The bot's reaction on a message, by the emoji's name (thumbsup, or :thumbsup:).
+    write: true
+    method: POST
+    path: /reactions.add
+    inputs:
+      - { name: channel, label: "The channel's id", required: true }
+      - { name: ts, label: "The message's ts", required: true }
+      - { name: emoji, label: "The emoji's name, such as thumbsup", required: true }
+    send:
+      channel: "{{ input.channel }}"
+      timestamp: "{{ input.ts }}"
+      name: "{{ input.emoji.replace(':', '') }}"
+    error: "value.ok == false ? value.error : null"
+    result: "{'reacted': true}"
+    output: { reacted: boolean }
+  upload_file:
+    label: Upload a file
+    description: >-
+      A run's file - or text given as content - shared in a channel (or in a thread), with a comment: Slack's
+      upload address asked for, the bytes sent there, and the upload finished.
+    write: true
+    method: POST
+    path: /files.getUploadURLExternal
+    body: form
+    inputs:
+      - { name: channel, label: "The channel's id", required: true }
+      - { name: file, label: "The file (a run's, from an earlier step)", kind: record }
+      - { name: content, label: "Or the text it holds (a CSV, a report)" }
+      - { name: filename, label: "Its name, such as report.csv (the file's own by default)" }
+      - { name: title, label: Its title }
+      - { name: comment, label: A message shown with it }
+      - { name: thread_ts, label: "The ts of a message, to share it in that thread" }
+    send:
+      filename: "{{ has(input.filename) && input.filename != null ? input.filename : (has(input.file) && input.file != null ? input.file.name : 'file.txt') }}"
+      length: "{{ has(input.file) && input.file != null ? input.file.size : size(bytes(input.content)) }}"
+    error: "value.ok == false ? value.error : null"
+    then:
+      - method: POST
+        url: "{{ input.previous.upload_url }}"
+        body: raw
+        send: "{{ has(input.file) && input.file != null ? input.file : input.content }}"
+        result: "{'uploaded': true}"
+      - method: POST
+        path: /files.completeUploadExternal
+        send:
+          files: [{ id: "{{ input.answers[0].file_id }}", title: "{{ input.title }}" }]
+          channel_id: "{{ input.channel }}"
+          initial_comment: "{{ input.comment }}"
+          thread_ts: "{{ input.thread_ts }}"
+        error: "value.ok == false ? value.error : null"
+    output: { ok: boolean, files: list }
+  open_dm:
+    label: Open a direct message
+    description: The direct message with a person (or a group of up to eight, ids separated by commas), for sending to.
+    write: true
+    method: POST
+    path: /conversations.open
+    inputs:
+      - { name: users, label: "The people's user ids (U...), separated by commas", required: true }
+    send: { users: "{{ input.users }}" }
+    error: "value.ok == false ? value.error : null"
+    result: value.channel
+    output: { id: text }
+  list_channels:
+    label: List channels
+    description: The workspace's channels the bot sees (public by default; types for private channels and more).
+    method: GET
+    path: /conversations.list
+    inputs:
+      - { name: types, label: "Which: public_channel, private_channel, mpim, im (separated by commas)" }
+      - { name: include_archived, label: Archived channels too, kind: boolean }
+    query:
+      types: "{{ input.types }}"
+      exclude_archived: "{{ has(input.include_archived) && input.include_archived == true ? 'false' : 'true' }}"
+      limit: "200"
+    items: "has(value.channels) ? value.channels : []"
+    next: "has(value.response_metadata) && has(value.response_metadata.next_cursor) && value.response_metadata.next_cursor != '' ? {'cursor': value.response_metadata.next_cursor} : null"
+    error: "value.ok == false ? value.error : null"
+    output: { id: text, name: text, is_private: boolean, is_archived: boolean, is_member: boolean, num_members: number }
+  find_user_by_email:
+    label: Find a person by email
+    description: The workspace member with an email address (users:read.email).
+    method: GET
+    path: /users.lookupByEmail
+    inputs:
+      - { name: email, label: Their email address, required: true }
+    query: { email: "{{ input.email }}" }
+    error: "value.ok == false ? value.error : null"
+    result: value.user
+    output: { id: text, name: text, real_name: text, profile: record }
+  schedule:
+    label: Schedule a message
+    description: A message Slack posts later (up to 120 days ahead), at a time given as 2026-12-01T09:00:00Z.
+    write: true
+    method: POST
+    path: /chat.scheduleMessage
+    inputs:
+      - { name: channel, label: "The channel's id", required: true }
+      - { name: at, label: "When, as 2026-12-01T09:00:00Z", required: true }
+      - { name: text, label: The message, required: true }
+      - { name: thread_ts, label: "The ts of a message, to post in its thread" }
+    send:
+      channel: "{{ input.channel }}"
+      post_at: "{{ type(input.at) == string ? int(timestamp(input.at)) : int(input.at) }}"
+      text: "{{ input.text }}"
+      thread_ts: "{{ input.thread_ts }}"
+    error: "value.ok == false ? value.error : null"
+    output: { ok: boolean, channel: text, scheduled_message_id: text, post_at: number }
+triggers:
+  new_message:
+    label: A new message in a channel
+    description: Each message posted in a channel the bot is in, asked for every minute.
+    inputs:
+      - { name: channel, label: "The channel's id (C..., in the channel's details)", required: true }
+    poll:
+      method: GET
+      path: /conversations.history
+      query: { channel: "{{ input.channel }}", oldest: "{{ input.cursor }}", limit: "100" }
+      items: "value.messages == null ? [] : value.messages"
+      next: "has(value.response_metadata) && value.response_metadata.next_cursor != '' ? {'cursor': value.response_metadata.next_cursor} : null"
+      error: "value.ok == false ? value.error : null"
+      newest_first: true
+      id: item.ts
+      # Slack is asked for what came after the newest message dealt with.
+      cursor: "items[size(items) - 1].ts"
+      every: 1m
+  message:
+    label: A message posted, as it comes
+    description: >-
+      Slack sends each message to the workflow's address through its Events API, signed with the app's signing
+      secret (which the credential needs).
+    webhook:
+      signature: { header: x-slack-signature, prefix: "v0=", time_header: x-slack-request-timestamp, signed: "v0:{time}:{body}" }
+      secret: signing_secret
+      challenge: { when: "value.type == 'url_verification'", answer: "{'challenge': value.challenge}" }
+      id: value.event_id
+      only: "value.type == 'event_callback' ? value.event.type == 'message' && !has(value.event.subtype) : false"
+      event: value.event
+      setup: >-
+        In the Slack app's settings, under Event Subscriptions: turn them on, give the workflow's address as the
+        Request URL, and subscribe to the bot event message.channels (message.im for direct messages).

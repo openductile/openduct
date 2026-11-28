@@ -1,0 +1,8 @@
+description: An event with no signature is refused
+trigger: event
+credential: { secret_key: sk_test_1, webhook_secret: whsec_test_5WbX5kEWLlfzsGNjH64I8lOOqUB6e8FH }
+input: { events: checkout.session.completed }
+delivery:
+  body: '{"id":"evt_1","object":"event","type":"checkout.session.completed","data":{"object":{"id":"cs_1","amount_total":4200,"customer_email":"ann@example.com"}}}'
+  at: 1700000100
+refused: "not signed"

@@ -1,0 +1,29 @@
+description: "A list's tasks over two pages: ClickUp counts its pages from 0 and says which is the last"
+action: list_tasks
+credential: { api_key: pk_1_TEST }
+input: { list_id: 901 }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://api.clickup.com/api/v2/list/901/task"
+      query: {}
+      headers: { authorization: pk_1_TEST }
+    answer:
+      status: 200
+      body:
+        tasks:
+          - { id: 86a1b2c3d, name: Call the supplier, status: { status: to do, type: open }, date_created: "1764230400000", url: "https://app.clickup.com/t/86a1b2c3d" }
+        last_page: false
+  - sent:
+      method: GET
+      url: "https://api.clickup.com/api/v2/list/901/task"
+      query: { page: "1" }
+    answer:
+      status: 200
+      body:
+        tasks:
+          - { id: 86a1b2c3e, name: Send the invoice, status: { status: in progress, type: custom }, date_created: "1764234000000", url: "https://app.clickup.com/t/86a1b2c3e" }
+        last_page: true
+result:
+  - { id: 86a1b2c3d, name: Call the supplier, status: { status: to do, type: open }, date_created: "1764230400000", url: "https://app.clickup.com/t/86a1b2c3d" }
+  - { id: 86a1b2c3e, name: Send the invoice, status: { status: in progress, type: custom }, date_created: "1764234000000", url: "https://app.clickup.com/t/86a1b2c3e" }

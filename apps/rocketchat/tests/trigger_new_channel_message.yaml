@@ -1,0 +1,9 @@
+description: Messages since the last poll, the newest asked for first, run oldest first
+trigger: new_channel_message
+credential: { workspace: acme, user_id: uAbC123, token: rc_test_1 }
+input: { room_name: sales }
+seen: { items: [[mSg001, ""]] }
+exchanges:
+  - sent: { method: GET, url: https://acme.rocket.chat/api/v1/channels.history, query: { roomName: sales, count: "100" } }
+    answer: { body: { messages: [{ _id: mSg005, msg: Third }, { _id: mSg004, msg: Second }, { _id: mSg001, msg: First }], success: true } }
+ids: [mSg004, mSg005]

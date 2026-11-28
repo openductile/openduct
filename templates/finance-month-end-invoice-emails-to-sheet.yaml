@@ -1,0 +1,96 @@
+name: Month-end invoices from Gmail into an expenses sheet, in dollars
+description: >-
+  On the last day of each month at 17:00 New York time (or whenever you run it by hand), find the month's invoice
+  and receipt e-mails in Gmail, pull out the vendor, the invoice number, the amount and its currency, turn each amount
+  into US dollars at the day's European Central Bank rate (Frankfurter, free, no key), add a row per invoice to your
+  Expenses sheet in Google Sheets, and e-mail your bookkeeper the total. Needs: Gmail (gmail) and Google Sheets
+  (sheets).
+category: Finance
+trigger:
+  schedule: { every: month, on: [last], at: "17:00", timezone: America/New_York }
+# What a test runs on: an event as this trigger gives it.
+sample:
+  scheduled_at: '2026-11-30T22:00:00Z'
+steps:
+  - name: found
+    gmail:
+      action: find_emails
+      credential: gmail
+      q: "subject:(invoice OR receipt OR bill) newer_than:31d -in:sent"
+    retry: { attempts: 3, wait: 30s }
+  - name: some
+    list: { items: steps.found, limit: 150 }
+  - name: each
+    for_each:
+      items: steps.some
+      steps:
+        - name: mail
+          gmail: { action: read_email, credential: gmail, message_id: "{{ item.id }}" }
+          retry: { attempts: 3, wait: 10s }
+  - name: rates
+    http:
+      url: https://api.frankfurter.dev/v1/latest
+      query: { base: USD }
+      sample: { amount: 1.0, base: USD, date: "2026-11-30", rates: { EUR: 0.9412, GBP: 0.7921, CAD: 1.3874, AUD: 1.5216, JPY: 151.2 } }
+    retry: { attempts: 3, wait: 30s }
+  - name: invoices
+    javascript: |
+      // Read each e-mail's vendor, number, amount and currency from its subject and first lines, and turn the amount
+      // into dollars. An e-mail with no amount in it is left out, and counted.
+      const symbols = { "$": "USD", "US$": "USD", "€": "EUR", "£": "GBP", "C$": "CAD", "A$": "AUD", "¥": "JPY" };
+      const rates = (steps.rates.body || {}).rates || {};
+      const header = (m, name) => {
+        const h = ((m.payload || {}).headers || []).find(x => String(x.name).toLowerCase() === name);
+        return h ? h.value : "";
+      };
+      const rows = [];
+      let skipped = 0;
+      for (const r of steps.each || []) {
+        const m = r.mail || {};
+        const subject = header(m, "subject");
+        const text = `${subject} ${m.snippet || ""}`;
+        // An amount after a symbol or a code (€1.234,50 is read too), the largest one being the total.
+        const re = /(US\$|C\$|A\$|\$|€|£|¥|\b(?:USD|EUR|GBP|CAD|AUD|JPY)\b)\s?(\d{1,3}(?:[.,\s]\d{3})*(?:[.,]\d{2})?|\d+(?:[.,]\d{2})?)/g;
+        let best = null, found;
+        while ((found = re.exec(text)) !== null) {
+          let n = found[2].replace(/\s/g, "");
+          // A comma before the last two digits is a decimal point (1.234,50); other commas group thousands.
+          n = /,\d{2}$/.test(n) ? n.replace(/\./g, "").replace(",", ".") : n.replace(/,/g, "");
+          const amount = parseFloat(n);
+          const currency = symbols[found[1]] || found[1];
+          if (!isNaN(amount) && (!best || amount > best.amount)) best = { amount, currency };
+        }
+        if (!best) { skipped++; continue; }
+        const rate = best.currency === "USD" ? 1 : rates[best.currency];
+        const usd = rate ? Math.round((best.amount / rate) * 100) / 100 : null;
+        // The invoice's number: a word with a digit in it, after "invoice", "receipt" or "bill".
+        const number = (text.match(/(?:invoice|receipt|bill)\s*(?:no\.?|number|#)?\s*:?\s*([A-Z0-9][A-Z0-9-]*\d[A-Z0-9-]*)/i) || [])[1] || "";
+        const vendor = header(m, "from").replace(/<[^>]*>/, "").replace(/"/g, "").trim();
+        const day = m.internalDate ? new Date(Number(m.internalDate)).toISOString().slice(0, 10) : "";
+        rows.push([day, vendor, number, best.amount, best.currency, usd == null ? "" : usd, subject, m.id || ""]);
+      }
+      const total = Math.round(rows.reduce((s, r) => s + (r[5] === "" ? 0 : r[5]), 0) * 100) / 100;
+      return { rows, count: rows.length, skipped, total, rate_day: (steps.rates.body || {}).date || "" };
+  - name: add
+    for_each:
+      items: steps.invoices.rows
+      steps:
+        - name: row
+          google_sheets:
+            action: add_row
+            credential: sheets
+            spreadsheet_id: your-sheet-id
+            sheet: Expenses
+            values: "{{ item }}"
+          retry: { attempts: 3, wait: 30s }
+  - name: tell
+    gmail:
+      action: send_email
+      credential: gmail
+      to: bookkeeper@example.com
+      subject: "Invoices for {{ value.scheduled_at.substring(0, 7) }}: {{ steps.invoices.count }}, {{ '%.2f'.format([steps.invoices.total]) }} USD"
+      text: >-
+        {{ steps.invoices.count }} invoices were added to the Expenses sheet, {{ '%.2f'.format([steps.invoices.total]) }} US dollars in all
+        at the rates of {{ steps.invoices.rate_day }}. {{ steps.invoices.skipped }} e-mails named no amount and were left out - they may
+        have it only in the attachment.
+    retry: { attempts: 3, wait: 30s }

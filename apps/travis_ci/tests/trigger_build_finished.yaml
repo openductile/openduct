@@ -1,0 +1,19 @@
+description: "A build that failed since the last poll starts a run"
+trigger: build_finished
+credential: { token: test-token }
+input: { repo: shop-example/storefront }
+seen: { items: [["86500001", ""]] }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://api.travis-ci.com/repo/shop-example%2Fstorefront/builds"
+      query: { build.state: failed, limit: "100" }
+    answer:
+      body:
+        "@type": builds
+        "@pagination": { limit: 100, offset: 0, count: 2, is_first: true, is_last: true, next: null }
+        builds:
+          - { id: 86601346, number: "212", state: failed, branch: { name: main } }
+          - { id: 86500001, number: "111", state: failed, branch: { name: main } }
+runs:
+  - { id: 86601346, number: "212", state: failed, branch: { name: main } }

@@ -1,0 +1,407 @@
+# Copyright 2026 Ductile AI, Inc
+# SPDX-License-Identifier: Apache-2.0
+# Todoist: started with `openduct app from-openapi` from Todoist's API v1 description
+# (https://developer.todoist.com/openapi.json, fetched 2026-11-27), then written over by hand: names, labels and
+# descriptions are our own words.
+app: todoist
+name: Todoist
+category: productivity
+description: Tasks in Todoist - added, found, changed, completed and commented on - and the projects, sections and labels they are kept in.
+docs: https://developer.todoist.com/api/v1/
+hosts: [api.todoist.com]
+base_url: https://api.todoist.com/api/v1
+sign_in:
+  - id: todoist
+    label: A personal API token
+    fields:
+      - { name: token, label: "The API token (in Todoist's integrations settings)", secret: true }
+      - { name: webhook_secret, label: "For the trigger as it happens: your Todoist app's client secret", secret: true, optional: true }
+    headers: { Authorization: "Bearer {{ credential.token }}" }
+  - id: todoist_oauth
+    label: Sign in with Todoist
+    oauth2:
+      authorize: https://app.todoist.com/oauth/authorize
+      token: https://api.todoist.com/oauth/access_token
+      scopes: ["data:read_write,data:delete"]
+    headers: { Authorization: "Bearer {{ credential.access_token }}" }
+error: "has(value.error) && type(value.error) == string ? value.error : null"
+default_action: create_task
+actions:
+  create_task:
+    label: Add a task
+    description: >-
+      A new task, in the Inbox or a project or section, with a due date in words (tomorrow at 9am, every Monday) or as a
+      date, a priority, labels and an assignee.
+    write: true
+    method: POST
+    path: /tasks
+    inputs:
+      - { name: content, label: "The task", required: true }
+      - { name: description, label: "More about it" }
+      - { name: project_id, label: "In this project (its id); the Inbox when empty" }
+      - { name: section_id, label: "In this section (its id)" }
+      - { name: parent_id, label: "Under this task (its id), as a sub-task" }
+      - { name: due_string, label: "Due, in words: tomorrow at 9am, next Friday, every Monday" }
+      - { name: due_date, label: "Or due on this day (2026-12-31)" }
+      - { name: due_datetime, label: "Or due at this time (2026-12-31T09:00:00Z)" }
+      - { name: priority, label: "Priority: 4 urgent down to 1 normal", kind: number }
+      - { name: labels, label: "Labels, by name, separated by commas" }
+      - { name: assignee_id, label: "Assigned to (their id, in a shared project)" }
+      - { name: deadline_date, label: "A deadline (2026-12-31)" }
+      - { name: duration, label: "Takes this long (with the unit below)", kind: number }
+      - { name: duration_unit, label: "minute or day" }
+    send:
+      content: "{{ input.content }}"
+      description: "{{ input.description }}"
+      project_id: "{{ input.project_id }}"
+      section_id: "{{ input.section_id }}"
+      parent_id: "{{ input.parent_id }}"
+      due_string: "{{ input.due_string }}"
+      due_date: "{{ input.due_date }}"
+      due_datetime: "{{ input.due_datetime }}"
+      priority: "{{ input.priority }}"
+      labels: "{{ input.labels.split(',').map(l, l.trim()) }}"
+      assignee_id: "{{ input.assignee_id }}"
+      deadline_date: "{{ input.deadline_date }}"
+      duration: "{{ input.duration }}"
+      duration_unit: "{{ input.duration_unit }}"
+    output: &task { id: text, content: text, description: text, project_id: text, section_id: text, parent_id: text, labels: list, priority: number, due: record, deadline: record, duration: record, responsible_uid: text, checked: boolean, added_at: text, completed_at: text, updated_at: text, note_count: number }
+  quick_add:
+    label: Add a task as you would type it
+    description: >-
+      A task written as in Todoist's own quick add, which reads the date, project, labels and priority out of it:
+      "Call the supplier tomorrow 10am #Orders @phone p1".
+    write: true
+    method: POST
+    path: /tasks/quick
+    inputs:
+      - { name: text, label: "The task, as typed in quick add", required: true }
+      - { name: note, label: "A comment to add to it" }
+      - { name: reminder, label: "A reminder, in words (tomorrow at 8am)" }
+    send: { text: "{{ input.text }}", note: "{{ input.note }}", reminder: "{{ input.reminder }}" }
+    output: *task
+  list_tasks:
+    label: List tasks
+    description: The tasks not yet done, all or of one project, section, label or parent; every page.
+    method: GET
+    path: /tasks
+    inputs:
+      - { name: project_id, label: "Of this project (its id)" }
+      - { name: section_id, label: "Of this section (its id)" }
+      - { name: label, label: "With this label (its name)" }
+      - { name: parent_id, label: "Under this task (its id)" }
+    query:
+      project_id: "{{ input.project_id }}"
+      section_id: "{{ input.section_id }}"
+      label: "{{ input.label }}"
+      parent_id: "{{ input.parent_id }}"
+      limit: "200"
+    items: value.results
+    next: "has(value.next_cursor) && value.next_cursor != null && value.next_cursor != '' ? {'cursor': value.next_cursor} : null"
+    output: *task
+  find_tasks:
+    label: Find tasks with a filter
+    description: >-
+      The tasks a Todoist filter picks out, such as today | overdue, or #Orders & p1, or assigned to: me; every page.
+    method: GET
+    path: /tasks/filter
+    inputs:
+      - { name: query, label: "The filter, as Todoist writes one: today | overdue", required: true }
+      - { name: lang, label: "The filter's language (two letters); English when empty" }
+    query: { query: "{{ input.query }}", lang: "{{ input.lang }}", limit: "200" }
+    items: value.results
+    next: "has(value.next_cursor) && value.next_cursor != null && value.next_cursor != '' ? {'cursor': value.next_cursor} : null"
+    output: *task
+  get_task:
+    label: Get a task
+    description: One task not yet done, by its id.
+    method: GET
+    path: "/tasks/{{ input.task_id }}"
+    inputs:
+      - { name: task_id, label: "The task's id", required: true }
+    output: *task
+  update_task:
+    label: Change a task
+    description: What it says, its description, due date, priority, labels or assignee; what is left empty stays.
+    write: true
+    method: POST
+    path: "/tasks/{{ input.task_id }}"
+    inputs:
+      - { name: task_id, label: "The task's id", required: true }
+      - { name: content, label: "What it now says" }
+      - { name: description, label: "More about it" }
+      - { name: due_string, label: "Due, in words: tomorrow at 9am, no date" }
+      - { name: due_date, label: "Or due on this day (2026-12-31)" }
+      - { name: due_datetime, label: "Or due at this time (2026-12-31T09:00:00Z)" }
+      - { name: priority, label: "Priority: 4 urgent down to 1 normal", kind: number }
+      - { name: labels, label: "Its labels now, by name, separated by commas (replacing the ones it has)" }
+      - { name: assignee_id, label: "Assigned to (their id)" }
+      - { name: deadline_date, label: "A deadline (2026-12-31)" }
+    send:
+      content: "{{ input.content }}"
+      description: "{{ input.description }}"
+      due_string: "{{ input.due_string }}"
+      due_date: "{{ input.due_date }}"
+      due_datetime: "{{ input.due_datetime }}"
+      priority: "{{ input.priority }}"
+      labels: "{{ input.labels.split(',').map(l, l.trim()) }}"
+      assignee_id: "{{ input.assignee_id }}"
+      deadline_date: "{{ input.deadline_date }}"
+    output: *task
+  complete_task:
+    label: Complete a task
+    description: A task ticked off; a repeating one moves on to its next date.
+    write: true
+    method: POST
+    path: "/tasks/{{ input.task_id }}/close"
+    body: none
+    inputs:
+      - { name: task_id, label: "The task's id", required: true }
+    result: "{'completed': true}"
+    output: { completed: boolean }
+  reopen_task:
+    label: Reopen a task
+    description: A task ticked off, back on the list.
+    write: true
+    method: POST
+    path: "/tasks/{{ input.task_id }}/reopen"
+    body: none
+    inputs:
+      - { name: task_id, label: "The task's id", required: true }
+    result: "{'reopened': true}"
+    output: { reopened: boolean }
+  move_task:
+    label: Move a task
+    description: A task moved to another project, a section, or under another task.
+    write: true
+    method: POST
+    path: "/tasks/{{ input.task_id }}/move"
+    inputs:
+      - { name: task_id, label: "The task's id", required: true }
+      - { name: project_id, label: "To this project (its id)" }
+      - { name: section_id, label: "Or to this section (its id)" }
+      - { name: parent_id, label: "Or under this task (its id)" }
+    send: { project_id: "{{ input.project_id }}", section_id: "{{ input.section_id }}", parent_id: "{{ input.parent_id }}" }
+    output: *task
+  delete_task:
+    label: Delete a task
+    description: A task and its sub-tasks, gone for good.
+    write: true
+    method: DELETE
+    path: "/tasks/{{ input.task_id }}"
+    inputs:
+      - { name: task_id, label: "The task's id", required: true }
+    result: "{'deleted': true}"
+    output: { deleted: boolean }
+  list_completed_tasks:
+    label: List tasks completed
+    description: >-
+      The tasks ticked off between two times (at most 3 months apart), all or of one project or section; every page.
+    method: GET
+    path: /tasks/completed/by_completion_date
+    inputs:
+      - { name: since, label: "Completed from (2026-11-01T00:00:00Z)", required: true }
+      - { name: until, label: "Until (2026-12-01T00:00:00Z)", required: true }
+      - { name: project_id, label: "Of this project (its id)" }
+      - { name: section_id, label: "Of this section (its id)" }
+    query:
+      since: "{{ input.since }}"
+      until: "{{ input.until }}"
+      project_id: "{{ input.project_id }}"
+      section_id: "{{ input.section_id }}"
+      limit: "200"
+    items: value.items
+    next: "has(value.next_cursor) && value.next_cursor != null && value.next_cursor != '' ? {'cursor': value.next_cursor} : null"
+    output: *task
+  list_projects:
+    label: List projects
+    description: Every project the account has, the Inbox too; every page.
+    method: GET
+    path: /projects
+    query: { limit: "200" }
+    items: value.results
+    next: "has(value.next_cursor) && value.next_cursor != null && value.next_cursor != '' ? {'cursor': value.next_cursor} : null"
+    output: &project { id: text, name: text, description: text, color: text, parent_id: text, is_favorite: boolean, is_shared: boolean, is_archived: boolean, inbox_project: boolean, view_style: text, workspace_id: text }
+  get_project:
+    label: Get a project
+    description: One project by its id.
+    method: GET
+    path: "/projects/{{ input.project_id }}"
+    inputs:
+      - { name: project_id, label: "The project's id", required: true }
+    output: *project
+  create_project:
+    label: Make a project
+    description: A new project, at the top or inside another, with a colour and a list or board view.
+    write: true
+    method: POST
+    path: /projects
+    inputs:
+      - { name: name, label: "Its name", required: true }
+      - { name: description, label: "Its description" }
+      - { name: parent_id, label: "Inside this project (its id)" }
+      - { name: color, label: "Its colour, by Todoist's name: berry_red, red, orange, yellow, green, blue..." }
+      - { name: view_style, label: "list, board or calendar" }
+      - { name: is_favorite, label: "A favourite", kind: boolean }
+    send:
+      name: "{{ input.name }}"
+      description: "{{ input.description }}"
+      parent_id: "{{ input.parent_id }}"
+      color: "{{ input.color }}"
+      view_style: "{{ input.view_style }}"
+      is_favorite: "{{ input.is_favorite }}"
+    output: *project
+  update_project:
+    label: Change a project
+    description: Its name, description, colour, view or whether it is a favourite; what is left empty stays.
+    write: true
+    method: POST
+    path: "/projects/{{ input.project_id }}"
+    inputs:
+      - { name: project_id, label: "The project's id", required: true }
+      - { name: name, label: "Its new name" }
+      - { name: description, label: "Its new description" }
+      - { name: color, label: "Its colour, by Todoist's name" }
+      - { name: view_style, label: "list, board or calendar" }
+      - { name: is_favorite, label: "A favourite", kind: boolean }
+    send:
+      name: "{{ input.name }}"
+      description: "{{ input.description }}"
+      color: "{{ input.color }}"
+      view_style: "{{ input.view_style }}"
+      is_favorite: "{{ input.is_favorite }}"
+    output: *project
+  archive_project:
+    label: Archive a project
+    description: A project put away, with its tasks; it can be brought back in Todoist.
+    write: true
+    method: POST
+    path: "/projects/{{ input.project_id }}/archive"
+    body: none
+    inputs:
+      - { name: project_id, label: "The project's id", required: true }
+    result: "{'archived': true}"
+    output: { archived: boolean }
+  list_sections:
+    label: List sections
+    description: The sections of one project, or of every project; every page.
+    method: GET
+    path: /sections
+    inputs:
+      - { name: project_id, label: "Of this project (its id)" }
+    query: { project_id: "{{ input.project_id }}", limit: "200" }
+    items: value.results
+    next: "has(value.next_cursor) && value.next_cursor != null && value.next_cursor != '' ? {'cursor': value.next_cursor} : null"
+    output: &section { id: text, project_id: text, name: text, description: text, section_order: number, is_archived: boolean, added_at: text }
+  create_section:
+    label: Make a section
+    description: A new section in a project.
+    write: true
+    method: POST
+    path: /sections
+    inputs:
+      - { name: project_id, label: "In this project (its id)", required: true }
+      - { name: name, label: "Its name", required: true }
+    send: { project_id: "{{ input.project_id }}", name: "{{ input.name }}" }
+    output: *section
+  list_comments:
+    label: List comments
+    description: The comments on a task, or on a project; every page.
+    method: GET
+    path: /comments
+    inputs:
+      - { name: task_id, label: "On this task (its id)" }
+      - { name: project_id, label: "Or on this project (its id)" }
+    query: { task_id: "{{ input.task_id }}", project_id: "{{ input.project_id }}", limit: "200" }
+    items: value.results
+    next: "has(value.next_cursor) && value.next_cursor != null && value.next_cursor != '' ? {'cursor': value.next_cursor} : null"
+    output: &comment { id: text, content: text, posted_uid: text, posted_at: text, file_attachment: record }
+  add_comment:
+    label: Comment on a task
+    description: A comment on a task, or on a project.
+    write: true
+    method: POST
+    path: /comments
+    inputs:
+      - { name: content, label: "The comment", required: true }
+      - { name: task_id, label: "On this task (its id)" }
+      - { name: project_id, label: "Or on this project (its id)" }
+    send: { content: "{{ input.content }}", task_id: "{{ input.task_id }}", project_id: "{{ input.project_id }}" }
+    output: *comment
+  list_labels:
+    label: List labels
+    description: The account's own labels; every page.
+    method: GET
+    path: /labels
+    query: { limit: "200" }
+    items: value.results
+    next: "has(value.next_cursor) && value.next_cursor != null && value.next_cursor != '' ? {'cursor': value.next_cursor} : null"
+    output: &label { id: text, name: text, color: text, order: number, is_favorite: boolean }
+  create_label:
+    label: Make a label
+    description: A new label of the account's own.
+    write: true
+    method: POST
+    path: /labels
+    inputs:
+      - { name: name, label: "Its name", required: true }
+      - { name: color, label: "Its colour, by Todoist's name" }
+    send: { name: "{{ input.name }}", color: "{{ input.color }}" }
+    output: *label
+  list_collaborators:
+    label: List who shares a project
+    description: The people a shared project is shared with, each with their id (to assign tasks to them) and name.
+    method: GET
+    path: "/projects/{{ input.project_id }}/collaborators"
+    inputs:
+      - { name: project_id, label: "The project's id", required: true }
+    query: { limit: "200" }
+    items: value.results
+    next: "has(value.next_cursor) && value.next_cursor != null && value.next_cursor != '' ? {'cursor': value.next_cursor} : null"
+    output: { id: text, name: text, email: text }
+triggers:
+  new_task:
+    label: A new task
+    description: Each task added, in every project or one, asked for every few minutes.
+    inputs:
+      - { name: project_id, label: "Only in this project (its id)" }
+    poll:
+      action: list_tasks
+      input: { project_id: "{{ input.project_id }}" }
+      id: item.id
+      every: 5m
+  completed_task:
+    label: A task completed
+    description: Each task ticked off, in every project or one, asked for every few minutes.
+    inputs:
+      - { name: project_id, label: "Only in this project (its id)" }
+    poll:
+      method: GET
+      path: /tasks/completed/by_completion_date
+      query:
+        since: "{{ string(timestamp(input.now) - duration('168h')) }}"
+        until: "{{ string(timestamp(input.now) + duration('1h')) }}"
+        project_id: "{{ input.project_id }}"
+        limit: "200"
+      items: value.items
+      next: "has(value.next_cursor) && value.next_cursor != null && value.next_cursor != '' ? {'cursor': value.next_cursor} : null"
+      id: item.id + '@' + item.completed_at
+      every: 5m
+  event:
+    label: Something changed (as it happens)
+    description: >-
+      Each task added, changed, completed or deleted - or comment, project, section or label - as Todoist sends it,
+      signed. Todoist sends these through a Todoist app of your own, set up in its App Management Console.
+    inputs:
+      - { name: events, label: "Which, separated by commas: item:added, item:completed, item:updated, note:added...", description: every one the app sends when empty }
+    webhook:
+      signature: { header: x-todoist-hmac-sha256, encoding: base64 }
+      secret: webhook_secret
+      id: "headers['x-todoist-delivery-id']"
+      only: "input.events == null || input.events.split(',').map(e, e.trim()).exists(e, e == value.event_name)"
+      event: "{'event': value.event_name, 'data': value.event_data, 'at': value.triggered_at}"
+      setup: >-
+        In Todoist's App Management Console (developer.todoist.com/appconsole.html), open your app (or make one),
+        and under Webhooks give this address as the callback URL, tick the events, and activate the webhook. Put the
+        app's client secret in the credential as its webhook secret. Todoist then sends the events of each account
+        that has signed in through that app - your own too, once you have.

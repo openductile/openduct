@@ -1,0 +1,13 @@
+description: "A card number checked, signed in with a customer key"
+action: run_tool
+sign_in: uproc_customer
+credential: {"api_key": "cust-test-key", "customer_domain": "northwind", "user_email": "ops@northwind.example"}
+input: {"tool": "check-creditcard-checksum", "params": {"credit_card": "4111111111111111"}}
+exchanges:
+  - sent:
+      method: POST
+      url: "https://api.uproc.io/api/v1/external/modules/data-process/actions/execute"
+      headers: {"x-api-key": "cust-test-key", "x-customer-domain": "northwind", "x-user-email": "ops@northwind.example"}
+      body: {"processor": "check-creditcard-checksum", "params": {"credit_card": "4111111111111111"}}
+    answer: {"status": 200, "body": {"success": true, "message": "", "data": {"result": true}}}
+result: {"success": true, "message": "", "data": {"result": true}}

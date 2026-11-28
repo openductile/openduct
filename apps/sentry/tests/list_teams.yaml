@@ -1,0 +1,39 @@
+# Made by `openduct app from-openapi`: List teams.
+description: "List teams, made from the API description's schemas"
+action: list_teams
+credential: { token: test-token }
+input: { organization_id_or_slug: example }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://us.sentry.io/api/0/organizations/example/teams/"
+      query: {}
+      headers: { authorization: "Bearer test-token" }
+    answer:
+      status: 200
+      body:
+        - id: id_1
+          slug: example
+          name: example
+          dateCreated: "2026-01-15T09:30:00Z"
+          isMember: true
+          teamRole: example
+          flags: {}
+          access: [example]
+          hasAccess: true
+          isPending: true
+          memberCount: 1
+          avatar: { avatarType: letter_avatar, avatarUuid: avatar_uuid_1, avatarUrl: example }
+result:
+  - id: id_1
+    slug: example
+    name: example
+    dateCreated: "2026-01-15T09:30:00Z"
+    isMember: true
+    teamRole: example
+    flags: {}
+    access: [example]
+    hasAccess: true
+    isPending: true
+    memberCount: 1
+    avatar: { avatarType: letter_avatar, avatarUuid: avatar_uuid_1, avatarUrl: example }

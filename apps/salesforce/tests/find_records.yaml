@@ -1,0 +1,15 @@
+description: Accounts whose fields hold the words, with the fields asked for
+action: find_records
+credential: { access_token: "00D000000000001!AQ.test", instance: examplecorp.my.salesforce.com }
+input: { q: Example, object: Account, fields: "Id,Name", limit: 10 }
+exchanges:
+  - sent:
+      method: GET
+      url: https://examplecorp.my.salesforce.com/services/data/v67.0/parameterizedSearch/
+      query: { q: Example, sobject: Account, fields: "Id,Name", defaultLimit: "10" }
+    answer:
+      body:
+        searchRecords:
+          - { attributes: { type: Account, url: /services/data/v67.0/sobjects/Account/0015e00000AbCdEAAV }, Id: 0015e00000AbCdEAAV, Name: Example Co }
+result:
+  - { attributes: { type: Account, url: /services/data/v67.0/sobjects/Account/0015e00000AbCdEAAV }, Id: 0015e00000AbCdEAAV, Name: Example Co }

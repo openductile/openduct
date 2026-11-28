@@ -1,0 +1,87 @@
+name: Welcome each new customer, then check in three days later
+description: >-
+  Watches the customers table of your own PostgreSQL database: each new row is added to your Customers sheet in
+  Google Sheets, the customer gets a welcome e-mail from their account manager's Gmail, and the team cheers in Slack's
+  wins channel. Three days later the run picks up again - it waited on the log, through restarts - and sends a short,
+  personal check-in. Needs: a PostgreSQL credential (crm_db) that may read the table, Google Sheets (sheets), Gmail
+  (gmail) and Slack (team_slack).
+category: Sales
+trigger:
+  # A new row each time the id grows; asked every minute. Only rows that are real customers, not trials.
+  postgres: { credential: crm_db, table: customers, cursor: id, where: "status = 'active'", every: 1m }
+# What a test runs on: a row as this trigger gives it.
+sample:
+  id: 1042
+  company: Fern Couriers
+  contact_name: Kim Osei
+  contact_email: kim@fern-couriers.example
+  plan: Team
+  seats: 12
+  monthly_amount: 348
+  owner_name: Alex
+  status: active
+  created_at: "2026-11-27 09:12:44"
+steps:
+  - name: who
+    set:
+      first_name: "value.contact_name == null ? 'there' : value.contact_name.split(' ')[0]"
+  - name: row
+    google_sheets:
+      action: add_row
+      credential: sheets
+      spreadsheet_id: your-sheet-id
+      sheet: Customers
+      values:
+        - "{{ value.id }}"
+        - "{{ value.company }}"
+        - "{{ value.contact_name }}"
+        - "{{ value.contact_email }}"
+        - "{{ value.plan }}"
+        - "{{ value.seats }}"
+        - "{{ value.monthly_amount }}"
+        - "{{ value.owner_name }}"
+        - "{{ value.created_at }}"
+    retry: { attempts: 3, wait: 30s }
+  - name: welcome
+    gmail:
+      action: send_email
+      credential: gmail
+      to: "{{ value.contact_email }}"
+      subject: "Welcome to Example Routes, {{ steps.who.first_name }}"
+      text: >-
+        Hi {{ steps.who.first_name }},
+
+
+        Welcome aboard - we are glad {{ value.company }} is with us. Your {{ value.plan }} plan with {{ value.seats }}
+        seats is ready. The quickest start is our 20-minute set-up guide: https://www.example.com/start
+
+
+        I look after your account, so write to me any time.
+
+
+        {{ value.owner_name }}
+    retry: { attempts: 3, wait: 30s }
+  - name: cheer
+    slack:
+      credential: team_slack
+      channel: "#wins"
+      text: ":tada: {{ value.company }} signed up for {{ value.plan }} - {{ value.seats }} seats, {{ value.monthly_amount }} a month. Account: {{ value.owner_name }}."
+    retry: { attempts: 3, wait: 30s }
+  - name: three_days
+    wait: 3d
+  - name: check_in
+    gmail:
+      action: send_email
+      credential: gmail
+      to: "{{ value.contact_email }}"
+      subject: "How are the first days going?"
+      text: >-
+        Hi {{ steps.who.first_name }},
+
+
+        It has been a few days since {{ value.company }} started. How is it going? If anything is unclear, or you
+        would like a 15-minute call to set up your routes together, just reply to this e-mail.
+
+
+        {{ value.owner_name }}
+    retry: { attempts: 3, wait: 30s }

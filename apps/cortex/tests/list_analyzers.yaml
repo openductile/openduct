@@ -1,0 +1,28 @@
+description: "The analyzers enabled in the organization"
+action: list_analyzers
+credential: { base_url: "https://cortex.example.com:9001", api_key: test-key }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://cortex.example.com:9001/api/analyzer"
+      query: { range: all }
+      headers: { authorization: Bearer test-key }
+    answer:
+      body:
+        - id: 220483fde9608c580fb6a2508ff3d2d3
+          name: Abuse_Finder_3_0
+          analyzerDefinitionId: Abuse_Finder_3_0
+          version: "3.0"
+          description: Find abuse contacts associated with domain names, URLs, IPs and email addresses.
+          dataTypeList: [ip, domain, fqdn, url, mail]
+          baseConfig: Abuse_Finder
+          createdBy: analyst
+result:
+  - id: 220483fde9608c580fb6a2508ff3d2d3
+    name: Abuse_Finder_3_0
+    analyzerDefinitionId: Abuse_Finder_3_0
+    version: "3.0"
+    description: Find abuse contacts associated with domain names, URLs, IPs and email addresses.
+    dataTypeList: [ip, domain, fqdn, url, mail]
+    baseConfig: Abuse_Finder
+    createdBy: analyst

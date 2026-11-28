@@ -1,0 +1,9 @@
+description: A blank slide second
+action: add_slide
+credential: { access_token: ya29.test }
+input: { presentation: 1CoPyOfTheTemplate0123456789abcdefg, layout: BLANK, position: 1 }
+exchanges:
+  - sent:
+      body: { requests: [{ createSlide: { insertionIndex: 1, slideLayoutReference: { predefinedLayout: BLANK } } }] }
+    answer: { body: { presentationId: 1CoPyOfTheTemplate0123456789abcdefg, replies: [{ createSlide: { objectId: SLIDES_API1234567_1 } }] } }
+result: { id: 1CoPyOfTheTemplate0123456789abcdefg, slide_id: SLIDES_API1234567_1 }

@@ -1,0 +1,9 @@
+description: A resolution, when the workflow asked only for new incidents, is answered and runs nothing
+trigger: incident_changed
+workflow: wf1
+credential: { api_key: pd_test_1, "webhook_secret@wf1": pd_whsec_test_1 }
+delivery:
+  headers: { x-pagerduty-signature: "v1=0c5051cedf38500b677248f7188957d16261458f006442e324bbb11e1fc66a2d" }
+  body: '{"event":{"id":"01DEN3W2A8EXAMPLF","event_type":"incident.resolved","resource_type":"incident","occurred_at":"2026-11-27T11:00:00.000Z","agent":null,"client":null,"data":{"id":"PINC001","type":"incident","number":42,"status":"resolved","title":"Checkout is down"}}}'
+  at: 1795773600
+passed: true

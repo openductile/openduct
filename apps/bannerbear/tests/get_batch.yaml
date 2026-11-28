@@ -1,0 +1,8 @@
+description: A batch, done
+action: get_batch
+credential: { api_key: bb_ak_v5_test }
+input: { batch: bat_5 }
+exchanges:
+  - sent: { method: GET, url: "https://api.bannerbear.com/v5/batches/bat_5" }
+    answer: { status: 200, body: { uid: bat_5, type: images, status: completed, total: 2, counts: { completed: 2, failed: 0, pending: 0 }, errors: [], items: [{ uid: img_1 }, { uid: img_2 }] } }
+result: { uid: bat_5, type: images, status: completed, total: 2, counts: { completed: 2, failed: 0, pending: 0 }, errors: [], items: [{ uid: img_1 }, { uid: img_2 }] }

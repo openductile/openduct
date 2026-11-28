@@ -1,0 +1,22 @@
+description: A forecast asked of the weather integration, its answer included
+action: call_service
+credential: { url: "http://home.example:8123", token: ha-test-token }
+input: { domain: weather, service: get_forecasts, data: { entity_id: weather.forecast_home, type: daily }, return_response: true }
+exchanges:
+  - sent:
+      method: POST
+      url: "http://home.example:8123/api/services/weather/get_forecasts"
+      query: { return_response: "true" }
+      body: { entity_id: weather.forecast_home, type: daily }
+    answer:
+      status: 200
+      body:
+        changed_states: []
+        service_response:
+          weather.forecast_home:
+            forecast: [{ condition: rainy, datetime: "2026-11-28T12:00:00+00:00", precipitation_probability: 60, temperature: 9.0 }]
+result:
+  changed_states: []
+  service_response:
+    weather.forecast_home:
+      forecast: [{ condition: rainy, datetime: "2026-11-28T12:00:00+00:00", precipitation_probability: 60, temperature: 9.0 }]

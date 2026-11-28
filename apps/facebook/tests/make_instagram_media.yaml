@@ -1,0 +1,10 @@
+action: make_instagram_media
+credential: { access_token: EAAB_test }
+input: { instagram_account_id: "17841400008460056", image_url: "https://example.com/tote.jpg", caption: "New in #tote" }
+exchanges:
+  - sent:
+      method: POST
+      url: https://graph.facebook.com/v25.0/17841400008460056/media
+      body: { image_url: "https://example.com/tote.jpg", caption: "New in #tote" }
+    answer: { body: { id: "17889455560051444" } }
+result: { id: "17889455560051444" }

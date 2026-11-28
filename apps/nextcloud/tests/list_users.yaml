@@ -1,0 +1,11 @@
+description: The users that match a search
+action: list_users
+credential: { url: "https://cloud.example.com", username: admin, password: app-pass-2 }
+input: { search: car }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://cloud.example.com/ocs/v2.php/cloud/users"
+      query: { search: car, limit: "100" }
+    answer: { status: 200, body: { ocs: { meta: { status: ok, statuscode: 200 }, data: { users: [carol, caroline] } } } }
+result: [carol, caroline]

@@ -1,0 +1,11 @@
+description: "A contact deleted"
+action: delete_contact
+credential: {"access_token": "ya29.test"}
+input: {"contact": "people/c333"}
+exchanges:
+  - sent:
+      method: DELETE
+      url: "https://people.googleapis.com/v1/people/c333:deleteContact"
+      headers: {"authorization": "Bearer ya29.test"}
+    answer: {"status": 200, "body": {}}
+result: {"deleted": true}

@@ -1,0 +1,11 @@
+description: An incident found by its number
+action: get_incident
+credential: { instance: acme, username: integration.user, password: pw-test-1 }
+input: { number: INC0010002 }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://acme.service-now.com/api/now/table/incident"
+      query: { sysparm_query: number=INC0010002, sysparm_limit: "1", sysparm_exclude_reference_link: "true" }
+    answer: { status: 200, body: { result: [{ sys_id: c537bae64f411200adf9f8e18110c76e, number: INC0010002, short_description: Unable to connect to office wifi, state: "2" }] } }
+result: { sys_id: c537bae64f411200adf9f8e18110c76e, number: INC0010002, short_description: Unable to connect to office wifi, state: "2" }

@@ -1,0 +1,21 @@
+description: A chat's new messages, subscribed the same way
+trigger: new_message
+register: true
+workflow: wf2
+address: https://studio.example/hooks/h2
+sign_in: teams
+credential: { access_token: eyJ0.teams }
+input: { chat_id: "19:2da4c29f6d7041eca70b638b43d45437@thread.v2" }
+exchanges:
+  - sent:
+      method: POST
+      url: https://graph.microsoft.com/v1.0/subscriptions
+      body:
+        changeType: created
+        notificationUrl: https://studio.example/hooks/h2
+        resource: "/chats/19:2da4c29f6d7041eca70b638b43d45437@thread.v2/messages"
+        includeResourceData: false
+        expirationDateTime: "2023-11-14T23:08:20Z"
+        clientState: recorded-secret
+    answer: { status: 201, body: { id: 0ab05c7d-2dc5-4530-97cd-4e7ae6534c08 } }
+kept: { client_state: recorded-secret, subscription_id: 0ab05c7d-2dc5-4530-97cd-4e7ae6534c08, address: "https://studio.example/hooks/h2" }

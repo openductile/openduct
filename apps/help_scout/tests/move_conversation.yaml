@@ -1,0 +1,13 @@
+description: A conversation moved to another inbox
+action: move_conversation
+credential: {access_token: hs-test-token}
+input: {conversation_id: '3443157477', mailbox_id: 86}
+exchanges:
+- sent:
+    method: PATCH
+    url: https://api.helpscout.net/v2/conversations/3443157477
+    query: {}
+    headers: {authorization: Bearer hs-test-token}
+    body: {op: move, path: /mailboxId, value: 86}
+  answer: {status: 204}
+result: {changed: true}

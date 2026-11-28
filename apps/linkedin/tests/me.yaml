@@ -1,0 +1,8 @@
+action: me
+credential: { access_token: AQX_test, person_id: 782bbtaQ }
+exchanges:
+  - sent:
+      method: GET
+      url: https://api.linkedin.com/v2/userinfo
+    answer: { body: { sub: 782bbtaQ, name: Ann Example, given_name: Ann, family_name: Example, locale: en-US } }
+result: { sub: 782bbtaQ, name: Ann Example, given_name: Ann, family_name: Example, locale: en-US }

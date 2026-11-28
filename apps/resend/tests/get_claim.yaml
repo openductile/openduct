@@ -1,0 +1,37 @@
+# Made by `openduct app from-openapi`: Retrieve a domain claim.
+description: "Retrieve a domain claim, made from the API description's schemas"
+action: get_claim
+credential: { token: test-token }
+input: { domain_id: domain_1 }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://api.resend.com/domains/domain_1/claim"
+      query: {}
+      headers: { authorization: "Bearer test-token" }
+    answer:
+      status: 200
+      body:
+        object: domain_claim
+        id: d91cd9bd-1176-453e-8fc1-35364d380206
+        name: example.com
+        status: pending
+        domain_id: a1b2c3d4-1176-453e-8fc1-35364d380206
+        region: us-east-1
+        record: { type: TXT, name: example.com, value: example, ttl: Auto }
+        blocked_reason: grace_period
+        failure_reason: example
+        created_at: example
+        expires_at: example
+result:
+  object: domain_claim
+  id: d91cd9bd-1176-453e-8fc1-35364d380206
+  name: example.com
+  status: pending
+  domain_id: a1b2c3d4-1176-453e-8fc1-35364d380206
+  region: us-east-1
+  record: { type: TXT, name: example.com, value: example, ttl: Auto }
+  blocked_reason: grace_period
+  failure_reason: example
+  created_at: example
+  expires_at: example

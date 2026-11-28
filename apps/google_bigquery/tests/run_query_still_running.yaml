@@ -1,0 +1,9 @@
+description: A query still running after the wait fails the step, naming its job to ask for later
+action: run_query
+credential: { access_token: ya29.bq-test }
+input: { project_id: example-shop-1, query: "SELECT COUNT(*) AS n FROM shop.events", location: europe-west2, max_rows: 100 }
+exchanges:
+  - sent:
+      body: { query: "SELECT COUNT(*) AS n FROM shop.events", useLegacySql: false, location: europe-west2, maxResults: 100, timeoutMs: 180000, formatOptions: { timestampOutputFormat: ISO8601_STRING } }
+    answer: { body: { kind: bigquery#queryResponse, jobReference: { projectId: example-shop-1, jobId: job_test_2, location: europe-west2 }, jobComplete: false } }
+error: "job job_test_2"

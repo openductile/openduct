@@ -1,0 +1,7 @@
+action: delete_group
+credential: { access_token: ya29.test }
+input: { group: support@example.com }
+exchanges:
+  - sent: { method: DELETE, url: https://admin.googleapis.com/admin/directory/v1/groups/support@example.com }
+    answer: { status: 204 }
+result: { deleted: true }

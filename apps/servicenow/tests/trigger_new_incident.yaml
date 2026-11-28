@@ -1,0 +1,17 @@
+description: Incidents opened since the last poll, the newest asked for, run oldest first
+trigger: new_incident
+credential: { instance: acme, username: integration.user, password: pw-test-1 }
+input: { query: priority=1 }
+seen: { items: [["s40", ""]] }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://acme.service-now.com/api/now/table/incident"
+      query: { sysparm_query: "priority=1^ORDERBYDESCsys_created_on", sysparm_exclude_reference_link: "true", sysparm_limit: "100" }
+    answer:
+      body:
+        result:
+          - { sys_id: s42, number: INC0010042, short_description: Mail is down }
+          - { sys_id: s41, number: INC0010041, short_description: VPN is slow }
+          - { sys_id: s40, number: INC0010040, short_description: Printer jam }
+ids: [s41, s42]

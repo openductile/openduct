@@ -1,0 +1,8 @@
+description: Someone joining a channel is not a message posted - answered, and nothing runs
+trigger: message
+credential: { bot_token: xoxb-1, signing_secret: 8f742231b10e8888abcd99yyyzzz85a5 }
+delivery:
+  headers: { x-slack-signature: "v0=78d1481c386a2b9f3cba18aa2698d9066a25222ade028a3c335c703277476c88", x-slack-request-timestamp: "1700000000" }
+  body: '{"token":"t","team_id":"T1","event":{"type":"message","subtype":"channel_join","channel":"C1","user":"U2","ts":"1700000001.000100"},"type":"event_callback","event_id":"Ev02","event_time":1700000001}'
+  at: 1700000030
+passed: true

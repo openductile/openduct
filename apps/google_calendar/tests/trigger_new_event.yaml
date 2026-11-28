@@ -1,0 +1,14 @@
+description: Events added since the last change dealt with; the next poll asks from the newest change
+trigger: new_event
+credential: { access_token: ya29.test }
+input: { calendar_id: primary }
+seen: { cursor: "2023-11-14T20:00:00.000Z", items: [["ev0", ""]] }
+exchanges:
+  - sent: { query: { updatedMin: "2023-11-14T20:00:00.000Z", orderBy: updated, showDeleted: "false", maxResults: "250" } }
+    answer:
+      body:
+        items:
+          - { id: ev0, summary: Old, updated: "2023-11-14T20:00:00.000Z" }
+          - { id: ev1, summary: Lunch, updated: "2023-11-14T21:00:00.000Z" }
+ids: [ev1]
+cursor: "2023-11-14T21:00:00.000Z"

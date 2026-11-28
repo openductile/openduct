@@ -1,0 +1,11 @@
+description: A message's text changed after its button was pressed, its buttons taken away
+action: edit_message
+credential: { bot_token: "123:abc" }
+input: { chat_id: "42", message_id: 8, text: "Order A-100 approved", buttons: [] }
+exchanges:
+  - sent:
+      method: POST
+      url: https://api.telegram.org/bot123:abc/editMessageText
+      body: { chat_id: "42", message_id: 8, text: "Order A-100 approved", reply_markup: { inline_keyboard: [] } }
+    answer: { body: { ok: true, result: { message_id: 8, chat: { id: 42 }, text: "Order A-100 approved", edit_date: 1700000100 } } }
+result: { message_id: 8, chat: { id: 42 }, text: "Order A-100 approved", edit_date: 1700000100 }

@@ -1,0 +1,17 @@
+description: A message written here, to two people, from one of the account's senders
+action: send_email
+credential: { api_key: xkeysib-test-1 }
+input: { to: "ann@example.com, kim@example.com", subject: Your order A-1001, html: "<p>It is on its way.</p>", sender_email: shop@example.com, sender_name: Example Shop, tags: orders }
+exchanges:
+  - sent:
+      method: POST
+      url: https://api.brevo.com/v3/smtp/email
+      headers: { api-key: xkeysib-test-1 }
+      body:
+        to: [{ email: ann@example.com }, { email: kim@example.com }]
+        subject: Your order A-1001
+        htmlContent: "<p>It is on its way.</p>"
+        sender: { email: shop@example.com, name: Example Shop }
+        tags: [orders]
+    answer: { status: 201, body: { messageId: "<202611271000.1@smtp-relay.example.com>" } }
+result: { messageId: "<202611271000.1@smtp-relay.example.com>" }

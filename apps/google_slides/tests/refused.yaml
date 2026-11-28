@@ -1,0 +1,7 @@
+description: A presentation that is not there, or not shared with the account - Google's own words
+action: read_presentation
+credential: { access_token: ya29.test }
+input: { presentation: nothere }
+exchanges:
+  - answer: { status: 404, body: { error: { code: 404, message: Requested entity was not found., status: NOT_FOUND } } }
+error: "Google Slides answered 404: Requested entity was not found."

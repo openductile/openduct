@@ -1,0 +1,18 @@
+description: A subscriber taken out of a group
+action: remove_from_group
+credential:
+  api_key: test-key
+input:
+  subscriber_id: '31986843064993537'
+  group_id: '42'
+exchanges:
+- sent:
+    method: DELETE
+    url: https://connect.mailerlite.com/api/subscribers/31986843064993537/groups/42
+    headers:
+      authorization: Bearer test-key
+      accept: application/json
+  answer:
+    status: 204
+result:
+  removed: true

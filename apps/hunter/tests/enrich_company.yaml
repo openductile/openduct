@@ -1,0 +1,11 @@
+description: A company from its website
+action: enrich_company
+credential: { api_key: hunter-test-key }
+input: { domain: example.com }
+exchanges:
+  - sent: { method: GET, url: https://api.hunter.io/v2/companies/find, query: { domain: example.com } }
+    answer:
+      body:
+        data: { id: 9f8e7d6c-5b4a-4c3d-8e2f-1a0b9c8d7e6f, name: Example Inc, domain: example.com, foundedYear: 2012, location: Springfield, United States, metrics: { employees: "11-50" }, tech: [stripe, shopify] }
+        meta: { domain: example.com }
+result: { id: 9f8e7d6c-5b4a-4c3d-8e2f-1a0b9c8d7e6f, name: Example Inc, domain: example.com, foundedYear: 2012, location: Springfield, United States, metrics: { employees: "11-50" }, tech: [stripe, shopify] }

@@ -1,0 +1,10 @@
+action: read
+credential: { access_token: EAAB_test }
+input: { path: 1029384756/posts, fields: "id,message,created_time" }
+exchanges:
+  - sent:
+      method: GET
+      url: https://graph.facebook.com/v25.0/1029384756/posts
+      query: { fields: "id,message,created_time" }
+    answer: { body: { data: [{ id: 1029384756_555, message: Our winter hours are up. }] } }
+result: { data: [{ id: 1029384756_555, message: Our winter hours are up. }] }

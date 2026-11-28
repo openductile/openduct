@@ -1,0 +1,29 @@
+description: A picture message
+action: send_mms
+credential:
+  api_key: abcd1234
+  api_secret: test-secret
+input:
+  to: '14155550100'
+  from: '14155550199'
+  image_url: https://www.example.com/menu.jpg
+  caption: Today's menu
+exchanges:
+- sent:
+    method: POST
+    url: https://api.nexmo.com/v1/messages
+    headers:
+      authorization: Basic YWJjZDEyMzQ6dGVzdC1zZWNyZXQ=
+    body:
+      channel: mms
+      message_type: image
+      to: '14155550100'
+      from: '14155550199'
+      image:
+        url: https://www.example.com/menu.jpg
+        caption: Today's menu
+  answer:
+    status: 202
+    body: &id001
+      message_uuid: aaaaaaaa-bbbb-4ccc-8ddd-0123456789ab
+result: *id001

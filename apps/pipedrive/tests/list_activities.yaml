@@ -1,0 +1,75 @@
+description: "List activities"
+action: list_activities
+credential: { api_key: test-key }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://api.pipedrive.com/api/v2/activities"
+      query: { limit: "100" }
+      headers: { x-api-token: test-key }
+    answer:
+      status: 200
+      body:
+        success: true
+        data:
+          - id: 1
+            subject: example
+            type: example
+            owner_id: 1
+            creator_user_id: 1
+            is_deleted: true
+            add_time: example
+            update_time: example
+            deal_id: 1
+            lead_id: lead_1
+            person_id: 1
+            org_id: 1
+        additional_data: { next_cursor: token_2 }
+  - sent:
+      method: GET
+      url: "https://api.pipedrive.com/api/v2/activities"
+      query: { limit: "100", cursor: token_2 }
+      headers: { x-api-token: test-key }
+    answer:
+      status: 200
+      body:
+        success: true
+        data:
+          - id: id_2
+            subject: example
+            type: example
+            owner_id: 1
+            creator_user_id: 1
+            is_deleted: true
+            add_time: example
+            update_time: example
+            deal_id: 1
+            lead_id: lead_1
+            person_id: 1
+            org_id: 1
+        additional_data: { next_cursor: null }
+result:
+  - id: 1
+    subject: example
+    type: example
+    owner_id: 1
+    creator_user_id: 1
+    is_deleted: true
+    add_time: example
+    update_time: example
+    deal_id: 1
+    lead_id: lead_1
+    person_id: 1
+    org_id: 1
+  - id: id_2
+    subject: example
+    type: example
+    owner_id: 1
+    creator_user_id: 1
+    is_deleted: true
+    add_time: example
+    update_time: example
+    deal_id: 1
+    lead_id: lead_1
+    person_id: 1
+    org_id: 1

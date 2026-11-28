@@ -1,0 +1,44 @@
+description: One alert
+action: get_alert
+credential:
+  url: https://thehive.example.com
+  api_key: test-key
+input:
+  alert_id: ~4096
+exchanges:
+- sent:
+    method: GET
+    url: https://thehive.example.com/api/v1/alert/~4096
+    headers:
+      authorization: Bearer test-key
+  answer:
+    status: 200
+    body: &id001
+      _id: ~4096
+      _type: Alert
+      _createdBy: soc-bot@example.com
+      _createdAt: 1795161600000
+      _updatedAt: 1795161600000
+      type: phishing
+      source: mail-gateway
+      sourceRef: MG-4096
+      externalLink: null
+      title: Password reset email reported
+      description: A reported email asks for a password reset.
+      severity: 2
+      severityLabel: MEDIUM
+      date: 1795161600000
+      tags:
+      - phishing
+      tlp: 2
+      tlpLabel: AMBER
+      pap: 2
+      papLabel: AMBER
+      follow: true
+      customFields: []
+      observableCount: 1
+      status: New
+      stage: New
+      assignee: null
+      summary: null
+result: *id001

@@ -1,0 +1,11 @@
+description: A message received, marked as read
+action: mark_read
+credential: { access_token: EAAG1, phone_number_id: "1234", api_version: v21.0 }
+input: { message_id: wamid.A }
+exchanges:
+  - sent:
+      method: POST
+      url: https://graph.facebook.com/v21.0/1234/messages
+      body: { messaging_product: whatsapp, status: read, message_id: wamid.A }
+    answer: { body: { success: true } }
+result: { success: true }

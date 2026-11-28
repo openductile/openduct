@@ -1,0 +1,70 @@
+# Copyright 2026 Ductile AI, Inc
+# SPDX-License-Identifier: Apache-2.0
+#
+# OpenDuct's chart: one node by default. For a cluster of three, install with values-cluster.yaml as well
+# (README.md). Every secret is a file from a Kubernetes secret, never an environment variable.
+
+image:
+  repository: ghcr.io/openductile/openduct
+  # Unless set, the chart's appVersion (as v0.1.2).
+  tag: ""
+  pullPolicy: IfNotPresent
+imagePullSecrets: []
+
+# One node, or a cluster: 3 or 5 nodes (the cluster's majority must stay up).
+replicas: 1
+
+cluster:
+  # The secret the nodes share, at least 16 characters, read from a file: the key `secret` of a Kubernetes secret.
+  # With `create`, the chart makes one at random the first time and keeps it on upgrades.
+  secret:
+    create: true
+    existingSecret: ""
+  # How many copies of each partition (at most the number of nodes).
+  replicationFactor: 3
+
+studio:
+  # The names people (and webhooks) reach the studio by, beside localhost.
+  hosts: [flows.example.com]
+  # The studio's address as the world sees it, for the addresses of forms and runs that wait.
+  url: ""
+  # Cookies marked Secure: the studio is reached over HTTPS, through the ingress.
+  secureCookies: true
+  # Let workflows' HTTP steps reach the cluster's own network (they cannot, unless this is true).
+  allowPrivateNetwork: false
+
+# Plain Kafka inside the cluster's network. For clients beyond it, turn on TLS and sign-in (docs/security.md) and
+# set this to false.
+allowInsecure: true
+
+logFormat: json
+
+# More settings, as environment variables of `openduct start` (OPENDUCT_*): never secrets (those are files).
+extraEnv: []
+
+persistence:
+  size: 20Gi
+  storageClass: ""
+
+resources:
+  requests: { cpu: 500m, memory: 1Gi }
+  # Each JavaScript or Python step runs in a process of its own, of at most 1 GiB, beside the node.
+  limits: { memory: 4Gi }
+
+service:
+  # The studio (and webhooks), on any node.
+  port: 80
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  # The host is studio.hosts' first; TLS from this secret.
+  tlsSecret: ""
+
+# A broker asked to stop hands its partitions over first (ten seconds) and lets requests finish (five).
+terminationGracePeriodSeconds: 30
+
+nodeSelector: {}
+tolerations: []
+affinity: {}

@@ -1,0 +1,13 @@
+description: A template named by its address copied into a folder, through Google Drive
+action: copy_presentation
+credential: { access_token: ya29.test }
+input: { presentation: "https://docs.google.com/presentation/d/1TmPlAtE0123456789abcdefghijKLMNOP/edit#slide=id.p", name: Proposal for Example Co, folder_id: 0AbCdEfFolder }
+exchanges:
+  - sent:
+      method: POST
+      url: https://www.googleapis.com/drive/v3/files/1TmPlAtE0123456789abcdefghijKLMNOP/copy
+      query: { supportsAllDrives: "true", fields: "id,name" }
+      headers: { authorization: Bearer ya29.test }
+      body: { name: Proposal for Example Co, parents: [0AbCdEfFolder] }
+    answer: { body: { id: 1CoPyOfTheTemplate0123456789abcdefg, name: Proposal for Example Co } }
+result: { id: 1CoPyOfTheTemplate0123456789abcdefg, name: Proposal for Example Co, url: "https://docs.google.com/presentation/d/1CoPyOfTheTemplate0123456789abcdefg/edit" }

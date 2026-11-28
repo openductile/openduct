@@ -1,0 +1,13 @@
+description: Two QR codes at once, in the order given
+action: qr_code_links
+credential: { api_key: "" }
+input: { qr_codes: [{ text: T-1042 }, { text: T-1043, size: 200 }] }
+exchanges:
+  - sent:
+      method: POST
+      url: https://quickchart.io/qr-urls
+      body: { qrCodes: [{ text: T-1042 }, { text: T-1043, size: 200 }] }
+    answer:
+      status: 200
+      body: { urls: ["https://quickchart.io/qr?text=T-1042", "https://quickchart.io/qr?text=T-1043&size=200"] }
+result: { urls: ["https://quickchart.io/qr?text=T-1042", "https://quickchart.io/qr?text=T-1043&size=200"] }

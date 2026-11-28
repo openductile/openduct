@@ -1,0 +1,477 @@
+# Copyright 2026 Ductile AI, Inc
+# SPDX-License-Identifier: Apache-2.0
+# Asana: made by `openduct app from-openapi` from Asana's own API description
+# (https://github.com/Asana/openapi/blob/466e40b476c0/defs/asana_oas.yaml, Apache 2.0 licence), then finished by hand.
+app: asana
+name: Asana
+category: productivity
+description: Tasks, projects and comments in Asana.
+docs: "https://developers.asana.com/reference/rest-api-reference"
+hosts: [app.asana.com]
+base_url: "https://app.asana.com/api/1.0"
+sign_in:
+  - id: asana
+    label: "A personal access token"
+    fields: [{ name: token, label: "The personal access token", secret: true }]
+    headers: { Authorization: "Bearer {{ credential.token }}" }
+  - id: asana_oauth
+    label: "Sign in with Asana"
+    oauth2:
+      authorize: "https://app.asana.com/-/oauth_authorize"
+      token: "https://app.asana.com/-/oauth_token"
+      scopes:
+        - "tasks:read"
+        - "tasks:write"
+        - "tasks:delete"
+        - "projects:read"
+        - "projects:write"
+        - "stories:read"
+        - "stories:write"
+        - "workspaces:read"
+        - "users:read"
+        - "tags:read"
+        - "teams:read"
+    headers: { Authorization: "Bearer {{ credential.access_token }}" }
+error: "has(value.errors) && size(value.errors) > 0 ? value.errors.map(e, e.message).join('; ') : null"
+default_action: create_task
+actions:
+  create_task:
+    label: "Add a task"
+    description: "A new task in a project (or in a workspace's My Tasks), with who does it and when it is due."
+    write: true
+    method: POST
+    path: "/tasks"
+    inputs:
+      - { name: name, label: "The task", required: true }
+      - { name: project, label: "The project it goes in (its id)" }
+      - { name: workspace, label: "Or the workspace (its id), for a task in no project" }
+      - { name: notes, label: "Its description" }
+      - { name: assignee, label: "Who does it: me, an email address or a person's id" }
+      - { name: due_on, label: "Due on (a day, such as 2026-12-01)" }
+      - { name: due_at, label: "Or due at (a time, such as 2026-12-01T17:00:00Z)" }
+      - { name: start_on, label: "Starts on (a day; needs a due day too)" }
+      - { name: tags, label: "Tags: their ids, separated by commas" }
+      - { name: followers, label: "Who follows it: emails or ids, separated by commas" }
+      - { name: custom_fields, label: "Custom fields, by their ids, as a record", kind: record }
+    send:
+      data:
+        name: "{{ input.name }}"
+        projects: "{{ [input.project] }}"
+        workspace: "{{ input.workspace }}"
+        notes: "{{ input.notes }}"
+        assignee: "{{ input.assignee }}"
+        due_on: "{{ input.due_on }}"
+        due_at: "{{ input.due_at }}"
+        start_on: "{{ input.start_on }}"
+        tags: "{{ input.tags.split(',').map(t, t.trim()) }}"
+        followers: "{{ input.followers.split(',').map(f, f.trim()) }}"
+        custom_fields: "{{ input.custom_fields }}"
+    result: value.data
+    output: &task
+      gid: text
+      name: text
+      notes: text
+      completed: boolean
+      completed_at: text
+      due_on: text
+      due_at: text
+      start_on: text
+      assignee: record
+      projects: list
+      memberships: list
+      tags: list
+      followers: list
+      parent: record
+      custom_fields: list
+      created_at: text
+      modified_at: text
+      permalink_url: text
+  get_task:
+    label: "Look up a task"
+    description: "A task with everything Asana keeps on it: its projects and sections, who does it, its custom fields, its link."
+    method: GET
+    path: "/tasks/{{ input.task_id }}"
+    inputs: [{ name: task_id, label: "The task's id", required: true }]
+    result: value.data
+    output: *task
+  update_task:
+    label: "Change a task"
+    description: "A task renamed, described, given to someone, moved to another day, or marked done or not; what is not given stays as it is."
+    write: true
+    method: PUT
+    path: "/tasks/{{ input.task_id }}"
+    inputs:
+      - { name: task_id, label: "The task's id", required: true }
+      - { name: name, label: "Its new name" }
+      - { name: notes, label: "Its new description" }
+      - { name: assignee, label: "Who does it now: me, an email address or a person's id" }
+      - { name: due_on, label: "Due on (a day, such as 2026-12-01)" }
+      - { name: due_at, label: "Or due at (a time)" }
+      - { name: start_on, label: "Starts on (a day)" }
+      - { name: completed, label: "Done", kind: boolean }
+      - { name: custom_fields, label: "Custom fields, by their ids, as a record", kind: record }
+    send:
+      data:
+        name: "{{ input.name }}"
+        notes: "{{ input.notes }}"
+        assignee: "{{ input.assignee }}"
+        due_on: "{{ input.due_on }}"
+        due_at: "{{ input.due_at }}"
+        start_on: "{{ input.start_on }}"
+        completed: "{{ input.completed }}"
+        custom_fields: "{{ input.custom_fields }}"
+    result: value.data
+    output: *task
+  complete_task:
+    label: "Mark a task done"
+    description: "A task marked as done."
+    write: true
+    method: PUT
+    path: "/tasks/{{ input.task_id }}"
+    inputs: [{ name: task_id, label: "The task's id", required: true }]
+    send: { data: { completed: true } }
+    result: value.data
+    output: *task
+  delete_task:
+    label: "Delete a task"
+    description: "A task moved to the trash (it can be brought back from there for 30 days)."
+    write: true
+    method: DELETE
+    path: "/tasks/{{ input.task_id }}"
+    inputs: [{ name: task_id, label: "The task's id", required: true }]
+    result: "{'deleted': true}"
+    output: { deleted: boolean }
+  list_project_tasks:
+    label: "List a project's tasks"
+    description: "The tasks of a project, in the project's order, with who does them and when they are due."
+    method: GET
+    path: "/projects/{{ input.project_id }}/tasks"
+    inputs:
+      - { name: project_id, label: "The project's id", required: true }
+      - { name: only_open, label: "Only tasks not yet done", kind: boolean }
+    query:
+      completed_since: "{{ input.only_open == true ? 'now' : null }}"
+      opt_fields: &task_fields "name,notes,completed,completed_at,due_on,due_at,start_on,assignee.name,projects.name,memberships.section.name,tags.name,parent.name,custom_fields.name,custom_fields.display_value,created_at,modified_at,permalink_url"
+      limit: "100"
+    items: value.data
+    next: &next "value.next_page == null ? null : {'offset': value.next_page.offset}"
+    output: *task
+  list_tasks:
+    label: "List someone's tasks"
+    description: "The tasks given to one person in a workspace - or the tasks of one section of a project."
+    method: GET
+    path: "/tasks"
+    inputs:
+      - { name: assignee, label: "Whose: me, an email address or a person's id (with the workspace)" }
+      - { name: workspace, label: "The workspace (its id)" }
+      - { name: section, label: "Or a section (its id)" }
+      - { name: only_open, label: "Only tasks not yet done", kind: boolean }
+    query:
+      assignee: "{{ input.assignee }}"
+      workspace: "{{ input.workspace }}"
+      section: "{{ input.section }}"
+      completed_since: "{{ input.only_open == true ? 'now' : null }}"
+      opt_fields: *task_fields
+      limit: "100"
+    items: value.data
+    next: *next
+    output: *task
+  search_tasks:
+    label: "Search tasks"
+    description: "Tasks of a workspace found by their words, project, person or due day - Asana's advanced search, on its paid plans; up to 100, the newest first."
+    method: GET
+    path: "/workspaces/{{ input.workspace }}/tasks/search"
+    inputs:
+      - { name: workspace, label: "The workspace (its id)", required: true }
+      - { name: text, label: "Words in its name or description" }
+      - { name: projects, label: "In any of these projects: ids, separated by commas" }
+      - { name: assignees, label: "Given to any of: me, or ids, separated by commas" }
+      - { name: completed, label: "Done (yes) or not (no)", kind: boolean }
+      - { name: due_before, label: "Due before (a day, such as 2026-12-01)" }
+      - { name: due_after, label: "Due after (a day)" }
+    query:
+      text: "{{ input.text }}"
+      projects.any: "{{ input.projects }}"
+      assignee.any: "{{ input.assignees }}"
+      completed: "{{ input.completed }}"
+      due_on.before: "{{ input.due_before }}"
+      due_on.after: "{{ input.due_after }}"
+      sort_by: created_at
+      opt_fields: *task_fields
+      limit: "100"
+    items: value.data
+    output: *task
+  list_subtasks:
+    label: "List a task's subtasks"
+    description: "The tasks under a task."
+    method: GET
+    path: "/tasks/{{ input.task_id }}/subtasks"
+    inputs: [{ name: task_id, label: "The task's id", required: true }]
+    query: { opt_fields: *task_fields, limit: "100" }
+    items: value.data
+    next: *next
+    output: *task
+  create_subtask:
+    label: "Add a subtask"
+    description: "A new task under a task."
+    write: true
+    method: POST
+    path: "/tasks/{{ input.task_id }}/subtasks"
+    inputs:
+      - { name: task_id, label: "The task it goes under (its id)", required: true }
+      - { name: name, label: "The subtask", required: true }
+      - { name: notes, label: "Its description" }
+      - { name: assignee, label: "Who does it: me, an email address or a person's id" }
+      - { name: due_on, label: "Due on (a day, such as 2026-12-01)" }
+    send:
+      data: { name: "{{ input.name }}", notes: "{{ input.notes }}", assignee: "{{ input.assignee }}", due_on: "{{ input.due_on }}" }
+    result: value.data
+    output: *task
+  add_comment:
+    label: "Comment on a task"
+    description: "A comment added to a task, as the signed-in person; its followers are told."
+    write: true
+    method: POST
+    path: "/tasks/{{ input.task_id }}/stories"
+    inputs:
+      - { name: task_id, label: "The task's id", required: true }
+      - { name: text, label: "The comment", required: true }
+      - { name: pinned, label: "Pin it to the top", kind: boolean }
+    send: { data: { text: "{{ input.text }}", is_pinned: "{{ input.pinned }}" } }
+    result: value.data
+    output: &story { gid: text, text: text, created_at: text, created_by: record, resource_subtype: text, is_pinned: boolean }
+  list_comments:
+    label: "List a task's comments"
+    description: "The comments on a task, oldest first (Asana's notes of changes left out)."
+    method: GET
+    path: "/tasks/{{ input.task_id }}/stories"
+    inputs: [{ name: task_id, label: "The task's id", required: true }]
+    query: { limit: "100" }
+    items: "value.data.filter(s, s.resource_subtype == 'comment_added')"
+    next: *next
+    output: *story
+  move_to_section:
+    label: "Move a task to a section"
+    description: "A task put at the end of a section (a column of a board), and out of its other sections of that project."
+    write: true
+    method: POST
+    path: "/sections/{{ input.section_id }}/addTask"
+    inputs:
+      - { name: section_id, label: "The section's id", required: true }
+      - { name: task_id, label: "The task's id", required: true }
+    send: { data: { task: "{{ input.task_id }}" } }
+    result: "{'moved': true}"
+    output: { moved: boolean }
+  add_to_project:
+    label: "Add a task to a project"
+    description: "A task put in another project too (a task may be in several), in one of its sections if given."
+    write: true
+    method: POST
+    path: "/tasks/{{ input.task_id }}/addProject"
+    inputs:
+      - { name: task_id, label: "The task's id", required: true }
+      - { name: project_id, label: "The project's id", required: true }
+      - { name: section_id, label: "In this section of it (its id)" }
+    send: { data: { project: "{{ input.project_id }}", section: "{{ input.section_id }}" } }
+    result: "{'added': true}"
+    output: { added: boolean }
+  add_tag:
+    label: "Tag a task"
+    description: "A tag put on a task."
+    write: true
+    method: POST
+    path: "/tasks/{{ input.task_id }}/addTag"
+    inputs:
+      - { name: task_id, label: "The task's id", required: true }
+      - { name: tag_id, label: "The tag's id", required: true }
+    send: { data: { tag: "{{ input.tag_id }}" } }
+    result: "{'added': true}"
+    output: { added: boolean }
+  add_followers:
+    label: "Add followers to a task"
+    description: "People who are told of the task's changes and comments."
+    write: true
+    method: POST
+    path: "/tasks/{{ input.task_id }}/addFollowers"
+    inputs:
+      - { name: task_id, label: "The task's id", required: true }
+      - { name: followers, label: "Who: me, email addresses or ids, separated by commas", required: true }
+    send: { data: { followers: "{{ input.followers.split(',').map(f, f.trim()) }}" } }
+    result: value.data
+    output: *task
+  list_sections:
+    label: "List a project's sections"
+    description: "The sections of a project (the columns of a board), in order."
+    method: GET
+    path: "/projects/{{ input.project_id }}/sections"
+    inputs: [{ name: project_id, label: "The project's id", required: true }]
+    query: { limit: "100" }
+    items: value.data
+    next: *next
+    output: &section { gid: text, name: text, resource_type: text }
+  create_section:
+    label: "Add a section to a project"
+    description: "A new section (a column of a board), at the end of the project."
+    write: true
+    method: POST
+    path: "/projects/{{ input.project_id }}/sections"
+    inputs:
+      - { name: project_id, label: "The project's id", required: true }
+      - { name: name, label: "The section's name", required: true }
+    send: { data: { name: "{{ input.name }}" } }
+    result: value.data
+    output: *section
+  list_projects:
+    label: "List projects"
+    description: "The projects of a workspace, or of one team."
+    method: GET
+    path: "/projects"
+    inputs:
+      - { name: workspace, label: "The workspace (its id)" }
+      - { name: team, label: "Or a team (its id)" }
+      - { name: archived, label: "Archived ones (yes) or not (no); both when empty", kind: boolean }
+    query:
+      workspace: "{{ input.workspace }}"
+      team: "{{ input.team }}"
+      archived: "{{ input.archived }}"
+      opt_fields: "name,archived,color,notes,owner.name,team.name,due_on,start_on,created_at,modified_at,permalink_url"
+      limit: "100"
+    items: value.data
+    next: *next
+    output: &project
+      gid: text
+      name: text
+      archived: boolean
+      color: text
+      notes: text
+      owner: record
+      team: record
+      due_on: text
+      start_on: text
+      created_at: text
+      modified_at: text
+      permalink_url: text
+  get_project:
+    label: "Look up a project"
+    description: "A project: its owner, team, dates, status and link."
+    method: GET
+    path: "/projects/{{ input.project_id }}"
+    inputs: [{ name: project_id, label: "The project's id", required: true }]
+    result: value.data
+    output: *project
+  create_project:
+    label: "Make a project"
+    description: "A new project in a workspace - in an organization, in one of its teams."
+    write: true
+    method: POST
+    path: "/projects"
+    inputs:
+      - { name: name, label: "The project's name", required: true }
+      - { name: workspace, label: "The workspace (its id)", required: true }
+      - { name: team, label: "The team it belongs to (its id; needed in an organization)" }
+      - { name: notes, label: "Its description" }
+      - { name: default_view, label: "Shown as: list, board, calendar or timeline" }
+      - { name: due_on, label: "Due on (a day, such as 2026-12-31)" }
+      - { name: start_on, label: "Starts on (a day)" }
+    send:
+      data:
+        name: "{{ input.name }}"
+        workspace: "{{ input.workspace }}"
+        team: "{{ input.team }}"
+        notes: "{{ input.notes }}"
+        default_view: "{{ input.default_view }}"
+        due_on: "{{ input.due_on }}"
+        start_on: "{{ input.start_on }}"
+    result: value.data
+    output: *project
+  list_workspaces:
+    label: "List workspaces"
+    description: "The workspaces and organizations the signed-in person is in, with their ids."
+    method: GET
+    path: "/workspaces"
+    query: { limit: "100" }
+    items: value.data
+    next: *next
+    output: { gid: text, name: text, resource_type: text }
+  list_users:
+    label: "List a workspace's people"
+    description: "The people of a workspace, with their email addresses."
+    method: GET
+    path: "/workspaces/{{ input.workspace }}/users"
+    inputs: [{ name: workspace, label: "The workspace (its id)", required: true }]
+    query: { opt_fields: "name,email", limit: "100" }
+    items: value.data
+    next: *next
+    output: { gid: text, name: text, email: text }
+  list_tags:
+    label: "List a workspace's tags"
+    description: "The tags of a workspace, with their ids."
+    method: GET
+    path: "/workspaces/{{ input.workspace }}/tags"
+    inputs: [{ name: workspace, label: "The workspace (its id)", required: true }]
+    query: { limit: "100" }
+    items: value.data
+    next: *next
+    output: { gid: text, name: text, resource_type: text }
+  list_teams:
+    label: "List an organization's teams"
+    description: "The teams of an organization that the signed-in person can see."
+    method: GET
+    path: "/workspaces/{{ input.workspace }}/teams"
+    inputs: [{ name: workspace, label: "The organization (its id)", required: true }]
+    query: { limit: "100" }
+    items: value.data
+    next: *next
+    output: { gid: text, name: text, resource_type: text }
+triggers:
+  new_task:
+    label: "A new task in a project"
+    description: "Each task added to a project, asked for every few minutes (tasks already done are left out)."
+    inputs:
+      - { name: project_id, label: "The project's id", required: true }
+    poll:
+      method: GET
+      path: "/projects/{{ input.project_id }}/tasks"
+      query: { completed_since: now, opt_fields: *task_fields, limit: "100" }
+      items: value.data
+      next: *next
+      id: item.gid
+      every: 5m
+  task_changed:
+    label: "A task added or changed in a project"
+    description: "Each task of a project that is added or changed (renamed, given to someone, moved, commented on, done), asked for every few minutes."
+    inputs:
+      - { name: project_id, label: "The project's id", required: true }
+    poll:
+      method: GET
+      path: "/tasks"
+      # Asked from five minutes before the poll before, in case the two clocks differ; a change seen is not run twice.
+      query:
+        project: "{{ input.project_id }}"
+        modified_since: "{{ input.cursor == null ? input.now : string(timestamp(input.cursor) - duration('5m')) }}"
+        opt_fields: *task_fields
+        limit: "100"
+      items: value.data
+      next: *next
+      id: item.gid
+      version: item.modified_at
+      cursor: input.now
+      every: 5m
+  task_completed:
+    label: "A task done in a project"
+    description: "Each task of a project marked as done, asked for every few minutes."
+    inputs:
+      - { name: project_id, label: "The project's id", required: true }
+    poll:
+      method: GET
+      path: "/tasks"
+      query:
+        project: "{{ input.project_id }}"
+        modified_since: "{{ input.cursor == null ? input.now : string(timestamp(input.cursor) - duration('5m')) }}"
+        opt_fields: *task_fields
+        limit: "100"
+      items: "value.data.filter(t, t.completed == true)"
+      next: *next
+      id: item.gid
+      cursor: input.now
+      every: 5m

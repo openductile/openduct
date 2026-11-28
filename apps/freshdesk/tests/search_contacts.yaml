@@ -1,0 +1,39 @@
+description: Contacts by a field
+action: search_contacts
+credential:
+  domain: acme
+  api_key: test-key
+input:
+  query: email:'pat@example.com'
+exchanges:
+- sent:
+    method: GET
+    url: https://acme.freshdesk.com/api/v2/search/contacts
+    query:
+      query: '"email:''pat@example.com''"'
+    headers:
+      authorization: Basic dGVzdC1rZXk6WA==
+  answer:
+    status: 200
+    body:
+      total: 1
+      results:
+      - &id001
+        id: 5001
+        name: Pat Sample
+        email: pat@example.com
+        phone: null
+        mobile: 555-0142
+        company_id: 8
+        job_title: Buyer
+        address: null
+        active: true
+        language: en
+        time_zone: Eastern Time (US & Canada)
+        tags:
+        - wholesale
+        custom_fields: {}
+        created_at: '2026-11-10T09:08:16Z'
+        updated_at: '2026-11-10T09:08:16Z'
+result:
+- *id001

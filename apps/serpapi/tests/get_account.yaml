@@ -1,0 +1,33 @@
+description: The plan and searches left, without the key or the email the answer also holds
+action: get_account
+credential: { api_key: serp_test_key_1 }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://serpapi.com/account.json"
+      query: { api_key: serp_test_key_1 }
+    answer:
+      status: 200
+      body:
+        account_id: 5ac54d6adefb2f1dba1b23c1
+        api_key: serp_test_key_1
+        account_email: owner@example.com
+        plan_id: developer
+        plan_name: Developer
+        searches_per_month: 5000
+        plan_searches_left: 4100
+        extra_credits: 0
+        total_searches_left: 4100
+        this_month_usage: 900
+        last_hour_searches: 12
+        account_rate_limit_per_hour: 1000
+result:
+  account_id: 5ac54d6adefb2f1dba1b23c1
+  plan_name: Developer
+  searches_per_month: 5000
+  plan_searches_left: 4100
+  extra_credits: 0
+  total_searches_left: 4100
+  this_month_usage: 900
+  last_hour_searches: 12
+  account_rate_limit_per_hour: 1000

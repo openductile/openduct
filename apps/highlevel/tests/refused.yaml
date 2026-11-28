@@ -1,0 +1,7 @@
+description: "A token HighLevel no longer takes: the step fails in its words"
+action: get_contact
+credential: { token: pit-test-token, location_id: i2SpAtBVHSVea1sL6oah }
+input: { contact_id: seD4PfOuKoVMLkEZqohJ }
+exchanges:
+  - answer: { status: 401, body: { statusCode: 401, message: "Invalid token: access token is invalid", error: Unauthorized } }
+error: "HighLevel answered 401: Invalid token: access token is invalid"

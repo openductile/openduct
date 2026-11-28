@@ -1,0 +1,9 @@
+description: "The server's health"
+action: get_health
+credential: { base_url: "https://gotify.example.com", token: AzyoeNS.D4iJLVa }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://gotify.example.com/health"
+    answer: { body: { health: green, database: green } }
+result: { health: green, database: green }

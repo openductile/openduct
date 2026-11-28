@@ -1,0 +1,56 @@
+# Made by `openduct app from-openapi`: Change issues.
+description: "Change issues, made from the API description's schemas"
+action: update_issues
+credential: { token: test-token }
+input: { organization_id_or_slug: example }
+exchanges:
+  - sent:
+      method: PUT
+      url: "https://us.sentry.io/api/0/organizations/example/issues/"
+      query: {}
+      headers: { authorization: "Bearer test-token" }
+      body: {}
+    answer:
+      status: 200
+      body:
+        assignedTo: { type: user, id: id_1, name: example, email: "ann@example.com" }
+        discard: true
+        hasSeen: true
+        inbox: true
+        isBookmarked: true
+        isPublic: true
+        isSubscribed: true
+        merge: { parent: example, children: [example] }
+        priority: example
+        shareId: share_1
+        status: example
+        statusDetails:
+          inNextRelease: true
+          inRelease: example
+          inCommit: { commit: example, repository: example }
+          ignoreDuration: 1
+          ignoreCount: 1
+          ignoreWindow: 1
+          ignoreUserCount: 1
+          ignoreUserWindow: 1
+result:
+  assignedTo: { type: user, id: id_1, name: example, email: "ann@example.com" }
+  discard: true
+  hasSeen: true
+  inbox: true
+  isBookmarked: true
+  isPublic: true
+  isSubscribed: true
+  merge: { parent: example, children: [example] }
+  priority: example
+  shareId: share_1
+  status: example
+  statusDetails:
+    inNextRelease: true
+    inRelease: example
+    inCommit: { commit: example, repository: example }
+    ignoreDuration: 1
+    ignoreCount: 1
+    ignoreWindow: 1
+    ignoreUserCount: 1
+    ignoreUserWindow: 1

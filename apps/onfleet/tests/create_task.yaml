@@ -1,0 +1,114 @@
+description: A delivery to an address for a recipient, in a time window, to a team
+action: create_task
+credential:
+  api_key: test-key
+input:
+  address: 100 Sample Street, San Francisco, CA, USA
+  address_notes: Green door
+  recipient_name: Pat Sample
+  recipient_phone: '+14155550100'
+  notes: 2 boxes of mugs
+  complete_after: '2026-12-01T15:00:00Z'
+  complete_before: '2026-12-01T17:00:00Z'
+  team_id: R4P7jhuzaIZ4cHHZE1ghmTtB
+exchanges:
+- sent:
+    method: POST
+    url: https://onfleet.com/api/v2/tasks
+    headers:
+      authorization: Basic dGVzdC1rZXk6
+    body:
+      destination:
+        address:
+          unparsed: 100 Sample Street, San Francisco, CA, USA
+        notes: Green door
+      recipients:
+      - name: Pat Sample
+        phone: '+14155550100'
+      notes: 2 boxes of mugs
+      completeAfter: 1796137200000
+      completeBefore: 1796144400000
+      container:
+        type: TEAM
+        team: R4P7jhuzaIZ4cHHZE1ghmTtB
+  answer:
+    status: 200
+    body:
+      id: 11z1BbsQUZFHD1XAd~emDDeK
+      timeCreated: 1795161600000
+      timeLastModified: 1795161600278
+      organization: yAM*fDkztrT3gUcz9mNDgNOL
+      shortId: 31aac0a5
+      trackingURL: https://onf.lt/31aac0a5
+      worker: null
+      merchant: yAM*fDkztrT3gUcz9mNDgNOL
+      executor: yAM*fDkztrT3gUcz9mNDgNOL
+      creator: EJmsbJgHiRLPjNVE7GEIPs7*
+      dependencies: &id001 []
+      state: 0
+      completeAfter: 1796137200000
+      completeBefore: 1796144400000
+      pickupTask: false
+      notes: 2 boxes of mugs
+      completionDetails: &id002
+        events: []
+        time: null
+      feedback: &id003 []
+      metadata: &id004 []
+      overrides: &id005 {}
+      container:
+        type: TEAM
+        team: R4P7jhuzaIZ4cHHZE1ghmTtB
+      recipients: &id006
+      - id: xX87G1gSkeLvGXlHn2tn0~iB
+        organization: yAM*fDkztrT3gUcz9mNDgNOL
+        timeCreated: 1795161600000
+        timeLastModified: 1795161600000
+        name: Pat Sample
+        phone: '+14155550100'
+        notes: Ring twice
+        skipSMSNotifications: false
+        metadata: []
+      destination: &id007
+        id: pfT5L1JclTdhvRnP9GQzMFuL
+        timeCreated: 1795161600000
+        timeLastModified: 1795161600000
+        location:
+        - -122.4128901
+        - 37.787933
+        address:
+          apartment: ''
+          state: California
+          postalCode: '94109'
+          country: United States
+          city: San Francisco
+          street: Sample Street
+          number: '100'
+        notes: Green door
+        metadata: []
+result:
+  id: 11z1BbsQUZFHD1XAd~emDDeK
+  timeCreated: 1795161600000
+  timeLastModified: 1795161600278
+  organization: yAM*fDkztrT3gUcz9mNDgNOL
+  shortId: 31aac0a5
+  trackingURL: https://onf.lt/31aac0a5
+  worker: null
+  merchant: yAM*fDkztrT3gUcz9mNDgNOL
+  executor: yAM*fDkztrT3gUcz9mNDgNOL
+  creator: EJmsbJgHiRLPjNVE7GEIPs7*
+  dependencies: *id001
+  state: 0
+  completeAfter: 1796137200000
+  completeBefore: 1796144400000
+  pickupTask: false
+  notes: 2 boxes of mugs
+  completionDetails: *id002
+  feedback: *id003
+  metadata: *id004
+  overrides: *id005
+  container:
+    type: TEAM
+    team: R4P7jhuzaIZ4cHHZE1ghmTtB
+  recipients: *id006
+  destination: *id007

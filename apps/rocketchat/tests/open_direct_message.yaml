@@ -1,0 +1,7 @@
+action: open_direct_message
+credential: { workspace: acme, user_id: uAbC123, token: rc_test_1 }
+input: { username: ann }
+exchanges:
+  - sent: { method: POST, url: https://acme.rocket.chat/api/v1/dm.create, body: { username: ann } }
+    answer: { body: { room: { _id: dAnn1, t: d, rid: dAnn1, usernames: [ann, shop-bot] }, success: true } }
+result: { _id: dAnn1, t: d, rid: dAnn1, usernames: [ann, shop-bot] }

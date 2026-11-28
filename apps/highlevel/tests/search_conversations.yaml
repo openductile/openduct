@@ -1,0 +1,38 @@
+description: "Search conversations"
+action: search_conversations
+credential: { token: test-token }
+input: { location_id: ABCHkzuJQ8ZMd4Te84GK }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://services.leadconnectorhq.com/conversations/search"
+      query: { locationId: ABCHkzuJQ8ZMd4Te84GK }
+      headers: { authorization: "Bearer test-token", version: "2021-04-15" }
+    answer:
+      status: 200
+      body:
+        conversations:
+          - id: ABCHkzuJQ8ZMd4Te84GK
+            contactId: ABCHkzuJQ8ZMd4Te84GK
+            locationId: ABCHkzuJQ8ZMd4Te84GK
+            lastMessageBody: example
+            lastMessageType: TYPE_CALL
+            type: TYPE_PHONE
+            unreadCount: 1
+            fullName: example
+            contactName: example
+            email: "ann@example.com"
+            phone: example
+        total: 100
+result:
+  - id: ABCHkzuJQ8ZMd4Te84GK
+    contactId: ABCHkzuJQ8ZMd4Te84GK
+    locationId: ABCHkzuJQ8ZMd4Te84GK
+    lastMessageBody: example
+    lastMessageType: TYPE_CALL
+    type: TYPE_PHONE
+    unreadCount: 1
+    fullName: example
+    contactName: example
+    email: "ann@example.com"
+    phone: example

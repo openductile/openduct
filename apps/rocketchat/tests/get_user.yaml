@@ -1,0 +1,7 @@
+action: get_user
+credential: { workspace: acme, user_id: uAbC123, token: rc_test_1 }
+input: { username: ann }
+exchanges:
+  - sent: { method: GET, url: https://acme.rocket.chat/api/v1/users.info, query: { username: ann } }
+    answer: { body: { user: { _id: uAnn1, username: ann, name: Ann Lee, status: online, active: true }, success: true } }
+result: { _id: uAnn1, username: ann, name: Ann Lee, status: online, active: true }

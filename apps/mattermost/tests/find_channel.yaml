@@ -1,0 +1,11 @@
+description: A channel by its team's name and its own
+action: find_channel
+credential: { server_url: "https://chat.example.com", token: testmmtoken0000000000000000 }
+input: { team_name: example-co, channel_name: orders }
+exchanges:
+  - sent:
+      method: GET
+      url: https://chat.example.com/api/v4/teams/name/example-co/channels/name/orders
+      headers: { authorization: Bearer testmmtoken0000000000000000 }
+    answer: { body: { id: c1aaaaaaaaaaaaaaaaaaaaaaaa, team_id: t1aaaaaaaaaaaaaaaaaaaaaaaa, type: O, name: orders, display_name: Orders, purpose: Order updates, header: "" } }
+result: { id: c1aaaaaaaaaaaaaaaaaaaaaaaa, team_id: t1aaaaaaaaaaaaaaaaaaaaaaaa, type: O, name: orders, display_name: Orders, purpose: Order updates, header: "" }

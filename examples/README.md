@@ -12,3 +12,7 @@ cargo run --release -p openduct -- serve --memory
 | [embedded-broker](embedded-broker/src/main.rs) | `cargo run -p embedded-broker -- ./edge-log` (it needs no separate broker) | OpenDuct inside your own program, with a durable log. Run it twice: the log survives restarts. |
 
 `--bootstrap host:port` points an example at another broker.
+
+[ci](ci) holds ready-made CI for workflows kept in a repository - GitHub Actions and GitLab CI that check and test
+them on every change, push them to a test workspace after a merge and promote them to production - and two workflow
+files to start from ([CI/CD for workflows](../docs/deployment.md#cicd-for-workflows)).

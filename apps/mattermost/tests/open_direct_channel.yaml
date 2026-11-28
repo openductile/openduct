@@ -1,0 +1,12 @@
+description: The direct message channel of two users
+action: open_direct_channel
+credential: { server_url: "https://chat.example.com", token: testmmtoken0000000000000000 }
+input: { user_id: u1aaaaaaaaaaaaaaaaaaaaaaaa, other_user_id: u2aaaaaaaaaaaaaaaaaaaaaaaa }
+exchanges:
+  - sent:
+      method: POST
+      url: https://chat.example.com/api/v4/channels/direct
+      headers: { authorization: Bearer testmmtoken0000000000000000 }
+      body: [u1aaaaaaaaaaaaaaaaaaaaaaaa, u2aaaaaaaaaaaaaaaaaaaaaaaa]
+    answer: { status: 201, body: { id: d1aaaaaaaaaaaaaaaaaaaaaaaa, team_id: "", type: D, name: u1aaaaaaaaaaaaaaaaaaaaaaaa__u2aaaaaaaaaaaaaaaaaaaaaaaa, display_name: "" } }
+result: { id: d1aaaaaaaaaaaaaaaaaaaaaaaa, team_id: "", type: D, name: u1aaaaaaaaaaaaaaaaaaaaaaaa__u2aaaaaaaaaaaaaaaaaaaaaaaa, display_name: "" }

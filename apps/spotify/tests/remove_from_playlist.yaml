@@ -1,0 +1,10 @@
+action: remove_from_playlist
+credential: { access_token: BQ-test-token }
+input: { playlist: 0TestList000000000001, uris: "spotify:track:0TestTrack000000000002" }
+exchanges:
+  - sent:
+      method: DELETE
+      url: https://api.spotify.com/v1/playlists/0TestList000000000001/items
+      body: { items: [{ uri: "spotify:track:0TestTrack000000000002" }] }
+    answer: { body: { snapshot_id: snap3 } }
+result: { snapshot_id: snap3 }

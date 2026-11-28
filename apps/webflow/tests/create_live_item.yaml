@@ -1,0 +1,13 @@
+description: An item added and put live at once
+action: create_live_item
+credential: { token: test-token }
+input: { collection_id: col_1, field_data: { name: Winter menu, slug: winter-menu } }
+exchanges:
+  - sent:
+      method: POST
+      url: "https://api.webflow.com/v2/collections/col_1/items/live"
+      body: { fieldData: { name: Winter menu, slug: winter-menu }, isDraft: false }
+    answer:
+      status: 202
+      body: { id: itm_4, isDraft: false, lastPublished: "2026-11-27T10:05:00.000Z", fieldData: { name: Winter menu, slug: winter-menu } }
+result: { id: itm_4, isDraft: false, lastPublished: "2026-11-27T10:05:00.000Z", fieldData: { name: Winter menu, slug: winter-menu } }

@@ -2,7 +2,7 @@ name: De-duplicate contacts with JavaScript
 description: >-
   When a list of contacts comes in over a webhook ({"contacts": [...]}), drop the repeats (the same e-mail address,
   whatever its case), sort them by name, and keep the clean list in the contacts.clean topic.
-category: Code
+category: Data
 trigger:
   webhook: {}
 # What a test runs on: an event as this trigger gives it.

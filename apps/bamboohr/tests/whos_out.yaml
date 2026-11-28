@@ -1,0 +1,44 @@
+description: Who is off, and the holidays
+action: whos_out
+credential:
+  company_domain: acme
+  api_key: test-key
+input:
+  start: '2026-12-21'
+  end: '2026-12-31'
+exchanges:
+- sent:
+    method: GET
+    url: https://acme.bamboohr.com/api/v1/time_off/whos_out
+    query:
+      start: '2026-12-21'
+      end: '2026-12-31'
+    headers:
+      authorization: Basic dGVzdC1rZXk6eA==
+      accept: application/json
+  answer:
+    status: 200
+    body:
+    - id: 1348
+      type: timeOff
+      employeeId: 101
+      name: Ada Sample
+      start: '2026-12-21'
+      end: '2026-12-23'
+    - id: 9
+      type: holiday
+      name: Winter holiday
+      start: '2026-12-25'
+      end: '2026-12-25'
+result:
+- id: 1348
+  type: timeOff
+  employeeId: 101
+  name: Ada Sample
+  start: '2026-12-21'
+  end: '2026-12-23'
+- id: 9
+  type: holiday
+  name: Winter holiday
+  start: '2026-12-25'
+  end: '2026-12-25'

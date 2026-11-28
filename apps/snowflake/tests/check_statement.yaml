@@ -1,0 +1,24 @@
+description: The second part of a large result - Snowflake sends only its rows
+action: check_statement
+credential: { account: exampleorg-example1, token: pat-test-1 }
+input: { statement_handle: 01b2c3d4-0000-4000-8000-000000000001, partition: 1 }
+exchanges:
+  - sent:
+      method: GET
+      url: https://exampleorg-example1.snowflakecomputing.com/api/v2/statements/01b2c3d4-0000-4000-8000-000000000001
+      query: { partition: "1" }
+      headers: { authorization: Bearer pat-test-1, user-agent: OpenDuct/1.0 }
+    answer:
+      status: 200
+      body:
+        data:
+          - ["2001", cy@example.com, "7.25"]
+result:
+  statement_handle: null
+  code: null
+  message: null
+  columns: []
+  rows: [["2001", cy@example.com, "7.25"]]
+  row_count: 0
+  partitions: 0
+  stats: null

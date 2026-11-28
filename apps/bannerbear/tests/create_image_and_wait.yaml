@@ -1,0 +1,11 @@
+description: The same image made on the synchronous address - the finished file comes back
+action: create_image_and_wait
+credential: { api_key: bb_ak_v5_test }
+input: { template: tpl_A1b2, objects: [{ name: title, text: Thank you for your order }, { name: photo, image_url: "https://shop.example.com/p/mug.jpg" }], formats: [png], metadata: A-1042 }
+exchanges:
+  - sent:
+      method: POST
+      url: "https://sync.api.bannerbear.com/v5/images"
+      body: { template: tpl_A1b2, modifications: { objects: [{ name: title, text: Thank you for your order }, { name: photo, image_url: "https://shop.example.com/p/mug.jpg" }] }, formats: [png], metadata: A-1042 }
+    answer: { status: 200, body: { uid: img_7Xk2, status: completed, template: tpl_A1b2, files: { png: "https://images.bannerbear.example/img_7Xk2.png" }, metadata: A-1042, self: "https://api.bannerbear.com/v5/images/img_7Xk2", created_at: "2026-11-27T09:00:00Z", completed_at: "2026-11-27T09:00:03Z" } }
+result: { uid: img_7Xk2, status: completed, template: tpl_A1b2, files: { png: "https://images.bannerbear.example/img_7Xk2.png" }, metadata: A-1042, self: "https://api.bannerbear.com/v5/images/img_7Xk2", created_at: "2026-11-27T09:00:00Z", completed_at: "2026-11-27T09:00:03Z" }

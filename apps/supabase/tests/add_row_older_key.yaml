@@ -1,0 +1,9 @@
+description: An older service_role key is sent in Authorization as well
+action: add_row
+credential: { project_url: "https://abcdefgh.supabase.co", api_key: eyJhbGciOiJIUzI1NiJ9.test.sig }
+input: { table: contacts, row: { name: Ann Example } }
+exchanges:
+  - sent:
+      headers: { apikey: eyJhbGciOiJIUzI1NiJ9.test.sig, authorization: Bearer eyJhbGciOiJIUzI1NiJ9.test.sig }
+    answer: { status: 201, body: [{ id: 8, name: Ann Example }] }
+result: { id: 8, name: Ann Example }

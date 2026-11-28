@@ -1,0 +1,11 @@
+action: open_issue
+credential: { token: test-token-1 }
+input: { owner: example-shop, repo: website, title: Checkout button is grey, body: "On phones, the button **cannot** be seen.", labels: [bug] }
+exchanges:
+  - sent:
+      method: POST
+      url: https://api.github.com/repos/example-shop/website/issues
+      headers: { authorization: Bearer test-token-1, accept: application/vnd.github+json, x-github-api-version: "2026-03-10" }
+      body: { title: Checkout button is grey, body: "On phones, the button **cannot** be seen.", labels: [bug] }
+    answer: { status: 201, body: { id: 1, number: 1347, state: open, html_url: "https://github.com/example-shop/website/issues/1347" } }
+result: { id: 1, number: 1347, state: open, html_url: "https://github.com/example-shop/website/issues/1347" }

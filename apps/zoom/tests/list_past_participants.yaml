@@ -1,0 +1,7 @@
+action: list_past_participants
+credential: { access_token: zoom-test-token }
+input: { meeting_id: "85700000001" }
+exchanges:
+  - sent: { method: GET, url: https://api.zoom.us/v2/past_meetings/85700000001/participants, query: { page_size: "300" } }
+    answer: { body: { page_size: 300, total_records: 1, participants: [{ id: part-test-1, name: Ann Lee, user_email: ann@example.com, join_time: "2026-12-01T20:01:00Z", leave_time: "2026-12-01T20:44:00Z", duration: 2580, status: in_meeting, internal_user: false }] } }
+result: [{ id: part-test-1, name: Ann Lee, user_email: ann@example.com, join_time: "2026-12-01T20:01:00Z", leave_time: "2026-12-01T20:44:00Z", duration: 2580, status: in_meeting, internal_user: false }]

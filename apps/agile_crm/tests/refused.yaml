@@ -1,0 +1,7 @@
+description: A wrong email or key is refused (Agile CRM documents the status only)
+action: get_contact
+credential: {domain: shopexample, email: dana@shop.example, api_key: agile-test-key}
+input: {contact_id: '5629585249009664'}
+exchanges:
+- answer: {status: 401}
+error: Agile CRM answered 401

@@ -1,0 +1,14 @@
+# Made by `openduct app from-openapi`: Add contacts to a campaign sequence.
+description: "Add contacts to a campaign sequence, made from the API description's schemas"
+action: add_to_campaign_sequence
+credential: { access_token: test-access-token }
+input: { campaign_id: campaign_1, sequence_id: sequence_1, contact_ids: [example] }
+exchanges:
+  - sent:
+      method: POST
+      url: "https://api.keap.com/crm/rest/v2/campaigns/campaign_1/sequences/sequence_1:addContacts"
+      query: {}
+      headers: { authorization: "Bearer test-access-token" }
+      body: { contact_ids: [example] }
+    answer: { status: 200, body: { add_to_sequence_results: {} } }
+result: { add_to_sequence_results: {} }

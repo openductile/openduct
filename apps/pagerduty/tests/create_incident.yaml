@@ -1,0 +1,20 @@
+description: An incident opened on a service, with a priority and someone assigned
+action: create_incident
+credential: { api_key: pd_test_1 }
+input: { from: ann@example.com, title: Checkout is down, service_id: PSVC001, urgency: high, details: Card payments fail since 10:00, priority_id: PPRI001, assignee_id: PUSER02 }
+exchanges:
+  - sent:
+      method: POST
+      url: https://api.pagerduty.com/incidents
+      headers: { authorization: Token token=pd_test_1, from: ann@example.com }
+      body:
+        incident:
+          type: incident
+          title: Checkout is down
+          service: { id: PSVC001, type: service_reference }
+          urgency: high
+          body: { type: incident_body, details: Card payments fail since 10:00 }
+          priority: { id: PPRI001, type: priority_reference }
+          assignments: [{ assignee: { id: PUSER02, type: user_reference } }]
+    answer: { status: 201, body: { incident: { id: PINC003, incident_number: 44, title: Checkout is down, status: triggered, urgency: high } } }
+result: { id: PINC003, incident_number: 44, title: Checkout is down, status: triggered, urgency: high }

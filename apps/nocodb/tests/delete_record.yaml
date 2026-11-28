@@ -1,0 +1,8 @@
+description: A record removed
+action: delete_record
+credential: { api_token: test-nocodb-token }
+input: { base_id: pexample0001, table_id: mexample0001, record_id: "2" }
+exchanges:
+  - sent: { method: DELETE, url: https://app.nocodb.com/api/v3/data/pexample0001/mexample0001/records, body: { id: "2" } }
+    answer: { body: { records: [{ id: 2 }] } }
+result: { id: 2 }

@@ -1,0 +1,287 @@
+# Copyright 2026 Ductile AI, Inc
+# SPDX-License-Identifier: Apache-2.0
+#
+# Written from CoinGecko's own API descriptions (https://docs.coingecko.com/openapi-specs/demo-api.json and
+# pro-api.json, fetched 2026-11-27), after `openduct app from-openapi` showed the operations.
+app: coingecko
+name: CoinGecko
+category: finance
+description: Prices, market data and history of crypto coins and tokens, exchanges and categories.
+docs: https://docs.coingecko.com/reference/introduction
+hosts: [api.coingecko.com, pro-api.coingecko.com]
+base_url: https://api.coingecko.com/api/v3
+sign_in:
+  - id: coingecko
+    label: A Demo API key (free)
+    fields:
+      - { name: api_key, label: "The Demo API key (Developer Dashboard at coingecko.com)", secret: true }
+    headers: { x-cg-demo-api-key: "{{ credential.api_key }}" }
+  - id: coingecko_pro
+    label: A paid plan's API key (Pro)
+    fields:
+      - { name: api_key, label: "The Pro API key (Developer Dashboard at coingecko.com)", secret: true }
+    headers: { x-cg-pro-api-key: "{{ credential.api_key }}" }
+    base_url: https://pro-api.coingecko.com/api/v3
+error: value.status.error_message
+actions:
+  get_price:
+    label: Price of coins
+    description: >-
+      The price of one or more coins (by id, symbol or name) in one or more currencies, with market cap, volume and
+      the change over 24 hours if asked; the answer is keyed by coin, then currency (bitcoin.usd).
+    method: GET
+    path: /simple/price
+    inputs:
+      - { name: vs_currencies, label: "In which currencies (separated by commas, such as usd,eur)", required: true }
+      - { name: ids, label: "Coins' ids (separated by commas, such as bitcoin,ethereum)" }
+      - { name: symbols, label: "Or coins' symbols (such as btc,eth)" }
+      - { name: names, label: "Or coins' names (such as Bitcoin)" }
+      - { name: include_market_cap, label: "With the market cap", kind: boolean }
+      - { name: include_24hr_vol, label: "With the volume of the last 24 hours", kind: boolean }
+      - { name: include_24hr_change, label: "With the change over 24 hours (%)", kind: boolean }
+      - { name: include_last_updated_at, label: "With when it was last updated", kind: boolean }
+      - { name: precision, label: "Decimal places (0 to 18, or full)" }
+    query:
+      vs_currencies: "{{ input.vs_currencies }}"
+      ids: "{{ input.ids }}"
+      symbols: "{{ input.symbols }}"
+      names: "{{ input.names }}"
+      include_market_cap: "{{ input.include_market_cap }}"
+      include_24hr_vol: "{{ input.include_24hr_vol }}"
+      include_24hr_change: "{{ input.include_24hr_change }}"
+      include_last_updated_at: "{{ input.include_last_updated_at }}"
+      precision: "{{ input.precision }}"
+  get_token_price:
+    label: Price of tokens by contract address
+    description: The price of tokens on a blockchain (Ethereum, Solana...), by their contract addresses; keyed by address.
+    method: GET
+    path: "/simple/token_price/{{ input.platform }}"
+    inputs:
+      - { name: platform, label: "The blockchain's id (such as ethereum; see List blockchains)", required: true }
+      - { name: contract_addresses, label: "The tokens' contract addresses (separated by commas)", required: true }
+      - { name: vs_currencies, label: "In which currencies (such as usd)", required: true }
+      - { name: include_market_cap, label: "With the market cap", kind: boolean }
+      - { name: include_24hr_vol, label: "With the volume of the last 24 hours", kind: boolean }
+      - { name: include_24hr_change, label: "With the change over 24 hours (%)", kind: boolean }
+    query:
+      contract_addresses: "{{ input.contract_addresses }}"
+      vs_currencies: "{{ input.vs_currencies }}"
+      include_market_cap: "{{ input.include_market_cap }}"
+      include_24hr_vol: "{{ input.include_24hr_vol }}"
+      include_24hr_change: "{{ input.include_24hr_change }}"
+  list_currencies:
+    label: Currencies prices can be given in
+    description: The currency codes CoinGecko gives prices in (usd, eur, btc...).
+    method: GET
+    path: /simple/supported_vs_currencies
+    items: "value.map(c, {'currency': c})"
+    output: { currency: text }
+  list_coins:
+    label: List all coins
+    description: Every coin's id, symbol and name (the id is what the other actions ask for), and its contract addresses if asked.
+    method: GET
+    path: /coins/list
+    inputs:
+      - { name: include_platform, label: "With each coin's contract addresses", kind: boolean }
+      - { name: status, label: "active (the default) or inactive" }
+    query: { include_platform: "{{ input.include_platform }}", status: "{{ input.status }}" }
+    items: value
+    output: { id: text, symbol: text, name: text, platforms: record }
+  list_coin_markets:
+    label: Coins with their market data
+    description: >-
+      Coins with price, market cap, volume, highs and lows and changes, ranked by market cap (or as asked); of a
+      category or the coins given; every page up to the most.
+    method: GET
+    path: /coins/markets
+    inputs:
+      - { name: vs_currency, label: "In which currency (such as usd)", required: true }
+      - { name: ids, label: "Only these coins (ids, separated by commas)" }
+      - { name: category, label: "Only of this category (its id, see Coin categories)" }
+      - { name: order, label: "market_cap_desc (the default), market_cap_asc, volume_desc, volume_asc, id_asc or id_desc" }
+      - { name: price_change_percentage, label: "With the change over these times (such as 1h,24h,7d)" }
+      - { name: precision, label: "Decimal places (0 to 18, or full)" }
+    query:
+      vs_currency: "{{ input.vs_currency }}"
+      ids: "{{ input.ids }}"
+      category: "{{ input.category }}"
+      order: "{{ input.order }}"
+      price_change_percentage: "{{ input.price_change_percentage }}"
+      precision: "{{ input.precision }}"
+      per_page: "250"
+    items: value
+    next: "size(value) < 250 ? null : {'page': (page == null ? 1 : int(page.page)) + 1}"
+    max_pages: 4
+    output:
+      id: text
+      symbol: text
+      name: text
+      current_price: number
+      market_cap: number
+      market_cap_rank: number
+      total_volume: number
+      high_24h: number
+      low_24h: number
+      price_change_24h: number
+      price_change_percentage_24h: number
+      circulating_supply: number
+      ath: number
+      last_updated: text
+  get_coin:
+    label: Get a coin
+    description: "Everything about a coin: its description, links, market data, where it trades."
+    method: GET
+    path: "/coins/{{ input.id }}"
+    inputs:
+      - { name: id, label: "The coin's id (such as bitcoin)", required: true }
+      - { name: tickers, label: "With where it trades (true by default)", kind: boolean }
+      - { name: market_data, label: "With its market data (true by default)", kind: boolean }
+      - { name: localization, label: "With its name in every language (true by default)", kind: boolean }
+      - { name: sparkline, label: "With its price over 7 days", kind: boolean }
+    query:
+      tickers: "{{ input.tickers }}"
+      market_data: "{{ input.market_data }}"
+      localization: "{{ input.localization }}"
+      sparkline: "{{ input.sparkline }}"
+    output: &coin { id: text, symbol: text, name: text, categories: list, description: record, links: record, image: record, market_cap_rank: number, market_data: record, tickers: list, last_updated: text }
+  get_coin_by_contract:
+    label: Get a coin by contract address
+    description: A token's data, found by the blockchain and its contract address.
+    method: GET
+    path: "/coins/{{ input.platform }}/contract/{{ input.contract_address }}"
+    inputs:
+      - { name: platform, label: "The blockchain's id (such as ethereum)", required: true }
+      - { name: contract_address, label: "The token's contract address", required: true }
+    output: *coin
+  get_coin_history:
+    label: A coin on a past date
+    description: A coin's price, market cap and volume on a day (at 00:00 UTC).
+    method: GET
+    path: "/coins/{{ input.id }}/history"
+    inputs:
+      - { name: id, label: "The coin's id", required: true }
+      - { name: date, label: "The day, as dd-mm-yyyy (such as 30-12-2025)", required: true }
+      - { name: localization, label: "With its name in every language", kind: boolean }
+    query: { date: "{{ input.date }}", localization: "{{ input.localization }}" }
+    output: { id: text, symbol: text, name: text, image: record, market_data: record }
+  get_coin_chart:
+    label: A coin's price history
+    description: >-
+      Prices, market caps and volumes over the last days, each as [time in milliseconds, value]; every 5 minutes for
+      1 day, hourly up to 90 days, daily beyond.
+    method: GET
+    path: "/coins/{{ input.id }}/market_chart"
+    inputs:
+      - { name: id, label: "The coin's id", required: true }
+      - { name: vs_currency, label: "In which currency (such as usd)", required: true }
+      - { name: days, label: "Over how many days (or max)", required: true }
+      - { name: interval, label: "daily (or hourly, on a paid plan); by days when empty" }
+      - { name: precision, label: "Decimal places (0 to 18, or full)" }
+    query: { vs_currency: "{{ input.vs_currency }}", days: "{{ input.days }}", interval: "{{ input.interval }}", precision: "{{ input.precision }}" }
+    output: &chart { prices: list, market_caps: list, total_volumes: list }
+  get_coin_chart_range:
+    label: A coin's price history between two times
+    description: Prices, market caps and volumes between two times, each as [time in milliseconds, value].
+    method: GET
+    path: "/coins/{{ input.id }}/market_chart/range"
+    inputs:
+      - { name: id, label: "The coin's id", required: true }
+      - { name: vs_currency, label: "In which currency (such as usd)", required: true }
+      - { name: from, label: "From (seconds since 1970)", required: true, kind: number }
+      - { name: to, label: "To (seconds since 1970)", required: true, kind: number }
+      - { name: interval, label: "daily (or hourly, on a paid plan); by the range when empty" }
+    query: { vs_currency: "{{ input.vs_currency }}", from: "{{ input.from }}", to: "{{ input.to }}", interval: "{{ input.interval }}" }
+    output: *chart
+  get_coin_ohlc:
+    label: A coin's candles (open, high, low, close)
+    description: A coin's open, high, low and close prices over the last days, one candle per 30 minutes, 4 hours or 4 days.
+    method: GET
+    path: "/coins/{{ input.id }}/ohlc"
+    inputs:
+      - { name: id, label: "The coin's id", required: true }
+      - { name: vs_currency, label: "In which currency (such as usd)", required: true }
+      - { name: days, label: "Over how many days: 1, 7, 14, 30, 90, 180 or 365", required: true }
+    query: { vs_currency: "{{ input.vs_currency }}", days: "{{ input.days }}" }
+    items: "value.map(c, {'time': c[0], 'open': c[1], 'high': c[2], 'low': c[3], 'close': c[4]})"
+    output: { time: number, open: number, high: number, low: number, close: number }
+  list_coin_tickers:
+    label: Where a coin trades
+    description: A coin's trading pairs on exchanges, with the last price and volume; most traded first, every page.
+    method: GET
+    path: "/coins/{{ input.id }}/tickers"
+    inputs:
+      - { name: id, label: "The coin's id", required: true }
+      - { name: exchange_ids, label: "Only on these exchanges (ids, separated by commas)" }
+      - { name: order, label: "volume_desc (the default), volume_asc, last_traded_at_desc or last_traded_at_asc" }
+    query: { exchange_ids: "{{ input.exchange_ids }}", order: "{{ input.order }}" }
+    items: value.tickers
+    next: "size(value.tickers) < 100 ? null : {'page': (page == null ? 1 : int(page.page)) + 1}"
+    output: { base: text, target: text, market: record, last: number, volume: number, converted_last: record, trust_score: text, last_traded_at: text, trade_url: text }
+  search:
+    label: Search coins, exchanges and categories
+    description: Coins, exchanges, categories and NFTs whose name or symbol matches, the largest first.
+    method: GET
+    path: /search
+    inputs:
+      - { name: query, label: What to look for, required: true }
+    query: { query: "{{ input.query }}" }
+    output: { coins: list, exchanges: list, categories: list, nfts: list }
+  trending:
+    label: Trending coins
+    description: The coins, NFTs and categories most searched on CoinGecko in the last 24 hours.
+    method: GET
+    path: /search/trending
+    output: { coins: list, nfts: list, categories: list }
+  global_market:
+    label: The whole crypto market
+    description: Total market cap and volume, how much of it each large coin holds, the change over 24 hours.
+    method: GET
+    path: /global
+    result: value.data
+    output: { active_cryptocurrencies: number, markets: number, total_market_cap: record, total_volume: record, market_cap_percentage: record, market_cap_change_percentage_24h_usd: number, updated_at: number }
+  exchange_rates:
+    label: Bitcoin's exchange rates
+    description: What one bitcoin is worth in other coins and in currencies.
+    method: GET
+    path: /exchange_rates
+    result: value.rates
+  list_categories:
+    label: Coin categories
+    description: The categories of coins (such as Layer 1, Stablecoins) with their market cap and change over 24 hours.
+    method: GET
+    path: /coins/categories
+    inputs:
+      - { name: order, label: "market_cap_desc (the default), market_cap_asc, name_asc, name_desc, market_cap_change_24h_desc or _asc" }
+    query: { order: "{{ input.order }}" }
+    items: value
+    output: { id: text, name: text, market_cap: number, market_cap_change_24h: number, volume_24h: number, top_3_coins_id: list, updated_at: text }
+  list_exchanges:
+    label: List exchanges
+    description: Exchanges with their trust score and 24-hour volume (in bitcoin), every page up to the most.
+    method: GET
+    path: /exchanges
+    query: { per_page: "250" }
+    items: value
+    next: "size(value) < 250 ? null : {'page': (page == null ? 1 : int(page.page)) + 1}"
+    output: &exchange { id: text, name: text, year_established: number, country: text, url: text, trust_score: number, trust_score_rank: number, trade_volume_24h_btc: number }
+  get_exchange:
+    label: Get an exchange
+    description: An exchange's details, volume and its most traded pairs.
+    method: GET
+    path: "/exchanges/{{ input.id }}"
+    inputs:
+      - { name: id, label: "The exchange's id (such as gdax)", required: true }
+    output: *exchange
+  list_platforms:
+    label: List blockchains
+    description: The blockchains (asset platforms) tokens live on, with their ids for the token actions.
+    method: GET
+    path: /asset_platforms
+    items: value
+    output: { id: text, chain_identifier: number, name: text, shortname: text, native_coin_id: text }
+  ping:
+    label: Is CoinGecko up
+    description: Checks the key and that the API answers.
+    method: GET
+    path: /ping
+    output: { gecko_says: text }

@@ -1,0 +1,25 @@
+description: 'The Send API refuses: each error of the message in its words'
+action: send_email
+credential:
+  api_key: test-key
+  secret_key: test-secret
+input:
+  from_email: orders@example.com
+  to: pat@example.com
+  subject: Hi
+exchanges:
+- answer:
+    status: 400
+    body:
+      Messages:
+      - Status: error
+        Errors:
+        - ErrorIdentifier: f987008f-251a-4dff-8ffc-40f1583ad7bc
+          ErrorCode: send-0003
+          StatusCode: 400
+          ErrorMessage: At least "HTMLPart", "TextPart" or "TemplateID" must be provided.
+          ErrorRelatedTo:
+          - HTMLPart
+          - TextPart
+          - TemplateID
+error: 'Mailjet answered 400: At least "HTMLPart", "TextPart" or "TemplateID" must be provided.'

@@ -1,0 +1,12 @@
+description: A row added, and given back as it was kept
+action: add_row
+credential: { project_url: "https://abcdefgh.supabase.co", api_key: sb_secret_test1 }
+input: { table: contacts, row: { name: Ann Example, email: ann@example.com } }
+exchanges:
+  - sent:
+      method: POST
+      url: https://abcdefgh.supabase.co/rest/v1/contacts
+      headers: { apikey: sb_secret_test1, prefer: return=representation }
+      body: { name: Ann Example, email: ann@example.com }
+    answer: { status: 201, body: [{ id: 7, name: Ann Example, email: ann@example.com }] }
+result: { id: 7, name: Ann Example, email: ann@example.com }

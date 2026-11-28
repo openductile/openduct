@@ -1,0 +1,10 @@
+description: A subtask, after another one
+action: create_task
+credential: { access_token: ya29.test }
+input: { list_id: "@default", title: Check the hours, parent: dGFzazM, after: dGFzazQ }
+exchanges:
+  - sent:
+      query: { parent: dGFzazM, previous: dGFzazQ }
+      body: { title: Check the hours }
+    answer: { body: { kind: tasks#task, id: dGFzazU, title: Check the hours, parent: dGFzazM, status: needsAction } }
+result: { kind: tasks#task, id: dGFzazU, title: Check the hours, parent: dGFzazM, status: needsAction }

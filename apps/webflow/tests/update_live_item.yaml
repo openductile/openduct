@@ -1,0 +1,13 @@
+description: A live item's field changed on the site at once
+action: update_live_item
+credential: { token: test-token }
+input: { collection_id: col_1, item_id: itm_4, field_data: { price: "14.00" } }
+exchanges:
+  - sent:
+      method: PATCH
+      url: "https://api.webflow.com/v2/collections/col_1/items/itm_4/live"
+      body: { fieldData: { price: "14.00" } }
+    answer:
+      status: 200
+      body: { id: itm_4, isDraft: false, fieldData: { name: Winter menu, slug: winter-menu, price: "14.00" } }
+result: { id: itm_4, isDraft: false, fieldData: { name: Winter menu, slug: winter-menu, price: "14.00" } }

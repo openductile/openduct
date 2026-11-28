@@ -1,0 +1,7 @@
+description: A path that is not there is refused (404), in Nextcloud's words
+action: create_share
+credential: { url: "https://cloud.example.com", username: ann, password: app-pass-1 }
+input: { path: /Nowhere/file.pdf }
+exchanges:
+  - answer: { status: 404, body: { ocs: { meta: { status: failure, statuscode: 404, message: "Wrong path, file/folder does not exist" }, data: [] } } }
+error: "Nextcloud answered 404: Wrong path, file/folder does not exist"

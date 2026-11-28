@@ -1,0 +1,11 @@
+description: An email reply to the customer (not internal, since it is not a note)
+action: add_article
+credential: { subdomain: acme, token: zm_test_1 }
+input: { ticket_id: "42", type: email, to: ann@example.com, subject: "Re: Order 1001 arrived damaged", body: We are sending a new one today. }
+exchanges:
+  - sent:
+      method: POST
+      url: https://acme.zammad.com/api/v1/ticket_articles
+      body: { ticket_id: "42", body: We are sending a new one today., type: email, to: ann@example.com, subject: "Re: Order 1001 arrived damaged", internal: false, sender: Agent }
+    answer: { status: 201, body: { id: 105, ticket_id: 42, to: ann@example.com, type: email, sender: Agent, internal: false } }
+result: { id: 105, ticket_id: 42, to: ann@example.com, type: email, sender: Agent, internal: false }

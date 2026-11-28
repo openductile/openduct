@@ -1,0 +1,7 @@
+action: delete_ticket
+credential: { subdomain: acme, token: zm_admin }
+input: { id: "42" }
+exchanges:
+  - sent: { method: DELETE, url: https://acme.zammad.com/api/v1/tickets/42 }
+    answer: { body: {} }
+result: { deleted: true }

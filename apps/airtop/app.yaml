@@ -1,0 +1,441 @@
+# Copyright 2026 Ductile AI, Inc
+# SPDX-License-Identifier: Apache-2.0
+# Airtop: made by `openduct app from-openapi` from Airtop's own API description (docs.airtop.ai/openapi.json), then
+# finished by hand: labels in our own words, the inputs people use, room for the AI's slower work.
+app: airtop
+name: Airtop
+category: development
+description: >-
+  Cloud browsers that a workflow drives in plain words - open pages, ask about them, click, type, fill forms and
+  scrape.
+docs: https://docs.airtop.ai/api-reference/airtop-api
+hosts: [api.airtop.ai]
+base_url: https://api.airtop.ai/api
+sign_in:
+  - id: airtop
+    label: An API key
+    fields:
+      - { name: token, label: Your Airtop API key (from the Airtop portal's API keys page), secret: true }
+    headers: { Authorization: "Bearer {{ credential.token }}" }
+default_action: page_query
+error: >-
+  status >= 400 && type(value) == map && has(value.detail) && value.detail != null ? value.detail + (has(value.errors)
+  && value.errors != null && size(value.errors) > 0 ? ': ' + value.errors.map(e, e.message).join('; ') : '') : null
+actions:
+  create_session:
+    label: Start a browser session
+    description: >-
+      A new cloud browser; it may take a few seconds (rarely a minute) to be ready - its status is then running.
+    write: true
+    method: POST
+    path: "/v1/sessions"
+    inputs:
+      - { name: profile_name, label: Load this saved profile (its sign-ins and cookies) }
+      - { name: timeout_minutes, label: End it after this many idle minutes (10 when empty), kind: number }
+      - { name: solve_captcha, label: Solve captchas as they come, kind: boolean }
+      - { name: record, label: Record the session, kind: boolean }
+      - { name: proxy, label: Go through Airtop's proxy, kind: boolean }
+      - { name: extension_ids, label: "Chrome Web Store extensions to load: a list of their ids", kind: list }
+    send:
+      configuration:
+        extensionIds: "{{ input.extension_ids }}"
+        profileName: "{{ input.profile_name }}"
+        proxy: "{{ input.proxy }}"
+        record: "{{ input.record }}"
+        solveCaptcha: "{{ input.solve_captcha }}"
+        timeoutMinutes: "{{ input.timeout_minutes }}"
+    output: { data: record, errors: list, meta: record, warnings: list }
+  get_session:
+    label: Look up a browser session
+    description: A session's status (running when ready) and when it was made and last used.
+    method: GET
+    path: "/v1/sessions/{{ input.id }}"
+    inputs:
+      - { name: id, label: The session's id, required: true }
+    output: { data: record, errors: list, meta: record, warnings: list }
+  list_sessions:
+    label: List browser sessions
+    description: The sessions of your account, by their ids or status.
+    method: GET
+    path: "/v1/sessions"
+    inputs:
+      - { name: session_ids, label: "Only these, by id, with commas" }
+      - { name: status, label: "Only these: awaitingCapacity, initializing, running, ended, completed, cancelled or all" }
+      - { name: offset, label: Skip this many, kind: number }
+      - { name: limit, label: At most this many, kind: number }
+    query:
+      sessionIds: "{{ input.session_ids }}"
+      status: "{{ input.status }}"
+      offset: "{{ input.offset }}"
+      limit: "{{ input.limit }}"
+    output: { data: record, errors: list, meta: record, warnings: list }
+  end_session:
+    label: End a browser session
+    description: "The browser is closed; a profile asked to be saved is saved now."
+    write: true
+    method: DELETE
+    path: "/v1/sessions/{{ input.id }}"
+    inputs:
+      - { name: id, label: The session's id, required: true }
+    result: "{'ended': status < 300}"
+    output: { ended: boolean }
+  save_profile:
+    label: Keep the session's profile when it ends
+    description: Its sign-ins and cookies are saved under a name, to load into later sessions.
+    write: true
+    method: PUT
+    path: "/v1/sessions/{{ input.session_id }}/save-profile-on-termination/{{ input.profile_name }}"
+    body: none
+    inputs:
+      - { name: session_id, label: The session's id, required: true }
+      - { name: profile_name, label: The name to save it under, required: true }
+    result: "{'saved': status < 300}"
+    output: { saved: boolean }
+  open_window:
+    label: Open a page in a new window
+    description: "A new window of the session, at an address; gives its window id and a live view address."
+    write: true
+    method: POST
+    path: "/v1/sessions/{{ input.session_id }}/windows"
+    inputs:
+      - { name: session_id, label: The session's id, required: true }
+      - { name: url, label: The page's address }
+      - { name: wait_until, label: "Wait until: load (the default), domContentLoaded, complete or noWait" }
+      - { name: wait_until_timeout_seconds, label: Wait at most this many seconds, kind: number }
+      - { name: screen_resolution, label: "The window's size for the live view, such as 1280x720" }
+    send:
+      screenResolution: "{{ input.screen_resolution }}"
+      url: "{{ input.url }}"
+      waitUntil: "{{ input.wait_until }}"
+      waitUntilTimeoutSeconds: "{{ input.wait_until_timeout_seconds }}"
+    timeout: 120
+    output: { data: record, errors: list, meta: record, warnings: list }
+  go_to_page:
+    label: Go to a page
+    description: The window loads another address.
+    write: true
+    method: POST
+    path: "/v1/sessions/{{ input.session_id }}/windows/{{ input.window_id }}"
+    inputs:
+      - { name: session_id, label: The session's id, required: true }
+      - { name: window_id, label: The window's id, required: true }
+      - { name: url, label: The page's address, required: true }
+      - { name: wait_until, label: "Wait until: load (the default), domContentLoaded, complete or noWait" }
+      - { name: wait_until_timeout_seconds, label: Wait at most this many seconds, kind: number }
+    send:
+      url: "{{ input.url }}"
+      waitUntil: "{{ input.wait_until }}"
+      waitUntilTimeoutSeconds: "{{ input.wait_until_timeout_seconds }}"
+    timeout: 120
+    output: { data: record, errors: list, meta: record, warnings: list }
+  list_windows:
+    label: List a session's windows
+    description: Each window's id, page and live view address.
+    method: GET
+    path: "/v1/sessions/{{ input.session_id }}/windows"
+    inputs:
+      - { name: session_id, label: The session's id, required: true }
+    output: { data: record, errors: list, meta: record, warnings: list }
+  get_window:
+    label: Look up a window
+    description: Its page and its live view address, to show a person what the browser does.
+    method: GET
+    path: "/v1/sessions/{{ input.session_id }}/windows/{{ input.window_id }}"
+    inputs:
+      - { name: session_id, label: The session's id, required: true }
+      - { name: window_id, label: The window's id, required: true }
+      - { name: include_navigation_bar, label: The live view shows the address bar, kind: boolean }
+      - { name: disable_resize, label: The live view keeps the window's size, kind: boolean }
+      - { name: screen_resolution, label: "The live view's size, such as 1280x720" }
+    query:
+      includeNavigationBar: "{{ input.include_navigation_bar }}"
+      disableResize: "{{ input.disable_resize }}"
+      screenResolution: "{{ input.screen_resolution }}"
+    output: { data: record, errors: list, meta: record, warnings: list }
+  close_window:
+    label: Close a window
+    description: "The window is closed; the session goes on."
+    write: true
+    method: DELETE
+    path: "/v1/sessions/{{ input.session_id }}/windows/{{ input.window_id }}"
+    inputs:
+      - { name: session_id, label: The session's id, required: true }
+      - { name: window_id, label: The window's id, required: true }
+    output: { data: record, errors: list, meta: record, warnings: list }
+  page_query:
+    label: Ask about a page
+    description: >-
+      Airtop's AI reads the page and answers the question - a summary, a price, a list of items (as JSON when an
+      output schema is given).
+    write: true
+    method: POST
+    path: "/v1/sessions/{{ input.session_id }}/windows/{{ input.window_id }}/page-query"
+    inputs:
+      - { name: session_id, label: The session's id, required: true }
+      - { name: window_id, label: The window's id, required: true }
+      - { name: prompt, label: "The question, such as: what is the price of the first item?", required: true }
+      - { name: follow_pagination_links, label: Follow the page's next links for more items, kind: boolean }
+      - name: configuration
+        label: "More settings, as Airtop's reference writes them (outputSchema: a JSON schema of the answer ...)"
+        kind: record
+      - { name: cost_threshold_credits, label: Stop if it would cost more than this many credits, kind: number }
+      - { name: time_threshold_seconds, label: Stop if it takes longer than this many seconds, kind: number }
+    send:
+      configuration: "{{ input.configuration }}"
+      costThresholdCredits: "{{ input.cost_threshold_credits }}"
+      followPaginationLinks: "{{ input.follow_pagination_links }}"
+      prompt: "{{ input.prompt }}"
+      timeThresholdSeconds: "{{ input.time_threshold_seconds }}"
+    timeout: 300
+    output: { data: record, errors: list, meta: record, warnings: list }
+  extract_pages:
+    label: Gather items over many pages
+    description: Airtop's AI goes through the page's pages (or its endless scroll) and gathers the items asked for.
+    write: true
+    method: POST
+    path: "/v1/sessions/{{ input.session_id }}/windows/{{ input.window_id }}/paginated-extraction"
+    inputs:
+      - { name: session_id, label: The session's id, required: true }
+      - { name: window_id, label: The window's id, required: true }
+      - { name: prompt, label: "What to gather, such as: every product's name and price", required: true }
+      - { name: configuration, label: "More settings, as Airtop's reference writes them", kind: record }
+      - { name: cost_threshold_credits, label: Stop if it would cost more than this many credits, kind: number }
+      - { name: time_threshold_seconds, label: Stop if it takes longer than this many seconds, kind: number }
+    send:
+      configuration: "{{ input.configuration }}"
+      costThresholdCredits: "{{ input.cost_threshold_credits }}"
+      prompt: "{{ input.prompt }}"
+      timeThresholdSeconds: "{{ input.time_threshold_seconds }}"
+    timeout: 300
+    output: { data: record, errors: list, meta: record, warnings: list }
+  scrape_page:
+    label: Read a page's text
+    description: The page's content as text, with no AI.
+    write: true
+    method: POST
+    path: "/v1/sessions/{{ input.session_id }}/windows/{{ input.window_id }}/scrape-content"
+    inputs:
+      - { name: session_id, label: The session's id, required: true }
+      - { name: window_id, label: The window's id, required: true }
+      - { name: cost_threshold_credits, label: Stop if it would cost more than this many credits, kind: number }
+      - { name: time_threshold_seconds, label: Stop if it takes longer than this many seconds, kind: number }
+    send:
+      costThresholdCredits: "{{ input.cost_threshold_credits }}"
+      timeThresholdSeconds: "{{ input.time_threshold_seconds }}"
+    timeout: 120
+    output: { data: record, errors: list, meta: record, warnings: list }
+  screenshot:
+    label: Take a screenshot
+    description: A picture of the window, as Airtop gives it.
+    write: true
+    method: POST
+    path: "/v1/sessions/{{ input.session_id }}/windows/{{ input.window_id }}/screenshot"
+    inputs:
+      - { name: session_id, label: The session's id, required: true }
+      - { name: window_id, label: The window's id, required: true }
+      - name: configuration
+        label: More settings, as Airtop's reference writes them (the area, the size ...)
+        kind: record
+    send: { configuration: "{{ input.configuration }}" }
+    timeout: 120
+    output: { data: record, errors: list, meta: record, warnings: list }
+  click:
+    label: Click on a page
+    description: Airtop's AI finds what is described and clicks it.
+    write: true
+    method: POST
+    path: "/v1/sessions/{{ input.session_id }}/windows/{{ input.window_id }}/click"
+    inputs:
+      - { name: session_id, label: The session's id, required: true }
+      - { name: window_id, label: The window's id, required: true }
+      - name: element_description
+        label: "What to click, in plain words, such as: the Sign in button"
+        required: true
+      - { name: wait_for_navigation, label: Wait for the page it leads to, kind: boolean }
+      - { name: configuration, label: "More settings, as Airtop's reference writes them", kind: record }
+      - { name: cost_threshold_credits, label: Stop if it would cost more than this many credits, kind: number }
+      - { name: time_threshold_seconds, label: Stop if it takes longer than this many seconds, kind: number }
+    send:
+      configuration: "{{ input.configuration }}"
+      costThresholdCredits: "{{ input.cost_threshold_credits }}"
+      elementDescription: "{{ input.element_description }}"
+      timeThresholdSeconds: "{{ input.time_threshold_seconds }}"
+      waitForNavigation: "{{ input.wait_for_navigation }}"
+    timeout: 300
+    output: { data: record, errors: list, meta: record, warnings: list }
+  type_text:
+    label: Type on a page
+    description: Types the text where described (or where the cursor is), and presses Enter or Tab after if asked.
+    write: true
+    method: POST
+    path: "/v1/sessions/{{ input.session_id }}/windows/{{ input.window_id }}/type"
+    inputs:
+      - { name: session_id, label: The session's id, required: true }
+      - { name: window_id, label: The window's id, required: true }
+      - { name: text, label: The text to type, required: true }
+      - { name: element_description, label: "Where, in plain words, such as: the search box" }
+      - { name: clear_input_field, label: Clear the field first, kind: boolean }
+      - { name: press_enter_key, label: Press Enter after, kind: boolean }
+      - { name: press_tab_key, label: Press Tab after, kind: boolean }
+      - { name: wait_for_navigation, label: Wait for the page it leads to, kind: boolean }
+      - { name: configuration, label: "More settings, as Airtop's reference writes them", kind: record }
+      - { name: cost_threshold_credits, label: Stop if it would cost more than this many credits, kind: number }
+      - { name: time_threshold_seconds, label: Stop if it takes longer than this many seconds, kind: number }
+    send:
+      clearInputField: "{{ input.clear_input_field }}"
+      configuration: "{{ input.configuration }}"
+      costThresholdCredits: "{{ input.cost_threshold_credits }}"
+      elementDescription: "{{ input.element_description }}"
+      pressEnterKey: "{{ input.press_enter_key }}"
+      pressTabKey: "{{ input.press_tab_key }}"
+      text: "{{ input.text }}"
+      timeThresholdSeconds: "{{ input.time_threshold_seconds }}"
+      waitForNavigation: "{{ input.wait_for_navigation }}"
+    timeout: 300
+    output: { data: record, errors: list, meta: record, warnings: list }
+  hover:
+    label: Point at something on a page
+    description: Airtop's AI finds what is described and moves the pointer over it (a menu that opens on hover).
+    write: true
+    method: POST
+    path: "/v1/sessions/{{ input.session_id }}/windows/{{ input.window_id }}/hover"
+    inputs:
+      - { name: session_id, label: The session's id, required: true }
+      - { name: window_id, label: The window's id, required: true }
+      - { name: element_description, label: "What to point at, in plain words", required: true }
+      - { name: configuration, label: "More settings, as Airtop's reference writes them", kind: record }
+      - { name: cost_threshold_credits, label: Stop if it would cost more than this many credits, kind: number }
+      - { name: time_threshold_seconds, label: Stop if it takes longer than this many seconds, kind: number }
+    send:
+      configuration: "{{ input.configuration }}"
+      costThresholdCredits: "{{ input.cost_threshold_credits }}"
+      elementDescription: "{{ input.element_description }}"
+      timeThresholdSeconds: "{{ input.time_threshold_seconds }}"
+    timeout: 300
+    output: { data: record, errors: list, meta: record, warnings: list }
+  scroll:
+    label: Scroll a page
+    description: To an edge, by an amount, or to something described.
+    write: true
+    method: POST
+    path: "/v1/sessions/{{ input.session_id }}/windows/{{ input.window_id }}/scroll"
+    inputs:
+      - { name: session_id, label: The session's id, required: true }
+      - { name: window_id, label: The window's id, required: true }
+      - { name: scroll_to_element, label: "Scroll to this, in plain words" }
+      - { name: scroll_to_edge, label: "Scroll to an edge: a record such as {yAxis: bottom}", kind: record }
+      - { name: scroll_by, label: "Scroll by: a record such as {yAxis: 500px}", kind: record }
+      - { name: scroll_within, label: "Scroll inside this area, in plain words" }
+      - { name: configuration, label: "More settings, as Airtop's reference writes them", kind: record }
+      - { name: cost_threshold_credits, label: Stop if it would cost more than this many credits, kind: number }
+      - { name: time_threshold_seconds, label: Stop if it takes longer than this many seconds, kind: number }
+    send:
+      configuration: "{{ input.configuration }}"
+      costThresholdCredits: "{{ input.cost_threshold_credits }}"
+      scrollBy: "{{ input.scroll_by }}"
+      scrollToEdge: "{{ input.scroll_to_edge }}"
+      scrollToElement: "{{ input.scroll_to_element }}"
+      scrollWithin: "{{ input.scroll_within }}"
+      timeThresholdSeconds: "{{ input.time_threshold_seconds }}"
+    timeout: 300
+    output: { data: record, errors: list, meta: record, warnings: list }
+  wait_for:
+    label: Wait for something on a page
+    description: Airtop's AI watches the page until what is described is true - a button shows, a price changes.
+    write: true
+    method: POST
+    path: "/v1/sessions/{{ input.session_id }}/windows/{{ input.window_id }}/monitor"
+    inputs:
+      - { name: session_id, label: The session's id, required: true }
+      - { name: window_id, label: The window's id, required: true }
+      - { name: condition, label: "What to wait for, in plain words", required: true }
+      - name: configuration
+        label: More settings, as Airtop's reference writes them (how often to look, how long ...)
+        kind: record
+      - { name: cost_threshold_credits, label: Stop if it would cost more than this many credits, kind: number }
+      - { name: time_threshold_seconds, label: Stop if it takes longer than this many seconds, kind: number }
+    send:
+      condition: "{{ input.condition }}"
+      configuration: "{{ input.configuration }}"
+      costThresholdCredits: "{{ input.cost_threshold_credits }}"
+      timeThresholdSeconds: "{{ input.time_threshold_seconds }}"
+    timeout: 300
+    output: { data: record, errors: list, meta: record, warnings: list }
+  learn_form:
+    label: Learn a page's form
+    description: >-
+      Airtop's AI reads the form on the page and makes a form-filling automation of it, to fill again and again.
+    write: true
+    method: POST
+    path: "/v1/sessions/{{ input.session_id }}/windows/{{ input.window_id }}/create-form-filler"
+    inputs:
+      - { name: session_id, label: The session's id, required: true }
+      - { name: window_id, label: The window's id, required: true }
+      - { name: configuration, label: "More settings, as Airtop's reference writes them", kind: record }
+      - { name: cost_threshold_credits, label: Stop if it would cost more than this many credits, kind: number }
+      - { name: time_threshold_seconds, label: Stop if it takes longer than this many seconds, kind: number }
+    send:
+      configuration: "{{ input.configuration }}"
+      costThresholdCredits: "{{ input.cost_threshold_credits }}"
+      timeThresholdSeconds: "{{ input.time_threshold_seconds }}"
+    timeout: 300
+    output: { data: record, errors: list, meta: record, warnings: list }
+  fill_form:
+    label: Fill a form
+    description: >-
+      Fills the page's form with a form-filling automation (Learn a page's form makes one), with the values given.
+    write: true
+    method: POST
+    path: "/v1/sessions/{{ input.session_id }}/windows/{{ input.window_id }}/fill-form"
+    inputs:
+      - { name: session_id, label: The session's id, required: true }
+      - { name: window_id, label: The window's id, required: true }
+      - { name: automation_id, label: The form-filling automation's id, required: true }
+      - { name: parameters, label: "The values to fill in: a record, as the automation names them", kind: record }
+      - { name: cost_threshold_credits, label: Stop if it would cost more than this many credits, kind: number }
+      - { name: time_threshold_seconds, label: Stop if it takes longer than this many seconds, kind: number }
+    send:
+      automationId: "{{ input.automation_id }}"
+      costThresholdCredits: "{{ input.cost_threshold_credits }}"
+      parameters: "{{ input.parameters }}"
+      timeThresholdSeconds: "{{ input.time_threshold_seconds }}"
+    timeout: 300
+    output: { data: record, errors: list, meta: record, warnings: list }
+  list_files:
+    label: List files
+    description: Files downloaded in (or uploaded to) your sessions.
+    method: GET
+    path: "/v1/files"
+    inputs:
+      - { name: session_ids, label: "Only these sessions' files, with commas" }
+      - { name: offset, label: Skip this many, kind: number }
+      - { name: limit, label: At most this many, kind: number }
+    query: { sessionIds: "{{ input.session_ids }}", offset: "{{ input.offset }}", limit: "{{ input.limit }}" }
+    output: { data: record, errors: list, meta: record, warnings: list }
+  get_file:
+    label: Look up a file
+    description: A file's name, size and an address to download it from.
+    method: GET
+    path: "/v1/files/{{ input.id }}"
+    inputs:
+      - { name: id, label: The file's id, required: true }
+    output: { data: record, errors: list, meta: record, warnings: list }
+  get_request_status:
+    label: Look up a request's status
+    description: Whether one of Airtop's longer requests is done, and its answer.
+    method: GET
+    path: "/v1/requests/{{ input.request_id }}/status"
+    inputs:
+      - { name: request_id, label: The request's id, required: true }
+    output: { error: text, response: text, status: text }
+  delete_profiles:
+    label: Remove saved profiles
+    description: The saved profiles named are removed.
+    write: true
+    method: DELETE
+    path: "/v1/profiles"
+    inputs:
+      - { name: profile_names, label: "Their names, with commas" }
+    query: { profileNames: "{{ input.profile_names }}" }
+    result: "{'removed': status < 300}"
+    output: { removed: boolean }

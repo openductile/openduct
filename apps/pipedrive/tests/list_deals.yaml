@@ -1,0 +1,75 @@
+description: "List deals"
+action: list_deals
+credential: { api_key: test-key }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://api.pipedrive.com/api/v2/deals"
+      query: { limit: "100" }
+      headers: { x-api-token: test-key }
+    answer:
+      status: 200
+      body:
+        success: true
+        data:
+          - id: 1
+            title: example
+            owner_id: 1
+            person_id: 1
+            org_id: 1
+            pipeline_id: 1
+            stage_id: 1
+            value: 1
+            currency: example
+            add_time: example
+            update_time: example
+            stage_change_time: example
+        additional_data: { next_cursor: token_2 }
+  - sent:
+      method: GET
+      url: "https://api.pipedrive.com/api/v2/deals"
+      query: { limit: "100", cursor: token_2 }
+      headers: { x-api-token: test-key }
+    answer:
+      status: 200
+      body:
+        success: true
+        data:
+          - id: id_2
+            title: example
+            owner_id: 1
+            person_id: 1
+            org_id: 1
+            pipeline_id: 1
+            stage_id: 1
+            value: 1
+            currency: example
+            add_time: example
+            update_time: example
+            stage_change_time: example
+        additional_data: { next_cursor: null }
+result:
+  - id: 1
+    title: example
+    owner_id: 1
+    person_id: 1
+    org_id: 1
+    pipeline_id: 1
+    stage_id: 1
+    value: 1
+    currency: example
+    add_time: example
+    update_time: example
+    stage_change_time: example
+  - id: id_2
+    title: example
+    owner_id: 1
+    person_id: 1
+    org_id: 1
+    pipeline_id: 1
+    stage_id: 1
+    value: 1
+    currency: example
+    add_time: example
+    update_time: example
+    stage_change_time: example

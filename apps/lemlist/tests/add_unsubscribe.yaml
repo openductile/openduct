@@ -1,0 +1,11 @@
+description: "An email no campaign may write to again"
+action: add_unsubscribe
+credential: {"api_key": "test-key"}
+input: {"value": "cy@example.com"}
+exchanges:
+  - sent:
+      method: POST
+      url: "https://api.lemlist.com/api/v2/unsubscribes/variables/cy@example.com"
+      headers: {"authorization": "Basic OnRlc3Qta2V5"}
+    answer: {"status": 200, "body": {"_id": "uns_2", "value": "cy@example.com", "variable": "email", "source": "api"}}
+result: {"_id": "uns_2", "value": "cy@example.com", "variable": "email", "source": "api"}

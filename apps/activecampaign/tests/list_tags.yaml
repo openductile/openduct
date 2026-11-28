@@ -1,0 +1,28 @@
+description: The account's tags
+action: list_tags
+credential:
+  account: shopexample
+  api_key: test-key
+exchanges:
+- sent:
+    method: GET
+    url: https://shopexample.api-us1.com/api/3/tags
+    query:
+      limit: '100'
+    headers:
+      api-token: test-key
+  answer:
+    status: 200
+    body:
+      tags:
+      - &id001
+        id: '20'
+        tag: VIP
+        tagType: contact
+        description: Best customers
+        subscriber_count: '12'
+        cdate: '2026-01-10T09:00:00-06:00'
+      meta:
+        total: '1'
+result:
+- *id001

@@ -1,0 +1,12 @@
+description: Turning the workflow off takes the address away again, and empties what was kept
+trigger: message
+unregister: true
+workflow: wf1
+credential: { bot_token: "123:abc", "webhook_secret@wf1": s3cr3t }
+exchanges:
+  - sent:
+      method: POST
+      url: https://api.telegram.org/bot123:abc/deleteWebhook
+      body: { drop_pending_updates: false }
+    answer: { body: { ok: true, result: true, description: Webhook was deleted } }
+kept: { webhook_secret: "" }

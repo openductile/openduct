@@ -1,0 +1,7 @@
+action: archive_project
+credential: { token: todoist-test-token }
+input: { project_id: 6Xproj0000000001 }
+exchanges:
+  - sent: { method: POST, url: https://api.todoist.com/api/v1/projects/6Xproj0000000001/archive }
+    answer: { body: { id: 6Xproj0000000001, name: Orders, description: Supplier orders, color: blue, parent_id: null, is_favorite: false, is_shared: false, is_archived: false, inbox_project: false, view_style: list } }
+result: { archived: true }

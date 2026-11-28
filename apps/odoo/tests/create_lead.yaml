@@ -1,0 +1,10 @@
+description: A lead from a website form
+action: create_lead
+credential: { address: "https://mycompany.example.com", api_key: 6578616d706c65206b6579 }
+input: { name: Website order for 20 chairs, contact_name: Ann Example, email_from: ann@example.com, expected_revenue: 2400 }
+exchanges:
+  - sent:
+      url: https://mycompany.example.com/json/2/crm.lead/create
+      body: { vals_list: [{ name: Website order for 20 chairs, contact_name: Ann Example, email_from: ann@example.com, expected_revenue: 2400 }] }
+    answer: { body: [12] }
+result: { id: 12 }

@@ -1,0 +1,27 @@
+description: "A call that reads a reminder aloud"
+action: send_voice_call
+credential: { api_key: test-key }
+input: { to: "+4915112345678", text: "Your table is booked for 7 pm tonight." }
+exchanges:
+  - sent:
+      method: POST
+      url: "https://gateway.seven.io/api/voice"
+      query: {}
+      headers: { x-api-key: test-key }
+      body: { to: "+4915112345678", text: "Your table is booked for 7 pm tonight." }
+    answer:
+      status: 200
+      body:
+        success: "100"
+        total_price: 0.045
+        balance: 42.38
+        debug: "false"
+        messages:
+          - { id: "1234567", sender: "491771783130", recipient: "4915112345678", text: "Your table is booked for 7 pm tonight.", price: 0.045, success: true, error: null, error_text: null }
+result:
+  success: "100"
+  total_price: 0.045
+  balance: 42.38
+  debug: "false"
+  messages:
+    - { id: "1234567", sender: "491771783130", recipient: "4915112345678", text: "Your table is booked for 7 pm tonight.", price: 0.045, success: true, error: null, error_text: null }

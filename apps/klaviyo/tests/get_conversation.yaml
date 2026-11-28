@@ -1,0 +1,31 @@
+# Made by `openduct app from-openapi`: Get Conversation for Profile.
+description: "Get Conversation for Profile, made from the API description's schemas"
+action: get_conversation
+credential: { api_key: test-key }
+input: { id: id_1 }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://a.klaviyo.com/api/profiles/id_1/conversation"
+      query: {}
+      headers: { authorization: test-key, revision: "2026-10-15" }
+    answer:
+      status: 200
+      body:
+        data:
+          type: conversation
+          id: id_1
+          attributes: { channel: instagram }
+          relationships: { profile: { data: {}, links: {} } }
+          links: { self: "https://example.com/1" }
+        links: { self: "https://example.com/1" }
+        meta: { agent_hints: { next_steps: [example] } }
+result:
+  data:
+    type: conversation
+    id: id_1
+    attributes: { channel: instagram }
+    relationships: { profile: { data: {}, links: {} } }
+    links: { self: "https://example.com/1" }
+  links: { self: "https://example.com/1" }
+  meta: { agent_hints: { next_steps: [example] } }

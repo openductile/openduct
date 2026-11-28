@@ -1,0 +1,11 @@
+description: The account's plan and what it may still make
+action: get_account
+credential: { api_key: at_test_key_1 }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://rest.apitemplate.io/v2/account-information"
+    answer:
+      status: 200
+      body: { status: success, subscription_product: Starter, subscription_status: active, api_quota: 1000, api_remaining: 912, template_count: 3, template_quota: 10 }
+result: { status: success, subscription_product: Starter, subscription_status: active, api_quota: 1000, api_remaining: 912, template_count: 3, template_quota: 10 }

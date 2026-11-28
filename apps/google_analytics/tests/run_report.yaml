@@ -1,0 +1,29 @@
+description: Sessions and users by date and country, each row a record of their names
+action: run_report
+credential: { access_token: ya29.a0 }
+input: { property_id: "123456789", metrics: "sessions, totalUsers", dimensions: "date,country", start_date: 2026-11-01, end_date: 2026-11-02, sort_by: sessions }
+exchanges:
+  - sent:
+      method: POST
+      url: "https://analyticsdata.googleapis.com/v1beta/properties/123456789:runReport"
+      headers: { authorization: Bearer ya29.a0 }
+      body:
+        metrics: [{ name: sessions }, { name: totalUsers }]
+        dimensions: [{ name: date }, { name: country }]
+        dateRanges: [{ startDate: 2026-11-01, endDate: 2026-11-02 }]
+        orderBys: [{ metric: { metricName: sessions }, desc: true }]
+    answer:
+      body:
+        dimensionHeaders: [{ name: date }, { name: country }]
+        metricHeaders: [{ name: sessions, type: TYPE_INTEGER }, { name: totalUsers, type: TYPE_INTEGER }]
+        rows:
+          - dimensionValues: [{ value: "20261101" }, { value: Canada }]
+            metricValues: [{ value: "120" }, { value: "97" }]
+          - dimensionValues: [{ value: "20261102" }, { value: "Côte d'Ivoire" }]
+            metricValues: [{ value: "8" }, { value: "6" }]
+        rowCount: 2
+        metadata: { currencyCode: USD, timeZone: America/Toronto }
+        kind: analyticsData#runReport
+result:
+  - { date: "20261101", country: Canada, sessions: 120, totalUsers: 97 }
+  - { date: "20261102", country: "Côte d'Ivoire", sessions: 8, totalUsers: 6 }

@@ -1,0 +1,90 @@
+name: New releases of the tools you depend on, summed up each morning
+description: >-
+  For development teams: list the GitHub repositories you depend on (owner/name, one a row in column A of a Dependencies
+  sheet), and every weekday at 7:30 the releases published since the last working day are summed up by a model - what
+  changed, and anything that breaks - in one email to the team, with a link to each. Mondays cover the weekend. No email
+  on a day with no release. Needs: a Google Sheets sign-in called sheets, a GitHub token (read access to public
+  repositories is enough) as a bearer credential called github, an AI credential called model, and a Gmail sign-in
+  called gmail.
+category: Engineering
+trigger:
+  schedule: { every: weekday, at: "07:30", timezone: Europe/London }
+# What a test runs on: an event as this trigger gives it.
+sample:
+  scheduled_at: "2026-11-30T07:30:00Z"
+steps:
+  - name: settings
+    set:
+      # Change these to your own.
+      spreadsheet: "'your-spreadsheet-id'"
+      send_to: "'dev-team@example.com'"
+  - name: repositories
+    google_sheets:
+      credential: sheets
+      action: read_rows
+      spreadsheet_id: "{{ steps.settings.spreadsheet }}"
+      range: Dependencies!A2:A
+    retry: { attempts: 3, wait: 10s }
+  - name: each_repository
+    for_each:
+      # Each row's first cell, as owner/name; blank rows are passed over.
+      items: steps.repositories.filter(r, size(r) > 0 && string(r[0]).trim() != '').map(r, string(r[0]).trim())
+      steps:
+        - name: repository
+          set: { name: item }
+        - name: latest
+          http:
+            method: GET
+            url: "https://api.github.com/repos/{{ item }}/releases/latest"
+            credential: github
+            headers: { Accept: application/vnd.github+json, X-GitHub-Api-Version: "2022-11-28" }
+            sample:
+              tag_name: v4.2.0
+              name: v4.2.0
+              html_url: https://github.com/example-org/example-lib/releases/tag/v4.2.0
+              published_at: "2026-11-29T16:20:00Z"
+              prerelease: false
+              body: |-
+                ## Changes
+                - Faster start-up when many plugins are loaded
+                - The `timeout` option is now in seconds, not milliseconds (breaking)
+                ## Fixes
+                - Retries no longer double-count failed attempts
+          retry: { attempts: 3, wait: 10s }
+          # A repository with no release yet (or a name mistyped) answers 404: the others go on.
+          on_error: continue
+  - name: since_last_working_day
+    javascript: |
+      // Releases published since the last working day began: on a Monday that is Friday's run, three days back.
+      const now = new Date(value.scheduled_at);
+      const hours = now.getUTCDay() === 1 ? 72 : 24;
+      const since = new Date(now.getTime() - hours * 3600 * 1000);
+      const fresh = steps.each_repository
+        .filter(r => r.latest && r.latest.status === 200 && r.latest.body && !r.latest.body.prerelease)
+        .filter(r => new Date(r.latest.body.published_at) > since)
+        .map(r => ({ repository: r.repository.name, tag: r.latest.body.tag_name, link: r.latest.body.html_url,
+                     notes: (r.latest.body.body || "").slice(0, 6000) }));
+      return { releases: fresh, count: fresh.length, since: since.toISOString() };
+  - where: steps.since_last_working_day.count > 0
+  - name: each_release
+    for_each:
+      items: steps.since_last_working_day.releases
+      steps:
+        - name: gist
+          summarise:
+            credential: model
+            text: "{{ item.repository }} {{ item.tag }}\n{{ item.notes }}"
+            length: at most three short lines
+            style: "bullets; put anything that breaks existing code first, marked BREAKING"
+  - name: send
+    gmail:
+      credential: gmail
+      action: send_email
+      to: "{{ steps.settings.send_to }}"
+      subject: "{{ steps.since_last_working_day.count }} new releases of our dependencies"
+      text: >-
+        {{ steps.since_last_working_day.releases.map(r, r.repository + ' ' + r.tag + ' - ' + r.link).join('\n') }}
+
+
+        {{ steps.each_release.map(r, r.gist.summary).join('\n\n') }}
+    retry: { attempts: 3, wait: 30s }

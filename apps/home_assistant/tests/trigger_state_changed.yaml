@@ -1,0 +1,12 @@
+description: The front door opened since the poll before - its new state runs
+trigger: state_changed
+credential: { url: "http://home.example:8123", token: ha-test-token }
+input: { entity_id: binary_sensor.front_door }
+seen: { items: [[binary_sensor.front_door, a7604e0b68ad9aa1]] }
+exchanges:
+  - sent: { method: GET, url: "http://home.example:8123/api/states/binary_sensor.front_door" }
+    answer:
+      status: 200
+      body: { entity_id: binary_sensor.front_door, state: "on", attributes: { device_class: door }, last_changed: "2026-11-27T08:15:00+00:00", last_updated: "2026-11-27T08:15:00+00:00" }
+runs:
+  - { entity_id: binary_sensor.front_door, state: "on", attributes: { device_class: door }, last_changed: "2026-11-27T08:15:00+00:00", last_updated: "2026-11-27T08:15:00+00:00" }

@@ -1,0 +1,89 @@
+# Copyright 2026 Ductile AI, Inc
+# SPDX-License-Identifier: Apache-2.0
+app: x
+name: X (Twitter)
+category: social
+description: Posts on X, written, found, liked and reposted.
+docs: https://docs.x.com/x-api/introduction
+hosts: [api.x.com]
+base_url: https://api.x.com/2
+sign_in:
+  - id: x
+    label: Sign in with X
+    oauth2:
+      authorize: https://x.com/i/oauth2/authorize
+      token: https://api.x.com/2/oauth2/token
+      # A web app's client id and secret go to the token address as HTTP basic.
+      client_auth: basic
+      scopes: [tweet.read, tweet.write, users.read, like.write, offline.access]
+      # The account's own id, which liking and reposting name.
+      after_connect: { url: "https://api.x.com/2/users/me", keep: { user_id: value.data.id } }
+    headers:
+      Authorization: "Bearer {{ credential.access_token }}"
+error: >-
+  status < 400 ? null
+  : has(value.detail) ? value.detail
+  : has(value.errors) && size(value.errors) > 0 ? value.errors[0].message : null
+default_action: post
+actions:
+  post:
+    label: Post
+    description: A post on X, or a reply to one. Gives its id and text.
+    write: true
+    method: POST
+    path: /tweets
+    inputs:
+      - { name: text, label: "What it says (280 characters, more with Premium)", required: true }
+      - { name: reply_to, label: "In answer to this post: its id" }
+    send:
+      text: "{{ input.text }}"
+      reply: { in_reply_to_tweet_id: "{{ input.reply_to }}" }
+    result: value.data
+  delete_post:
+    label: Remove a post
+    write: true
+    method: DELETE
+    path: "/tweets/{{ input.post_id }}"
+    inputs:
+      - { name: post_id, label: "The post's id", required: true }
+    result: value.data
+  find_posts:
+    label: Find recent posts
+    description: Posts of the last 7 days a search finds (such as from:exampleshop or "#automation -is:retweet"); up to 100 a page, 5 pages.
+    method: GET
+    path: /tweets/search/recent
+    inputs:
+      - { name: query, label: "The search, as X writes them", required: true }
+      - { name: since, label: "Posted since (within 7 days: 2026-11-25T00:00:00Z)" }
+      - { name: fields, label: "More of their fields, with commas: created_at,author_id,public_metrics (id and text when empty)" }
+    query:
+      query: "{{ input.query }}"
+      start_time: "{{ input.since }}"
+      max_results: "100"
+      post.fields: "{{ input.fields }}"
+    items: "has(value.data) ? value.data : []"
+    next: "has(value.meta.next_token) ? {'next_token': value.meta.next_token} : null"
+    max_pages: 5
+  like:
+    label: Like a post
+    write: true
+    method: POST
+    path: "/users/{{ credential.user_id }}/likes"
+    inputs:
+      - { name: post_id, label: "The post's id", required: true }
+    send: { tweet_id: "{{ input.post_id }}" }
+    result: value.data
+  repost:
+    label: Repost a post
+    write: true
+    method: POST
+    path: "/users/{{ credential.user_id }}/retweets"
+    inputs:
+      - { name: post_id, label: "The post's id", required: true }
+    send: { tweet_id: "{{ input.post_id }}" }
+    result: value.data
+  me:
+    label: Who is signed in
+    method: GET
+    path: /users/me
+    result: value.data

@@ -1,0 +1,11 @@
+description: Ideas from a page alone - its address as the seed
+action: keyword_ideas
+credential: { access_token: ya29.test }
+input: { customer_id: "1234567890", url: "https://shop.example.com/garden", developer_token: devtok-test }
+exchanges:
+  - sent:
+      body:
+        urlSeed: { url: "https://shop.example.com/garden" }
+        keywordPlanNetwork: GOOGLE_SEARCH
+    answer: { status: 200, body: { results: [{ text: garden chairs }] } }
+result: [{ text: garden chairs }]

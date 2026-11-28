@@ -1,0 +1,7 @@
+action: invite_to_channel
+credential: { workspace: acme, user_id: uAbC123, token: rc_test_1 }
+input: { room_id: rSupp1, username: cara }
+exchanges:
+  - sent: { method: POST, url: https://acme.rocket.chat/api/v1/channels.invite, body: { roomId: rSupp1, username: cara } }
+    answer: { body: { channel: { _id: rSupp1, name: support, usernames: [shop-bot, ann, bob, cara] }, success: true } }
+result: { _id: rSupp1, name: support, usernames: [shop-bot, ann, bob, cara] }

@@ -1,0 +1,31 @@
+# Made by `openduct app from-openapi`: Get Tag Group for Tag.
+description: "Get Tag Group for Tag, made from the API description's schemas"
+action: get_tag_tag_group
+credential: { api_key: test-key }
+input: { id: abcd1234-ef56-gh78-ij90-abcdef123456 }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://a.klaviyo.com/api/tags/abcd1234-ef56-gh78-ij90-abcdef123456/tag-group"
+      query: {}
+      headers: { authorization: test-key, revision: "2026-10-15" }
+    answer:
+      status: 200
+      body:
+        data:
+          type: tag-group
+          id: zyxw9876-vu54-ts32-rq10-zyxwvu654321
+          attributes: { name: example, exclusive: true, default: true }
+          relationships: { tags: { data: [null], links: {} } }
+          links: { self: "https://example.com/1" }
+        links: { self: "https://example.com/1" }
+        meta: { agent_hints: { next_steps: [example] } }
+result:
+  data:
+    type: tag-group
+    id: zyxw9876-vu54-ts32-rq10-zyxwvu654321
+    attributes: { name: example, exclusive: true, default: true }
+    relationships: { tags: { data: [null], links: {} } }
+    links: { self: "https://example.com/1" }
+  links: { self: "https://example.com/1" }
+  meta: { agent_hints: { next_steps: [example] } }

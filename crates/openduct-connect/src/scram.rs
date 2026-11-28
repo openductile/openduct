@@ -16,13 +16,13 @@ const MIN_ITERATIONS: u32 = 4_096;
 const MAX_ITERATIONS: u32 = 100_000;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) enum Hash {
+pub enum Hash {
     Sha256,
     Sha512,
 }
 
 /// One sign-in, from the first message to checking the server's proof.
-pub(crate) struct Scram {
+pub struct Scram {
     hash: Hash,
     password: String,
     nonce: String,
@@ -40,7 +40,7 @@ impl std::fmt::Debug for Scram {
 
 impl Scram {
     /// `nonce` is fresh and random for every sign-in (it is fixed only in tests).
-    pub(crate) fn new(hash: Hash, username: &str, password: &str, nonce: String) -> Self {
+    pub fn new(hash: Hash, username: &str, password: &str, nonce: String) -> Self {
         let name = username.replace('=', "=3D").replace(',', "=2C");
         Self {
             hash,
@@ -52,7 +52,7 @@ impl Scram {
     }
 
     /// A nonce of 24 random bytes, as text.
-    pub(crate) fn nonce() -> Result<String, String> {
+    pub fn nonce() -> Result<String, String> {
         let mut bytes = [0u8; 24];
         rustls::crypto::ring::default_provider()
             .secure_random
@@ -61,12 +61,12 @@ impl Scram {
         Ok(STANDARD.encode(bytes))
     }
 
-    pub(crate) fn client_first(&self) -> Vec<u8> {
+    pub fn client_first(&self) -> Vec<u8> {
         format!("n,,{}", self.client_first_bare).into_bytes()
     }
 
     /// The answer to the server's challenge: proof of the password, not the password.
-    pub(crate) fn client_final(&mut self, server_first: &[u8]) -> Result<Vec<u8>, String> {
+    pub fn client_final(&mut self, server_first: &[u8]) -> Result<Vec<u8>, String> {
         let text =
             std::str::from_utf8(server_first).map_err(|_| "sent a SCRAM challenge that is not text")?;
         let (mut nonce, mut salt, mut iterations) = (None, None, None);
@@ -107,7 +107,7 @@ impl Scram {
     }
 
     /// The server's last word: its own proof that it knows the password.
-    pub(crate) fn verify(&self, server_final: &[u8]) -> Result<(), String> {
+    pub fn verify(&self, server_final: &[u8]) -> Result<(), String> {
         let text = std::str::from_utf8(server_final)
             .map_err(|_| "ended signing in with something that is not text")?;
         if let Some(why) = text.strip_prefix("e=") {

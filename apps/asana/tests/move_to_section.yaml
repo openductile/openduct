@@ -1,0 +1,11 @@
+description: A task moved to another column of a board
+action: move_to_section
+credential: { token: "2/1200000000000001/1209999999999999:0a1b2c3d4e5f" }
+input: { section_id: "1205000000000002", task_id: "1204000000000001" }
+exchanges:
+  - sent:
+      method: POST
+      url: https://app.asana.com/api/1.0/sections/1205000000000002/addTask
+      body: { data: { task: "1204000000000001" } }
+    answer: { body: { data: {} } }
+result: { moved: true }

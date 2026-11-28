@@ -1,0 +1,26 @@
+description: A Messenger message
+action: send_messenger
+credential:
+  api_key: abcd1234
+  api_secret: test-secret
+input:
+  to: 0123456789
+  from: '9876543210'
+  text: We open at 9.
+exchanges:
+- sent:
+    method: POST
+    url: https://api.nexmo.com/v1/messages
+    headers:
+      authorization: Basic YWJjZDEyMzQ6dGVzdC1zZWNyZXQ=
+    body:
+      channel: messenger
+      message_type: text
+      to: 0123456789
+      from: '9876543210'
+      text: We open at 9.
+  answer:
+    status: 202
+    body: &id001
+      message_uuid: aaaaaaaa-bbbb-4ccc-8ddd-0123456789ab
+result: *id001

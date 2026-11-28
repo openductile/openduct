@@ -1,0 +1,6 @@
+action: read_document
+credential: { access_token: ya29.a0 }
+input: { document: nothere }
+exchanges:
+  - answer: { status: 404, body: { error: { code: 404, message: Requested entity was not found., status: NOT_FOUND } } }
+error: "Google Docs answered 404: Requested entity was not found."

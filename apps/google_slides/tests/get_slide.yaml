@@ -1,0 +1,8 @@
+description: One slide as Google keeps it
+action: get_slide
+credential: { access_token: ya29.test }
+input: { presentation: 1CoPyOfTheTemplate0123456789abcdefg, slide_id: g2 }
+exchanges:
+  - sent: { method: GET, url: https://slides.googleapis.com/v1/presentations/1CoPyOfTheTemplate0123456789abcdefg/pages/g2 }
+    answer: { body: { objectId: g2, pageType: SLIDE, pageElements: [{ objectId: body_2, shape: { shapeType: TEXT_BOX } }], slideProperties: { layoutObjectId: l1, masterObjectId: m1 } } }
+result: { objectId: g2, pageType: SLIDE, pageElements: [{ objectId: body_2, shape: { shapeType: TEXT_BOX } }], slideProperties: { layoutObjectId: l1, masterObjectId: m1 } }

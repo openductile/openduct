@@ -1,0 +1,12 @@
+description: A thread started under a message
+action: create_thread
+sign_in: discord_bot
+credential: { bot_token: test-bot-token }
+input: { channel_id: "910000000000000001", message_id: "950000000000000002", name: "Order A-100", auto_archive_duration: 1440 }
+exchanges:
+  - sent:
+      method: POST
+      url: https://discord.com/api/v10/channels/910000000000000001/messages/950000000000000002/threads
+      body: { name: "Order A-100", auto_archive_duration: 1440 }
+    answer: { status: 201, body: { id: "960000000000000001", name: "Order A-100", parent_id: "910000000000000001", type: 11 } }
+result: { id: "960000000000000001", name: "Order A-100", parent_id: "910000000000000001", type: 11 }

@@ -1,0 +1,33 @@
+# Made by `openduct app from-openapi`: Retrieve a content import source.
+description: "Retrieve a content import source, made from the API description's schemas"
+action: get_content_import_source
+credential: { token: test-token }
+input: { source_id: source_1 }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://api.intercom.io/ai/content_import_sources/source_1"
+      query: {}
+      headers: { authorization: "Bearer test-token" }
+    answer:
+      status: 200
+      body:
+        type: content_import_source
+        id: 1234
+        last_synced_at: 1672928610
+        sync_behavior: api
+        status: active
+        url: example
+        created_at: 1672928359
+        updated_at: 1672928610
+        audience_ids: [1]
+result:
+  type: content_import_source
+  id: 1234
+  last_synced_at: 1672928610
+  sync_behavior: api
+  status: active
+  url: example
+  created_at: 1672928359
+  updated_at: 1672928610
+  audience_ids: [1]

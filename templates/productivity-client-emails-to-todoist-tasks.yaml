@@ -1,0 +1,65 @@
+name: Turn clients' e-mails into Todoist tasks
+description: >-
+  Press Run when you sit down to plan: the unread mail of the last two days under your Gmail label clients is read,
+  a model picks out what each one asks you to do - the task, by when, and whether it is urgent - and each request
+  becomes a task in your Todoist inbox, with the e-mail's subject beside it. Mail that asks for nothing makes no task.
+  Needs: mail (gmail), model (ai), todoist (bearer: your Todoist API token).
+category: Productivity
+trigger: manual
+# What a test runs on: a run started by hand.
+sample: {}
+steps:
+  - name: unread
+    gmail:
+      action: find_emails
+      credential: mail
+      q: "label:clients is:unread newer_than:2d"
+    retry: { attempts: 3, wait: 10s }
+  # At most 25 a run: a long holiday's backlog is taken in pieces.
+  - name: some
+    list:
+      items: steps.unread
+      limit: 25
+  - name: each
+    for_each:
+      items: steps.some
+      steps:
+        - name: mail
+          gmail:
+            action: read_email
+            credential: mail
+            message_id: "{{ item.id }}"
+          retry: { attempts: 3, wait: 10s }
+        - name: about
+          set:
+            subject: >-
+              has(steps.mail.payload) ? steps.mail.payload.headers.filter(h, h.name.lowerAscii() == 'subject').map(h, h.value).join(' ') : ''
+        - name: ask
+          extract:
+            credential: model
+            text: "Subject: {{ steps.about.subject }}\n\n{{ steps.mail.snippet }}"
+            instructions: >-
+              The text is an e-mail from a client. If it asks the reader to do something, give that as a short task
+              starting with a verb. If it asks for nothing (a thank-you, a newsletter, a receipt), leave task empty.
+            fields:
+              - { name: task, type: string, description: "what to do, starting with a verb; empty if nothing is asked" }
+              - { name: due, type: date, description: "the day it is wanted by, if the e-mail says one" }
+              - { name: urgent, type: boolean, description: "the client says it is urgent or blocking" }
+        - name: add
+          if:
+            when: steps.ask.json.task != null && steps.ask.json.task != ''
+            then:
+              - name: task
+                http:
+                  method: POST
+                  url: https://api.todoist.com/api/v1/tasks
+                  credential: todoist
+                  json:
+                    content: "{{ steps.ask.json.task }}"
+                    description: "From the e-mail: {{ steps.about.subject }}"
+                    due_date: "{{ steps.ask.json.due }}"
+                    # Todoist's 4 is its most urgent.
+                    priority: "{{ steps.ask.json.urgent == true ? 4 : 1 }}"
+                    labels: [email]
+                  sample: { id: "6X7rM8997g3RQmvh", content: Send the revised quote, url: "https://app.todoist.com/app/task/6X7rM8997g3RQmvh" }
+                retry: { attempts: 3, wait: 10s }

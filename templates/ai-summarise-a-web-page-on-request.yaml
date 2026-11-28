@@ -1,0 +1,53 @@
+name: Summarise a web page on request
+description: >-
+  Send this workflow's address a page's link ({"url": "https://...", "length": "short"}) from a browser bookmark, a chat
+  bot or your own app, and get back the page's title and a summary in a few bullets, written by a model from the page's
+  own text. Only https links are fetched; a page that cannot be read is answered with why. Needs: an AI credential
+  called model.
+category: AI
+trigger:
+  # Left empty here: each workflow made from the template is given a token of its own, for the caller to send.
+  webhook: { token: "" }
+# What a test runs on: an event as this trigger gives it.
+sample:
+  url: https://www.example.com/blog/opening-a-second-shop
+  length: short
+steps:
+  - name: is_a_link
+    if:
+      when: "!has(value.url) || !string(value.url).startsWith('https://')"
+      then:
+        - respond: { status: 400, body: { error: "send {\"url\": \"https://...\"}: an https link" } }
+        - stop: {}
+  - name: page
+    http:
+      method: GET
+      url: "{{ value.url }}"
+      headers: { Accept: "text/html" }
+      # The page as a file, so the next step reads its text rather than its HTML.
+      response: file
+      timeout: 20s
+      fail_on_status: true
+      sample: |-
+        <html><head><title>Opening a second shop</title></head><body><article>
+        <h1>Opening a second shop</h1>
+        <p>We opened our second shop in March, two streets from the first. Rent is lower, but we needed two more
+        people and a second card reader.</p>
+        <p>Sales in the first month were 60% of the first shop's, and the shops now share one stock room.</p>
+        </article></body></html>
+    retry: { attempts: 2, wait: 5s }
+  - name: text
+    extract_file: { file: steps.page.body, format: html }
+  - name: summary
+    summarise:
+      credential: model
+      text: "{{ steps.text.text }}"
+      length: "{{ has(value.length) ? value.length : 'short' }}"
+      style: bullets
+  - name: reply
+    respond:
+      status: 200
+      body:
+        url: "{{ value.url }}"
+        title: "{{ has(steps.text.title) ? steps.text.title : '' }}"
+        summary: "{{ steps.summary.summary }}"

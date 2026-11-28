@@ -1,0 +1,60 @@
+# Made by `openduct app from-openapi`: Update an article.
+description: "Update an article, made from the API description's schemas"
+action: update_article
+credential: { token: test-token }
+input: { article_id: 1 }
+exchanges:
+  - sent:
+      method: PUT
+      url: "https://api.intercom.io/articles/1"
+      query: {}
+      headers: { authorization: "Bearer test-token" }
+      body: {}
+    answer:
+      status: 200
+      body:
+        statistics:
+          type: article_statistics
+          views: 10
+          conversations: 0
+          reactions: 10
+          happy_reaction_percentage: 40.0
+          neutral_reaction_percentage: 40.0
+          sad_reaction_percentage: 1
+          fin_involvements: 10
+          fin_resolutions: 8
+          fin_resolution_rate: 80.0
+        type: article
+        id: "6871119"
+        workspace_id: hfi1bx4l
+        content_id: "6871120"
+        title: example
+        description: example
+        body: example
+        body_markdown: example
+        author_id: "5017691"
+        state: published
+        created_at: 1672928359
+result:
+  statistics:
+    type: article_statistics
+    views: 10
+    conversations: 0
+    reactions: 10
+    happy_reaction_percentage: 40.0
+    neutral_reaction_percentage: 40.0
+    sad_reaction_percentage: 1
+    fin_involvements: 10
+    fin_resolutions: 8
+    fin_resolution_rate: 80.0
+  type: article
+  id: "6871119"
+  workspace_id: hfi1bx4l
+  content_id: "6871120"
+  title: example
+  description: example
+  body: example
+  body_markdown: example
+  author_id: "5017691"
+  state: published
+  created_at: 1672928359

@@ -1,0 +1,26 @@
+description: A comment for the hiring team
+action: comment_on_application
+credential:
+  company_domain: acme
+  api_key: test-key
+input:
+  application_id: '5001'
+  comment: Great latte art.
+exchanges:
+- sent:
+    method: POST
+    url: https://acme.bamboohr.com/api/v1/applicant_tracking/applications/5001/comments
+    headers:
+      authorization: Basic dGVzdC1rZXk6eA==
+      accept: application/json
+    body:
+      type: comment
+      comment: Great latte art.
+  answer:
+    status: 200
+    body:
+      type: comment
+      id: 501
+result:
+  type: comment
+  id: 501

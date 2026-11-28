@@ -1,0 +1,11 @@
+description: A picture of a slide, medium size
+action: slide_picture
+credential: { access_token: ya29.test }
+input: { presentation: 1CoPyOfTheTemplate0123456789abcdefg, slide_id: p, size: MEDIUM }
+exchanges:
+  - sent:
+      method: GET
+      url: https://slides.googleapis.com/v1/presentations/1CoPyOfTheTemplate0123456789abcdefg/pages/p/thumbnail
+      query: { thumbnailProperties.thumbnailSize: MEDIUM, thumbnailProperties.mimeType: PNG }
+    answer: { body: { width: 800, height: 450, contentUrl: "https://lh7-us.googleusercontent.example/thumb-p" } }
+result: { width: 800, height: 450, contentUrl: "https://lh7-us.googleusercontent.example/thumb-p" }

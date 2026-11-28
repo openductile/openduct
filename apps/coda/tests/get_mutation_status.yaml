@@ -1,0 +1,13 @@
+# Made by `openduct app from-openapi`: Check that a change is done.
+description: "Check that a change is done, made from the API description's schemas"
+action: get_mutation_status
+credential: { token: test-token }
+input: { request_id: request_1 }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://docs.superhuman.com/apis/v1/mutationStatus/request_1"
+      query: {}
+      headers: { authorization: "Bearer test-token" }
+    answer: { status: 200, body: { completed: true, warning: example } }
+result: { completed: true, warning: example }

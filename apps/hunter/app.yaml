@@ -1,0 +1,436 @@
+# Copyright 2026 Ductile AI, Inc
+# SPDX-License-Identifier: Apache-2.0
+# Hunter: written by hand from Hunter's API reference (https://hunter.io/api-documentation/v2, read 2026-11-27).
+app: hunter
+name: Hunter
+category: sales
+description: Email addresses found and checked with Hunter, companies and people described, and the leads and sequences kept there.
+docs: "https://hunter.io/api-documentation/v2"
+hosts: [api.hunter.io]
+base_url: "https://api.hunter.io/v2"
+sign_in:
+  - id: hunter
+    label: "An API key"
+    fields: [{ name: api_key, label: "The API key", secret: true }]
+    headers: { X-API-KEY: "{{ credential.api_key }}" }
+error: "has(value.errors) && size(value.errors) > 0 ? value.errors.map(e, e.details).join('; ') : null"
+default_action: find_email
+actions:
+  find_email:
+    label: "Find someone's email address"
+    description: "The most likely address of a person at a company, from their name and the company's website (or name), with how sure Hunter is. Nothing is charged when none is found."
+    write: true   # it spends credits: a preview does not send it
+    method: GET
+    path: "/email-finder"
+    inputs:
+      - { name: domain, label: "The company's website, such as example.com" }
+      - { name: company, label: "Or the company's name" }
+      - { name: first_name, label: "First name" }
+      - { name: last_name, label: "Last name" }
+      - { name: full_name, label: "Or the full name" }
+      - { name: linkedin_handle, label: "Or their LinkedIn handle (in place of a name and company)" }
+    query:
+      domain: "{{ input.domain }}"
+      company: "{{ input.company }}"
+      first_name: "{{ input.first_name }}"
+      last_name: "{{ input.last_name }}"
+      full_name: "{{ input.full_name }}"
+      linkedin_handle: "{{ input.linkedin_handle }}"
+    result: value.data
+    output:
+      first_name: text
+      last_name: text
+      email: text
+      score: number
+      domain: text
+      accept_all: boolean
+      position: text
+      twitter: text
+      linkedin_url: text
+      phone_number: text
+      company: text
+      sources: list
+      verification: record
+  verify_email:
+    label: "Check an email address"
+    description: "Whether mail to an address will arrive: valid, invalid, accept_all, webmail, disposable or unknown, with a score and how Hunter knows."
+    write: true   # it spends credits: a preview does not send it
+    method: GET
+    path: "/email-verifier"
+    inputs: [{ name: email, label: "The email address", required: true }]
+    query: { email: "{{ input.email }}" }
+    result: value.data
+    output:
+      status: text
+      score: number
+      email: text
+      regexp: boolean
+      gibberish: boolean
+      disposable: boolean
+      webmail: boolean
+      mx_records: boolean
+      smtp_server: boolean
+      smtp_check: boolean
+      accept_all: boolean
+      block: boolean
+      sources: list
+  domain_search:
+    label: "Find a company's email addresses"
+    description: "The addresses Hunter knows at a website, with each person's name, position and department, and the company's address pattern."
+    write: true   # it spends credits: a preview does not send it
+    method: GET
+    path: "/domain-search"
+    inputs:
+      - { name: domain, label: "The company's website, such as example.com" }
+      - { name: company, label: "Or the company's name" }
+      - { name: type, label: "Which: personal or generic (such as contact@)" }
+      - { name: seniority, label: "Seniority: junior, senior, executive (separated by commas)" }
+      - { name: department, label: "Department: sales, marketing, finance, it, hr, ... (separated by commas)" }
+      - { name: limit, label: "How many addresses, up to 100 (10 when empty; 10 at most on the Free plan)", kind: number }
+    query:
+      domain: "{{ input.domain }}"
+      company: "{{ input.company }}"
+      type: "{{ input.type }}"
+      seniority: "{{ input.seniority }}"
+      department: "{{ input.department }}"
+      limit: "{{ input.limit }}"
+    result: value.data
+    output:
+      domain: text
+      disposable: boolean
+      webmail: boolean
+      accept_all: boolean
+      pattern: text
+      organization: text
+      linked_domains: list
+      emails: list
+  count_emails:
+    label: "Count a company's email addresses"
+    description: "How many addresses Hunter has for a website, by kind, department and seniority. It is free."
+    method: GET
+    path: "/email-count"
+    inputs:
+      - { name: domain, label: "The company's website, such as example.com" }
+      - { name: company, label: "Or the company's name" }
+      - { name: type, label: "Only personal or generic ones" }
+    query: { domain: "{{ input.domain }}", company: "{{ input.company }}", type: "{{ input.type }}" }
+    result: value.data
+    output: { total: number, personal_emails: number, generic_emails: number, department: record, seniority: record }
+  find_domain:
+    label: "Find a company's website"
+    description: "The websites that may be a company's, from its name, with how many addresses Hunter has for each. It is free."
+    method: GET
+    path: "/domain-finder"
+    inputs:
+      - { name: company, label: "The company's name", required: true }
+      - { name: limit, label: "How many, up to 10 (5 when empty)", kind: number }
+    query: { company: "{{ input.company }}", limit: "{{ input.limit }}" }
+    result: value.data
+    output: { domain: text, company_name: text, logo: text, email_count: number }
+  enrich_person:
+    label: "Describe a person"
+    description: "What is known of the person behind an email address: name, location, employer and role, social profiles."
+    write: true   # it spends credits: a preview does not send it
+    method: GET
+    path: "/people/find"
+    inputs:
+      - { name: email, label: "Their email address" }
+      - { name: linkedin_handle, label: "Or their LinkedIn handle" }
+    query: { email: "{{ input.email }}", linkedin_handle: "{{ input.linkedin_handle }}" }
+    result: value.data
+    output: &person
+      id: text
+      name: record
+      email: text
+      location: text
+      timeZone: text
+      geo: record
+      bio: text
+      site: text
+      avatar: text
+      employment: record
+      linkedin: record
+      twitter: record
+      phone: text
+  enrich_company:
+    label: "Describe a company"
+    description: "What is known of a company from its website: name, industry, size, location, founding year, technologies, funding."
+    write: true   # it spends credits: a preview does not send it
+    method: GET
+    path: "/companies/find"
+    inputs: [{ name: domain, label: "The company's website, such as example.com", required: true }]
+    query: { domain: "{{ input.domain }}" }
+    result: value.data
+    output: &company
+      id: text
+      name: text
+      legalName: text
+      domain: text
+      category: record
+      tags: list
+      description: text
+      foundedYear: number
+      location: text
+      geo: record
+      logo: text
+      linkedin: record
+      type: text
+      phone: text
+      metrics: record
+      tech: list
+  enrich_contact:
+    label: "Describe a person and their company"
+    description: "The person behind an email address and the company they work for, in one."
+    write: true   # it spends credits: a preview does not send it
+    method: GET
+    path: "/combined/find"
+    inputs: [{ name: email, label: "Their email address", required: true }]
+    query: { email: "{{ input.email }}" }
+    result: value.data
+    output: { person: record, company: record }
+  discover_companies:
+    label: "Find companies"
+    description: "Companies that fit a description in plain words, such as software companies in Europe with 11-50 people, with how many addresses each has."
+    method: POST
+    path: "/discover"
+    inputs:
+      - { name: query, label: "The companies, in plain words", required: true }
+      - { name: limit, label: "How many, up to 100", kind: number }
+    send: { query: "{{ input.query }}", limit: "{{ input.limit }}" }
+    result: value.data
+    output: { domain: text, organization: text, emails_count: record }
+  list_leads:
+    label: "List leads"
+    description: "The leads saved in Hunter, the newest first, found by name, company, website or email if words are given."
+    method: GET
+    path: "/leads"
+    inputs:
+      - { name: query, label: "Words in their name, company, website or email" }
+      - { name: leads_list_id, label: "Only those of this leads list (its id)", kind: number }
+    query: { query: "{{ input.query }}", "leads_list_id": "{{ input.leads_list_id }}", sort: newest, limit: "100" }
+    items: value.data.leads
+    next: "size(value.data.leads) < 100 ? null : {'offset': (page == null ? 0 : int(page['offset'])) + 100}"
+    output: &lead
+      id: number
+      email: text
+      first_name: text
+      last_name: text
+      position: text
+      company: text
+      company_industry: text
+      company_size: text
+      confidence_score: number
+      website: text
+      country_code: text
+      source: text
+      linkedin_url: text
+      phone_number: text
+      twitter: text
+      notes: text
+      sending_status: text
+      last_activity_at: text
+      last_contacted_at: text
+      verification: record
+      leads_list: record
+      created_at: text
+      lead_tags: list
+  get_lead:
+    label: "Look up a lead"
+    description: "A lead saved in Hunter, by its id."
+    method: GET
+    path: "/leads/{{ input.lead_id }}"
+    inputs: [{ name: lead_id, label: "The lead's id", required: true }]
+    result: value.data
+    output: *lead
+  save_lead:
+    label: "Save a lead"
+    description: "A lead added, found by its email address - or, if Hunter has it already, changed with what is given (custom attributes are merged)."
+    write: true
+    method: PUT
+    path: "/leads"
+    inputs: &lead_inputs
+      - { name: email, label: "Email address", required: true }
+      - { name: first_name, label: "First name" }
+      - { name: last_name, label: "Last name" }
+      - { name: position, label: "Position" }
+      - { name: company, label: "Company" }
+      - { name: website, label: "The company's website" }
+      - { name: phone_number, label: "Phone number" }
+      - { name: linkedin_url, label: "LinkedIn address" }
+      - { name: country_code, label: "Country (two letters, such as US)" }
+      - { name: notes, label: "Notes" }
+      - { name: source, label: "Where it came from" }
+      - { name: leads_list_id, label: "The leads list it goes on (its id)", kind: number }
+      - { name: custom_attributes, label: "Custom attributes, by their short names, as a record", kind: record }
+    send: &lead_send
+      email: "{{ input.email }}"
+      first_name: "{{ input.first_name }}"
+      last_name: "{{ input.last_name }}"
+      position: "{{ input.position }}"
+      company: "{{ input.company }}"
+      website: "{{ input.website }}"
+      phone_number: "{{ input.phone_number }}"
+      linkedin_url: "{{ input.linkedin_url }}"
+      country_code: "{{ input.country_code }}"
+      notes: "{{ input.notes }}"
+      source: "{{ input.source }}"
+      leads_list_id: "{{ input.leads_list_id }}"
+      custom_attributes: "{{ input.custom_attributes }}"
+    result: value.data
+    output: *lead
+  create_lead:
+    label: "Add a lead"
+    description: "A new lead; when Hunter has its email address already, that lead is put on the list given and nothing else changes."
+    write: true
+    method: POST
+    path: "/leads"
+    inputs: *lead_inputs
+    send: *lead_send
+    result: value.data
+    output: *lead
+  update_lead:
+    label: "Change a lead"
+    description: "A lead's fields changed, by its id; what is not given stays."
+    write: true
+    method: PUT
+    path: "/leads/{{ input.lead_id }}"
+    inputs:
+      - { name: lead_id, label: "The lead's id", required: true }
+      - { name: email, label: "Email address" }
+      - { name: first_name, label: "First name" }
+      - { name: last_name, label: "Last name" }
+      - { name: position, label: "Position" }
+      - { name: company, label: "Company" }
+      - { name: phone_number, label: "Phone number" }
+      - { name: notes, label: "Notes" }
+      - { name: custom_attributes, label: "Custom attributes, by their short names, as a record", kind: record }
+    send:
+      email: "{{ input.email }}"
+      first_name: "{{ input.first_name }}"
+      last_name: "{{ input.last_name }}"
+      position: "{{ input.position }}"
+      company: "{{ input.company }}"
+      phone_number: "{{ input.phone_number }}"
+      notes: "{{ input.notes }}"
+      custom_attributes: "{{ input.custom_attributes }}"
+    # Hunter answers 204, with nothing.
+    result: "{'updated': true}"
+    output: { updated: boolean }
+  delete_lead:
+    label: "Delete a lead"
+    description: "A lead removed from Hunter."
+    write: true
+    method: DELETE
+    path: "/leads/{{ input.lead_id }}"
+    inputs: [{ name: lead_id, label: "The lead's id", required: true }]
+    result: "{'deleted': true}"
+    output: { deleted: boolean }
+  list_leads_lists:
+    label: "List leads lists"
+    description: "The lists leads are kept on, with how many each holds."
+    method: GET
+    path: "/leads_lists"
+    query: { limit: "100" }
+    items: value.data.leads_lists
+    next: "size(value.data.leads_lists) < 100 ? null : {'offset': (page == null ? 0 : int(page['offset'])) + 100}"
+    output: &leads_list { id: number, name: text, leads_count: number, type: text, leads_list_folder_id: number, created_at: text }
+  get_leads_list:
+    label: "Look up a leads list"
+    description: "A leads list and its first leads (up to 100)."
+    method: GET
+    path: "/leads_lists/{{ input.leads_list_id }}"
+    inputs: [{ name: leads_list_id, label: "The list's id", required: true }]
+    query: { limit: "100" }
+    result: value.data
+    output: { id: number, name: text, leads_count: number, type: text, created_at: text, leads: list }
+  create_leads_list:
+    label: "Make a leads list"
+    description: "A new list to keep leads on."
+    write: true
+    method: POST
+    path: "/leads_lists"
+    inputs: [{ name: name, label: "The list's name", required: true }]
+    send: { name: "{{ input.name }}" }
+    result: value.data
+    output: *leads_list
+  list_sequences:
+    label: "List email sequences"
+    description: "The email sequences (campaigns) of the account: whether each is started, paused or archived, and how many it is sent to."
+    method: GET
+    path: "/sequences"
+    inputs:
+      - { name: started, label: "Only those started (yes) or not (no)", kind: boolean }
+      - { name: archived, label: "Archived ones (yes) or not (no)", kind: boolean }
+    query: { started: "{{ input.started }}", archived: "{{ input.archived }}", limit: "100" }
+    items: value.data.sequences
+    next: "size(value.data.sequences) < 100 ? null : {'offset': (page == null ? 0 : int(page['offset'])) + 100}"
+    output: { id: number, name: text, recipients_count: number, editable: boolean, started: boolean, archived: boolean, paused: boolean, owner: record }
+  list_sequence_recipients:
+    label: "List a sequence's recipients"
+    description: "Who an email sequence is sent to, and where each is: pending, sent, opened, clicked, replied, bounced, unsubscribed or canceled."
+    method: GET
+    path: "/campaigns/{{ input.sequence_id }}/recipients"
+    inputs: [{ name: sequence_id, label: "The sequence's id", required: true }]
+    query: { limit: "100" }
+    items: value.data.recipients
+    next: "size(value.data.recipients) < 100 ? null : {'offset': (page == null ? 0 : int(page['offset'])) + 100}"
+    output: &recipient { email: text, first_name: text, last_name: text, position: text, company: text, website: text, sending_status: text, sending_status_comment: text, lead_id: number }
+  add_to_sequence:
+    label: "Add people to a sequence"
+    description: "Email addresses (up to 50) that a sequence is sent to; those it cannot take are named with why."
+    write: true
+    method: POST
+    path: "/campaigns/{{ input.sequence_id }}/recipients"
+    inputs:
+      - { name: sequence_id, label: "The sequence's id", required: true }
+      - { name: emails, label: "Email addresses, separated by commas", required: true }
+    send: { emails: "{{ input.emails.split(',').map(e, e.trim()) }}" }
+    result: value.data
+    output: { recipients_added: number, skipped_recipients: list }
+  remove_from_sequence:
+    label: "Take people off a sequence"
+    description: "Email addresses (up to 50) taken off a sequence; what was still to be sent to them is canceled."
+    write: true
+    method: DELETE
+    path: "/campaigns/{{ input.sequence_id }}/recipients"
+    inputs:
+      - { name: sequence_id, label: "The sequence's id", required: true }
+      - { name: emails, label: "Email addresses, separated by commas", required: true }
+    send: { emails: "{{ input.emails.split(',').map(e, e.trim()) }}" }
+    result: value.data
+    output: { recipients_removed: number, recipients_canceled: number, messages_canceled: number, skipped_recipients: list }
+  account:
+    label: "Account and credits left"
+    description: "The plan, when its counts start again, and the searches, verifications and credits used and left. It is free."
+    method: GET
+    path: "/account"
+    result: value.data
+    output: { first_name: text, last_name: text, email: text, plan_name: text, plan_level: number, reset_date: text, team_id: number, requests: record }
+triggers:
+  new_lead:
+    label: "A new lead"
+    description: "Each lead saved in Hunter (from the website, the browser extension or a workflow), asked for every few minutes."
+    inputs:
+      - { name: leads_list_id, label: "Only those of this leads list (its id)", kind: number }
+    poll:
+      method: GET
+      path: "/leads"
+      query: { "leads_list_id": "{{ input.leads_list_id }}", sort: newest, limit: "100" }
+      items: value.data.leads
+      next: "size(value.data.leads) < 100 ? null : {'offset': (page == null ? 0 : int(page['offset'])) + 100}"
+      newest_first: true
+      id: "string(item.id)"
+      every: 5m
+  sequence_reply:
+    label: "Someone replied to a sequence"
+    description: "Each recipient of an email sequence who replies, asked for every few minutes."
+    inputs:
+      - { name: sequence_id, label: "The sequence's id", required: true }
+    poll:
+      method: GET
+      path: "/campaigns/{{ input.sequence_id }}/recipients"
+      query: { limit: "100" }
+      items: "value.data.recipients.filter(r, r.sending_status == 'replied')"
+      next: "size(value.data.recipients) < 100 ? null : {'offset': (page == null ? 0 : int(page['offset'])) + 100}"
+      id: item.email
+      every: 15m

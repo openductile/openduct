@@ -1,0 +1,18 @@
+description: 'Firestore refuses: the step fails in its words'
+action: get_document
+credential:
+  access_token: ya29.test
+input:
+  project_id: sample-shop
+  collection: orders
+  document_id: A-999
+exchanges:
+- answer:
+    status: 404
+    body:
+      error:
+        code: 404
+        message: Document "projects/sample-shop/databases/(default)/documents/orders/A-999" not found.
+        status: NOT_FOUND
+error: 'Google Cloud Firestore answered 404: Document "projects/sample-shop/databases/(default)/documents/orders/A-999"
+  not found.'

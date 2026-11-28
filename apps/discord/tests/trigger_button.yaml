@@ -1,0 +1,12 @@
+description: A button pressed - it runs, and Discord is told the message is being updated
+trigger: interaction
+sign_in: discord_bot
+credential: { bot_token: test-bot-token, public_key: 3a2e578f29addf031da4172d5c614f059c027eba074c2e13ab54bc7cc51c1180 }
+delivery:
+  headers:
+    x-signature-ed25519: dc12c1915f6cd1d8d0877330529e9cc0378ef9c6948d9a3eeae9f22deb60cac05ce52df351d2c7712c114f56cd330a90b9d6c94cefb9ec793c012fe979a5ae0d
+    x-signature-timestamp: "1700000000"
+  body: '{"id":"1100000000000000003","application_id":"1000000000000000001","type":3,"token":"dGVzdC1idXR0b24tdG9rZW4","guild_id":"900000000000000001","channel_id":"910000000000000001","member":{"user":{"id":"920000000000000001","username":"ann"}},"message":{"id":"940000000000000001"},"data":{"custom_id":"approve","component_type":2},"version":1}'
+  at: 1700000010
+ids: ["1100000000000000003"]
+answer: { type: 6 }

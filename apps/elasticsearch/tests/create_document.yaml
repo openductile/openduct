@@ -1,0 +1,25 @@
+description: An order added under an id no document has yet
+action: create_document
+credential: {url: 'https://search.example.com:9200', api_key: VnVhQ2ZHY0JDZGJrUW0tZTVhT3g6dWkybHAyYXhUTm1zeWFrdzl0dk5udw==}
+input:
+  index: orders
+  id: o-1001
+  document: {order: '1001', total: 25}
+exchanges:
+- sent:
+    method: PUT
+    url: https://search.example.com:9200/orders/_create/o-1001
+    query: {}
+    headers: {authorization: ApiKey VnVhQ2ZHY0JDZGJrUW0tZTVhT3g6dWkybHAyYXhUTm1zeWFrdzl0dk5udw==}
+    body: {order: '1001', total: 25}
+  answer:
+    status: 201
+    body: &id001
+      _index: orders
+      _id: o-1001
+      _version: 1
+      result: created
+      _seq_no: 0
+      _primary_term: 1
+      _shards: {total: 2, successful: 1, failed: 0}
+result: *id001

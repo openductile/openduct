@@ -1,0 +1,11 @@
+description: A member found by their email address
+action: find_user_by_email
+credential: { bot_token: xoxb-1 }
+input: { email: ann@example.com }
+exchanges:
+  - sent:
+      method: GET
+      url: https://slack.com/api/users.lookupByEmail
+      query: { email: ann@example.com }
+    answer: { body: { ok: true, user: { id: W012A3CDE, name: ann, real_name: Ann Example, profile: { email: ann@example.com } } } }
+result: { id: W012A3CDE, name: ann, real_name: Ann Example, profile: { email: ann@example.com } }

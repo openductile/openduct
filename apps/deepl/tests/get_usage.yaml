@@ -1,0 +1,20 @@
+description: The characters used this billing period, and the limit
+action: get_usage
+credential: { api_key: 0f6a2c1e-5b7d-4e2a-9c3f-1a2b3c4d5e6f }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://api.deepl.com/v2/usage"
+      headers: { authorization: DeepL-Auth-Key 0f6a2c1e-5b7d-4e2a-9c3f-1a2b3c4d5e6f }
+    answer:
+      status: 200
+      body:
+        character_count: 180118
+        character_limit: 1250000
+        products:
+          - { product_type: translate, billing_unit: characters, api_key_unit_count: 636, account_unit_count: 180118 }
+result:
+  character_count: 180118
+  character_limit: 1250000
+  products:
+    - { product_type: translate, billing_unit: characters, api_key_unit_count: 636, account_unit_count: 180118 }

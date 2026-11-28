@@ -1,0 +1,18 @@
+description: The open tasks of the first list, over two pages
+action: list_tasks
+credential: { access_token: ya29.test }
+input: { list_id: "@default", only_open: true }
+exchanges:
+  - sent:
+      method: GET
+      url: https://tasks.googleapis.com/tasks/v1/lists/@default/tasks
+      query: { showCompleted: "false", showHidden: "false", maxResults: "100" }
+    answer:
+      body:
+        items: [{ kind: tasks#task, id: dGFzazE, title: Order more boxes, status: needsAction, due: "2026-12-01T00:00:00.000Z", position: "00000000000000000000" }]
+        nextPageToken: CgwI0Lq
+  - sent: { query: { showCompleted: "false", showHidden: "false", maxResults: "100", pageToken: CgwI0Lq } }
+    answer: { body: { items: [{ kind: tasks#task, id: dGFzazI, title: Call the printer, status: needsAction }] } }
+result:
+  - { kind: tasks#task, id: dGFzazE, title: Order more boxes, status: needsAction, due: "2026-12-01T00:00:00.000Z", position: "00000000000000000000" }
+  - { kind: tasks#task, id: dGFzazI, title: Call the printer, status: needsAction }

@@ -1,0 +1,11 @@
+description: "Find a contact by email or phone"
+action: find_contact
+credential: { token: test-token }
+input: { location_id: sadadya1u12basyhasd }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://services.leadconnectorhq.com/contacts/search/duplicate"
+      query: { locationId: sadadya1u12basyhasd }
+      headers: { authorization: "Bearer test-token", version: "2021-07-28" }
+    answer: { status: 200 }

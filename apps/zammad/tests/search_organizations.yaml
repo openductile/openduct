@@ -1,0 +1,7 @@
+action: search_organizations
+credential: { subdomain: acme, token: zm_test_1 }
+input: { query: example.com }
+exchanges:
+  - sent: { method: GET, url: https://acme.zammad.com/api/v1/organizations/search, query: { query: example.com, per_page: "100" } }
+    answer: { body: [{ id: 3, name: Example Supplies, domain: example.com, shared: true }] }
+result: [{ id: 3, name: Example Supplies, domain: example.com, shared: true }]

@@ -1,0 +1,12 @@
+description: A channel's posts, newest first, taken in Mattermost's order
+action: list_posts
+credential: { server_url: "https://chat.example.com", token: testmmtoken0000000000000000 }
+input: { channel_id: c1aaaaaaaaaaaaaaaaaaaaaaaa }
+exchanges:
+  - sent:
+      method: GET
+      url: https://chat.example.com/api/v4/channels/c1aaaaaaaaaaaaaaaaaaaaaaaa/posts
+      headers: { authorization: Bearer testmmtoken0000000000000000 }
+      query: { per_page: "200" }
+    answer: { body: { order: [p3aaaaaaaaaaaaaaaaaaaaaaaa, p2aaaaaaaaaaaaaaaaaaaaaaaa, p1aaaaaaaaaaaaaaaaaaaaaaaa], posts: { p1aaaaaaaaaaaaaaaaaaaaaaaa: { id: p1aaaaaaaaaaaaaaaaaaaaaaaa, create_at: 1764237600000, update_at: 1764237600000, user_id: u1aaaaaaaaaaaaaaaaaaaaaaaa, channel_id: c1aaaaaaaaaaaaaaaaaaaaaaaa, root_id: "", message: The order shipped., type: "", props: {} }, p2aaaaaaaaaaaaaaaaaaaaaaaa: { id: p2aaaaaaaaaaaaaaaaaaaaaaaa, create_at: 1764237660000, update_at: 1764237660000, user_id: u2aaaaaaaaaaaaaaaaaaaaaaaa, channel_id: c1aaaaaaaaaaaaaaaaaaaaaaaa, root_id: p1aaaaaaaaaaaaaaaaaaaaaaaa, message: Thanks!, type: "", props: {} }, p3aaaaaaaaaaaaaaaaaaaaaaaa: { id: p3aaaaaaaaaaaaaaaaaaaaaaaa, create_at: 1764237720000, update_at: 1764237720000, user_id: u1aaaaaaaaaaaaaaaaaaaaaaaa, channel_id: c1aaaaaaaaaaaaaaaaaaaaaaaa, root_id: "", message: Stand-up in 5., type: "", props: {} } }, next_post_id: "", prev_post_id: "" } }
+result: [{ id: p3aaaaaaaaaaaaaaaaaaaaaaaa, create_at: 1764237720000, update_at: 1764237720000, user_id: u1aaaaaaaaaaaaaaaaaaaaaaaa, channel_id: c1aaaaaaaaaaaaaaaaaaaaaaaa, root_id: "", message: Stand-up in 5., type: "", props: {} }, { id: p2aaaaaaaaaaaaaaaaaaaaaaaa, create_at: 1764237660000, update_at: 1764237660000, user_id: u2aaaaaaaaaaaaaaaaaaaaaaaa, channel_id: c1aaaaaaaaaaaaaaaaaaaaaaaa, root_id: p1aaaaaaaaaaaaaaaaaaaaaaaa, message: Thanks!, type: "", props: {} }, { id: p1aaaaaaaaaaaaaaaaaaaaaaaa, create_at: 1764237600000, update_at: 1764237600000, user_id: u1aaaaaaaaaaaaaaaaaaaaaaaa, channel_id: c1aaaaaaaaaaaaaaaaaaaaaaaa, root_id: "", message: The order shipped., type: "", props: {} }]

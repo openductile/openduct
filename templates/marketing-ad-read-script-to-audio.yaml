@@ -1,0 +1,80 @@
+name: A radio or podcast ad read, written and voiced
+description: >-
+  For businesses that advertise on podcasts, local radio or in-store speakers: press Run with what you sell and the
+  offer, and a model writes a spoken ad of the length you choose (about two and a half words a second), ElevenLabs reads
+  it in the voice you pick, and the MP3 is saved in a folder on your server - with the script beside it as a text file -
+  for you to listen to before it goes anywhere. Needs: an AI credential called model, an ElevenLabs key as a header
+  credential called elevenlabs (xi-api-key), and a folder called media that your OpenDuct admin allows (openduct start
+  --files-root media=/srv/media).
+category: Marketing
+trigger: manual
+# What a test runs on: what the run is given (each is optional: the first step says what is used without it).
+sample:
+  product: Harbor Bakery's sourdough subscription
+  offer: the first month at half price with the code BREAD50
+  seconds: 30
+  # An ElevenLabs voice's id; the run asks for 'your-voice-id' when none is given.
+  voice: your-voice-id
+steps:
+  - name: brief
+    set:
+      # Change these, or send them with the run.
+      product: "has(value.product) ? value.product : 'our weekly vegetable box'"
+      offer: "has(value.offer) ? value.offer : 'free delivery on the first order'"
+      seconds: "has(value.seconds) ? math.least(math.greatest(int(value.seconds), 10), 90) : 30"
+      # An ElevenLabs voice's id (Voices, in your ElevenLabs account).
+      voice: "has(value.voice) ? value.voice : 'your-voice-id'"
+      slug: "(has(value.product) ? value.product : 'ad').lowerAscii().replace(' ', '-').replace('\\'', '')"
+  - name: today
+    datetime: {}
+  - name: script
+    ai:
+      credential: model
+      system: >-
+        You write ads to be read aloud: warm, plain spoken English, short sentences, no stage directions, no sound
+        effects, no hashtags or links that cannot be said. End with the offer and how to get it, said once. Write only
+        the words to be read.
+      prompt: >-
+        A {{ steps.brief.seconds }}-second ad (about {{ int(double(steps.brief.seconds) * 2.5) }} words) for
+        {{ steps.brief.product }}. The offer: {{ steps.brief.offer }}.
+      max_tokens: 500
+  - name: voiced
+    http:
+      method: POST
+      url: "https://api.elevenlabs.io/v1/text-to-speech/{{ steps.brief.voice }}/with-timestamps"
+      credential: elevenlabs
+      query: { output_format: mp3_44100_128 }
+      json:
+        text: "{{ steps.script.text }}"
+        model_id: eleven_multilingual_v2
+      timeout: 120s
+      fail_on_status: true
+      # This form of the call answers with the audio in Base64 (audio_base64), beside the timing of each character.
+      sample:
+        audio_base64: SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4Ljc2LjEwMAAAAAAAAAAAAAAA
+        alignment: { characters: [], character_start_times_seconds: [], character_end_times_seconds: [] }
+    retry: { attempts: 2, wait: 20s }
+  - name: mp3
+    convert:
+      format: base64
+      base64: steps.voiced.body.audio_base64
+      name: "{{ steps.brief.slug }}-{{ steps.brief.seconds }}s.mp3"
+  - name: words
+    convert:
+      format: text
+      text: "{{ steps.script.text }}"
+      name: "{{ steps.brief.slug }}-{{ steps.brief.seconds }}s.txt"
+  - name: save_audio
+    storage:
+      action: write
+      root: media
+      path: "ads/{{ steps.today.date }}/{{ steps.brief.slug }}-{{ steps.brief.seconds }}s.mp3"
+      file: steps.mp3
+      overwrite: true
+  - name: save_script
+    storage:
+      action: write
+      root: media
+      path: "ads/{{ steps.today.date }}/{{ steps.brief.slug }}-{{ steps.brief.seconds }}s.txt"
+      file: steps.words
+      overwrite: true

@@ -1,0 +1,9 @@
+description: The account's own address for results removed
+action: delete_webhook
+credential: { api_key: dc_test_key_1 }
+exchanges:
+  - sent:
+      method: DELETE
+      url: "https://api.dropcontact.com/v1/enrich/webhook"
+    answer: { status: 200, body: { detail: Webhook deleted } }
+result: { detail: Webhook deleted }

@@ -1,0 +1,17 @@
+description: The account's PDF templates
+action: list_templates
+credential: { api_key: at_test_key_1 }
+input: { format: PDF }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://rest.apitemplate.io/v2/list-templates"
+      query: { format: PDF, limit: "100" }
+    answer:
+      status: 200
+      body:
+        status: success
+        templates:
+          - { template_id: cd890b2b199c5c42, name: Invoice, status: ACTIVE, format: PDF, created_at: "2026-10-15T06:29:01.308Z", updated_at: "2026-10-15T13:03:43.615Z", group_name: "" }
+result:
+  - { template_id: cd890b2b199c5c42, name: Invoice, status: ACTIVE, format: PDF, created_at: "2026-10-15T06:29:01.308Z", updated_at: "2026-10-15T13:03:43.615Z", group_name: "" }

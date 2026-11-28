@@ -1,0 +1,364 @@
+# Copyright 2026 Ductile AI, Inc
+# SPDX-License-Identifier: Apache-2.0
+# Spotify: started with `openduct app from-openapi` from Spotify's Web API description
+# (https://developer.spotify.com/reference/web-api/open-api-schema.yaml, fetched 2026-11-27), then written over by hand:
+# names, labels and descriptions are our own words.
+app: spotify
+name: Spotify
+category: media
+description: Music and podcasts on Spotify - playlists made and filled, the library, what is playing, and the catalogue searched.
+docs: https://developer.spotify.com/documentation/web-api
+hosts: [api.spotify.com]
+base_url: https://api.spotify.com/v1
+sign_in:
+  - id: spotify
+    label: Sign in with Spotify
+    oauth2:
+      authorize: https://accounts.spotify.com/authorize
+      token: https://accounts.spotify.com/api/token
+      client_auth: basic
+      scopes:
+        - user-read-private
+        - playlist-read-private
+        - playlist-read-collaborative
+        - playlist-modify-public
+        - playlist-modify-private
+        - user-library-read
+        - user-library-modify
+        - user-follow-modify
+        - user-top-read
+        - user-read-recently-played
+        - user-read-playback-state
+        - user-modify-playback-state
+        - user-read-currently-playing
+    headers:
+      Authorization: "Bearer {{ credential.access_token }}"
+error: value.error.message
+default_action: add_to_playlist
+actions:
+  search:
+    label: Search the catalogue
+    description: >-
+      Tracks, artists, albums, playlists, shows or episodes whose names match the words given; a search may narrow
+      itself with artist:, album:, track:, year: or genre:.
+    method: GET
+    path: /search
+    inputs:
+      - { name: q, label: "What to look for, such as: artist:Example Band year:2025", required: true }
+      - { name: type, label: "What kinds, separated by commas: track, artist, album, playlist, show, episode", description: track when empty }
+      - { name: market, label: "Only what can be played in this country (two letters, such as US)" }
+      - { name: limit, label: "At most this many of each kind (1 to 10; 5 when empty)", kind: number }
+    query:
+      q: "{{ input.q }}"
+      type: "{{ has(input.type) && input.type != null ? input.type.replace(' ', '') : 'track' }}"
+      market: "{{ input.market }}"
+      limit: "{{ input.limit }}"
+    output: { tracks: record, artists: record, albums: record, playlists: record, shows: record, episodes: record }
+  get_track:
+    label: Get a track
+    description: A track's name, artists, album, length, popularity and links.
+    method: GET
+    path: "/tracks/{{ regex.extract(input.track, '([A-Za-z0-9]+)(?:[?].*)?$') }}"
+    inputs:
+      - { name: track, label: "The track: its link, Spotify URI or ID", required: true }
+      - { name: market, label: "As offered in this country (two letters)" }
+    query: { market: "{{ input.market }}" }
+    output: { id: text, name: text, uri: text, artists: list, album: record, duration_ms: number, explicit: boolean, popularity: number, external_urls: record, external_ids: record }
+  get_album:
+    label: Get an album
+    description: An album's name, artists, release date, label, cover pictures and its first tracks.
+    method: GET
+    path: "/albums/{{ regex.extract(input.album, '([A-Za-z0-9]+)(?:[?].*)?$') }}"
+    inputs:
+      - { name: album, label: "The album: its link, Spotify URI or ID", required: true }
+      - { name: market, label: "As offered in this country (two letters)" }
+    query: { market: "{{ input.market }}" }
+    output: { id: text, name: text, uri: text, album_type: text, artists: list, release_date: text, total_tracks: number, label: text, images: list, tracks: record, external_urls: record }
+  get_artist:
+    label: Get an artist
+    description: An artist's name, genres, followers, popularity and pictures.
+    method: GET
+    path: "/artists/{{ regex.extract(input.artist, '([A-Za-z0-9]+)(?:[?].*)?$') }}"
+    inputs:
+      - { name: artist, label: "The artist: their link, Spotify URI or ID", required: true }
+    output: { id: text, name: text, uri: text, genres: list, followers: record, popularity: number, images: list, external_urls: record }
+  list_artist_albums:
+    label: List an artist's albums
+    description: The albums, singles and compilations of an artist, and those they appear on; every page.
+    method: GET
+    path: "/artists/{{ regex.extract(input.artist, '([A-Za-z0-9]+)(?:[?].*)?$') }}/albums"
+    inputs:
+      - { name: artist, label: "The artist: their link, Spotify URI or ID", required: true }
+      - { name: include_groups, label: "Only these, separated by commas: album, single, appears_on, compilation" }
+      - { name: market, label: "Only what is offered in this country (two letters)" }
+    query: { include_groups: "{{ input.include_groups }}", market: "{{ input.market }}", limit: "10" }
+    items: value.items
+    next: value.next
+    output: { id: text, name: text, uri: text, album_type: text, album_group: text, release_date: text, total_tracks: number, artists: list, images: list }
+  list_my_playlists:
+    label: List my playlists
+    description: The playlists the signed-in account made or follows; every page.
+    method: GET
+    path: /me/playlists
+    query: { limit: "50" }
+    items: value.items
+    next: value.next
+    output: { id: text, name: text, uri: text, description: text, public: boolean, collaborative: boolean, owner: record, items: record, external_urls: record, snapshot_id: text }
+  get_playlist:
+    label: Get a playlist
+    description: A playlist's name, description, owner, followers and its first items.
+    method: GET
+    path: "/playlists/{{ regex.extract(input.playlist, '([A-Za-z0-9]+)(?:[?].*)?$') }}"
+    inputs:
+      - { name: playlist, label: "The playlist: its link, Spotify URI or ID", required: true }
+      - { name: market, label: "As offered in this country (two letters)" }
+    query: { market: "{{ input.market }}" }
+    output: { id: text, name: text, uri: text, description: text, public: boolean, collaborative: boolean, owner: record, followers: record, items: record, images: list, snapshot_id: text }
+  list_playlist_items:
+    label: List a playlist's tracks
+    description: Each track (or episode) of a playlist, when it was added and by whom; every page.
+    method: GET
+    path: "/playlists/{{ regex.extract(input.playlist, '([A-Za-z0-9]+)(?:[?].*)?$') }}/items"
+    inputs:
+      - { name: playlist, label: "The playlist: its link, Spotify URI or ID", required: true }
+      - { name: market, label: "As offered in this country (two letters)" }
+    query: { market: "{{ input.market }}", limit: "50", additional_types: "track,episode" }
+    items: value.items
+    next: value.next
+    output: { added_at: text, added_by: record, is_local: boolean, item: record }
+  create_playlist:
+    label: Make a playlist
+    description: A new, empty playlist in the signed-in account; gives its id and link.
+    write: true
+    method: POST
+    path: /me/playlists
+    inputs:
+      - { name: name, label: "Its name", required: true }
+      - { name: description, label: Its description }
+      - { name: public, label: "Shown on the profile (yes when empty)", kind: boolean }
+      - { name: collaborative, label: "Others may change it (only for one not public)", kind: boolean }
+    send:
+      name: "{{ input.name }}"
+      description: "{{ input.description }}"
+      public: "{{ input.public }}"
+      collaborative: "{{ input.collaborative }}"
+    output: { id: text, name: text, uri: text, description: text, public: boolean, collaborative: boolean, external_urls: record, snapshot_id: text }
+  change_playlist:
+    label: Change a playlist
+    description: A playlist's name, description, or whether it is public or collaborative; what is left empty stays.
+    write: true
+    method: PUT
+    path: "/playlists/{{ regex.extract(input.playlist, '([A-Za-z0-9]+)(?:[?].*)?$') }}"
+    inputs:
+      - { name: playlist, label: "The playlist: its link, Spotify URI or ID", required: true }
+      - { name: name, label: Its new name }
+      - { name: description, label: Its new description }
+      - { name: public, label: "Shown on the profile", kind: boolean }
+      - { name: collaborative, label: "Others may change it", kind: boolean }
+    send:
+      name: "{{ input.name }}"
+      description: "{{ input.description }}"
+      public: "{{ input.public }}"
+      collaborative: "{{ input.collaborative }}"
+    result: "{'changed': true}"
+    output: { changed: boolean }
+  add_to_playlist:
+    label: Add tracks to a playlist
+    description: Tracks or episodes added at the end of a playlist, or at a place in it; up to 100 at once.
+    write: true
+    method: POST
+    path: "/playlists/{{ regex.extract(input.playlist, '([A-Za-z0-9]+)(?:[?].*)?$') }}/items"
+    inputs:
+      - { name: playlist, label: "The playlist: its link, Spotify URI or ID", required: true }
+      - { name: uris, label: "The tracks' (or episodes') Spotify URIs, separated by commas: spotify:track:...", required: true }
+      - { name: position, label: "At this place, counting from 0 (at the end when empty)", kind: number }
+    send:
+      uris: "{{ input.uris.split(',').map(u, u.trim()) }}"
+      position: "{{ input.position }}"
+    output: { snapshot_id: text }
+  remove_from_playlist:
+    label: Remove tracks from a playlist
+    description: Every place a playlist has these tracks or episodes, taken out.
+    write: true
+    method: DELETE
+    path: "/playlists/{{ regex.extract(input.playlist, '([A-Za-z0-9]+)(?:[?].*)?$') }}/items"
+    inputs:
+      - { name: playlist, label: "The playlist: its link, Spotify URI or ID", required: true }
+      - { name: uris, label: "The tracks' (or episodes') Spotify URIs, separated by commas", required: true }
+    send:
+      items: "{{ input.uris.split(',').map(u, {'uri': u.trim()}) }}"
+    output: { snapshot_id: text }
+  me:
+    label: Who I am
+    description: The signed-in account's id, name, country and plan (Premium or Free).
+    method: GET
+    path: /me
+    output: { id: text, display_name: text, uri: text, country: text, product: text, followers: record, external_urls: record }
+  list_saved_tracks:
+    label: List my liked songs
+    description: The tracks saved to the signed-in account's library, each with when it was saved; every page.
+    method: GET
+    path: /me/tracks
+    inputs:
+      - { name: market, label: "As offered in this country (two letters)" }
+    query: { market: "{{ input.market }}", limit: "50" }
+    items: value.items
+    next: value.next
+    output: { added_at: text, track: record }
+  save_to_library:
+    label: Save to my library
+    description: >-
+      Tracks liked, albums, shows and episodes saved, artists, people and playlists followed - by their Spotify URIs, up
+      to 40 at once.
+    write: true
+    method: PUT
+    path: /me/library
+    body: none
+    inputs:
+      - { name: uris, label: "Their Spotify URIs, separated by commas: spotify:track:..., spotify:album:...", required: true }
+    query: { uris: "{{ input.uris.replace(' ', '') }}" }
+    result: "{'saved': true}"
+    output: { saved: boolean }
+  remove_from_library:
+    label: Remove from my library
+    description: Tracks, albums, shows, episodes, artists, people or playlists taken out of the library (or unfollowed), by their Spotify URIs.
+    write: true
+    method: DELETE
+    path: /me/library
+    inputs:
+      - { name: uris, label: "Their Spotify URIs, separated by commas", required: true }
+    query: { uris: "{{ input.uris.replace(' ', '') }}" }
+    result: "{'removed': true}"
+    output: { removed: boolean }
+  list_top:
+    label: List my top artists or tracks
+    description: Those the signed-in account listens to most, over the last 4 weeks, 6 months or year; every page.
+    method: GET
+    path: "/me/top/{{ input.type }}"
+    inputs:
+      - { name: type, label: "artists or tracks", required: true }
+      - { name: time_range, label: "short_term (4 weeks), medium_term (6 months) or long_term (a year)", description: medium_term when empty }
+    query: { time_range: "{{ input.time_range }}", limit: "50" }
+    items: value.items
+    next: value.next
+    output: { id: text, name: text, uri: text, popularity: number, genres: list, artists: list, album: record, external_urls: record }
+  list_recently_played:
+    label: List what I played lately
+    description: The last tracks (up to 50) the signed-in account played, newest first, each with when.
+    method: GET
+    path: /me/player/recently-played
+    inputs:
+      - { name: after, label: "Only those played after this time (Unix time in milliseconds)", kind: number }
+    query: { after: "{{ input.after }}", limit: "50" }
+    items: value.items
+    output: { track: record, played_at: text, context: record }
+  currently_playing:
+    label: What is playing now
+    description: The track or episode the signed-in account is playing, how far in, and on which device; empty when nothing is.
+    method: GET
+    path: /me/player/currently-playing
+    query: { additional_types: "track,episode" }
+    output: { is_playing: boolean, progress_ms: number, item: record, currently_playing_type: text, context: record, device: record, timestamp: number }
+  play:
+    label: Play
+    description: >-
+      Starts an album, artist or playlist, or a list of tracks, on the account's active device (or another) - or
+      carries on with what was paused. Needs Spotify Premium.
+    write: true
+    method: PUT
+    path: /me/player/play
+    inputs:
+      - { name: context_uri, label: "An album's, artist's or playlist's Spotify URI to play" }
+      - { name: uris, label: "Or these tracks' Spotify URIs, separated by commas" }
+      - { name: device_id, label: "On this device (its id, from List my devices); the active one when empty" }
+    query: { device_id: "{{ input.device_id }}" }
+    send:
+      context_uri: "{{ input.context_uri }}"
+      uris: "{{ input.uris.split(',').map(u, u.trim()) }}"
+    result: "{'playing': true}"
+    output: { playing: boolean }
+  pause:
+    label: Pause
+    description: Pauses what the account is playing. Needs Spotify Premium.
+    write: true
+    method: PUT
+    path: /me/player/pause
+    body: none
+    inputs:
+      - { name: device_id, label: "On this device (its id); the active one when empty" }
+    query: { device_id: "{{ input.device_id }}" }
+    result: "{'paused': true}"
+    output: { paused: boolean }
+  skip_to_next:
+    label: Skip to the next track
+    description: Moves on to the next track in the account's queue. Needs Spotify Premium.
+    write: true
+    method: POST
+    path: /me/player/next
+    body: none
+    inputs:
+      - { name: device_id, label: "On this device (its id); the active one when empty" }
+    query: { device_id: "{{ input.device_id }}" }
+    result: "{'skipped': true}"
+    output: { skipped: boolean }
+  add_to_queue:
+    label: Add to the queue
+    description: A track or episode to be played next. Needs Spotify Premium.
+    write: true
+    method: POST
+    path: /me/player/queue
+    body: none
+    inputs:
+      - { name: uri, label: "The track's or episode's Spotify URI", required: true }
+      - { name: device_id, label: "On this device (its id); the active one when empty" }
+    query: { uri: "{{ input.uri }}", device_id: "{{ input.device_id }}" }
+    result: "{'queued': true}"
+    output: { queued: boolean }
+  list_devices:
+    label: List my devices
+    description: The phones, computers and speakers the account may play on, which one is active, and their volume.
+    method: GET
+    path: /me/player/devices
+    items: value.devices
+    output: { id: text, name: text, type: text, is_active: boolean, is_restricted: boolean, volume_percent: number, supports_volume: boolean }
+  list_show_episodes:
+    label: List a podcast's episodes
+    description: Each episode of a show, with its name, description, length and release date; every page.
+    method: GET
+    path: "/shows/{{ regex.extract(input.show, '([A-Za-z0-9]+)(?:[?].*)?$') }}/episodes"
+    inputs:
+      - { name: show, label: "The show: its link, Spotify URI or ID", required: true }
+      - { name: market, label: "As offered in this country (two letters)" }
+    query: { market: "{{ input.market }}", limit: "50" }
+    items: value.items
+    next: value.next
+    output: { id: text, name: text, uri: text, description: text, duration_ms: number, release_date: text, explicit: boolean, language: text, external_urls: record }
+triggers:
+  new_saved_track:
+    label: A song liked
+    description: >-
+      Each track saved to the signed-in account's library (a heart pressed), asked for every few minutes: when, and
+      the track.
+    poll:
+      method: GET
+      path: /me/tracks
+      query: { limit: "50" }
+      items: value.items
+      id: item.track.id + '@' + item.added_at
+      newest_first: true
+      event: "{'added_at': item.added_at, 'track': item.track}"
+      every: 5m
+  new_played_track:
+    label: A track played
+    description: >-
+      Each track the signed-in account finishes playing, asked for every few minutes: the track, when, and from which
+      album or playlist.
+    poll:
+      method: GET
+      path: /me/player/recently-played
+      query: { limit: "50", after: "{{ input.cursor }}" }
+      items: value.items
+      id: item.played_at
+      newest_first: true
+      cursor: "string(int(timestamp(items[size(items) - 1].played_at)) * 1000)"
+      every: 10m

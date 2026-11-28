@@ -1,0 +1,29 @@
+description: Employees changed since a time, from a record by ID
+action: list_changed_employees
+credential:
+  company_domain: acme
+  api_key: test-key
+input:
+  since: '2026-11-01T00:00:00Z'
+exchanges:
+- sent:
+    method: GET
+    url: https://acme.bamboohr.com/api/v1/employees/changed
+    query:
+      since: '2026-11-01T00:00:00Z'
+    headers:
+      authorization: Basic dGVzdC1rZXk6eA==
+      accept: application/json
+  answer:
+    status: 200
+    body:
+      latest: '2026-11-15T18:20:00+00:00'
+      employees:
+        '101':
+          id: '101'
+          action: Updated
+          lastChanged: '2026-11-15T18:20:00+00:00'
+result:
+- id: '101'
+  action: Updated
+  lastChanged: '2026-11-15T18:20:00+00:00'

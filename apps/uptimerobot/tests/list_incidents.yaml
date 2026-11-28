@@ -1,0 +1,10 @@
+action: list_incidents
+credential: { api_key: ur_test_1 }
+input: { monitor_id: 801, status: open }
+exchanges:
+  - sent: { method: GET, url: https://api.uptimerobot.com/v3/incidents, query: { monitor_id: "801", status: open, limit: "200" } }
+    answer:
+      body:
+        nextLink: null
+        data: [{ id: inc_7f3a, status: open, type: Downtime, cause: 503, reason: Service Unavailable, monitor: { id: 801, friendlyName: Shop }, commentsCount: 0, startedAt: "2026-11-27T09:55:00Z", resolvedAt: null, duration: null }]
+result: [{ id: inc_7f3a, status: open, type: Downtime, cause: 503, reason: Service Unavailable, monitor: { id: 801, friendlyName: Shop }, commentsCount: 0, startedAt: "2026-11-27T09:55:00Z", resolvedAt: null, duration: null }]

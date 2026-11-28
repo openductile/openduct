@@ -1,0 +1,12 @@
+action: create_issue
+credential: { api_key: lin_api_test1 }
+input: { team_id: tm-1, title: Checkout button does nothing, description: "Seen on **mobile** only.", priority: 2, label_ids: "lb-1, lb-2", due_date: "2026-12-05" }
+exchanges:
+  - sent:
+      method: POST
+      url: https://api.linear.app/graphql
+      body:
+        query: "mutation($input: IssueCreateInput!) { issueCreate(input: $input) { success issue { id identifier title url priorityLabel state { name } assignee { name } team { key } } } }"
+        variables: { input: { teamId: tm-1, title: Checkout button does nothing, description: "Seen on **mobile** only.", priority: 2, labelIds: [lb-1, lb-2], dueDate: "2026-12-05" } }
+    answer: { body: { data: { issueCreate: { success: true, issue: { id: 0b1e6a52-0000-4000-8000-000000000001, identifier: ENG-101, title: Checkout button does nothing, priority: 2, priorityLabel: High, url: "https://linear.app/example/issue/ENG-101", state: { id: st-1, name: Todo, type: unstarted }, assignee: { id: u-1, name: Ann Lee }, team: { id: tm-1, key: ENG } } } } } }
+result: { id: 0b1e6a52-0000-4000-8000-000000000001, identifier: ENG-101, title: Checkout button does nothing, priority: 2, priorityLabel: High, url: "https://linear.app/example/issue/ENG-101", state: { id: st-1, name: Todo, type: unstarted }, assignee: { id: u-1, name: Ann Lee }, team: { id: tm-1, key: ENG } }

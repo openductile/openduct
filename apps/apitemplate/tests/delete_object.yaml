@@ -1,0 +1,11 @@
+description: A file removed from storage
+action: delete_object
+credential: { api_key: at_test_key_1 }
+input: { transaction_ref: a0430897-2c94-40e1-a09b-57403d811ceb }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://rest.apitemplate.io/v2/delete-object"
+      query: { transaction_ref: a0430897-2c94-40e1-a09b-57403d811ceb }
+    answer: { status: 200, body: { status: success, transaction_ref: a0430897-2c94-40e1-a09b-57403d811ceb } }
+result: { status: success, transaction_ref: a0430897-2c94-40e1-a09b-57403d811ceb }

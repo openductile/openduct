@@ -1,0 +1,48 @@
+# Made by `openduct app from-openapi`: Send RCS.
+description: "Send RCS, made from the API description's schemas"
+action: send_rcs
+credential: { api_key: test-key }
+input: { text: example, to: example }
+exchanges:
+  - sent:
+      method: POST
+      url: "https://gateway.seven.io/api/rcs/messages"
+      query: {}
+      headers: { x-api-key: test-key }
+      body: { text: example, to: example }
+    answer:
+      status: 200
+      body:
+        balance: 1
+        debug: example
+        messages:
+          - encoding: example
+            error: example
+            error_text: example
+            id: id_1
+            parts: 1
+            price: 1
+            recipient: example
+            sender: example
+            success: true
+            text: example
+        sms_type: direct
+        success: example
+        total_price: 1
+result:
+  balance: 1
+  debug: example
+  messages:
+    - encoding: example
+      error: example
+      error_text: example
+      id: id_1
+      parts: 1
+      price: 1
+      recipient: example
+      sender: example
+      success: true
+      text: example
+  sms_type: direct
+  success: example
+  total_price: 1

@@ -1,0 +1,7 @@
+description: A path that is not there - Dropbox's own words
+action: get_metadata
+credential: { access_token: sl.test-token }
+input: { path: /Nothere.pdf }
+exchanges:
+  - answer: { status: 409, body: { error_summary: path/not_found/.., error: { ".tag": path, path: { ".tag": not_found } } } }
+error: "Dropbox answered 409: path/not_found/.."

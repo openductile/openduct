@@ -1,0 +1,19 @@
+description: A customer added with an email; the id comes in a header
+action: create_customer
+credential: {access_token: hs-test-token}
+input: {first_name: Bob, last_name: Example, email: bob@example.com}
+exchanges:
+- sent:
+    method: POST
+    url: https://api.helpscout.net/v2/customers
+    query: {}
+    headers: {authorization: Bearer hs-test-token}
+    body:
+      firstName: Bob
+      lastName: Example
+      emails:
+      - {type: work, value: bob@example.com}
+  answer:
+    status: 201
+    headers: {Resource-ID: '29419', Location: 'https://api.helpscout.net/v2/customers/29419'}
+result: {id: '29419'}

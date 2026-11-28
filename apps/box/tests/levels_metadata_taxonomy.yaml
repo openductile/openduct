@@ -1,0 +1,13 @@
+# Made by `openduct app from-openapi`: Create metadata taxonomy levels.
+description: "Create metadata taxonomy levels, made from the API description's schemas"
+action: levels_metadata_taxonomy
+credential: { access_token: test-access-token }
+input: { namespace: example, taxonomy_key: example }
+exchanges:
+  - sent:
+      method: POST
+      url: "https://api.box.com/2.0/metadata_taxonomies/example/example/levels"
+      query: {}
+      headers: { authorization: "Bearer test-access-token" }
+    answer: { status: 201, body: { entries: [{ displayName: Continent, description: Continent, level: 1 }] } }
+result: { entries: [{ displayName: Continent, description: Continent, level: 1 }] }

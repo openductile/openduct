@@ -1,0 +1,11 @@
+description: "The team"
+action: get_team
+credential: {"api_key": "test-key"}
+exchanges:
+  - sent:
+      method: GET
+      url: "https://api.lemlist.com/api/team"
+      query: {"version": "v2"}
+      headers: {"authorization": "Basic OnRlc3Qta2V5"}
+    answer: {"status": 200, "body": {"_id": "tea_T1", "name": "Northwind Example", "userIds": ["usr_U1"], "createdBy": "usr_U1", "createdAt": "2025-01-10T09:00:00.000Z", "users": [{"userId": "usr_U1", "name": "Ann Lee"}]}}
+result: {"_id": "tea_T1", "name": "Northwind Example", "userIds": ["usr_U1"], "createdBy": "usr_U1", "createdAt": "2025-01-10T09:00:00.000Z", "users": [{"userId": "usr_U1", "name": "Ann Lee"}]}

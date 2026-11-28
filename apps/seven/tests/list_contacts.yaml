@@ -1,0 +1,50 @@
+# Made by `openduct app from-openapi`: List Contacts.
+description: "List Contacts, made from the API description's schemas"
+action: list_contacts
+credential: { api_key: test-key }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://gateway.seven.io/api/contacts"
+      query: {}
+      headers: { x-api-key: test-key }
+    answer:
+      status: 200
+      body:
+        data:
+          - id: 1
+            avatar: example
+            validation: { state: example, timestamp: example }
+            initials: { initials: example, color: example }
+            properties:
+              firstname: example
+              lastname: example
+              mobile_number: 1
+              home_number: example
+              email: "ann@example.com"
+              address: example
+              postal_code: example
+              city: example
+              birthday: "2026-01-15"
+              notes: example
+            groups: [1]
+            created: example
+        pagingMetadata: { offset: 1, count: 1, total: 1, limit: 1, has_more: true }
+result:
+  - id: 1
+    avatar: example
+    validation: { state: example, timestamp: example }
+    initials: { initials: example, color: example }
+    properties:
+      firstname: example
+      lastname: example
+      mobile_number: 1
+      home_number: example
+      email: "ann@example.com"
+      address: example
+      postal_code: example
+      city: example
+      birthday: "2026-01-15"
+      notes: example
+    groups: [1]
+    created: example

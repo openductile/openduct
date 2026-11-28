@@ -170,3 +170,42 @@ async fn a_segment_cut_back_to_nothing_does_not_block_the_next() {
     assert_eq!(got.last(), Some(&(2, first + 1)));
     assert_eq!(got.len() as u64, first + 1);
 }
+
+/// The entries the log still holds, and where it says it starts.
+async fn held(log: &mut LogStore) -> (Option<u64>, Vec<u64>) {
+    let purged = log
+        .get_log_state()
+        .await
+        .unwrap()
+        .last_purged_log_id
+        .map(|l| l.index);
+    (purged, all(log).await.into_iter().map(|(_, i)| i).collect())
+}
+
+#[tokio::test]
+async fn the_log_is_never_purged_past_the_newest_snapshot_on_disk() {
+    use openduct_raft::snapshot::Floor;
+    let tmp = tempfile::tempdir().unwrap();
+    let mut log = open(tmp.path(), 1 << 20);
+    append(&mut log, 1, 1..=20).await;
+
+    // No snapshot on disk: asked to purge, it keeps everything.
+    log.purge_no_further_than(Floor::covering(None));
+    log.purge(log_id(1, 10)).await.unwrap();
+    assert_eq!(held(&mut log).await, (None, (1..=20).collect()));
+
+    // A snapshot covers up to 6: asked for 10, it purges up to 6 and keeps 7 onwards.
+    log.purge_no_further_than(Floor::covering(Some(6)));
+    log.purge(log_id(1, 10)).await.unwrap();
+    assert_eq!(held(&mut log).await, (Some(6), (7..=20).collect()));
+
+    // Covered as far as asked, or further: purged as asked.
+    log.purge_no_further_than(Floor::covering(Some(15)));
+    log.purge(log_id(1, 12)).await.unwrap();
+    assert_eq!(held(&mut log).await, (Some(12), (13..=20).collect()));
+
+    // What was kept is still there after a restart, and so is where the log starts.
+    drop(log);
+    let mut log = open(tmp.path(), 1 << 20);
+    assert_eq!(held(&mut log).await, (Some(12), (13..=20).collect()));
+}

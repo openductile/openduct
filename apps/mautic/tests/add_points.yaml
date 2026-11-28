@@ -1,0 +1,12 @@
+description: "Points added for something a contact did"
+action: add_points
+credential: {"site_url": "https://mautic.example.com", "username": "admin", "password": "pw-test"}
+input: {"contact_id": 47, "points": 5, "event_name": "Booked a demo"}
+exchanges:
+  - sent:
+      method: POST
+      url: "https://mautic.example.com/api/contacts/47/points/plus/5"
+      headers: {"authorization": "Basic YWRtaW46cHctdGVzdA=="}
+      body: {"eventName": "Booked a demo"}
+    answer: {"status": 200, "body": {"success": true}}
+result: {"success": true}

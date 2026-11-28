@@ -1,0 +1,12 @@
+description: "Replies in one campaign"
+action: list_activities
+credential: {"api_key": "test-key"}
+input: {"type": "emailsReplied", "campaign_id": "cam_A1"}
+exchanges:
+  - sent:
+      method: GET
+      url: "https://api.lemlist.com/api/activities"
+      query: {"version": "v2", "type": "emailsReplied", "campaignId": "cam_A1", "limit": "100"}
+      headers: {"authorization": "Basic OnRlc3Qta2V5"}
+    answer: {"status": 200, "body": [{"_id": "act_3", "type": "emailsReplied", "createdAt": "2026-11-27T09:00:00.000Z", "campaignId": "cam_A1", "leadId": "lea_L1", "leadEmail": "ann@example.com", "leadFirstName": "Ann"}, {"_id": "act_2", "type": "emailsReplied", "createdAt": "2026-11-26T15:00:00.000Z", "campaignId": "cam_A1", "leadId": "lea_L2", "leadEmail": "bo@example.com", "leadFirstName": "Bo"}]}
+result: [{"_id": "act_3", "type": "emailsReplied", "createdAt": "2026-11-27T09:00:00.000Z", "campaignId": "cam_A1", "leadId": "lea_L1", "leadEmail": "ann@example.com", "leadFirstName": "Ann"}, {"_id": "act_2", "type": "emailsReplied", "createdAt": "2026-11-26T15:00:00.000Z", "campaignId": "cam_A1", "leadId": "lea_L2", "leadEmail": "bo@example.com", "leadFirstName": "Bo"}]

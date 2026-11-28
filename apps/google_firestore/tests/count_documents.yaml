@@ -1,0 +1,33 @@
+description: How many documents a collection has
+action: count_documents
+credential:
+  access_token: ya29.test
+input:
+  project_id: sample-shop
+  collection: orders
+exchanges:
+- sent:
+    method: POST
+    url: https://firestore.googleapis.com/v1/projects/sample-shop/databases/(default)/documents:runAggregationQuery
+    headers:
+      authorization: Bearer ya29.test
+    body:
+      structuredAggregationQuery:
+        structuredQuery:
+          from:
+          - collectionId: orders
+        aggregations:
+        - alias: count
+          count:
+            upTo: '9223372036854775807'
+  answer:
+    status: 200
+    body:
+    - result:
+        aggregateFields:
+          count:
+            integerValue: '128'
+      readTime: '2026-11-21T08:00:00.000000Z'
+result:
+  count: 128
+  readTime: '2026-11-21T08:00:00.000000Z'

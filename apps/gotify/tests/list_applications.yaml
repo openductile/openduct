@@ -1,0 +1,13 @@
+description: "The applications, with their tokens"
+action: list_applications
+sign_in: gotify_client
+credential: { base_url: "https://gotify.example.com", token: CzyoeNS.D4iJLVb }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://gotify.example.com/application"
+    answer:
+      body:
+        - { id: 5, name: Shop orders, description: New and paid orders, token: AzyoeNS.D4iJLVa, defaultPriority: 2, internal: false, image: image/image.jpeg, sortKey: a0, createdAt: "2026-11-01T09:00:00Z" }
+result:
+  - { id: 5, name: Shop orders, description: New and paid orders, token: AzyoeNS.D4iJLVa, defaultPriority: 2, internal: false, image: image/image.jpeg, sortKey: a0, createdAt: "2026-11-01T09:00:00Z" }

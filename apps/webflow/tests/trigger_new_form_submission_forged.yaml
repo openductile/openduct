@@ -1,0 +1,10 @@
+description: A form answer signed with another secret is refused
+trigger: new_form_submission
+workflow: wf1
+credential: { token: test-token, "webhook_secret@wf1": whsec_test_5f3a9c }
+input: { site_id: site_1 }
+delivery:
+  headers: { x-webflow-timestamp: "1764237600000", x-webflow-signature: "e31fb9c364e7006e0a6fe6c1bb7dee260465dc357aa85d2ced53655455a3fc2a" }
+  body: '{"triggerType":"form_submission","payload":{"name":"Contact Us","siteId":"site_1","data":{"Name":"Ann Lee","Email":"ann@example.com"},"submittedAt":"2025-11-27T09:59:58.000Z","id":"sub_9","formId":"frm_1"}}'
+  at: 1764237605
+refused: "signature does not match"

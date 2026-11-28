@@ -21,10 +21,82 @@ pub(crate) enum AppCommand {
         #[arg(long, default_value = "apps")]
         dir: PathBuf,
     },
-    /// Check apps' definitions: names, hosts, every template and expression.
+    /// Check apps' definitions: names, hosts, every template and expression; and say how finished each is.
     Check {
         /// An app's folder, or a folder of apps' folders (by default ./apps).
         paths: Vec<PathBuf>,
+        /// Fail for an app whose quality score is below this (0 to 100; the bar for an app OpenDuct ships is 80).
+        #[arg(long)]
+        bar: Option<u32>,
+    },
+    /// Make an app from a vendor's API description: OpenAPI 3.0 or 3.1, or Swagger 2.0, as JSON or YAML.
+    FromOpenapi {
+        /// The description: a file, or its https:// address.
+        spec: String,
+        /// The app's id: lowercase letters, digits and '_' (a workflow step is named after it).
+        #[arg(long)]
+        name: String,
+        /// Its name as people know it (by default the description's title).
+        #[arg(long)]
+        title: Option<String>,
+        #[arg(long)]
+        category: Option<String>,
+        /// How many actions at most: the best of the description's operations (see docs/apps.md).
+        #[arg(long, default_value_t = openduct_flow::app_files::generate::DEFAULT_ACTIONS)]
+        actions: usize,
+        /// Only operations with one of these tags (with commas).
+        #[arg(long, value_delimiter = ',')]
+        only: Vec<String>,
+        /// Exactly these actions, by name (with commas), in place of the best.
+        #[arg(long, value_delimiter = ',')]
+        choose: Vec<String>,
+        /// How it signs in when the description does not say: bearer, basic, header:<name> or query:<name>.
+        #[arg(long)]
+        sign_in: Option<String>,
+        /// The API's address, when the description names none (or to use another).
+        #[arg(long)]
+        base_url: Option<String>,
+        /// The vendor's API reference, when the description names none.
+        #[arg(long)]
+        docs: Option<String>,
+        /// What the README says the description came from (by default its address or file's name).
+        #[arg(long)]
+        source: Option<String>,
+        /// The folder to write it in (by default apps/<name>).
+        #[arg(long)]
+        out: Option<PathBuf>,
+        /// Write over an app that is there.
+        #[arg(long)]
+        force: bool,
+        /// Let the description's address be on this machine's own network.
+        #[arg(long)]
+        allow_private_network: bool,
+    },
+    /// Make an app whose actions are the tools of a vendor's MCP server.
+    FromMcp {
+        /// The server's MCP address (https://).
+        url: String,
+        /// The app's id: lowercase letters, digits and '_'.
+        #[arg(long)]
+        name: String,
+        #[arg(long)]
+        title: Option<String>,
+        #[arg(long)]
+        category: Option<String>,
+        /// How many tools at most (by default all, up to 100).
+        #[arg(long, default_value_t = 0)]
+        actions: usize,
+        /// The token the server takes, as `token=...` in a file only you may read (chmod 600).
+        #[arg(long)]
+        token_file: Option<PathBuf>,
+        #[arg(long)]
+        docs: Option<String>,
+        #[arg(long)]
+        out: Option<PathBuf>,
+        #[arg(long)]
+        force: bool,
+        #[arg(long)]
+        allow_private_network: bool,
     },
     /// Check apps and run their recorded exchanges (tests/*.yaml): no account, no network.
     Test {
@@ -98,8 +170,14 @@ fn load(folder: &Path) -> Result<&'static AppDef, String> {
 
 fn summary(app: &AppDef) -> String {
     let sign_ins: Vec<&str> = app.sign_ins.iter().map(|s| s.id.as_str()).collect();
+    // G3 app triggers: what starts a workflow from it, when it has any.
+    let triggers = match app.triggers.len() {
+        0 => String::new(),
+        1 => ", 1 trigger".to_owned(),
+        n => format!(", {n} triggers"),
+    };
     format!(
-        "{} ({}): {} action{}, signs in as {}",
+        "{} ({}): {} action{}{triggers}, signs in as {}",
         app.id,
         app.name,
         app.actions.len(),
@@ -111,24 +189,75 @@ fn summary(app: &AppDef) -> String {
 pub(crate) async fn command(command: AppCommand) -> Result<(), String> {
     match command {
         AppCommand::New { id, dir } => new(&id, &dir),
-        AppCommand::Check { paths } => {
-            let mut failed = 0;
-            for folder in folders(&paths)? {
-                match load(&folder) {
-                    Ok(app) => println!("✓ {}", summary(app)),
-                    Err(e) => {
-                        failed += 1;
-                        println!("✕ {e}");
-                    }
-                }
-            }
-            if failed > 0 {
-                return Err(format!(
-                    "{failed} app{} could not be read",
-                    if failed == 1 { "" } else { "s" }
-                ));
-            }
-            Ok(())
+        AppCommand::Check { paths, bar } => check(&paths, bar),
+        // app generator
+        AppCommand::FromOpenapi {
+            spec,
+            name,
+            title,
+            category,
+            actions,
+            only,
+            choose,
+            sign_in,
+            base_url,
+            docs,
+            source,
+            out,
+            force,
+            allow_private_network,
+        } => {
+            let options = openduct_flow::app_files::generate::Options {
+                name: title,
+                category,
+                actions,
+                only,
+                chosen: (!choose.is_empty()).then_some(choose),
+                sign_in: sign_in.as_deref().map(str::parse).transpose()?,
+                base_url,
+                docs,
+                source: source.unwrap_or_default(),
+                ..Default::default()
+            };
+            crate::app_gen::from_openapi(crate::app_gen::FromOpenapi {
+                spec,
+                id: name,
+                options,
+                out,
+                force,
+                allow_private: allow_private_network,
+            })
+            .await
+        }
+        AppCommand::FromMcp {
+            url,
+            name,
+            title,
+            category,
+            actions,
+            token_file,
+            docs,
+            out,
+            force,
+            allow_private_network,
+        } => {
+            let options = openduct_flow::app_files::generate::McpOptions {
+                id: name,
+                name: title,
+                category,
+                actions,
+                docs,
+                ..Default::default()
+            };
+            crate::app_gen::from_mcp(crate::app_gen::FromMcp {
+                url,
+                options,
+                token_file,
+                out,
+                force,
+                allow_private: allow_private_network,
+            })
+            .await
         }
         AppCommand::Test { paths } => test(&paths),
         AppCommand::Try {
@@ -153,6 +282,49 @@ pub(crate) async fn command(command: AppCommand) -> Result<(), String> {
             Ok(())
         }
     }
+}
+
+/// `openduct app check`: each app read and checked, and how finished it is; with a bar, those below it fail.
+fn check(paths: &[PathBuf], bar: Option<u32>) -> Result<(), String> {
+    let (mut failed, mut below) = (0, 0);
+    for folder in folders(paths)? {
+        match load(&folder) {
+            Ok(app) => {
+                println!("✓ {}", summary(app));
+                // app generator: the quality report.
+                let report = crate::app_gen::quality_of(app, &folder);
+                for line in report.lines() {
+                    println!("    {line}");
+                }
+                if bar.is_some_and(|b| !report.meets(b)) {
+                    below += 1;
+                    println!(
+                        "✕ {}: {}/100 is below the bar of {}",
+                        app.id,
+                        report.score,
+                        bar.unwrap_or_default()
+                    );
+                }
+            }
+            Err(e) => {
+                failed += 1;
+                println!("✕ {e}");
+            }
+        }
+    }
+    if failed > 0 {
+        return Err(format!(
+            "{failed} app{} could not be read",
+            if failed == 1 { "" } else { "s" }
+        ));
+    }
+    if below > 0 {
+        return Err(format!(
+            "{below} app{} below the bar",
+            if below == 1 { " is" } else { "s are" }
+        ));
+    }
+    Ok(())
 }
 
 fn test(paths: &[PathBuf]) -> Result<(), String> {

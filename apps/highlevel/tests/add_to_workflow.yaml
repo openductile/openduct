@@ -1,0 +1,13 @@
+description: "Add a contact to a workflow"
+action: add_to_workflow
+credential: { token: test-token }
+input: { contact_id: sx6wyHhbFdRXh302LLNR, workflow_id: sx6wyHhbFdRXh302LLNR }
+exchanges:
+  - sent:
+      method: POST
+      url: "https://services.leadconnectorhq.com/contacts/sx6wyHhbFdRXh302LLNR/workflow/sx6wyHhbFdRXh302LLNR"
+      query: {}
+      headers: { authorization: "Bearer test-token", version: "2021-07-28" }
+      body: {}
+    answer: { status: 200, body: { succeded: true } }
+result: { succeded: true }

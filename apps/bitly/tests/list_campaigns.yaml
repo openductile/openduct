@@ -1,0 +1,31 @@
+# Made by `openduct app from-openapi`: Retrieve Campaigns.
+description: "Retrieve Campaigns, made from the API description's schemas"
+action: list_campaigns
+credential: { token: test-token }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://api-ssl.bitly.com/v4/campaigns"
+      query: {}
+      headers: { authorization: "Bearer test-token" }
+    answer:
+      status: 200
+      body:
+        campaigns:
+          - references: {}
+            guid: guid_1
+            group_guid: group_guid_1
+            created_by: example
+            name: example
+            description: example
+            created: example
+            modified: example
+result:
+  - references: {}
+    guid: guid_1
+    group_guid: group_guid_1
+    created_by: example
+    name: example
+    description: example
+    created: example
+    modified: example

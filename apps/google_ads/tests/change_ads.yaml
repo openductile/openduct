@@ -1,0 +1,15 @@
+description: An ad paused
+action: change_ads
+credential: { access_token: ya29.test }
+input:
+  customer_id: "1234567890"
+  operations: [{ update: { resourceName: customers/1234567890/adGroupAds/501~9001, status: PAUSED }, updateMask: status }]
+  developer_token: devtok-test
+exchanges:
+  - sent:
+      method: POST
+      url: "https://googleads.googleapis.com/v26/customers/1234567890/adGroupAds:mutate"
+      body:
+        operations: [{ update: { resourceName: customers/1234567890/adGroupAds/501~9001, status: PAUSED }, updateMask: status }]
+    answer: { status: 200, body: { results: [{ resourceName: customers/1234567890/adGroupAds/501~9001 }] } }
+result: { results: [{ resourceName: customers/1234567890/adGroupAds/501~9001 }] }

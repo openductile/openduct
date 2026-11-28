@@ -1,0 +1,26 @@
+description: The account's lists
+action: list_lists
+credential:
+  account: shopexample
+  api_key: test-key
+exchanges:
+- sent:
+    method: GET
+    url: https://shopexample.api-us1.com/api/3/lists
+    query:
+      limit: '100'
+    headers:
+      api-token: test-key
+  answer:
+    status: 200
+    body:
+      lists:
+      - &id001
+        id: '2'
+        stringid: newsletter
+        name: Newsletter
+        cdate: '2025-05-01T09:00:00-05:00'
+      meta:
+        total: '1'
+result:
+- *id001

@@ -1,0 +1,57 @@
+description: "Create or change a contact"
+action: upsert_contact
+credential: { token: test-token }
+input: { location_id: ve9EPM428h8vShlRW1KT }
+exchanges:
+  - sent:
+      method: POST
+      url: "https://services.leadconnectorhq.com/contacts/upsert"
+      query: {}
+      headers: { authorization: "Bearer test-token", version: "2021-07-28" }
+      body: { locationId: ve9EPM428h8vShlRW1KT }
+    answer:
+      status: 200
+      body:
+        new: true
+        contact:
+          id: seD4PfOuKoVMLkEZqohJ
+          name: example
+          locationId: ve9EPM428h8vShlRW1KT
+          firstName: ann
+          lastName: Example
+          email: "ann@example.com"
+          emailLowerCase: "ann@example.com"
+          timezone: example
+          companyName: example
+          phone: example
+          dnd: true
+          dndSettings:
+            Call: { status: active, message: example, code: example }
+            Email: { status: active, message: example, code: example }
+            SMS: { status: active, message: example, code: example }
+            WhatsApp: { status: active, message: example, code: example }
+            GMB: { status: active, message: example, code: example }
+            FB: { status: active, message: example, code: example }
+        traceId: trace_1
+result:
+  new: true
+  contact:
+    id: seD4PfOuKoVMLkEZqohJ
+    name: example
+    locationId: ve9EPM428h8vShlRW1KT
+    firstName: ann
+    lastName: Example
+    email: "ann@example.com"
+    emailLowerCase: "ann@example.com"
+    timezone: example
+    companyName: example
+    phone: example
+    dnd: true
+    dndSettings:
+      Call: { status: active, message: example, code: example }
+      Email: { status: active, message: example, code: example }
+      SMS: { status: active, message: example, code: example }
+      WhatsApp: { status: active, message: example, code: example }
+      GMB: { status: active, message: example, code: example }
+      FB: { status: active, message: example, code: example }
+  traceId: trace_1

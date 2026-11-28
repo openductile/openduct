@@ -1,0 +1,364 @@
+# Copyright 2026 Ductile AI, Inc
+# SPDX-License-Identifier: Apache-2.0
+# Elasticsearch: written from Elastic's own API description,
+# https://github.com/elastic/elasticsearch-specification/blob/b16f1b942354/output/openapi/elasticsearch-openapi.json
+# (Apache 2.0), and its API reference. The generator's draft offered every query-string option of each call; this
+# keeps the ones a workflow needs, and sends searches as JSON bodies.
+app: elasticsearch
+name: Elasticsearch
+category: data
+description: >-
+  Documents in your own Elasticsearch cluster or Elastic Cloud deployment: found, counted, added, changed and
+  removed; indices made, read and removed; ES|QL queries run.
+docs: https://www.elastic.co/docs/api/doc/elasticsearch/
+# The cluster is the installation's own: its address is the credential's.
+base_url_field: url
+sign_in:
+  - id: elasticsearch
+    label: An API key
+    fields:
+      - { name: url, label: "The cluster's address, such as https://search.example.com:9200" }
+      - { name: api_key, label: "The API key's encoded value", secret: true }
+    headers: { Authorization: "ApiKey {{ credential.api_key }}" }
+  - id: elasticsearch_user
+    label: A user name and password
+    fields:
+      - { name: url, label: "The cluster's address, such as https://search.example.com:9200" }
+      - { name: username, label: User name }
+      - { name: password, label: Password, secret: true }
+    basic: { username: "{{ credential.username }}", password: "{{ credential.password }}" }
+# Elasticsearch says what went wrong in error.reason (a list's answer has none).
+error: "type(value) == map && type(value.error) == map ? value.error.reason : null"
+actions:
+  find_documents:
+    label: Find documents
+    description: Every document of an index that matches a search, up to 1,000, each with its id and fields.
+    method: POST
+    path: "/{{ input.index }}/_search"
+    inputs:
+      - { name: index, label: "The index: one, several with commas, or a pattern such as orders-*", required: true }
+      - name: query
+        label: "What to find, in the query language (as JSON), such as {\"match\": {\"status\": \"paid\"}}; every document if not given"
+        kind: record
+      - { name: q, label: "Or a simple search, such as status:paid AND total:>100" }
+      - { name: sort, label: "Sort by (as JSON), such as [{\"created_at\": \"desc\"}]", kind: list }
+      - { name: fields, label: "Only these fields of each document (with commas, no spaces)" }
+    query: { q: "{{ input.q }}" }
+    send:
+      query: "{{ input.query }}"
+      sort: "{{ input.sort }}"
+      _source: "{{ input.fields.split(',') }}"
+      size: 100
+    items: value.hits.hits
+    # The next hundred are asked from where the last page ended.
+    next: "size(value.hits.hits) < 100 ? null : {'from': (page == null ? 0 : int(page.from)) + 100}"
+    page_in: body
+    max_pages: 10
+    output: { _index: text, _id: text, _score: number, _source: record, sort: list }
+  search:
+    label: Search
+    description: "One search's whole answer: the hits (10 unless a size is given), how many matched, and any aggregations."
+    method: POST
+    path: "/{{ input.index }}/_search"
+    inputs:
+      - { name: index, label: "The index: one, several with commas, or a pattern such as orders-*", required: true }
+      - { name: query, label: "What to find, in the query language (as JSON); every document if not given", kind: record }
+      - { name: q, label: "Or a simple search, such as status:paid AND total:>100" }
+      - { name: size, label: "How many hits (10 by default)", kind: number }
+      - { name: from, label: "Skip this many hits first", kind: number }
+      - { name: sort, label: "Sort by (as JSON), such as [{\"created_at\": \"desc\"}]", kind: list }
+      - name: aggregations
+        label: "Sums, averages, counts by value and the like (as JSON), such as {\"by_status\": {\"terms\": {\"field\": \"status\"}}}"
+        kind: record
+      - { name: fields, label: "Only these fields of each document (with commas, no spaces)" }
+    query: { q: "{{ input.q }}" }
+    send:
+      query: "{{ input.query }}"
+      size: "{{ input.size }}"
+      from: "{{ input.from }}"
+      sort: "{{ input.sort }}"
+      aggregations: "{{ input.aggregations }}"
+      _source: "{{ input.fields.split(',') }}"
+    output: { took: number, timed_out: boolean, _shards: record, hits: record, aggregations: record }
+  count_documents:
+    label: Count documents
+    description: How many documents of an index match a search (all of them if none is given).
+    method: POST
+    path: "/{{ input.index }}/_count"
+    inputs:
+      - { name: index, label: "The index: one, several with commas, or a pattern such as orders-*", required: true }
+      - { name: query, label: "Which to count, in the query language (as JSON)", kind: record }
+      - { name: q, label: "Or a simple search, such as status:paid" }
+    query: { q: "{{ input.q }}" }
+    send: { query: "{{ input.query }}" }
+    output: { count: number, _shards: record }
+  get_document:
+    label: Look up a document
+    description: One document, by its id, with its fields; found is false if there is none.
+    method: GET
+    path: "/{{ input.index }}/_doc/{{ input.id }}"
+    inputs:
+      - { name: index, label: The index, required: true }
+      - { name: id, label: "The document's id", required: true }
+      - { name: fields, label: "Only these fields (with commas)" }
+    query: { _source_includes: "{{ input.fields }}" }
+    output: { _index: text, _id: text, _version: number, _seq_no: number, _primary_term: number, found: boolean, _source: record }
+  get_documents:
+    label: Look up several documents
+    description: Several documents of an index at once, by their ids.
+    method: POST
+    path: "/{{ input.index }}/_mget"
+    inputs:
+      - { name: index, label: The index, required: true }
+      - { name: ids, label: "The documents' ids", required: true, kind: list }
+    send: { ids: "{{ input.ids }}" }
+    output: { docs: list }
+  add_document:
+    label: Add a document
+    description: Adds a document to an index; Elasticsearch gives it an id.
+    write: true
+    method: POST
+    path: "/{{ input.index }}/_doc"
+    inputs:
+      - { name: index, label: "The index (made if it is not there yet, unless the cluster forbids it)", required: true }
+      - { name: document, label: "The document (as JSON), such as {\"order\": \"1001\", \"total\": 25}", required: true, kind: record }
+      - { name: refresh, label: "Searchable at once: true, wait_for, or false (the default)" }
+    query: { refresh: "{{ input.refresh }}" }
+    send: "{{ input.document }}"
+    output: { _index: text, _id: text, _version: number, result: text, _seq_no: number, _primary_term: number, _shards: record }
+  save_document:
+    label: Add or replace a document
+    description: Puts a document under the id given, in place of the one there if any.
+    write: true
+    method: PUT
+    path: "/{{ input.index }}/_doc/{{ input.id }}"
+    inputs:
+      - { name: index, label: The index, required: true }
+      - { name: id, label: "The document's id", required: true }
+      - { name: document, label: "The document (as JSON)", required: true, kind: record }
+      - { name: refresh, label: "Searchable at once: true, wait_for, or false (the default)" }
+    query: { refresh: "{{ input.refresh }}" }
+    send: "{{ input.document }}"
+    output: { _index: text, _id: text, _version: number, result: text, _seq_no: number, _primary_term: number, _shards: record }
+  create_document:
+    label: Add a document with an id of its own
+    description: Adds a document under the id given only if no document has it yet; one that does is refused.
+    write: true
+    method: PUT
+    path: "/{{ input.index }}/_create/{{ input.id }}"
+    inputs:
+      - { name: index, label: The index, required: true }
+      - { name: id, label: "The document's id", required: true }
+      - { name: document, label: "The document (as JSON)", required: true, kind: record }
+      - { name: refresh, label: "Searchable at once: true, wait_for, or false (the default)" }
+    query: { refresh: "{{ input.refresh }}" }
+    send: "{{ input.document }}"
+    output: { _index: text, _id: text, _version: number, result: text, _seq_no: number, _primary_term: number, _shards: record }
+  update_document:
+    label: Change a document
+    description: Changes some fields of a document (the rest stay), or runs a script on it; adds it if asked when it is not there.
+    write: true
+    method: POST
+    path: "/{{ input.index }}/_update/{{ input.id }}"
+    inputs:
+      - { name: index, label: The index, required: true }
+      - { name: id, label: "The document's id", required: true }
+      - { name: fields, label: "The fields to change and their new values (as JSON)", kind: record }
+      - { name: add_if_missing, label: "Add the fields as a new document if there is none with this id", kind: boolean }
+      - name: script
+        label: "Or a script to run on it (as JSON), such as {\"source\": \"ctx._source.visits += 1\"}"
+        kind: record
+      - { name: retry_on_conflict, label: "How many times to try again if it changes meanwhile", kind: number }
+      - { name: refresh, label: "Searchable at once: true, wait_for, or false (the default)" }
+    query: { refresh: "{{ input.refresh }}", retry_on_conflict: "{{ input.retry_on_conflict }}" }
+    send: { doc: "{{ input.fields }}", doc_as_upsert: "{{ input.add_if_missing }}", script: "{{ input.script }}" }
+    output: { _index: text, _id: text, _version: number, result: text, _seq_no: number, _primary_term: number, _shards: record }
+  delete_document:
+    label: Delete a document
+    description: Removes one document, by its id.
+    write: true
+    method: DELETE
+    path: "/{{ input.index }}/_doc/{{ input.id }}"
+    inputs:
+      - { name: index, label: The index, required: true }
+      - { name: id, label: "The document's id", required: true }
+      - { name: refresh, label: "Gone from searches at once: true, wait_for, or false (the default)" }
+    query: { refresh: "{{ input.refresh }}" }
+    output: { _index: text, _id: text, _version: number, result: text, _seq_no: number, _primary_term: number, _shards: record }
+  delete_matching:
+    label: Delete the documents a search finds
+    description: Removes every document of an index that matches a search.
+    write: true
+    method: POST
+    path: "/{{ input.index }}/_delete_by_query"
+    inputs:
+      - { name: index, label: "The index: one, several with commas, or a pattern", required: true }
+      - { name: query, label: "Which to delete, in the query language (as JSON), such as {\"range\": {\"created_at\": {\"lt\": \"now-1y\"}}}", kind: record }
+      - { name: q, label: "Or a simple search, such as status:cancelled" }
+      - { name: conflicts, label: "If one changes meanwhile: abort (the default) or proceed" }
+    query: { q: "{{ input.q }}", conflicts: "{{ input.conflicts }}" }
+    send: { query: "{{ input.query }}" }
+    output: { took: number, timed_out: boolean, total: number, deleted: number, batches: number, version_conflicts: number, noops: number, failures: list }
+  update_matching:
+    label: Change the documents a search finds
+    description: Runs a script on every document of an index that matches a search.
+    write: true
+    method: POST
+    path: "/{{ input.index }}/_update_by_query"
+    inputs:
+      - { name: index, label: "The index: one, several with commas, or a pattern", required: true }
+      - name: script
+        label: "What to change, as a script (as JSON), such as {\"source\": \"ctx._source.status = 'archived'\"}"
+        required: true
+        kind: record
+      - { name: query, label: "Which to change, in the query language (as JSON); every document if not given", kind: record }
+      - { name: q, label: "Or a simple search, such as status:shipped" }
+      - { name: conflicts, label: "If one changes meanwhile: abort (the default) or proceed" }
+    query: { q: "{{ input.q }}", conflicts: "{{ input.conflicts }}" }
+    send: { query: "{{ input.query }}", script: "{{ input.script }}" }
+    output: { took: number, timed_out: boolean, total: number, updated: number, batches: number, version_conflicts: number, noops: number, failures: list }
+  list_indices:
+    label: List indices
+    description: The cluster's indices, with their health, number of documents and size.
+    method: GET
+    path: /_cat/indices
+    inputs:
+      - { name: health, label: "Only those of this health: green, yellow or red" }
+    query: { format: json, health: "{{ input.health }}" }
+    items: value
+    output:
+      health: text
+      status: text
+      index: text
+      uuid: text
+      pri: text
+      rep: text
+      docs.count: text
+      docs.deleted: text
+      store.size: text
+      pri.store.size: text
+  get_index:
+    label: Look up an index
+    description: "An index's settings, fields (mappings) and aliases."
+    method: GET
+    path: "/{{ input.index }}"
+    inputs:
+      - { name: index, label: The index, required: true }
+    # The answer is keyed by the index's name: one index's is given as it is.
+    result: "size(value) == 1 ? value.map(k, value[k])[0] : value"
+    output: { aliases: record, mappings: record, settings: record }
+  create_index:
+    label: Create an index
+    description: A new index, with its fields (mappings), settings and aliases if given.
+    write: true
+    method: PUT
+    path: "/{{ input.index }}"
+    inputs:
+      - { name: index, label: "The new index's name (lowercase)", required: true }
+      - name: mappings
+        label: "Its fields and their kinds (as JSON), such as {\"properties\": {\"total\": {\"type\": \"double\"}}}"
+        kind: record
+      - { name: settings, label: "Its settings (as JSON), such as {\"number_of_replicas\": 1}", kind: record }
+      - { name: aliases, label: "Its aliases (as JSON), such as {\"orders\": {}}", kind: record }
+    send: { mappings: "{{ input.mappings }}", settings: "{{ input.settings }}", aliases: "{{ input.aliases }}" }
+    output: { acknowledged: boolean, shards_acknowledged: boolean, index: text }
+  delete_index:
+    label: Delete an index
+    description: Removes an index and every document in it.
+    write: true
+    method: DELETE
+    path: "/{{ input.index }}"
+    inputs:
+      - { name: index, label: The index, required: true }
+    output: { acknowledged: boolean }
+  get_fields:
+    label: "Look up an index's fields"
+    description: "The fields an index has and their kinds (its mappings)."
+    method: GET
+    path: "/{{ input.index }}/_mapping"
+    inputs:
+      - { name: index, label: The index, required: true }
+    result: "size(value) == 1 ? value.map(k, value[k])[0].mappings : value"
+    output: { properties: record, dynamic: text }
+  add_fields:
+    label: Add fields to an index
+    description: New fields for an index, each with its kind; fields already there stay as they are.
+    write: true
+    method: PUT
+    path: "/{{ input.index }}/_mapping"
+    inputs:
+      - { name: index, label: The index, required: true }
+      - name: properties
+        label: "The new fields and their kinds (as JSON), such as {\"paid_at\": {\"type\": \"date\"}}"
+        required: true
+        kind: record
+    send: { properties: "{{ input.properties }}" }
+    output: { acknowledged: boolean }
+  refresh_index:
+    label: Refresh an index
+    description: Makes what was just added or changed in an index searchable now.
+    write: true
+    method: POST
+    path: "/{{ input.index }}/_refresh"
+    body: none
+    inputs:
+      - { name: index, label: "The index: one, several with commas, or a pattern", required: true }
+    output: { _shards: record }
+  change_aliases:
+    label: Change aliases
+    description: Adds and removes aliases (other names for indices) in one go.
+    write: true
+    method: POST
+    path: /_aliases
+    inputs:
+      - name: actions
+        label: "What to do (as JSON), such as [{\"add\": {\"index\": \"orders-2026\", \"alias\": \"orders\"}}]"
+        required: true
+        kind: list
+    send: { actions: "{{ input.actions }}" }
+    output: { acknowledged: boolean, errors: boolean }
+  cluster_health:
+    label: "Check the cluster's health"
+    description: "The cluster's health (green, yellow or red), its nodes and its shards."
+    method: GET
+    path: /_cluster/health
+    output:
+      cluster_name: text
+      status: text
+      timed_out: boolean
+      number_of_nodes: number
+      number_of_data_nodes: number
+      active_primary_shards: number
+      active_shards: number
+      relocating_shards: number
+      initializing_shards: number
+      unassigned_shards: number
+      active_shards_percent_as_number: number
+  esql_query:
+    label: Run an ES|QL query
+    description: "A query in ES|QL, Elasticsearch's piped query language: its columns and rows of values."
+    method: POST
+    path: /_query
+    inputs:
+      - { name: query, label: "The query, such as FROM orders | WHERE total > 100 | STATS sum(total) BY status", required: true }
+      - { name: params, label: "Values for the query's ? marks, in order (as JSON)", kind: list }
+      - { name: filter, label: "Only documents this search finds, in the query language (as JSON)", kind: record }
+    query: { format: json }
+    send: { query: "{{ input.query }}", params: "{{ input.params }}", filter: "{{ input.filter }}" }
+    output: { took: number, is_partial: boolean, columns: list, values: list }
+triggers:
+  new_document:
+    label: A new document
+    description: >-
+      Each document added to an index, the newest asked for every few minutes: the newest by a field that holds each
+      document's time.
+    inputs:
+      - { name: index_name, label: "The index, or a pattern such as logs-*", required: true }
+      - { name: time_field, label: "The field with each document's time, such as @timestamp or created_at", required: true }
+      - { name: q, label: "Only documents this simple search finds, such as level:error" }
+    poll:
+      action: find_documents
+      input: { index: "{{ input.index_name }}", q: "{{ input.q }}", sort: "{{ [{input.time_field: 'desc'}] }}" }
+      newest_first: true
+      id: item._index + '/' + item._id
+      every: 5m

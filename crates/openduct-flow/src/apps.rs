@@ -107,12 +107,189 @@ pub const CREDENTIALS: &[CredentialKind] = &[
         fields: &["url", "username", "password?", "tls?", "ca?"],
         secrets: &["password"],
     },
+    // sql databases
+    CredentialKind {
+        kind: "mysql",
+        label: "A MySQL or MariaDB database: its host, port (3306), database, who signs in, and tls (require, the \
+                default, or disable)",
+        fields: &[
+            "host",
+            "username",
+            "password?",
+            "port?",
+            "database?",
+            "tls?",
+            "ca?",
+            "certificate?",
+        ],
+        secrets: &["password"],
+    },
+    // sql databases
+    CredentialKind {
+        kind: "sqlserver",
+        label: "A SQL Server database: its host, port (1433), database, who signs in (a SQL Server user), and tls \
+                (require, the default, strict, or disable)",
+        fields: &[
+            "host",
+            "username",
+            "password?",
+            "port?",
+            "database?",
+            "tls?",
+            "ca?",
+            "certificate?",
+        ],
+        secrets: &["password"],
+    },
     CredentialKind {
         kind: "smtp",
         label: "A mail server: its host, port, security (starttls, the default, tls or none), who signs in, and the \
                 address mail is from",
         fields: &["host", "from", "port?", "security?", "username?", "password?"],
         secrets: &["password"],
+    },
+    // storage
+    CredentialKind {
+        kind: "sftp",
+        label: "An SFTP server: its host, port (22), who signs in with a password or a private key, its host key (kept \
+                the first time when not given), and a folder paths are inside",
+        fields: &[
+            "host",
+            "username",
+            "port?",
+            "password?",
+            "private_key?",
+            "host_key?",
+            "folder?",
+        ],
+        secrets: &["password", "private_key"],
+    },
+    CredentialKind {
+        kind: "ftp",
+        label: "An FTP server: its host, port, security (starttls, the default, tls or none), who signs in, a CA, and \
+                a folder paths are inside",
+        fields: &[
+            "host",
+            "port?",
+            "security?",
+            "username?",
+            "password?",
+            "ca?",
+            "folder?",
+        ],
+        secrets: &["password"],
+    },
+    CredentialKind {
+        kind: "s3",
+        label: "S3, or a store that speaks its API (MinIO, R2, Wasabi, B2): keys, region, endpoint for a store other \
+                than AWS, path_style, and a bucket and prefix",
+        fields: &[
+            "access_key",
+            "secret_key",
+            "region?",
+            "endpoint?",
+            "path_style?",
+            "bucket?",
+            "prefix?",
+            "session_token?",
+        ],
+        secrets: &["secret_key", "session_token"],
+    },
+    // storage places
+    CredentialKind {
+        kind: "azure_blob",
+        label: "Azure Blob Storage: the storage account, its shared key or a SAS token, a container, an endpoint for a \
+                store other than Azure's (Azurite), and a prefix every name is inside",
+        fields: &[
+            "account",
+            "shared_key?",
+            "sas_token?",
+            "container?",
+            "endpoint?",
+            "prefix?",
+        ],
+        secrets: &["shared_key", "sas_token"],
+    },
+    // storage places
+    CredentialKind {
+        kind: "gcs",
+        label: "Google Cloud Storage: a service account's key file (JSON), a bucket and a prefix every name is inside",
+        fields: &["key_file", "bucket?", "prefix?"],
+        secrets: &["key_file"],
+    },
+    // storage places
+    CredentialKind {
+        kind: "box_token",
+        label: "Box, with a developer token from Box's console (it lasts an hour: for trying a workflow; connect Box \
+                for one that keeps running)",
+        fields: &["token"],
+        secrets: &["token"],
+    },
+    CredentialKind {
+        kind: "redis",
+        label: "A Redis server: its url (redis://host:6379/0, or rediss:// for TLS), who signs in, and a CA",
+        fields: &["url", "username?", "password?", "ca?"],
+        secrets: &["password"],
+    },
+    // vector stores
+    CredentialKind {
+        kind: "qdrant",
+        label: "Qdrant, for vector stores: its address (https://<cluster>:6333) and an API key",
+        fields: &["url", "api_key?"],
+        secrets: &["api_key"],
+    },
+    CredentialKind {
+        kind: "weaviate",
+        label: "Weaviate, for vector stores: its address and an API key",
+        fields: &["url", "api_key?"],
+        secrets: &["api_key"],
+    },
+    CredentialKind {
+        kind: "milvus",
+        label: "Milvus or Zilliz Cloud, for vector stores: its address (https://<host>:19530), a token (user:password, \
+                or an API key), and a database other than the default",
+        fields: &["url", "token?", "database?"],
+        secrets: &["token"],
+    },
+    CredentialKind {
+        kind: "chroma",
+        label: "Chroma, for vector stores: its address (https://<host>:8000), an API key, a tenant and a database",
+        fields: &["url", "api_key?", "tenant?", "database?"],
+        secrets: &["api_key"],
+    },
+    CredentialKind {
+        kind: "pinecone",
+        label: "Pinecone, for vector stores: an API key, and the cloud and region new indexes are made in",
+        fields: &["api_key", "cloud?", "region?", "url?"],
+        secrets: &["api_key"],
+    },
+    CredentialKind {
+        kind: "mongodb",
+        label: "MongoDB Atlas, for vector stores: its url (mongodb+srv://cluster0.abcde.mongodb.net), who signs in, \
+                where users are kept (admin), TLS, and a CA",
+        fields: &["url", "username?", "password?", "auth_source?", "tls?", "ca?"],
+        secrets: &["password"],
+    },
+    // messaging
+    CredentialKind {
+        kind: "imap",
+        label: "A mailbox, over IMAP: its host, port (993), security (tls, the default, starttls or none), who signs \
+                in with a password or an OAuth access token (XOAUTH2; with a refresh token, the token address and the \
+                client's id and secret, it is kept fresh), and a CA",
+        fields: &[
+            "host",
+            "username",
+            "password?",
+            "port?",
+            "security?",
+            "access_token?",
+            "refresh_token?",
+            "token_url?",
+            "client_id?",
+            "client_secret?",
+            "ca?",
+        ],
+        secrets: &["password", "access_token", "refresh_token", "client_secret"],
     },
 ];
 

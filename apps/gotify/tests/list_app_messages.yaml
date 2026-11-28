@@ -1,0 +1,17 @@
+description: "One application's messages"
+action: list_app_messages
+sign_in: gotify_client
+credential: { base_url: "https://gotify.example.com", token: CzyoeNS.D4iJLVb }
+input: { app_id: 5 }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://gotify.example.com/application/5/message"
+      query: { limit: "200" }
+    answer:
+      body:
+        messages:
+          - { id: 26, appid: 5, message: Backup finished, priority: 2, date: "2026-11-27T11:00:00Z" }
+        paging: { size: 1, since: 26, limit: 200 }
+result:
+  - { id: 26, appid: 5, message: Backup finished, priority: 2, date: "2026-11-27T11:00:00Z" }

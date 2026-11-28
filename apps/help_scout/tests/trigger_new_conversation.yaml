@@ -1,0 +1,50 @@
+description: Conversations started since the poll before, the newest asked for; listing stops at one seen before
+trigger: new_conversation
+credential: {access_token: hs-test-token}
+seen:
+  items:
+  - ['3443157477', '']
+exchanges:
+- sent:
+    method: GET
+    url: https://api.helpscout.net/v2/conversations
+    query: {status: all, sortField: createdAt, sortOrder: desc}
+    headers: {authorization: Bearer hs-test-token}
+  answer:
+    status: 200
+    body:
+      _embedded:
+        conversations:
+        - &id004
+          id: 3443157478
+          number: 1043
+          threads: 1
+          type: email
+          folderId: 11
+          status: active
+          state: published
+          subject: Refund, please
+          preview: I ordered last week and
+          mailboxId: 85
+          createdBy: &id001 {id: 29418, type: customer, email: ann@example.com}
+          createdAt: '2026-11-27T10:30:00Z'
+          tags: &id002 []
+          primaryCustomer: &id003 {id: 29418, type: customer, first: Ann, last: Example, email: ann@example.com}
+        - id: 3443157477
+          number: 1042
+          threads: 1
+          type: email
+          folderId: 11
+          status: active
+          state: published
+          subject: Where is my order?
+          preview: I ordered last week and
+          mailboxId: 85
+          createdBy: *id001
+          createdAt: '2026-11-27T10:00:00Z'
+          tags: *id002
+          primaryCustomer: *id003
+      _links:
+        self: {href: 'https://api.helpscout.net/v2/x'}
+runs:
+- *id004

@@ -1,0 +1,7 @@
+action: list_categories
+credential: { api_key: CG-test1 }
+input: { order: name_asc }
+exchanges:
+  - sent: { method: GET, url: https://api.coingecko.com/api/v3/coins/categories, query: { order: name_asc } }
+    answer: { body: [{ id: layer-1, name: Layer 1 (L1), market_cap: 2176528015490.13, market_cap_change_24h: -0.49, top_3_coins_id: [bitcoin, ethereum, solana] }] }
+result: [{ id: layer-1, name: Layer 1 (L1), market_cap: 2176528015490.13, market_cap_change_24h: -0.49, top_3_coins_id: [bitcoin, ethereum, solana] }]

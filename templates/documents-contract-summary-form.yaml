@@ -1,0 +1,107 @@
+name: The key terms of a contract, from a PDF
+description: >-
+  Upload a contract as a PDF on a form the studio serves: its text is read and a model pulls out the key terms - who
+  signs, when it starts and ends, whether it renews by itself, the notice to give, what it costs and anything unusual.
+  The day by which you must give notice is worked out, a row goes into the Contracts sheet of your Google Sheets
+  spreadsheet, and the person who uploaded it gets the summary by e-mail from your Gmail. A scanned PDF holds no text
+  and is answered as such. Needs: model (an AI credential), google_sheets, gmail.
+category: Documents
+trigger:
+  form:
+    title: Summarise a contract
+    description: Upload a contract (a PDF with text, up to 2 MB). The summary comes by e-mail in a few minutes.
+    fields:
+      - { name: contract, label: The contract, type: file, accept: ".pdf,application/pdf", required: true }
+      - { name: other_party, label: Who it is with, type: text, required: true, max_length: 120 }
+      - { name: email, label: Your e-mail, type: email, required: true }
+    thanks: Thank you - the summary is on its way to you.
+# What a test runs on: an answer as the form gives it (the contract is a small PDF, in Base64).
+sample:
+  other_party: Brightline Cleaning LLC
+  email: office@example.com
+  contract:
+    name: cleaning-agreement.pdf
+    type: application/pdf
+    size: 1064
+    base64: JVBERi0xLjQKMSAwIG9iago8PCAvVHlwZSAvQ2F0YWxvZyAvUGFnZXMgMiAwIFIgPj4KZW5kb2JqCjIgMCBvYmoKPDwgL1R5cGUgL1BhZ2VzIC9LaWRzIFszIDAgUl0gL0NvdW50IDEgPj4KZW5kb2JqCjMgMCBvYmoKPDwgL1R5cGUgL1BhZ2UgL1BhcmVudCAyIDAgUiAvTWVkaWFCb3ggWzAgMCA2MTIgNzkyXSAvQ29udGVudHMgNCAwIFIgL1Jlc291cmNlcyA8PCAvRm9udCA8PCAvRjEgNSAwIFIgPj4gPj4gPj4KZW5kb2JqCjQgMCBvYmoKPDwgL0xlbmd0aCA1MTkgPj4Kc3RyZWFtCkJUIC9GMSAxMSBUZiA1MCA3ODAgVGQgMTQgVEwKKE9mZmljZSBjbGVhbmluZyBhZ3JlZW1lbnQgYmV0d2VlbiBFeGFtcGxlIFN0dWRpbyBJbmMuIGFuZCBCcmlnaHRsaW5lIENsZWFuaW5nIExMQy4pIFRqIFQqCihJdCBzdGFydHMgb24gMSBKYW51YXJ5IDIwMjYgYW5kIHJ1bnMgZm9yIG9uZSB5ZWFyLikgVGogVCoKKEl0IHJlbmV3cyBmb3IgYW5vdGhlciB5ZWFyIHVubGVzcyBlaXRoZXIgc2lkZSBnaXZlcyA2MCBkYXlzIG5vdGljZSBpbiB3cml0aW5nLikgVGogVCoKKFRoZSBmZWUgaXMgODAwIFVTRCBhIG1vbnRoLCBwYWlkIHdpdGhpbiAxNSBkYXlzIG9mIGVhY2ggaW52b2ljZS4pIFRqIFQqCihCcmlnaHRsaW5lIGNsZWFucyB0aGUgb2ZmaWNlIHRocmVlIGV2ZW5pbmdzIGEgd2VlayBhbmQgYnJpbmdzIGl0cyBvd24gc3VwcGxpZXMuKSBUaiBUKgooRWl0aGVyIHNpZGUgbWF5IGVuZCBpdCBhdCBvbmNlIGlmIHRoZSBvdGhlciBkb2VzIG5vdCBwYXkgb3IgZG9lcyBub3QgZG8gdGhlIHdvcmsuKSBUaiBUKgpFVAplbmRzdHJlYW0KZW5kb2JqCjUgMCBvYmoKPDwgL1R5cGUgL0ZvbnQgL1N1YnR5cGUgL1R5cGUxIC9CYXNlRm9udCAvSGVsdmV0aWNhID4+CmVuZG9iagp4cmVmCjAgNgowMDAwMDAwMDAwIDY1NTM1IGYgCjAwMDAwMDAwMDkgMDAwMDAgbiAKMDAwMDAwMDA1OCAwMDAwMCBuIAowMDAwMDAwMTE1IDAwMDAwIG4gCjAwMDAwMDAyNDEgMDAwMDAgbiAKMDAwMDAwMDgxMSAwMDAwMCBuIAp0cmFpbGVyCjw8IC9TaXplIDYgL1Jvb3QgMSAwIFIgPj4Kc3RhcnR4cmVmCjg4MQolJUVPRgo=
+steps:
+  - name: file
+    convert: { format: base64, base64: value.contract.base64, name: "{{ value.contract.name }}", type: application/pdf }
+  - name: pdf
+    extract_file: { file: steps.file, format: pdf }
+  - name: has_text
+    if:
+      when: size(steps.pdf.text.trim()) < 200
+      then:
+        - name: no_text
+          gmail:
+            action: send_email
+            credential: gmail
+            to: "{{ value.email }}"
+            subject: "We could not read {{ value.contract.name }}"
+            text: "The PDF holds almost no text - it may be a scan. Please upload a PDF made from the document itself."
+        - stop: {}
+  - name: terms
+    ai:
+      credential: model
+      system: >-
+        You read contracts for a small business owner and pull out the key terms, in plain words. Use only what the
+        contract says; a term it does not state is null. Answer with JSON only.
+      prompt: "A contract with {{ value.other_party }}:\n\n{{ steps.pdf.text }}"
+      schema:
+        type: object
+        properties:
+          parties: { type: string, description: "Who signs it" }
+          starts: { type: [string, "null"], description: "The day it starts, as 2026-01-01" }
+          ends: { type: [string, "null"], description: "The day it ends, as 2026-12-31" }
+          renews: { type: string, enum: [by itself, by agreement, does not renew, not said] }
+          notice_days: { type: [integer, "null"], description: "Days of notice to end it or stop it renewing" }
+          cost: { type: [string, "null"], description: "What it costs and how often, as 800 USD a month" }
+          payment: { type: [string, "null"], description: "When invoices are paid" }
+          unusual: { type: array, items: { type: string }, description: "Terms a small business should look at twice" }
+        required: [parties, starts, ends, renews, notice_days, cost, payment, unusual]
+      max_tokens: 700
+  # The last day to give notice: the end, less the notice.
+  - name: notice
+    javascript: |
+      const t = (steps.terms && steps.terms.json) || {};
+      if (!t.ends || t.notice_days == null) return { by: "not worked out", text: "" };
+      const end = new Date(t.ends + "T00:00:00Z");
+      if (isNaN(end)) return { by: "not worked out", text: "" };
+      end.setUTCDate(end.getUTCDate() - t.notice_days);
+      const by = end.toISOString().slice(0, 10);
+      return { by, text: `Give notice by ${by} if you do not want it to ${t.renews === "by itself" ? "renew" : "go on"}.` };
+  - name: row
+    google_sheets:
+      action: add_row
+      credential: google_sheets
+      spreadsheet_id: your-spreadsheet-id
+      sheet: Contracts
+      values:
+        - "{{ value.other_party }}"
+        - "{{ steps.terms.json.starts }}"
+        - "{{ steps.terms.json.ends }}"
+        - "{{ steps.terms.json.renews }}"
+        - "{{ steps.notice.by }}"
+        - "{{ steps.terms.json.cost }}"
+        - "{{ value.contract.name }}"
+    retry: { attempts: 3, wait: 10s }
+  - name: send
+    gmail:
+      action: send_email
+      credential: gmail
+      to: "{{ value.email }}"
+      subject: "Contract with {{ value.other_party }}: the key terms"
+      text: >-
+        Who signs: {{ steps.terms.json.parties }}
+
+        Runs from {{ steps.terms.json.starts }} to {{ steps.terms.json.ends }}; renews: {{ steps.terms.json.renews }}.
+        {{ steps.notice.text }}
+
+        Cost: {{ steps.terms.json.cost }}. Payment: {{ steps.terms.json.payment }}.
+
+        Worth a second look: {{ steps.terms.json.unusual == null || size(steps.terms.json.unusual) == 0 ? 'nothing stood
+        out' : steps.terms.json.unusual.join('; ') }}.
+
+        This is a summary to help you read the contract, not legal advice.
+    retry: { attempts: 3, wait: 10s }

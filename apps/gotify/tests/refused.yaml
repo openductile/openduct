@@ -1,0 +1,9 @@
+description: "Gotify refuses a token it does not know: the step fails in its words"
+action: send_message
+credential: { base_url: "https://gotify.example.com", token: wrong }
+input: { message: Hello }
+exchanges:
+  - answer:
+      status: 401
+      body: { error: Unauthorized, errorCode: 401, errorDescription: "you need to provide a valid access token or user credentials to access this api" }
+error: "Gotify answered 401: Unauthorized: you need to provide a valid access token or user credentials to access this api"

@@ -5,8 +5,6 @@
 //! asked for), and what its answer means - the step's result, the records of a page and where the next one is, or
 //! why the app refused.
 
-use std::time::Duration;
-
 use base64::Engine as _;
 use openduct_expr::{Env, Value};
 use serde_json::{Value as Json, json};
@@ -16,8 +14,6 @@ use crate::apps::Credential;
 use crate::model::Tree;
 use crate::run::HttpRequest;
 
-/// How long one request of an app's may take.
-const TIMEOUT: Duration = Duration::from_secs(30);
 /// The longest refusal shown from an app's answer.
 const SHOWN: usize = 300;
 
@@ -40,7 +36,7 @@ impl Names {
 
 /// A credential's fields as its sign-in declares them. A secret one it does not hold (a test run's, which reads no
 /// secret) is •••; another one left out is null.
-fn credential_value(sign_in: &SignIn, credential: &Credential) -> Value {
+pub(super) fn credential_value(sign_in: &SignIn, credential: &Credential) -> Value {
     let fields: serde_json::Map<String, Json> = sign_in
         .fields
         .iter()
@@ -57,7 +53,7 @@ fn credential_value(sign_in: &SignIn, credential: &Credential) -> Value {
 }
 
 /// The sign-in a credential is of: its own kind's, or (a test run's stand-in) the app's first.
-fn sign_in_of<'a>(app: &'a AppDef, credential: &Credential) -> Result<&'a SignIn, String> {
+pub(super) fn sign_in_of<'a>(app: &'a AppDef, credential: &Credential) -> Result<&'a SignIn, String> {
     if credential.kind == "test" {
         return app
             .sign_ins
@@ -75,7 +71,7 @@ fn sign_in_of<'a>(app: &'a AppDef, credential: &Credential) -> Result<&'a SignIn
     })
 }
 
-fn render(t: &crate::template::Template, names: &[(String, Value)]) -> Result<String, String> {
+pub(super) fn render(t: &crate::template::Template, names: &[(String, Value)]) -> Result<String, String> {
     let null = Value::Null;
     t.render(&Env {
         value: &null,
@@ -84,7 +80,7 @@ fn render(t: &crate::template::Template, names: &[(String, Value)]) -> Result<St
     })
 }
 
-fn tree_value(t: &Tree, names: &[(String, Value)]) -> Result<Value, String> {
+pub(super) fn tree_value(t: &Tree, names: &[(String, Value)]) -> Result<Value, String> {
     let null = Value::Null;
     crate::run::tree(
         t,
@@ -235,6 +231,18 @@ pub fn request(
     };
     let body = match (action.body, send) {
         (BodyKind::None, _) | (_, None) => None,
+        // messaging: sent as it is - text's bytes, or a run's file (its bytes loaded before it goes).
+        (BodyKind::Raw, Some(v)) => Some(match &v {
+            Value::Text(t) => ("application/octet-stream".to_owned(), t.as_bytes().to_vec()),
+            file if crate::files::is_file(file) => (
+                super::follow_ups::FILE_BODY.to_owned(),
+                file.to_json().into_bytes(),
+            ),
+            other => (
+                "application/octet-stream".to_owned(),
+                other.to_json().into_bytes(),
+            ),
+        }),
         (BodyKind::Json, Some(v)) => {
             let mut json: Json = serde_json::from_str(&v.to_json()).unwrap_or(Json::Null);
             // A next page's values in the body, for a service that takes them there.
@@ -257,8 +265,17 @@ pub fn request(
             if let Json::Object(fields) = json {
                 let mut pairs = form.query_pairs_mut();
                 for (k, v) in &fields {
-                    if !v.is_null() {
-                        pairs.append_pair(k, &plain(v));
+                    match v {
+                        Json::Null => {}
+                        // A list is one pair for each of its items: `events[]=a&events[]=b`.
+                        Json::Array(items) => {
+                            for item in items.iter().filter(|i| !i.is_null()) {
+                                pairs.append_pair(k, &plain(item));
+                            }
+                        }
+                        v => {
+                            pairs.append_pair(k, &plain(v));
+                        }
                     }
                 }
             }
@@ -275,7 +292,7 @@ pub fn request(
         headers,
         query,
         body,
-        timeout: TIMEOUT,
+        timeout: action.timeout,
     })
 }
 
@@ -290,7 +307,7 @@ pub struct Answer {
 
 /// A field left empty (an optional input not given) left out, at any depth, not sent as null; a record left empty by
 /// that is left out too.
-fn without_nulls(json: &mut Json) {
+pub(super) fn without_nulls(json: &mut Json) {
     match json {
         Json::Object(fields) => {
             for v in fields.values_mut() {

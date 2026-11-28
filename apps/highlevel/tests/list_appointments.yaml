@@ -1,0 +1,39 @@
+description: "List appointments"
+action: list_appointments
+credential: { token: test-token }
+input: { location_id: "0007BWpSzSwfiuSl0tR2", start_time: "1680373800000", end_time: "1680978599999" }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://services.leadconnectorhq.com/calendars/events"
+      query: { locationId: "0007BWpSzSwfiuSl0tR2", startTime: "1680373800000", endTime: "1680978599999" }
+      headers: { authorization: "Bearer test-token", version: "2021-04-15" }
+    answer:
+      status: 200
+      body:
+        events:
+          - id: ocQHyuzHvysMo5N5VsXc
+            address: example
+            title: example
+            calendarId: BqTwX8QFwXzpegMve9EQ
+            locationId: "0007BWpSzSwfiuSl0tR2"
+            contactId: "9NkT25Vor1v4aQatFsv2"
+            groupId: "9NkT25Vor1v4aQatFsv2"
+            appointmentStatus: confirmed
+            assignedUserId: YlWd2wuCAZQzh2cH1fVZ
+            users: [example]
+            notes: example
+            description: example
+result:
+  - id: ocQHyuzHvysMo5N5VsXc
+    address: example
+    title: example
+    calendarId: BqTwX8QFwXzpegMve9EQ
+    locationId: "0007BWpSzSwfiuSl0tR2"
+    contactId: "9NkT25Vor1v4aQatFsv2"
+    groupId: "9NkT25Vor1v4aQatFsv2"
+    appointmentStatus: confirmed
+    assignedUserId: YlWd2wuCAZQzh2cH1fVZ
+    users: [example]
+    notes: example
+    description: example

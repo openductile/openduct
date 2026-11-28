@@ -1,0 +1,7 @@
+action: get_activity
+credential: { access_token: st_test_1 }
+input: { id: "99001" }
+exchanges:
+  - sent: { method: GET, url: https://www.strava.com/api/v3/activities/99001 }
+    answer: { body: { id: 99001, name: Morning Run, sport_type: Run, distance: 8012.4, moving_time: 2580, elapsed_time: 2702, average_heartrate: 151.2 } }
+result: { id: 99001, name: Morning Run, sport_type: Run, distance: 8012.4, moving_time: 2580, elapsed_time: 2702, average_heartrate: 151.2 }

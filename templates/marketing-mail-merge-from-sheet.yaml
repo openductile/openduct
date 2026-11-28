@@ -1,0 +1,95 @@
+name: A personal e-mail to each person in a sheet
+description: >-
+  Run it by hand to send one personal e-mail per row of a Google Sheet from your own Gmail - an invitation, a
+  thank-you, a price change - with each row's own words put in ({first_name}, {company} and any other column). A
+  script checks every row first: a bad or repeated address, an unsubscribed person or a missing name is left out and
+  said why, and each row sent is marked in its status column. Write the subject and text in the first step. Needs:
+  Gmail (gmail) and Google Sheets (sheets).
+category: Marketing
+trigger: manual
+# What a test runs on: the input a run by hand is given.
+sample:
+  at_most: 100
+steps:
+  - name: message
+    set:
+      subject: "'An invitation for {company}: our spring open day'"
+      text: >-
+        'Hello {first_name},\n\nWe are opening our workshop on Saturday 14 March, 10:00 to 16:00, and would love to
+        show you and the {company} team what we make. There will be coffee, demos and a 10% open-day discount.\n\nReply
+        to this e-mail to tell us you are coming.\n\nBest wishes,\nThe team at Example Workshop'
+  - name: sheet
+    google_sheets:
+      action: read_rows
+      credential: sheets
+      spreadsheet_id: your-sheet-id
+      # A header row naming the columns - email, first_name, company, status... - then one person a row.
+      range: Mail merge!A1:Z2000
+    retry: { attempts: 3, wait: 30s }
+  - name: checked
+    python: |
+      import re
+      rows = steps.get("sheet") or []
+      header = [str(h).strip().lower().replace(" ", "_") for h in (rows[0] if rows else [])]
+      col = {name: i for i, name in enumerate(header)}
+      status_col = col.get("status")
+      emails, problems, seen = [], [], set()
+      def fill(template, person):
+          # {column} becomes that row's value; a column the sheet lacks stays as it is written.
+          return re.sub(r"\{(\w+)\}", lambda m: str(person.get(m.group(1), m.group(0))), template)
+      # The columns the message uses: a row with one of them empty is left out, not sent with a gap.
+      used = sorted(set(re.findall(r"\{(\w+)\}", steps["message"]["subject"] + steps["message"]["text"])) & set(col))
+      for number, row in enumerate(rows[1:], start=2):
+          person = {name: (str(row[i]).strip() if i < len(row) else "") for name, i in col.items()}
+          email = person.get("email", "").lower()
+          status = person.get("status", "").lower()
+          empty = [name for name in used if not person.get(name)]
+          if status.startswith("sent"):
+              continue
+          if "unsubscribed" in status:
+              problems.append(f"row {number}: unsubscribed")
+          elif not re.fullmatch(r"[^@\s]+@[^@\s]+\.[a-z]{2,}", email):
+              problems.append(f"row {number}: not an e-mail address ({email or 'empty'})")
+          elif email in seen:
+              problems.append(f"row {number}: {email} is in the sheet twice")
+          elif empty:
+              problems.append(f"row {number}: no {', '.join(empty)}")
+          else:
+              seen.add(email)
+              emails.append({
+                  "row": number, "to": email,
+                  "subject": fill(steps["message"]["subject"], person),
+                  "text": fill(steps["message"]["text"], person),
+              })
+      at_most = int(value.get("at_most") or 100)
+      # The status column's letter, for marking each row sent (A to Z).
+      letter = chr(ord("A") + status_col) if status_col is not None and status_col < 26 else None
+      result = {"emails": emails[:at_most], "later": max(0, len(emails) - at_most), "problems": problems, "status_column": letter}
+  - name: send
+    for_each:
+      items: steps.checked.emails
+      steps:
+        - name: mail
+          gmail:
+            action: send_email
+            credential: gmail
+            to: "{{ item.to }}"
+            subject: "{{ item.subject }}"
+            text: "{{ item.text }}"
+          retry: { attempts: 3, wait: 30s }
+        - name: mark
+          if:
+            when: steps.checked.status_column != null
+            then:
+              - google_sheets:
+                  action: set_rows
+                  credential: sheets
+                  spreadsheet_id: your-sheet-id
+                  range: "Mail merge!{{ steps.checked.status_column }}{{ item.row }}"
+                  rows: "{{ [['sent']] }}"
+                retry: { attempts: 3, wait: 30s }
+  - name: summary
+    set:
+      sent: size(steps.checked.emails)
+      later: steps.checked.later
+      left_out: steps.checked.problems

@@ -1,0 +1,40 @@
+description: Hours worked between two dates
+action: list_timesheet_entries
+credential:
+  company_domain: acme
+  api_key: test-key
+input:
+  start: '2026-11-16'
+  end: '2026-11-22'
+  employee_ids: '101'
+exchanges:
+- sent:
+    method: GET
+    url: https://acme.bamboohr.com/api/v1/time_tracking/timesheet_entries
+    query:
+      start: '2026-11-16'
+      end: '2026-11-22'
+      employeeIds: '101'
+    headers:
+      authorization: Basic dGVzdC1rZXk6eA==
+      accept: application/json
+  answer:
+    status: 200
+    body:
+    - &id001
+      id: 31
+      employeeId: 101
+      type: clock
+      date: '2026-11-16'
+      start: '2026-11-16T15:00:00+00:00'
+      end: '2026-11-16T23:00:00+00:00'
+      timezone: America/Denver
+      hours: 8
+      note: Opening shift
+      projectInfo: null
+      approvedAt: null
+      approved: false
+      createdAt: '2026-11-16T15:00:02Z'
+      updatedAt: '2026-11-16T23:00:04Z'
+result:
+- *id001

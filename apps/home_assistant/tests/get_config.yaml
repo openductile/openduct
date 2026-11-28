@@ -1,0 +1,25 @@
+description: The installation's settings
+action: get_config
+credential: { url: "http://home.example:8123", token: ha-test-token }
+exchanges:
+  - sent: { method: GET, url: "http://home.example:8123/api/config" }
+    answer:
+      status: 200
+      body:
+        components: [api, frontend, http, sensor, automation]
+        location_name: Home
+        latitude: 45.0
+        longitude: 8.0
+        elevation: 500
+        time_zone: Europe/Zurich
+        unit_system: { length: km, mass: g, temperature: "°C", volume: L }
+        version: "2026.11.0"
+result:
+  components: [api, frontend, http, sensor, automation]
+  location_name: Home
+  latitude: 45.0
+  longitude: 8.0
+  elevation: 500
+  time_zone: Europe/Zurich
+  unit_system: { length: km, mass: g, temperature: "°C", volume: L }
+  version: "2026.11.0"

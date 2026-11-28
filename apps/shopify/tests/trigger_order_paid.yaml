@@ -1,0 +1,8 @@
+description: An order once paid, as Shopify sends it
+trigger: order_paid
+credential: { shop: mystore, access_token: shpat_1, webhook_secret: shpss_test_app_secret }
+delivery:
+  headers: { x-shopify-hmac-sha256: "Fnk/3I+PCv0Pnig863+UDPlP5A2Fkihb6YaRXhqDutM=", x-shopify-topic: orders/paid, x-shopify-webhook-id: w5 }
+  body: '{"id":820982911946154509,"financial_status":"paid","total_price":"18.50"}'
+  at: 1700000000
+runs: [{ id: 820982911946154509, financial_status: paid, total_price: "18.50" }]

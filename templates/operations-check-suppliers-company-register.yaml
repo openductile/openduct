@@ -1,0 +1,97 @@
+name: Check your UK suppliers against Companies House
+description: >-
+  For anyone taking on suppliers or partners in the UK: list them in a Suppliers sheet (the name in column A, the
+  company number in B if you know it), press Run, and an AI agent finds each one in the Companies House register -
+  choosing among names that look alike by the details you gave - and writes beside it the official name and number,
+  whether it is active, when it was set up, whether its accounts or confirmation statement are overdue, and a line on
+  anything to look at. Needs: a Google Sheets sign-in called sheets, a Companies House API key as a basic credential
+  called companies_house (the key as the user name, no password), and an AI credential called model.
+category: Operations
+trigger: manual
+# What a test runs on: what the run is given (nothing: the settings are in the first step).
+sample: {}
+steps:
+  - name: settings
+    set:
+      # Change this to your own spreadsheet. Columns C to H are written.
+      spreadsheet: "'your-spreadsheet-id'"
+  - name: suppliers
+    google_sheets:
+      credential: sheets
+      action: read_rows
+      spreadsheet_id: "{{ steps.settings.spreadsheet }}"
+      range: Suppliers!A2:B
+    retry: { attempts: 3, wait: 10s }
+  - name: each_supplier
+    for_each:
+      items: steps.suppliers
+      steps:
+        - name: given
+          set:
+            name: "size(item) > 0 ? string(item[0]).trim() : ''"
+            number: "size(item) > 1 ? string(item[1]).trim() : ''"
+        - name: to_do
+          if:
+            when: steps.given.name != '' || steps.given.number != ''
+            then:
+              - name: checker
+                agent:
+                  credential: model
+                  instructions: >-
+                    You check a supplier in the UK Companies House register. With a company number, read its profile.
+                    With only a name, search, pick the company that matches (say so if several could), then read its
+                    profile. Report only what the register says; when nothing matches, say not found.
+                  input: "Supplier: {{ steps.given.name }}; company number: {{ steps.given.number == '' ? 'not known' : steps.given.number }}"
+                  tools:
+                    - name: search_companies
+                      description: Companies in the register whose names match some words, with their numbers, status and address.
+                      parameters:
+                        type: object
+                        properties:
+                          words: { type: string }
+                        required: [words]
+                      http:
+                        method: GET
+                        url: https://api.company-information.service.gov.uk/search/companies
+                        credential: companies_house
+                        query: { q: "{{ args.words }}", items_per_page: "5" }
+                    - name: company_profile
+                      description: A company's profile by its number - name, status, set-up day, address, and whether filings are overdue.
+                      parameters:
+                        type: object
+                        properties:
+                          number: { type: string, description: "The company number, eight characters, as 01234567 or SC123456" }
+                        required: [number]
+                      http:
+                        method: GET
+                        url: "https://api.company-information.service.gov.uk/company/{{ args.number.trim().upperAscii() }}"
+                        credential: companies_house
+                  allow: [search_companies, company_profile]
+                  output:
+                    schema:
+                      type: object
+                      properties:
+                        found: { type: boolean }
+                        number: { type: string }
+                        official_name: { type: string }
+                        status: { type: string, description: "As the register says: active, dissolved, liquidation..." }
+                        set_up: { type: string, description: "The day it was incorporated, as 2014-03-02" }
+                        overdue: { type: string, description: "accounts, confirmation statement, both, or none" }
+                        note: { type: string, description: "One line: anything to look at, or that several companies matched" }
+                      required: [found, number, official_name, status, set_up, overdue, note]
+                  max_turns: 6
+                  max_tool_calls: 5
+                on_error: continue
+              - name: write
+                google_sheets:
+                  credential: sheets
+                  action: set_rows
+                  spreadsheet_id: "{{ steps.settings.spreadsheet }}"
+                  # The supplier's own row: the first one is on row 2.
+                  range: "Suppliers!C{{ index + 2 }}:H{{ index + 2 }}"
+                  rows: >-
+                    [has(steps.checker.json) && steps.checker.json != null && steps.checker.json.found == true
+                      ? [steps.checker.json.number, steps.checker.json.official_name, steps.checker.json.status,
+                         steps.checker.json.set_up, steps.checker.json.overdue, steps.checker.json.note]
+                      : ['', '', 'not found', '', '', has(steps.checker.json) && steps.checker.json != null ? steps.checker.json.note : 'the check failed: run it again']]
+                retry: { attempts: 3, wait: 10s }

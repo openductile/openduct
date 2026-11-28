@@ -1,0 +1,16 @@
+description: Products in a price range, the cheapest first
+action: google_shopping
+credential: { api_key: serp_test_key_1 }
+input: { q: ceramic plant pot, min_price: 10, max_price: 40, sort_by: "1" }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://serpapi.com/search"
+      query: { api_key: serp_test_key_1, engine: google_shopping, q: ceramic plant pot, min_price: "10", max_price: "40", sort_by: "1" }
+    answer:
+      status: 200
+      body:
+        shopping_results:
+          - { position: 1, title: Ceramic pot 6 inch, product_id: "1234567890", source: Example Garden, price: "$12.99", extracted_price: 12.99, rating: 4.5, reviews: 88, delivery: Free delivery }
+result:
+  - { position: 1, title: Ceramic pot 6 inch, product_id: "1234567890", source: Example Garden, price: "$12.99", extracted_price: 12.99, rating: 4.5, reviews: 88, delivery: Free delivery }

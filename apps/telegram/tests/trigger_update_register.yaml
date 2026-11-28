@@ -1,0 +1,13 @@
+description: Turning the workflow on asks Telegram for messages and button presses at the address
+trigger: update
+register: true
+workflow: wf3
+address: https://studio.example/hooks/h3
+credential: { bot_token: "123:abc" }
+exchanges:
+  - sent:
+      method: POST
+      url: https://api.telegram.org/bot123:abc/setWebhook
+      body: { url: https://studio.example/hooks/h3, secret_token: recorded-secret, allowed_updates: [message, callback_query] }
+    answer: { body: { ok: true, result: true, description: Webhook was set } }
+kept: { webhook_secret: recorded-secret }

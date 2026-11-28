@@ -1,0 +1,29 @@
+description: "List pipelines"
+action: list_pipelines
+credential: { token: test-token }
+input: { location_id: ve9EPM428h8vShlRW1KT }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://services.leadconnectorhq.com/opportunities/pipelines"
+      query: { locationId: ve9EPM428h8vShlRW1KT }
+      headers: { authorization: "Bearer test-token", version: "2021-07-28" }
+    answer:
+      status: 200
+      body:
+        pipelines:
+          - id: aWdODOBVOlH1RUFKWQke
+            name: example
+            stages: [[example]]
+            showInFunnel: false
+            showInPieChart: true
+            locationId: dsjddjkndadqaja
+            colorRenderMode: dot
+result:
+  - id: aWdODOBVOlH1RUFKWQke
+    name: example
+    stages: [[example]]
+    showInFunnel: false
+    showInPieChart: true
+    locationId: dsjddjkndadqaja
+    colorRenderMode: dot

@@ -1,0 +1,39 @@
+# Made by `openduct app from-openapi`: Look up a project's event.
+description: "Look up a project's event, made from the API description's schemas"
+action: get_event
+credential: { token: test-token }
+input: { organization_id_or_slug: example, project_id_or_slug: example, event_id: event_1 }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://us.sentry.io/api/0/projects/example/example/events/event_1/"
+      query: {}
+      headers: { authorization: "Bearer test-token" }
+    answer:
+      status: 200
+      body:
+        id: id_1
+        groupID: group_1
+        eventID: event_1
+        projectID: project_1
+        message: example
+        title: example
+        location: example
+        platform: example
+        dateReceived: "2026-01-15T09:30:00Z"
+        size: 1
+        entries: [example]
+        dist: example
+result:
+  id: id_1
+  groupID: group_1
+  eventID: event_1
+  projectID: project_1
+  message: example
+  title: example
+  location: example
+  platform: example
+  dateReceived: "2026-01-15T09:30:00Z"
+  size: 1
+  entries: [example]
+  dist: example

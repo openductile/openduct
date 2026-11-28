@@ -1,0 +1,18 @@
+description: 'Freshdesk refuses: the step fails in its words, field by field'
+action: create_contact
+credential:
+  domain: acme
+  api_key: test-key
+input:
+  name: Pat Sample
+exchanges:
+- answer:
+    status: 400
+    body:
+      description: Validation failed
+      errors:
+      - field: email
+        message: Please fill at least 1 of email, mobile, phone, twitter_id, unique_external_id fields
+        code: missing_field
+error: 'Freshdesk answered 400: Validation failed: email - Please fill at least 1 of email, mobile, phone, twitter_id,
+  unique_external_id fields'

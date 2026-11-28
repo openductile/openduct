@@ -1,0 +1,13 @@
+description: "Mark an opportunity won or lost"
+action: set_opportunity_status
+credential: { token: test-token }
+input: { id: yWQobCRIhRguQtD2llvk, status: open }
+exchanges:
+  - sent:
+      method: PUT
+      url: "https://services.leadconnectorhq.com/opportunities/yWQobCRIhRguQtD2llvk/status"
+      query: {}
+      headers: { authorization: "Bearer test-token", version: "2021-07-28" }
+      body: { status: open }
+    answer: { status: 200, body: { succeded: true } }
+result: { succeded: true }

@@ -1,0 +1,9 @@
+description: A key api.nasa.gov does not know - 403, in the words of api.data.gov, the gateway it signs keys up with
+action: get_asteroid
+credential: { api_key: not-a-key }
+input: { asteroid_id: "3000001" }
+exchanges:
+  - answer:
+      status: 403
+      body: { error: { code: API_KEY_INVALID, message: "An invalid api_key was supplied. Get one at https://api.nasa.gov:443" } }
+error: "NASA answered 403: An invalid api_key was supplied."

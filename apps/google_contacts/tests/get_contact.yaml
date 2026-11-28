@@ -1,0 +1,12 @@
+description: "A contact by its id alone"
+action: get_contact
+credential: {"access_token": "ya29.test"}
+input: {"contact": "c111"}
+exchanges:
+  - sent:
+      method: GET
+      url: "https://people.googleapis.com/v1/people/c111"
+      query: {"personFields": "names,emailAddresses,phoneNumbers,organizations,addresses,birthdays,biographies,urls,memberships,metadata"}
+      headers: {"authorization": "Bearer ya29.test"}
+    answer: {"status": 200, "body": {"resourceName": "people/c111", "etag": "%EgUBAi43PRoEAQIFByIM", "names": [{"displayName": "Ann Lee", "givenName": "Ann", "familyName": "Lee"}], "emailAddresses": [{"value": "ann@example.com"}, {"value": "ann.lee@example.org"}], "phoneNumbers": [{"value": "+1 555 0100"}], "organizations": [{"name": "Northwind Example", "title": "Owner"}], "biographies": [{"value": "Met at the spring fair", "contentType": "TEXT_PLAIN"}], "memberships": [{"contactGroupMembership": {"contactGroupId": "myContacts", "contactGroupResourceName": "contactGroups/myContacts"}}]}}
+result: {"resource_name": "people/c111", "etag": "%EgUBAi43PRoEAQIFByIM", "name": "Ann Lee", "given_name": "Ann", "family_name": "Lee", "email": "ann@example.com", "emails": ["ann@example.com", "ann.lee@example.org"], "phone": "+1 555 0100", "phones": ["+1 555 0100"], "company": "Northwind Example", "job_title": "Owner", "notes": "Met at the spring fair", "groups": ["contactGroups/myContacts"], "person": {"resourceName": "people/c111", "etag": "%EgUBAi43PRoEAQIFByIM", "names": [{"displayName": "Ann Lee", "givenName": "Ann", "familyName": "Lee"}], "emailAddresses": [{"value": "ann@example.com"}, {"value": "ann.lee@example.org"}], "phoneNumbers": [{"value": "+1 555 0100"}], "organizations": [{"name": "Northwind Example", "title": "Owner"}], "biographies": [{"value": "Met at the spring fair", "contentType": "TEXT_PLAIN"}], "memberships": [{"contactGroupMembership": {"contactGroupId": "myContacts", "contactGroupResourceName": "contactGroups/myContacts"}}]}}

@@ -1,0 +1,13 @@
+description: Contacts by a word in their name or email
+action: find_contacts
+credential: { address: "https://mycompany.example.com", api_key: 6578616d706c65206b6579 }
+input: { search: example.com }
+exchanges:
+  - sent:
+      url: https://mycompany.example.com/json/2/res.partner/search_read
+      body:
+        domain: ["|", [name, ilike, example.com], [email, ilike, example.com]]
+        fields: [name, email, phone, is_company, company_name, parent_id, street, city, zip, country_id, vat, create_date, write_date]
+        limit: 100
+    answer: { body: [{ id: 26, name: Ann Example, email: ann@example.com, phone: false, is_company: false, company_name: false, parent_id: [25, Example Deco], country_id: [233, United States] }] }
+result: [{ id: 26, name: Ann Example, email: ann@example.com, phone: false, is_company: false, company_name: false, parent_id: [25, Example Deco], country_id: [233, United States] }]

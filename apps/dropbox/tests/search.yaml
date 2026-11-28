@@ -1,0 +1,14 @@
+description: Files with a word in their names, in one folder
+action: search
+credential: { access_token: sl.test-token }
+input: { query: contract, path: /Clients, filename_only: true, extensions: "pdf, docx" }
+exchanges:
+  - sent:
+      url: https://api.dropboxapi.com/2/files/search_v2
+      body: { query: contract, options: { path: /Clients, filename_only: true, max_results: 1000, file_extensions: [pdf, docx] } }
+    answer:
+      body:
+        matches:
+          - metadata: { ".tag": metadata, metadata: { ".tag": file, id: "id:b5bzd_91_PFBBBBBBBBBBYx", name: Example Co contract.pdf, path_display: /Clients/Example Co contract.pdf, size: 120438, rev: b2d21df1ee89 } }
+        has_more: false
+result: [{ ".tag": file, id: "id:b5bzd_91_PFBBBBBBBBBBYx", name: Example Co contract.pdf, path_display: /Clients/Example Co contract.pdf, size: 120438, rev: b2d21df1ee89 }]

@@ -1,0 +1,13 @@
+description: "lemlist refuses a lead already in the campaign"
+action: add_lead
+credential: {"api_key": "test-key"}
+input: {"campaign_id": "cam_A1", "email": "ann@example.com"}
+exchanges:
+  - sent:
+      method: POST
+      url: "https://api.lemlist.com/api/campaigns/cam_A1/leads/"
+      query: {}
+      headers: {"authorization": "Basic OnRlc3Qta2V5"}
+      body: {"email": "ann@example.com"}
+    answer: {"status": 400, "body": {"error": "Lead already in the campaign", "code": "LEAD_ALREADY_IN_CAMPAIGN"}}
+error: "Lead already in the campaign"

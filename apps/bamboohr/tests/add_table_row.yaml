@@ -1,0 +1,26 @@
+description: A new job row from a date
+action: add_table_row
+credential:
+  company_domain: acme
+  api_key: test-key
+input:
+  employee_id: '101'
+  table: jobInfo
+  date: '2026-12-01'
+  job_title: Area Manager
+  location: Boulder
+exchanges:
+- sent:
+    method: POST
+    url: https://acme.bamboohr.com/api/v1/employees/101/tables/jobInfo
+    headers:
+      authorization: Basic dGVzdC1rZXk6eA==
+      accept: application/json
+    body:
+      date: '2026-12-01'
+      jobTitle: Area Manager
+      location: Boulder
+  answer:
+    status: 200
+result:
+  added: true

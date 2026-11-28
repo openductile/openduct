@@ -1,0 +1,265 @@
+# Copyright 2026 Ductile AI, Inc
+# SPDX-License-Identifier: Apache-2.0
+# Written by hand from Reddit's API reference (reddit.com/dev/api) and its OAuth2 guide.
+app: reddit
+name: Reddit
+category: social
+description: Posts, comments and messages on Reddit - post to a community, reply, read and search.
+docs: https://www.reddit.com/dev/api
+hosts: [oauth.reddit.com]
+base_url: https://oauth.reddit.com
+sign_in:
+  - id: reddit
+    label: Sign in with Reddit
+    oauth2:
+      authorize: https://www.reddit.com/api/v1/authorize
+      token: https://www.reddit.com/api/v1/access_token
+      scopes: [identity, read, submit, edit, history, privatemessages, save]
+      client_auth: basic
+      # A refresh token, for a workflow that keeps running: Reddit's tokens last an hour.
+      extra: { duration: permanent }
+    # Reddit asks every client to say who it is; a generic one is slowed down or turned away.
+    headers: { Authorization: "Bearer {{ credential.access_token }}", User-Agent: "server:openduct-workflows:v1.0" }
+  - id: reddit_app
+    label: An app's id and secret (reading only)
+    fields:
+      - { name: client_id, label: "The app's client id (under its name in your apps)" }
+      - { name: client_secret, label: "The app's secret", secret: true }
+    oauth2: { grant: client_credentials, token: "https://www.reddit.com/api/v1/access_token", client_auth: basic }
+    headers: { Authorization: "Bearer {{ credential.access_token }}", User-Agent: "server:openduct-workflows:v1.0" }
+# Reddit answers a refused post or comment with 200 and a list of [code, message, field]; others with a message.
+error: >-
+  type(value) == map && has(value.json) && has(value.json.errors) && size(value.json.errors) > 0
+  ? value.json.errors.map(e, e[1] + ' (' + e[0] + ')').join('; ') : null
+default_action: submit_post
+actions:
+  submit_post:
+    label: Post to a community
+    description: "A text post, or a link, in a subreddit, as the person signed in; gives the new post's id, its full name (t3_...) and address."
+    write: true
+    method: POST
+    path: /api/submit
+    body: form
+    inputs:
+      - { name: subreddit, label: "The community, without r/ (such as smallbusiness)", required: true }
+      - { name: title, label: "Title (up to 300 characters)", required: true }
+      - { name: text, label: "The text, in Markdown (a text post)" }
+      - { name: url, label: "The address it links to (a link post)" }
+      - { name: flair_id, label: "Its flair's id, where the community asks for one" }
+      - { name: flair_text, label: "Its flair's text" }
+      - { name: nsfw, label: Marked as for adults, kind: boolean }
+      - { name: spoiler, label: Marked as a spoiler, kind: boolean }
+      - { name: replies_to_inbox, label: "Send replies to the inbox (yes unless said)", kind: boolean }
+    send:
+      sr: "{{ input.subreddit }}"
+      kind: "{{ has(input.url) && input.url != null ? 'link' : 'self' }}"
+      title: "{{ input.title }}"
+      text: "{{ input.text }}"
+      url: "{{ input.url }}"
+      flair_id: "{{ input.flair_id }}"
+      flair_text: "{{ input.flair_text }}"
+      nsfw: "{{ input.nsfw }}"
+      spoiler: "{{ input.spoiler }}"
+      sendreplies: "{{ input.replies_to_inbox }}"
+      api_type: json
+    result: value.json.data
+    output: { id: text, name: text, url: text }
+  comment:
+    label: Comment or reply
+    description: A comment on a post, a reply to a comment, or an answer to a private message - by the full name of what it answers.
+    write: true
+    method: POST
+    path: /api/comment
+    body: form
+    inputs:
+      - { name: thing_id, label: "What it answers: a post (t3_...), a comment (t1_...) or a message (t4_...)", required: true }
+      - { name: text, label: "The text, in Markdown", required: true }
+    send: { thing_id: "{{ input.thing_id }}", text: "{{ input.text }}", api_type: json }
+    result: value.json.data.things[0].data
+    output: { id: text, name: text, body: text, permalink: text, parent_id: text, link_id: text, created_utc: number }
+  edit_text:
+    label: Change a post's or comment's text
+    description: The new text takes the place of the old; a text post or a comment of the person signed in.
+    write: true
+    method: POST
+    path: /api/editusertext
+    body: form
+    inputs:
+      - { name: thing_id, label: "The post (t3_...) or comment (t1_...)", required: true }
+      - { name: text, label: "The new text, in Markdown", required: true }
+    send: { thing_id: "{{ input.thing_id }}", text: "{{ input.text }}", api_type: json }
+    result: value.json.data.things[0].data
+    output: { id: text, name: text, body: text, selftext: text, permalink: text }
+  send_message:
+    label: Send a private message
+    description: A new private message to a Reddit user.
+    write: true
+    method: POST
+    path: /api/compose
+    body: form
+    inputs:
+      - { name: to, label: "To: their user name, without u/", required: true }
+      - { name: subject, label: "Subject (up to 100 characters)", required: true }
+      - { name: text, label: "The message, in Markdown", required: true }
+    send: { to: "{{ input.to }}", subject: "{{ input.subject }}", text: "{{ input.text }}", api_type: json }
+    result: "{'sent': true}"
+    output: { sent: boolean }
+  save:
+    label: Save a post or comment
+    description: Kept in the person's saved list, for later.
+    write: true
+    method: POST
+    path: /api/save
+    body: form
+    inputs:
+      - { name: id, label: "The post (t3_...) or comment (t1_...)", required: true }
+    send: { id: "{{ input.id }}" }
+    result: "{'saved': status < 300}"
+    output: { saved: boolean }
+  list_new_posts:
+    label: List a community's newest posts
+    description: Newest first; every page, up to 1,000.
+    method: GET
+    path: "/r/{{ input.subreddit }}/new"
+    inputs:
+      - { name: subreddit, label: "The community, without r/", required: true }
+    query: { limit: "100" }
+    items: value.data.children.map(c, c.data)
+    next: "value.data.after == null ? null : {'after': value.data.after}"
+    output: { id: text, name: text, title: text, author: text, subreddit: text, selftext: text, url: text, permalink: text, created_utc: number, score: number, num_comments: number, over_18: boolean, link_flair_text: text }
+  list_top_posts:
+    label: List a community's top posts
+    description: Best scored first, over the hour, day, week, month, year or all time; every page, up to 1,000.
+    method: GET
+    path: "/r/{{ input.subreddit }}/top"
+    inputs:
+      - { name: subreddit, label: "The community, without r/", required: true }
+      - { name: period, label: "Over: hour, day (the default), week, month, year or all" }
+    query: { t: "{{ input.period }}", limit: "100" }
+    items: value.data.children.map(c, c.data)
+    next: "value.data.after == null ? null : {'after': value.data.after}"
+    output: { id: text, name: text, title: text, author: text, subreddit: text, selftext: text, url: text, permalink: text, created_utc: number, score: number, num_comments: number, over_18: boolean, link_flair_text: text }
+  list_hot_posts:
+    label: List a community's popular posts
+    description: As the community's front page orders them; every page, up to 1,000.
+    method: GET
+    path: "/r/{{ input.subreddit }}/hot"
+    inputs:
+      - { name: subreddit, label: "The community, without r/", required: true }
+    query: { limit: "100" }
+    items: value.data.children.map(c, c.data)
+    next: "value.data.after == null ? null : {'after': value.data.after}"
+    output: { id: text, name: text, title: text, author: text, subreddit: text, selftext: text, url: text, permalink: text, created_utc: number, score: number, num_comments: number, over_18: boolean, link_flair_text: text }
+  search_posts:
+    label: Search posts
+    description: Posts that hold the words, in one community or all of Reddit; every page, up to 1,000.
+    method: GET
+    path: "{{ has(input.subreddit) && input.subreddit != null ? '/r/' + input.subreddit : '' }}/search"
+    inputs:
+      - { name: q, label: "The words to look for (up to 512 characters)", required: true }
+      - { name: subreddit, label: "Only in this community, without r/" }
+      - { name: sort, label: "Order: relevance (the default), hot, top, new or comments" }
+      - { name: period, label: "Over: hour, day, week, month, year or all" }
+    query:
+      q: "{{ input.q }}"
+      restrict_sr: "{{ has(input.subreddit) && input.subreddit != null ? 'true' : null }}"
+      sort: "{{ input.sort }}"
+      t: "{{ input.period }}"
+      type: link
+      limit: "100"
+    items: value.data.children.map(c, c.data)
+    next: "value.data.after == null ? null : {'after': value.data.after}"
+    output: { id: text, name: text, title: text, author: text, subreddit: text, selftext: text, url: text, permalink: text, created_utc: number, score: number, num_comments: number, over_18: boolean, link_flair_text: text }
+  get_post_comments:
+    label: Read a post and its comments
+    description: The post and its comments, each with its replies under it; the best first unless ordered otherwise.
+    method: GET
+    path: "/comments/{{ input.post_id }}"
+    inputs:
+      - { name: post_id, label: "The post's id, without t3_ (abc123 of /comments/abc123/)", required: true }
+      - { name: sort, label: "Order: confidence (the default), top, new, controversial, old or qa" }
+      - { name: limit, label: "At most this many comments", kind: number }
+      - { name: depth, label: "Replies at most this deep", kind: number }
+    query: { sort: "{{ input.sort }}", limit: "{{ input.limit }}", depth: "{{ input.depth }}" }
+    result: "{'post': value[0].data.children[0].data, 'comments': value[1].data.children.filter(c, c.kind == 't1').map(c, c.data)}"
+    output: { post: record, comments: list }
+  get_things:
+    label: Look up posts or comments
+    description: Posts, comments or communities by their full names (t3_..., t1_..., t5_...).
+    method: GET
+    path: /api/info
+    inputs:
+      - { name: ids, label: "Their full names, with commas", required: true }
+    query: { id: "{{ input.ids }}" }
+    items: value.data.children.map(c, c.data)
+    output: { id: text, name: text, title: text, author: text, subreddit: text, selftext: text, url: text, permalink: text, created_utc: number, score: number, num_comments: number, over_18: boolean, link_flair_text: text }
+  get_subreddit:
+    label: Look up a community
+    description: Its title, description, subscribers, rules for posting and whether it is for adults.
+    method: GET
+    path: "/r/{{ input.subreddit }}/about"
+    inputs:
+      - { name: subreddit, label: "The community, without r/", required: true }
+    result: value.data
+    output: { id: text, name: text, display_name: text, title: text, public_description: text, subscribers: number, over18: boolean, submission_type: text, url: text, created_utc: number }
+  get_me:
+    label: Who is signed in
+    description: The Reddit account the sign-in acts as.
+    method: GET
+    path: /api/v1/me
+    output: { id: text, name: text, created_utc: number, link_karma: number, comment_karma: number }
+  list_inbox:
+    label: List messages and replies
+    description: The inbox (private messages, and replies to the person's posts and comments), or only its unread; newest first, every page.
+    method: GET
+    path: "/message/{{ has(input.unread_only) && input.unread_only == true ? 'unread' : 'inbox' }}"
+    inputs:
+      - { name: unread_only, label: Only those not read yet, kind: boolean }
+    query: { limit: "100", mark: "false" }
+    items: value.data.children.map(c, c.data)
+    next: "value.data.after == null ? null : {'after': value.data.after}"
+    output: { id: text, name: text, author: text, subject: text, body: text, created_utc: number, new: boolean, was_comment: boolean, context: text, parent_id: text }
+  list_user_posts:
+    label: List a user's posts
+    description: Newest first unless ordered otherwise; every page, up to 1,000.
+    method: GET
+    path: "/user/{{ input.username }}/submitted"
+    inputs:
+      - { name: username, label: "Their user name, without u/", required: true }
+      - { name: sort, label: "Order: new (the default), hot, top or controversial" }
+    query: { sort: "{{ input.sort }}", limit: "100" }
+    items: value.data.children.map(c, c.data)
+    next: "value.data.after == null ? null : {'after': value.data.after}"
+    output: { id: text, name: text, title: text, author: text, subreddit: text, selftext: text, url: text, permalink: text, created_utc: number, score: number, num_comments: number, over_18: boolean, link_flair_text: text }
+  list_user_comments:
+    label: List a user's comments
+    description: Newest first unless ordered otherwise; every page, up to 1,000.
+    method: GET
+    path: "/user/{{ input.username }}/comments"
+    inputs:
+      - { name: username, label: "Their user name, without u/", required: true }
+      - { name: sort, label: "Order: new (the default), hot, top or controversial" }
+    query: { sort: "{{ input.sort }}", limit: "100" }
+    items: value.data.children.map(c, c.data)
+    next: "value.data.after == null ? null : {'after': value.data.after}"
+    output: { id: text, name: text, author: text, body: text, subreddit: text, link_id: text, link_title: text, permalink: text, created_utc: number, score: number }
+triggers:
+  new_post:
+    label: A new post in a community
+    description: Each post made in the subreddit, the newest asked for every few minutes.
+    inputs:
+      - { name: subreddit, label: "The community, without r/", required: true }
+    poll:
+      action: list_new_posts
+      input: { subreddit: "{{ input.subreddit }}" }
+      newest_first: true
+      id: item.name
+      every: 5m
+  new_message:
+    label: A new message or reply
+    description: Each private message, and each reply to the person's posts and comments, the newest asked for every few minutes.
+    poll:
+      action: list_inbox
+      newest_first: true
+      id: item.name
+      every: 5m

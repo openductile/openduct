@@ -1,0 +1,11 @@
+description: Without a homeserver, matrix.org's own address
+action: send_message
+credential: { homeserver: "", token: syt_test_token }
+input: { room_id: "!abc123:example.org", text: Hello, transaction_id: run-7f3c }
+exchanges:
+  - sent:
+      method: PUT
+      url: "https://matrix-client.matrix.org/_matrix/client/v3/rooms/!abc123:example.org/send/m.room.message/run-7f3c"
+      body: { msgtype: m.text, body: Hello }
+    answer: { status: 200, body: { event_id: "$ev5" } }
+result: { event_id: "$ev5" }

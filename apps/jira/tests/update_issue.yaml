@@ -1,0 +1,11 @@
+description: Only the fields given are sent; Jira answers 204
+action: update_issue
+credential: { site: examplecorp, email: ann@example.com, api_token: ATATT_test }
+input: { issue: SUP-13, summary: Printer on floor 2 is fixed, labels: [hardware] }
+exchanges:
+  - sent:
+      method: PUT
+      url: https://examplecorp.atlassian.net/rest/api/3/issue/SUP-13
+      body: { fields: { summary: Printer on floor 2 is fixed, labels: [hardware] } }
+    answer: { status: 204, body: "" }
+result: { changed: true }

@@ -1,0 +1,38 @@
+name: Keep new contacts in a table
+description: >-
+  When a contact comes in over a webhook ({"email", "name", "company"}), keep it in the contacts data table - once per
+  e-mail address, brought up to date when it comes again - count the new ones, and answer whether it was new. Make the
+  table once, under Tables: contacts, with the text columns email, name and company.
+category: Data
+trigger:
+  webhook: {}
+# What a test runs on: an event as this trigger gives it.
+sample:
+  email: ' Ada@Example.com '
+  name: Ada Lovelace
+  company: Analytical Engines
+steps:
+  - name: contact
+    set:
+      email: "value.email == null ? null : value.email.trim().lowerAscii()"
+      name: value.name
+  - where: "steps.contact.email != null && steps.contact.email.contains('@')"
+  - name: keep
+    table:
+      name: contacts
+      action: upsert
+      key: email
+      row:
+        email: "{{ steps.contact.email }}"
+        name: "{{ steps.contact.name }}"
+        company: "{{ value.company }}"
+  - name: counted
+    state:
+      set:
+        new_contacts: "{{ has(state.new_contacts) ? state.new_contacts + steps.keep.inserted : steps.keep.inserted }}"
+  - name: answer
+    respond:
+      status: 200
+      body:
+        new: "{{ steps.keep.inserted == 1 }}"
+        new_contacts: "{{ steps.counted.new_contacts }}"

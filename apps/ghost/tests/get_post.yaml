@@ -1,0 +1,8 @@
+description: A post by its slug
+action: get_post
+credential: { site: acme, content_key: 22444f78447824223cefc48aaa }
+input: { slug: winter-opening-hours, formats: plaintext }
+exchanges:
+  - sent: { method: GET, url: https://acme.ghost.io/ghost/api/content/posts/slug/winter-opening-hours/, query: { key: 22444f78447824223cefc48aaa, formats: plaintext } }
+    answer: { body: { posts: [{ id: 6744a1b2c3d4e5f600000001, title: Our winter opening hours, plaintext: We open at 10 from December. }] } }
+result: { id: 6744a1b2c3d4e5f600000001, title: Our winter opening hours, plaintext: We open at 10 from December. }

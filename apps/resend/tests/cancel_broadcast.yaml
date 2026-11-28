@@ -1,0 +1,13 @@
+# Made by `openduct app from-openapi`: Cancel a broadcast.
+description: "Cancel a broadcast, made from the API description's schemas"
+action: cancel_broadcast
+credential: { token: test-token }
+input: { id: "00000000-0000-4000-8000-000000000001" }
+exchanges:
+  - sent:
+      method: POST
+      url: "https://api.resend.com/broadcasts/00000000-0000-4000-8000-000000000001/cancel"
+      query: {}
+      headers: { authorization: "Bearer test-token" }
+    answer: { status: 200, body: { id: "78261eea-8f8b-4381-83c6-79fa7120f1cf", object: broadcast } }
+result: { id: "78261eea-8f8b-4381-83c6-79fa7120f1cf", object: broadcast }

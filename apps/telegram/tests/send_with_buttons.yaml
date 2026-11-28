@@ -1,0 +1,11 @@
+description: A message with buttons under it (an inline keyboard)
+action: send
+credential: { bot_token: "123:abc" }
+input: { chat_id: "42", text: "Approve order A-100?", buttons: [[{ text: Approve, callback_data: approve:A-100 }, { text: Reject, callback_data: reject:A-100 }]] }
+exchanges:
+  - sent:
+      method: POST
+      url: https://api.telegram.org/bot123:abc/sendMessage
+      body: { chat_id: "42", text: "Approve order A-100?", reply_markup: { inline_keyboard: [[{ text: Approve, callback_data: approve:A-100 }, { text: Reject, callback_data: reject:A-100 }]] } }
+    answer: { body: { ok: true, result: { message_id: 8, chat: { id: 42 }, text: "Approve order A-100?" } } }
+result: { sent: true, message: { message_id: 8, chat: { id: 42 }, text: "Approve order A-100?" } }

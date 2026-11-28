@@ -1,0 +1,27 @@
+description: A folder over two pages - the second asked of .../continue with the cursor alone
+action: list_folder
+credential: { access_token: sl.test-token }
+input: { path: /Invoices }
+exchanges:
+  - sent:
+      method: POST
+      url: https://api.dropboxapi.com/2/files/list_folder
+      headers: { authorization: Bearer sl.test-token }
+      body: { path: /Invoices, recursive: false, limit: 2000 }
+    answer:
+      body:
+        entries:
+          - { ".tag": file, id: "id:a4ayc_80_OEAAAAAAAAAXw", name: INV-1042.pdf, path_display: /Invoices/INV-1042.pdf, path_lower: /invoices/inv-1042.pdf, size: 48211, rev: a1c10ce0dd78, client_modified: "2026-11-20T10:00:00Z", server_modified: "2026-11-20T10:00:05Z", is_downloadable: true }
+        cursor: ZtkX9_EHj3x7PMkVuFIhwKYXEpwpLwyxp9vMKomUhllil9q7eWiAu
+        has_more: true
+  - sent:
+      url: https://api.dropboxapi.com/2/files/list_folder/continue
+      body: { cursor: ZtkX9_EHj3x7PMkVuFIhwKYXEpwpLwyxp9vMKomUhllil9q7eWiAu }
+    answer:
+      body:
+        entries: [{ ".tag": folder, id: "id:a4ayc_80_OEAAAAAAAAAYa", name: Paid, path_display: /Invoices/Paid, path_lower: /invoices/paid }]
+        cursor: ZtkX9_EHj3x7PMkVuFIhwKYXEpwpLwyxp9vMKomUhllil9q7eWiAv
+        has_more: false
+result:
+  - { ".tag": file, id: "id:a4ayc_80_OEAAAAAAAAAXw", name: INV-1042.pdf, path_display: /Invoices/INV-1042.pdf, path_lower: /invoices/inv-1042.pdf, size: 48211, rev: a1c10ce0dd78, client_modified: "2026-11-20T10:00:00Z", server_modified: "2026-11-20T10:00:05Z", is_downloadable: true }
+  - { ".tag": folder, id: "id:a4ayc_80_OEAAAAAAAAAYa", name: Paid, path_display: /Invoices/Paid, path_lower: /invoices/paid }

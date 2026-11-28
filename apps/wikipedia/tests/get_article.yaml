@@ -1,0 +1,8 @@
+description: An article's metadata and address
+action: get_article
+credential: { contact: ops@example.com }
+input: { title: Solar_System }
+exchanges:
+  - sent: { method: GET, url: https://en.wikipedia.org/w/rest.php/v1/page/Solar_System/bare }
+    answer: { body: { id: 26903, key: Solar_System, title: Solar System, latest: { id: 1347490218, timestamp: "2026-11-20T01:20:41Z" }, content_model: wikitext, html_url: "https://en.wikipedia.org/w/rest.php/v1/page/Solar_System/html" } }
+result: { id: 26903, key: Solar_System, title: Solar System, latest: { id: 1347490218, timestamp: "2026-11-20T01:20:41Z" }, content_model: wikitext, html_url: "https://en.wikipedia.org/w/rest.php/v1/page/Solar_System/html" }

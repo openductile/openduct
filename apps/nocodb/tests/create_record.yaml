@@ -1,0 +1,12 @@
+description: A record added, its fields by their titles; the new record out of NocoDB's list
+action: create_record
+credential: { api_token: test-nocodb-token }
+input: { base_id: pexample0001, table_id: mexample0001, fields: { Name: Ann Example, Email: ann@example.com } }
+exchanges:
+  - sent:
+      method: POST
+      url: https://app.nocodb.com/api/v3/data/pexample0001/mexample0001/records
+      headers: { xc-token: test-nocodb-token }
+      body: { fields: { Name: Ann Example, Email: ann@example.com } }
+    answer: { body: { records: [{ id: 1, fields: { Name: Ann Example, Email: ann@example.com, Status: Open } }] } }
+result: { id: 1, fields: { Name: Ann Example, Email: ann@example.com, Status: Open } }

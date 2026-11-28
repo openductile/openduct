@@ -1,0 +1,323 @@
+# Copyright 2026 Ductile AI, Inc
+# SPDX-License-Identifier: Apache-2.0
+# Mailgun: hosts, paths and fields from Mailgun's API description,
+# https://documentation.mailgun.com/_bundle/docs/mailgun/api-reference/send/mailgun.yaml (fetched 2026-11-27; it
+# states no licence, so the labels and descriptions here are our own words). Written by hand: Mailgun describes its
+# forms as multipart, and takes them as ordinary forms when nothing is attached, which is how they are sent here.
+app: mailgun
+name: Mailgun
+category: email
+description: Email sent through Mailgun, what became of it, mailing lists and who may not be written to.
+docs: https://documentation.mailgun.com/docs/mailgun/api-reference/api-overview
+hosts: [api.mailgun.net, api.eu.mailgun.net]
+base_url: https://api.mailgun.net
+sign_in:
+  - id: mailgun
+    label: An API key (US region)
+    fields:
+      - { name: api_key, label: "The API key (Mailgun: API Security)", secret: true }
+      - { name: domain, label: "The sending domain, such as mg.example.com" }
+    basic: { username: api, password: "{{ credential.api_key }}" }
+  - id: mailgun_eu
+    label: An API key (EU region)
+    base_url: https://api.eu.mailgun.net
+    fields:
+      - { name: api_key, label: "The API key (Mailgun: API Security)", secret: true }
+      - { name: domain, label: "The sending domain, such as mg.example.com" }
+    basic: { username: api, password: "{{ credential.api_key }}" }
+error: "status >= 400 ? value.message : null"
+default_action: send_email
+actions:
+  send_email:
+    label: Send an email
+    description: An email sent from the domain, written here or made from one of its templates.
+    write: true
+    method: POST
+    path: "/v3/{{ has(input.domain) && input.domain != null ? input.domain : credential.domain }}/messages"
+    body: form
+    inputs:
+      - { name: from, label: "From, such as Shop <orders@mg.example.com>", required: true }
+      - { name: to, label: "To (several with commas)", required: true }
+      - { name: subject, label: Subject }
+      - { name: text, label: "The message, as plain text" }
+      - { name: html, label: "The message, as HTML" }
+      - { name: cc, label: "Copies to (several with commas)" }
+      - { name: bcc, label: "Hidden copies to (several with commas)" }
+      - { name: reply_to, label: "Replies go to" }
+      - { name: template, label: "Or made from this template (its name)" }
+      - { name: template_variables, label: "The template's values, as JSON, such as {\"name\": \"Ann\"}" }
+      - { name: tag, label: "A tag, to find it again in the events" }
+      - { name: deliver_at, label: "Send it later, at (such as Fri, 14 Oct 2026 12:00:00 +0000)" }
+      - { name: test_mode, label: "Test only: accepted but not delivered", kind: boolean }
+      - { name: domain, label: "From another of your domains than the credential's" }
+    send:
+      from: "{{ input.from }}"
+      to: "{{ input.to }}"
+      subject: "{{ input.subject }}"
+      text: "{{ input.text }}"
+      html: "{{ input.html }}"
+      cc: "{{ input.cc }}"
+      bcc: "{{ input.bcc }}"
+      "h:Reply-To": "{{ input.reply_to }}"
+      template: "{{ input.template }}"
+      "t:variables": "{{ input.template_variables }}"
+      "o:tag": "{{ input.tag }}"
+      "o:deliverytime": "{{ input.deliver_at }}"
+      "o:testmode": "{{ input.test_mode == true ? 'yes' : null }}"
+    output: { id: text, message: text }
+  list_events:
+    label: List email events
+    description: What became of the domain's email - accepted, delivered, failed, opened, clicked, unsubscribed, complained - newest first.
+    method: GET
+    path: "/v3/{{ has(input.domain) && input.domain != null ? input.domain : credential.domain }}/events"
+    inputs:
+      - { name: event, label: "Only: accepted, delivered, failed, opened, clicked, unsubscribed, complained or stored" }
+      - { name: recipient, label: "Only to this address" }
+      - { name: from, label: "Only from this address" }
+      - { name: subject, label: "Only with this subject" }
+      - { name: tags, label: "Only with this tag" }
+      - { name: begin, label: "Only since (RFC 2822 date or seconds since 1970)" }
+      - { name: domain, label: "Of another of your domains than the credential's" }
+    query:
+      event: "{{ input.event }}"
+      recipient: "{{ input.recipient }}"
+      from: "{{ input.from }}"
+      subject: "{{ input.subject }}"
+      tags: "{{ input.tags }}"
+      begin: "{{ input.begin }}"
+      ascending: "no"
+      limit: "300"
+    items: value.items
+    next: "size(value.items) == 0 ? null : value.paging.next"
+    max_pages: 10
+    output: { id: text, event: text, timestamp: number, recipient: text, "recipient-domain": text, tags: list, message: record, "delivery-status": record, severity: text, reason: text, "log-level": text, "user-variables": record }
+  list_domains:
+    label: List domains
+    description: The account's sending domains, with their state.
+    method: GET
+    path: /v4/domains
+    inputs: [{ name: state, label: "Only: active, unverified or disabled" }]
+    query: { state: "{{ input.state }}", limit: "1000" }
+    items: value.items
+    next: "size(value.items) < 1000 ? null : {'skip': (page == null ? 0 : int(page.skip)) + size(value.items)}"
+    output: { id: text, name: text, state: text, type: text, created_at: text, web_prefix: text, disabled: record }
+  get_domain:
+    label: Look up a domain
+    description: One sending domain, with the DNS records it needs.
+    method: GET
+    path: "/v4/domains/{{ input.name }}"
+    inputs: [{ name: name, label: "The domain, such as mg.example.com", required: true }]
+    output: { domain: record, receiving_dns_records: list, sending_dns_records: list }
+  list_templates:
+    label: List templates
+    description: The domain's stored email templates.
+    method: GET
+    path: "/v3/{{ has(input.domain) && input.domain != null ? input.domain : credential.domain }}/templates"
+    inputs: [{ name: domain, label: "Of another of your domains than the credential's" }]
+    query: { limit: "100" }
+    items: "value.items == null ? [] : value.items"
+    next: "value.items == null || size(value.items) == 0 ? null : value.paging.next"
+    output: { id: text, name: text, description: text, createdAt: text, createdBy: text }
+  list_mailing_lists:
+    label: List mailing lists
+    description: The account's mailing lists, with how many members each has.
+    method: GET
+    path: /v3/lists/pages
+    query: { limit: "100" }
+    items: value.items
+    next: "size(value.items) == 0 ? null : value.paging.next"
+    output: { address: text, name: text, description: text, access_level: text, reply_preference: text, members_count: number, created_at: text }
+  get_mailing_list:
+    label: Look up a mailing list
+    description: One mailing list, by its address.
+    method: GET
+    path: "/v3/lists/{{ input.list_address }}"
+    inputs: [{ name: list_address, label: "The list's address, such as news@mg.example.com", required: true }]
+    result: value.list
+    output: { address: text, name: text, description: text, access_level: text, reply_preference: text, members_count: number, created_at: text }
+  create_mailing_list:
+    label: Make a mailing list
+    description: A new mailing list with an address of its own; email to that address goes to its members.
+    write: true
+    method: POST
+    path: /v3/lists
+    body: form
+    inputs:
+      - { name: address, label: "Its address, such as news@mg.example.com", required: true }
+      - { name: name, label: Its name }
+      - { name: description, label: What it is for }
+      - { name: access_level, label: "Who may send to it: readonly (the default), members or everyone" }
+      - { name: reply_preference, label: "Replies go to: list or sender" }
+    send:
+      address: "{{ input.address }}"
+      name: "{{ input.name }}"
+      description: "{{ input.description }}"
+      access_level: "{{ input.access_level }}"
+      reply_preference: "{{ input.reply_preference }}"
+    result: value.list
+    output: { address: text, name: text, description: text, access_level: text, reply_preference: text, members_count: number, created_at: text }
+  list_members:
+    label: List a mailing list's members
+    description: The people on a list, or only those subscribed or unsubscribed.
+    method: GET
+    path: "/v3/lists/{{ input.list_address }}/members/pages"
+    inputs:
+      - { name: list_address, label: "The list's address", required: true }
+      - { name: subscribed, label: "Only those subscribed (true) or unsubscribed (false)", kind: boolean }
+    query: { subscribed: "{{ input.subscribed }}", limit: "100" }
+    items: value.items
+    next: "size(value.items) == 0 ? null : value.paging.next"
+    output: { address: text, name: text, subscribed: boolean, vars: record }
+  get_member:
+    label: Look up a mailing list member
+    description: One person on a list.
+    method: GET
+    path: "/v3/lists/{{ input.list_address }}/members/{{ input.member_address }}"
+    inputs:
+      - { name: list_address, label: "The list's address", required: true }
+      - { name: member_address, label: "Their email", required: true }
+    result: "has(value.member) ? value.member : value"
+    output: { address: text, name: text, subscribed: boolean, vars: record }
+  add_member:
+    label: Add someone to a mailing list
+    description: A person put on a list, or changed when they are on it already and update is asked for.
+    write: true
+    method: POST
+    path: "/v3/lists/{{ input.list_address }}/members"
+    body: form
+    inputs:
+      - { name: list_address, label: "The list's address", required: true }
+      - { name: address, label: "Their email", required: true }
+      - { name: name, label: "Their name" }
+      - { name: vars, label: "More about them, as JSON, such as {\"plan\": \"pro\"}" }
+      - { name: subscribed, label: "Subscribed (the default)", kind: boolean }
+      - { name: upsert, label: "If they are on it already, change them", kind: boolean }
+    send:
+      address: "{{ input.address }}"
+      name: "{{ input.name }}"
+      vars: "{{ input.vars }}"
+      subscribed: "{{ input.subscribed }}"
+      upsert: "{{ input.upsert }}"
+    result: value.member
+    output: { address: text, name: text, subscribed: boolean, vars: record }
+  update_member:
+    label: Change a mailing list member
+    description: A person's name, details, or subscription on a list changed.
+    write: true
+    method: PUT
+    path: "/v3/lists/{{ input.list_address }}/members/{{ input.member_address }}"
+    body: form
+    inputs:
+      - { name: list_address, label: "The list's address", required: true }
+      - { name: member_address, label: "Their email now", required: true }
+      - { name: address, label: "Their new email" }
+      - { name: name, label: "Their name" }
+      - { name: vars, label: "More about them, as JSON" }
+      - { name: subscribed, label: "Subscribed", kind: boolean }
+    send:
+      address: "{{ input.address }}"
+      name: "{{ input.name }}"
+      vars: "{{ input.vars }}"
+      subscribed: "{{ input.subscribed }}"
+    result: value.member
+    output: { address: text, name: text, subscribed: boolean, vars: record }
+  remove_member:
+    label: Take someone off a mailing list
+    description: A person removed from a list.
+    write: true
+    method: DELETE
+    path: "/v3/lists/{{ input.list_address }}/members/{{ input.member_address }}"
+    inputs:
+      - { name: list_address, label: "The list's address", required: true }
+      - { name: member_address, label: "Their email", required: true }
+    output: { member: record, message: text }
+  list_bounces:
+    label: List bounces
+    description: Addresses mail could not be delivered to, which the domain no longer sends to.
+    method: GET
+    path: "/v3/{{ has(input.domain) && input.domain != null ? input.domain : credential.domain }}/bounces"
+    inputs: [{ name: domain, label: "Of another of your domains than the credential's" }]
+    query: { limit: "1000" }
+    items: value.items
+    next: "size(value.items) == 0 ? null : value.paging.next"
+    output: { address: text, code: text, error: text, created_at: text }
+  get_bounce:
+    label: Look up a bounce
+    description: Whether an address bounced, and why.
+    method: GET
+    path: "/v3/{{ has(input.domain) && input.domain != null ? input.domain : credential.domain }}/bounces/{{ input.address }}"
+    inputs:
+      - { name: address, label: "The email", required: true }
+      - { name: domain, label: "Of another of your domains than the credential's" }
+    output: { address: text, code: text, error: text, created_at: text }
+  delete_bounce:
+    label: Clear a bounce
+    description: An address the domain may send to again.
+    write: true
+    method: DELETE
+    path: "/v3/{{ has(input.domain) && input.domain != null ? input.domain : credential.domain }}/bounces/{{ input.address }}"
+    inputs:
+      - { name: address, label: "The email", required: true }
+      - { name: domain, label: "Of another of your domains than the credential's" }
+    output: { address: text, message: text }
+  list_unsubscribes:
+    label: List unsubscribes
+    description: Addresses that asked to get no more email from the domain.
+    method: GET
+    path: "/v3/{{ has(input.domain) && input.domain != null ? input.domain : credential.domain }}/unsubscribes"
+    inputs: [{ name: domain, label: "Of another of your domains than the credential's" }]
+    query: { limit: "1000" }
+    items: value.items
+    next: "size(value.items) == 0 ? null : value.paging.next"
+    output: { address: text, tags: list, created_at: text }
+  add_unsubscribe:
+    label: Add an unsubscribe
+    description: An address the domain sends no more email to, for all mail or one tag of it.
+    write: true
+    method: POST
+    path: "/v3/{{ has(input.domain) && input.domain != null ? input.domain : credential.domain }}/unsubscribes"
+    body: form
+    inputs:
+      - { name: address, label: "The email", required: true }
+      - { name: tag, label: "Only mail with this tag (all mail by default)" }
+      - { name: domain, label: "Of another of your domains than the credential's" }
+    send: { address: "{{ input.address }}", tags: "{{ input.tag }}" }
+    output: { message: text, address: text }
+  delete_unsubscribe:
+    label: Remove an unsubscribe
+    description: An address the domain may send to again.
+    write: true
+    method: DELETE
+    path: "/v3/{{ has(input.domain) && input.domain != null ? input.domain : credential.domain }}/unsubscribes/{{ input.address }}"
+    inputs:
+      - { name: address, label: "The email", required: true }
+      - { name: domain, label: "Of another of your domains than the credential's" }
+    output: { address: text, message: text }
+  list_complaints:
+    label: List spam complaints
+    description: Addresses whose people marked the domain's email as spam.
+    method: GET
+    path: "/v3/{{ has(input.domain) && input.domain != null ? input.domain : credential.domain }}/complaints"
+    inputs: [{ name: domain, label: "Of another of your domains than the credential's" }]
+    query: { limit: "1000" }
+    items: value.items
+    next: "size(value.items) == 0 ? null : value.paging.next"
+    output: { address: text, created_at: text }
+triggers:
+  email_event:
+    label: An email event
+    description: >-
+      Each new event of the domain's email - delivered, failed, opened, clicked, unsubscribed, complained - or of one
+      kind, asked for every few minutes. Mailgun may store an event some minutes after it happened, so each poll
+      looks over the last half hour.
+    inputs:
+      - { name: event, label: "Only: accepted, delivered, failed, opened, clicked, unsubscribed or complained" }
+      - { name: tags, label: "Only mail with this tag" }
+    poll:
+      method: GET
+      path: "/v3/{{ credential.domain }}/events"
+      query: { event: "{{ input.event }}", tags: "{{ input.tags }}", begin: "{{ string(int(timestamp(input.now)) - 1800) }}", ascending: "yes", limit: "300" }
+      items: value.items
+      next: "size(value.items) == 0 ? null : value.paging.next"
+      id: item.id
+      every: 5m

@@ -1,0 +1,6 @@
+action: ping
+credential: { api_key: CG-test1 }
+exchanges:
+  - sent: { method: GET, url: https://api.coingecko.com/api/v3/ping, headers: { x-cg-demo-api-key: CG-test1 } }
+    answer: { body: { gecko_says: "(V3) To the Moon!" } }
+result: { gecko_says: "(V3) To the Moon!" }

@@ -1,0 +1,7 @@
+action: get_monitor
+credential: { api_key: ur_test_1 }
+input: { id: 801 }
+exchanges:
+  - sent: { method: GET, url: https://api.uptimerobot.com/v3/monitors/801 }
+    answer: { body: { id: 801, friendlyName: Shop, url: "https://shop.example.com", type: HTTP, status: UP, interval: 300, currentStateDuration: 3600 } }
+result: { id: 801, friendlyName: Shop, url: "https://shop.example.com", type: HTTP, status: UP, interval: 300, currentStateDuration: 3600 }

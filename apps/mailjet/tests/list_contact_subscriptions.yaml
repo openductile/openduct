@@ -1,0 +1,28 @@
+description: A contact's lists
+action: list_contact_subscriptions
+credential:
+  api_key: test-key
+  secret_key: test-secret
+input:
+  contact_id: '1001'
+exchanges:
+- sent:
+    method: GET
+    url: https://api.mailjet.com/v3/REST/contact/1001/getcontactslists
+    headers:
+      authorization: Basic dGVzdC1rZXk6dGVzdC1zZWNyZXQ=
+  answer:
+    status: 200
+    body:
+      Count: 1
+      Data:
+      - ListID: 55
+        IsActive: true
+        IsUnsub: false
+        SubscribedAt: '2026-11-01T10:00:00Z'
+      Total: 1
+result:
+- ListID: 55
+  IsActive: true
+  IsUnsub: false
+  SubscribedAt: '2026-11-01T10:00:00Z'

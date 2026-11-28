@@ -2,7 +2,7 @@ name: Post new orders to Discord
 description: >-
   When an order comes in over a webhook ({"id", "customer", "total"}), post it to a Discord channel through the
   channel's webhook.
-category: Messaging
+category: E-commerce
 trigger:
   webhook: {}
 # What a test runs on: an event as this trigger gives it.

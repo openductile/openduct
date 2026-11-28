@@ -1,0 +1,38 @@
+description: A note written on a deal
+action: add_deal_note
+credential:
+  account: shopexample
+  api_key: test-key
+input:
+  deal_id: '7'
+  note: Asked for delivery by Friday
+exchanges:
+- sent:
+    method: POST
+    url: https://shopexample.api-us1.com/api/3/deals/7/notes
+    headers:
+      api-token: test-key
+    body:
+      note:
+        note: Asked for delivery by Friday
+  answer:
+    status: 201
+    body:
+      deals:
+      - id: '7'
+        title: Spring order
+        value: '45678'
+        currency: usd
+        status: '0'
+        contact: '113'
+        group: '1'
+        stage: '2'
+        owner: '1'
+        cdate: '2026-11-27T10:05:00-06:00'
+      note: &id001
+        id: '40'
+        note: Asked for delivery by Friday
+        relid: '7'
+        reltype: Deal
+        cdate: '2026-11-27T10:30:00-06:00'
+result: *id001

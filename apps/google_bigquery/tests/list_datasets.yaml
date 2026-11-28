@@ -1,0 +1,7 @@
+action: list_datasets
+credential: { access_token: ya29.bq-test }
+input: { project_id: example-shop-1 }
+exchanges:
+  - sent: { method: GET, url: https://bigquery.googleapis.com/bigquery/v2/projects/example-shop-1/datasets, query: { maxResults: "1000" } }
+    answer: { body: { datasets: [{ id: "example-shop-1:shop", datasetReference: { projectId: example-shop-1, datasetId: shop }, location: US }] } }
+result: [{ id: shop, location: US, name: null }]

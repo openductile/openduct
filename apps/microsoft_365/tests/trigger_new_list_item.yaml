@@ -1,0 +1,12 @@
+description: An item added to a list since the poll before
+trigger: new_list_item
+credential: { access_token: eyJ0 }
+input: { site_id: "example.sharepoint.com,da60e844-ba1d-49bc-b4d4-d5e36bae9019,712a596e-90a1-49e3-9b48-bfa80bee8740", list_id: Orders }
+seen: { items: [["1", ""]] }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://graph.microsoft.com/v1.0/sites/example.sharepoint.com,da60e844-ba1d-49bc-b4d4-d5e36bae9019,712a596e-90a1-49e3-9b48-bfa80bee8740/lists/Orders/items"
+      query: { expand: fields }
+    answer: { body: { value: [{ id: "1", fields: { Title: Order 1042 } }, { id: "2", fields: { Title: Order 1043 } }] } }
+runs: [{ id: "2", fields: { Title: Order 1043 } }]

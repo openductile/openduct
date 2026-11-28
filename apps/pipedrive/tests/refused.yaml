@@ -1,0 +1,7 @@
+description: "A token Pipedrive does not take: the step fails in its words"
+action: get_deal
+credential: { api_key: test-pipedrive-token }
+input: { id: 41 }
+exchanges:
+  - answer: { status: 401, body: { success: false, error: "unauthorized access", errorCode: 401, error_info: "Please check developers.pipedrive.com" } }
+error: "Pipedrive answered 401: unauthorized access"

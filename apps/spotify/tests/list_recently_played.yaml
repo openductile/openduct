@@ -1,0 +1,6 @@
+action: list_recently_played
+credential: { access_token: BQ-test-token }
+exchanges:
+  - sent: { method: GET, url: https://api.spotify.com/v1/me/player/recently-played, query: { limit: "50" } }
+    answer: { body: { items: [{ played_at: "2026-11-27T09:12:00.120Z", track: { id: 0TestTrack000000000002, name: Second Song, uri: "spotify:track:0TestTrack000000000002", duration_ms: 185000 }, context: { type: playlist, uri: "spotify:playlist:0TestList000000000001" } }], cursors: { after: "1795770720120", before: "1795770720120" }, next: null } }
+result: [{ played_at: "2026-11-27T09:12:00.120Z", track: { id: 0TestTrack000000000002, name: Second Song, uri: "spotify:track:0TestTrack000000000002", duration_ms: 185000 }, context: { type: playlist, uri: "spotify:playlist:0TestList000000000001" } }]

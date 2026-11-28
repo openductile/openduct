@@ -1,0 +1,39 @@
+description: "Create a task"
+action: create_task
+credential: { api_key: test-key }
+input: { list_id: 123, name: example }
+exchanges:
+  - sent:
+      method: POST
+      url: "https://api.clickup.com/api/v2/list/123/task"
+      query: {}
+      headers: { authorization: test-key }
+      body: { name: example }
+    answer:
+      status: 200
+      body:
+        id: id_1
+        custom_id: custom_1
+        custom_item_id: 1
+        name: example
+        text_content: example
+        description: example
+        markdown_description: example
+        status: { id: id_1, status: example, color: example, orderindex: 1, type: example }
+        orderindex: example
+        date_created: example
+        date_updated: example
+        date_closed: example
+result:
+  id: id_1
+  custom_id: custom_1
+  custom_item_id: 1
+  name: example
+  text_content: example
+  description: example
+  markdown_description: example
+  status: { id: id_1, status: example, color: example, orderindex: 1, type: example }
+  orderindex: example
+  date_created: example
+  date_updated: example
+  date_closed: example

@@ -1,0 +1,31 @@
+description: "Add a task for a contact"
+action: add_task
+credential: { token: test-token }
+input: { contact_id: sx6wyHhbFdRXh302LLNR, title: example, due_date: "2020-10-25T11:00:00Z", completed: true }
+exchanges:
+  - sent:
+      method: POST
+      url: "https://services.leadconnectorhq.com/contacts/sx6wyHhbFdRXh302LLNR/tasks"
+      query: {}
+      headers: { authorization: "Bearer test-token", version: "2021-07-28" }
+      body: { title: example, dueDate: "2020-10-25T11:00:00Z", completed: true }
+    answer:
+      status: 201
+      body:
+        task:
+          id: lJpzYrWdpkC2hX6t2yue
+          title: test
+          body: testing
+          assignedTo: tesTUcmRxWrjqzJS8EjkxNKting
+          dueDate: "2021-07-08T02:30:00.000Z"
+          completed: true
+          contactId: lJpzYrWdpkC2hX6t2yue
+result:
+  task:
+    id: lJpzYrWdpkC2hX6t2yue
+    title: test
+    body: testing
+    assignedTo: tesTUcmRxWrjqzJS8EjkxNKting
+    dueDate: "2021-07-08T02:30:00.000Z"
+    completed: true
+    contactId: lJpzYrWdpkC2hX6t2yue

@@ -1,0 +1,32 @@
+description: Only a contact's phone changed
+action: update_contact
+credential: {domain: shopexample, email: dana@shop.example, api_key: agile-test-key}
+input: {contact_id: '5629585249009664', phone: +1 555 0100}
+exchanges:
+- sent:
+    method: PUT
+    url: https://shopexample.agilecrm.com/dev/api/contacts/edit-properties
+    headers: {authorization: Basic ZGFuYUBzaG9wLmV4YW1wbGU6YWdpbGUtdGVzdC1rZXk=, accept: application/json}
+    query: {}
+    body:
+      id: '5629585249009664'
+      properties:
+      - {type: SYSTEM, name: phone, value: +1 555 0100, subtype: work}
+  answer:
+    status: 200
+    body: &id001
+      id: '5629585249009664'
+      type: PERSON
+      created_time: '1764237600'
+      updated_time: 1764237600
+      star_value: 4
+      lead_score: 10
+      tags: [Lead]
+      properties:
+      - {type: SYSTEM, name: first_name, value: Ann}
+      - {type: SYSTEM, name: last_name, value: Example}
+      - {type: SYSTEM, name: email, value: ann@example.com, subtype: work}
+      contact_company_id: null
+      owner: {id: 6263975862861824, email: dana@shop.example, name: Dana Example}
+      campaignStatus: []
+result: *id001

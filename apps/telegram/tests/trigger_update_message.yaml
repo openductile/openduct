@@ -1,0 +1,17 @@
+description: A message, through the same address
+trigger: update
+workflow: wf3
+credential: { bot_token: "123:abc", "webhook_secret@wf3": s3cr3t }
+delivery:
+  headers: { x-telegram-bot-api-secret-token: s3cr3t }
+  body: '{"update_id": 951, "message": {"message_id": 11, "from": {"id": 7, "first_name": "Ann"}, "chat": {"id": 42}, "text": "status A-100"}}'
+  at: 1700000000
+runs:
+  - kind: message
+    data: ""
+    callback_query_id: ""
+    from: { id: 7, first_name: Ann }
+    chat_id: 42
+    message_id: 11
+    text: status A-100
+    message: { message_id: 11, from: { id: 7, first_name: Ann }, chat: { id: 42 }, text: status A-100 }

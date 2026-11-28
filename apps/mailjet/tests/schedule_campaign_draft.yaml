@@ -1,0 +1,27 @@
+description: A campaign for a time
+action: schedule_campaign_draft
+credential:
+  api_key: test-key
+  secret_key: test-secret
+input:
+  draft_id: '7001'
+  date: '2026-12-01T09:00:00Z'
+exchanges:
+- sent:
+    method: POST
+    url: https://api.mailjet.com/v3/REST/campaigndraft/7001/schedule
+    headers:
+      authorization: Basic dGVzdC1rZXk6dGVzdC1zZWNyZXQ=
+    body:
+      Date: '2026-12-01T09:00:00Z'
+  answer:
+    status: 201
+    body:
+      Count: 1
+      Data:
+      - Date: '2026-12-01T09:00:00Z'
+        Status: Programmed
+      Total: 1
+result:
+  Date: '2026-12-01T09:00:00Z'
+  Status: Programmed

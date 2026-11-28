@@ -1,0 +1,7 @@
+description: No member has that email
+action: find_user_by_email
+credential: { bot_token: xoxb-1 }
+input: { email: nobody@example.com }
+exchanges:
+  - answer: { body: { ok: false, error: users_not_found } }
+error: "Slack refused it: users_not_found"

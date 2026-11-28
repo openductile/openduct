@@ -20,8 +20,17 @@ Two ways, both giving the store's name (`mystore` of `mystore.myshopify.com`):
 - **Look up an order** (`get_order`).
 - **Add a customer** (`create_customer`).
 
+## Triggers
+
+- **A new order** (`new_order`), **An order paid** (`order_paid`), **A new customer** (`new_customer`): each as Shopify
+  sends it, signed with the app's secret. Turning the workflow on adds the webhook to the store, and turning it off
+  deletes it. With an Admin API access token, the credential needs the app's **API secret key** (it signs the
+  webhooks); an app's client ID and secret sign in already with it.
+
 ## Tested
 
 Recorded exchanges from Shopify's documented requests and answers (`tests/`).
 
 Run against a development store on 2026-11-16, signed in with an app's client ID and secret (the token asked of the store itself): List orders, Get an order and Create a customer worked. The access-token sign-in was not tried live.
+
+Triggers are tested with recorded exchanges and signed deliveries (`tests/trigger_*.yaml`), signatures made as the app documents them; none was run against a live account.

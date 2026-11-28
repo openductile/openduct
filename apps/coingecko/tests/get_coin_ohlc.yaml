@@ -1,0 +1,10 @@
+description: Candles come as lists of five numbers; each is made a record
+action: get_coin_ohlc
+credential: { api_key: CG-test1 }
+input: { id: bitcoin, vs_currency: usd, days: "1" }
+exchanges:
+  - sent: { method: GET, url: https://api.coingecko.com/api/v3/coins/bitcoin/ohlc, query: { vs_currency: usd, days: "1" } }
+    answer: { body: [[1795737600000, 76769.0, 76889.0, 76744.0, 76818.0], [1795739400000, 76818.0, 76900.0, 76321.0, 76422.0]] }
+result:
+  - { time: 1795737600000, open: 76769.0, high: 76889.0, low: 76744.0, close: 76818.0 }
+  - { time: 1795739400000, open: 76818.0, high: 76900.0, low: 76321.0, close: 76422.0 }

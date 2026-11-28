@@ -1,0 +1,12 @@
+description: Leads added since the poll before, the newest first; listing stops at one seen
+trigger: new_record
+credential: { address: "https://mycompany.example.com", api_key: 6578616d706c65206b6579 }
+input: { model: crm.lead, fields: "name,email_from" }
+seen: { items: [["12", ""]] }
+exchanges:
+  - sent:
+      method: POST
+      url: https://mycompany.example.com/json/2/crm.lead/search_read
+      body: { domain: [], fields: [name, email_from], order: id desc, limit: 100 }
+    answer: { body: [{ id: 14, name: Repair quote, email_from: cy@example.com }, { id: 13, name: Table order, email_from: bo@example.com }, { id: 12, name: Website order for 20 chairs, email_from: ann@example.com }] }
+runs: [{ id: 13, name: Table order, email_from: bo@example.com }, { id: 14, name: Repair quote, email_from: cy@example.com }]

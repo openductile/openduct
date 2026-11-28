@@ -1,0 +1,7 @@
+action: create_company
+credential: { api_key: xkeysib-test-1 }
+input: { name: Example Ltd, attributes: { domain: example.com } }
+exchanges:
+  - sent: { method: POST, url: https://api.brevo.com/v3/companies, body: { name: Example Ltd, attributes: { domain: example.com } } }
+    answer: { body: { id: 61a5ce58c5d4795761045991 } }
+result: { id: 61a5ce58c5d4795761045991 }

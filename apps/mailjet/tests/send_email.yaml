@@ -1,0 +1,60 @@
+description: An email to two people, written here
+action: send_email
+credential:
+  api_key: test-key
+  secret_key: test-secret
+input:
+  from_email: orders@example.com
+  from_name: Sample Shop
+  to: pat@example.com, lee@example.com
+  subject: Your order has shipped
+  text: It is on its way.
+  html: <p>It is on its way.</p>
+  custom_id: order-100
+exchanges:
+- sent:
+    method: POST
+    url: https://api.mailjet.com/v3.1/send
+    headers:
+      authorization: Basic dGVzdC1rZXk6dGVzdC1zZWNyZXQ=
+    body:
+      Messages:
+      - From:
+          Email: orders@example.com
+          Name: Sample Shop
+        To:
+        - Email: pat@example.com
+        - Email: lee@example.com
+        Subject: Your order has shipped
+        TextPart: It is on its way.
+        HTMLPart: <p>It is on its way.</p>
+        CustomID: order-100
+  answer:
+    status: 200
+    body:
+      Messages:
+      - Status: success
+        CustomID: order-100
+        To:
+        - &id001
+          Email: pat@example.com
+          MessageUUID: 123e4567-e89b-12d3-a456-426614174000
+          MessageID: 288230376151711744
+          MessageHref: https://api.mailjet.com/v3/REST/message/288230376151711744
+        - Email: lee@example.com
+          MessageUUID: 123e4567-e89b-12d3-a456-426614174000
+          MessageID: 288230376151711744
+          MessageHref: https://api.mailjet.com/v3/REST/message/288230376151711744
+        Cc: &id002 []
+        Bcc: &id003 []
+result:
+  Status: success
+  CustomID: order-100
+  To:
+  - *id001
+  - Email: lee@example.com
+    MessageUUID: 123e4567-e89b-12d3-a456-426614174000
+    MessageID: 288230376151711744
+    MessageHref: https://api.mailjet.com/v3/REST/message/288230376151711744
+  Cc: *id002
+  Bcc: *id003

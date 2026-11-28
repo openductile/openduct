@@ -1,0 +1,7 @@
+action: get_task
+credential: { token: todoist-test-token }
+input: { task_id: 6Xtest0000000001 }
+exchanges:
+  - sent: { method: GET, url: https://api.todoist.com/api/v1/tasks/6Xtest0000000001 }
+    answer: { body: { id: 6Xtest0000000001, content: Call the supplier, description: About the December order, project_id: 6Xproj0000000001, section_id: null, parent_id: null, labels: [phone], priority: 4, due: { date: "2026-11-28", string: tomorrow, is_recurring: false }, checked: false, added_at: "2026-11-27T09:00:00.000000Z", note_count: 0 } }
+result: { id: 6Xtest0000000001, content: Call the supplier, description: About the December order, project_id: 6Xproj0000000001, section_id: null, parent_id: null, labels: [phone], priority: 4, due: { date: "2026-11-28", string: tomorrow, is_recurring: false }, checked: false, added_at: "2026-11-27T09:00:00.000000Z", note_count: 0 }

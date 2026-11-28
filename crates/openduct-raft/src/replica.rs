@@ -39,7 +39,9 @@ use crate::members::{Forwarded, Member, Members, lead_write};
 use crate::net::{self, ClusterAuth, Links};
 use crate::partition::{PartitionMachine, PartitionShared};
 use crate::types::{Broker, Command, ControllerRaft, GroupId, PartitionRaft, Reply};
+use empty_disk::EmptyDisk;
 
+mod empty_disk;
 mod moves;
 mod quiet;
 mod store;
@@ -56,6 +58,15 @@ pub struct Timing {
     pub heartbeat: Duration,
     pub election_min: Duration,
     pub election_max: Duration,
+    /// How long a partition of which every copy here is being rebuilt is given to find a leader - a copy that
+    /// kept its log - before it is started empty (`ReplicaConfig::start_empty_where_none_survived`). Many
+    /// elections long: a copy that kept its log and can be reached leads well inside it.
+    pub empty_start_wait: Duration,
+    /// How long a broker leads a partition before it may hand it back to the partition's first broker. Longer than
+    /// any broker takes to stop (a pod's grace period is sixty seconds): a broker that has just given its
+    /// partitions away is stopping, and handing them straight back made it lead while it was being killed (UAT
+    /// drill, 2026-11-24). A broker that restarts gets its partitions back this long after it went.
+    pub hand_back_after: Duration,
 }
 
 impl Default for Timing {
@@ -64,6 +75,8 @@ impl Default for Timing {
             heartbeat: Duration::from_millis(200),
             election_min: Duration::from_millis(1_500),
             election_max: Duration::from_millis(3_000),
+            empty_start_wait: Duration::from_secs(30),
+            hand_back_after: Duration::from_secs(120),
         }
     }
 }
@@ -94,6 +107,22 @@ pub struct ReplicaConfig {
     pub supported_level: u32,
     /// Partitions of the offsets topic (see `offsets`): how far consumer groups' commits spread.
     pub offsets_partitions: i32,
+    /// A person's word that, where most copies of a partition were lost, the copies which kept their log are to be
+    /// taken as the truth (members.rs `accept_surviving_copies`): the name of this recovery, any text a person
+    /// chooses. It holds for ONE recovery: once every partition has a leader again the name is written into the
+    /// data directory as spent, and from then on it does nothing - at a later start, after a later loss - until a
+    /// person gives a new name. So a setting left in place is harmless, where a switch left on would let a later
+    /// loss be settled without anyone deciding it. `None`: such a partition waits.
+    pub accept_surviving_copies: Option<String>,
+    /// A person's STRONGER word, for a partition of which NO copy kept its log (2026-11-24: Production's event log
+    /// had 18 such partitions - every copy set aside - and they waited for ever, as the word above is built to
+    /// leave them). Named, and spent, as that one is, and it includes it. Where a copy that kept its log is in
+    /// reach it leads within moments and the others are rebuilt from it, exactly as under the word above. Only a
+    /// partition that still has no leader after `Timing::empty_start_wait` is started again EMPTY by the copies
+    /// being rebuilt: what it held is gone (the set-aside directories keep what was on each disk). THE RISK a
+    /// person takes with this word: a copy that kept its log but could not be reached during that wait is passed
+    /// over, and what only it held is lost with the rest. `None`: such a partition waits.
+    pub start_empty_where_none_survived: Option<String>,
 }
 
 impl ReplicaConfig {
@@ -118,6 +147,8 @@ impl ReplicaConfig {
             tier: None,
             supported_level: crate::features::SUPPORTED_LEVEL,
             offsets_partitions: 16,
+            accept_surviving_copies: None,
+            start_empty_where_none_survived: None,
         }
     }
 }
@@ -202,33 +233,14 @@ fn write_identity(config: &ReplicaConfig, identity: &Identity) -> io::Result<()>
     crate::snapshot::sync_dir(&config.dir)
 }
 
-/// For a broker starting with an empty disk: whether the cluster exists already - the highest index any other
-/// broker's controller has committed - asking the others for a little while.
-async fn existing_cluster(links: &Links, config: &ReplicaConfig) -> Option<u64> {
-    let deadline = Instant::now() + (config.timing.election_max * 2).max(Duration::from_secs(3));
-    loop {
-        let mut found = None;
-        for (id, b) in &config.brokers {
-            if *id != config.id
-                && let Some(info) = links.probe(&b.raft).await
-                && let Some(committed) = info.controller_committed
-            {
-                found = Some(found.map_or(committed, |f: u64| f.max(committed)));
-            }
-        }
-        if found.is_some() || Instant::now() >= deadline {
-            return found;
-        }
-        tokio::time::sleep(Duration::from_millis(200)).await;
-    }
-}
-
 #[derive(Debug)]
 struct Inner {
     id: u64,
-    /// Set when this broker came back with an empty disk to a cluster that existed: the controller's index then.
-    /// Groups that existed by then recover before they vote.
+    /// Set when this broker started with an empty disk while its cluster was up: the controller's index then. It is
+    /// taken in by the controller's leader (`join`); whether its copies catch up before they vote is `empty_disk`'s.
     rejoined_at: Option<u64>,
+    /// New to the cluster, or back after losing its disk (`empty_disk.rs`).
+    empty_disk: parking_lot::Mutex<EmptyDisk>,
     config: ReplicaConfig,
     raft_config: Arc<Config>,
     flusher: Arc<Flusher>,
@@ -241,14 +253,21 @@ struct Inner {
     moves: parking_lot::Mutex<BTreeSet<GroupId>>,
     /// Set once the cluster uses a feature level this broker's build does not support: it serves nothing more.
     outdated: std::sync::atomic::AtomicBool,
+    /// The recovery a person named at this start, while it is still in force (`accept_surviving_copies`).
+    recovery: parking_lot::Mutex<Option<String>>,
+    /// Whether the stronger word is in force: a partition with no copy that kept its log is started empty.
+    empty_start: std::sync::atomic::AtomicBool,
     /// Partitions whose first broker has been caught up for that many checks in a row.
     steady: parking_lot::Mutex<BTreeMap<GroupId, u32>>,
+    /// Since when this broker has led each partition it leads, as the hand-back first saw it.
+    leading_since: parking_lot::Mutex<BTreeMap<GroupId, tokio::time::Instant>>,
 }
 
 /// This broker's part of the cluster.
 pub struct Replica {
     inner: Arc<Inner>,
-    tasks: Vec<JoinHandle<()>>,
+    /// Its own tasks: the server for the other brokers first. Taken by `shutdown`, which waits for each to end.
+    tasks: parking_lot::Mutex<Vec<JoinHandle<()>>>,
 }
 
 impl std::fmt::Debug for Replica {
@@ -312,11 +331,90 @@ impl Replica {
         let (identity, fresh) = identity(&config)?;
         let flusher = Flusher::start()?;
         let members = Arc::new(Members::new(config.supported_level));
+        let recovery = match config.accept_surviving_copies.as_deref().map(str::trim) {
+            Some(name) if !name.is_empty() => {
+                if spent_recoveries(&config.dir).iter().any(|spent| spent == name) {
+                    tracing::info!(
+                        recovery = name,
+                        "--accept-surviving-copies names a recovery that is done: it has no effect. A new loss \
+                         needs a new name, given by a person"
+                    );
+                    None
+                } else {
+                    tracing::warn!(
+                        recovery = name,
+                        "started with --accept-surviving-copies: where most copies of a partition were lost, the \
+                         copies that kept their log are taken as they are - until every partition has a leader"
+                    );
+                    members.accept_surviving_copies(true);
+                    Some(name.to_owned())
+                }
+            }
+            _ => None,
+        };
+        // The stronger word (config: start_empty_where_none_survived). It includes the one above - the copies being
+        // rebuilt vote - and is spent the same way, under a name of its own kind.
+        let empty_word = config
+            .start_empty_where_none_survived
+            .as_deref()
+            .map(str::trim)
+            .filter(|name| !name.is_empty())
+            .map(|name| format!("{EMPTY_WORD}{name}"));
+        let (recovery, empty_start) = match empty_word {
+            Some(key) if spent_recoveries(&config.dir).contains(&key) => {
+                tracing::info!(
+                    recovery = %key,
+                    "--start-empty-where-no-copy-survived names a recovery that is done: it has no effect. A new \
+                     loss needs a new name, given by a person"
+                );
+                (recovery, false)
+            }
+            Some(key) => {
+                tracing::warn!(
+                    recovery = %key,
+                    wait_secs = config.timing.empty_start_wait.as_secs(),
+                    "started with --start-empty-where-no-copy-survived: a partition of which no copy kept its log \
+                     is started again EMPTY once it has had no leader for the wait - what it held is gone, and so \
+                     is what a copy that could not be reached in that time alone held"
+                );
+                members.accept_surviving_copies(true);
+                (Some(key), true)
+            }
+            None => (recovery, false),
+        };
         let links = Links::new(config.id, config.auth.clone(), Arc::clone(&members));
         let dir = config.dir.join("controller");
-        let log = LogStore::open(dir.join("raft"), config.log_segment_bytes, Arc::clone(&flusher))?;
-        let machine = ControllerMachine::open(dir.join("state"))?;
+        let open_log = || LogStore::open(dir.join("raft"), config.log_segment_bytes, Arc::clone(&flusher));
+        let mut log = open_log()?;
+        let mut machine = ControllerMachine::open(dir.join("state"))?;
+        // THE CLUSTER'S OWN STATE IS CHECKED AS A PARTITION'S COPY IS (start_partition): purged with no snapshot on
+        // this disk to cover it, this broker's copy of it is lost. It is set aside and rebuilt from the others. The
+        // partitions' copies on this disk are untouched by that - and are not to be touched until this broker knows
+        // again what it holds (reconcile removes nothing while the cluster's state here is being rebuilt).
+        let mark = dir.join(RECOVERING_MARK);
+        let mut controller_lost = mark.exists();
+        if let Some(purged) = log.get_log_state().await?.last_purged_log_id
+            && !machine.covers(&purged)
+        {
+            drop(machine);
+            drop(log);
+            let kept = set_aside(&config.dir, &GroupId::Controller, &dir)?;
+            write_mark(&dir, &mark)?;
+            controller_lost = true;
+            tracing::error!(
+                purged = %purged,
+                kept = %kept.display(),
+                "this broker's copy of the cluster's state cannot be rebuilt: its log is purged and no snapshot on \
+                 this disk covers it. The copy is set aside and rebuilt from the other brokers"
+            );
+            log = open_log()?;
+            machine = ControllerMachine::open(dir.join("state"))?;
+        }
+        if controller_lost {
+            members.mark_recovering_at(GroupId::Controller, mark.clone());
+        }
         let control = machine.shared();
+        log.purge_no_further_than(control.snapshots.floor());
         let controller = ControllerRaft::new(
             config.id,
             Arc::clone(&raft_config),
@@ -326,12 +424,19 @@ impl Replica {
         )
         .await
         .map_err(|e| io::Error::other(format!("the controller did not start: {e}")))?;
+        if controller_lost {
+            // It follows and is caught up; it neither stands for election nor starts a cluster of its own.
+            controller.runtime_config().elect(false);
+        }
         if !members.insert(
             GroupId::Controller,
             Member::Controller(controller.clone(), Arc::clone(&control)),
         ) {
             let _ = controller.shutdown().await;
             return Err(io::Error::other("the broker stopped while it started"));
+        }
+        if controller_lost {
+            tokio::spawn(settle_controller_when_level(Arc::clone(&members)));
         }
         let listener = TcpListener::bind(config.listen).await?;
         let server = tokio::spawn(net::serve(
@@ -346,7 +451,7 @@ impl Replica {
             .map_err(|e| io::Error::other(e.to_string()))?;
         // An empty disk: a new cluster, or a broker of an existing one that lost its data.
         let rejoined_at = if fresh {
-            existing_cluster(&links, &config).await
+            empty_disk::existing_cluster(&links, &config).await
         } else {
             None
         };
@@ -356,7 +461,7 @@ impl Replica {
                 "this broker's disk is empty but its cluster exists: rejoining, its copies rebuilt from the others"
             );
             members.mark_recovering(GroupId::Controller);
-        } else if config.brokers.keys().next() == Some(&config.id) && !initialized {
+        } else if config.brokers.keys().next() == Some(&config.id) && !initialized && !controller_lost {
             tracing::info!(brokers = config.brokers.len(), "starting a new cluster");
             if let Err(e) = controller.initialize(config.brokers.clone()).await {
                 tracing::info!(error = %e, "the cluster was already started");
@@ -368,6 +473,9 @@ impl Replica {
         let inner = Arc::new(Inner {
             id: config.id,
             rejoined_at,
+            empty_disk: parking_lot::Mutex::new(
+                rejoined_at.map_or(EmptyDisk::No, |at| EmptyDisk::Undecided { at }),
+            ),
             config,
             raft_config,
             flusher,
@@ -378,7 +486,10 @@ impl Replica {
             runtime: Handle::current(),
             moves: parking_lot::Mutex::new(BTreeSet::new()),
             outdated: std::sync::atomic::AtomicBool::new(false),
+            recovery: parking_lot::Mutex::new(recovery),
+            empty_start: std::sync::atomic::AtomicBool::new(empty_start),
             steady: parking_lot::Mutex::new(BTreeMap::new()),
+            leading_since: parking_lot::Mutex::new(BTreeMap::new()),
         });
         let mut tasks = vec![
             server,
@@ -389,15 +500,29 @@ impl Replica {
         if let Some(tier) = inner.config.tier.clone() {
             tasks.push(tokio::spawn(tiering::tend(Arc::clone(&inner), tier)));
         }
-        if inner.rejoined_at.is_some() {
-            // New to the cluster, or back with an empty disk: taken in by the controller's leader.
+        if let Some(at) = inner.rejoined_at {
+            // New to the cluster, or back with an empty disk: taken in by the controller's leader, and told which.
             tasks.push(tokio::spawn(Arc::clone(&inner).join()));
+            tasks.push(tokio::spawn(empty_disk::settle(Arc::clone(&inner), at)));
         }
-        Ok(Self { inner, tasks })
+        Ok(Self {
+            inner,
+            tasks: parking_lot::Mutex::new(tasks),
+        })
     }
 
     pub fn id(&self) -> u64 {
         self.inner.id
+    }
+
+    /// How it started as to its disk: "kept", "undecided", "new" (copies vote at once) or "lost" (empty_disk.rs).
+    pub fn empty_disk(&self) -> &'static str {
+        match *self.inner.empty_disk.lock() {
+            EmptyDisk::No => "kept",
+            EmptyDisk::Undecided { .. } => "undecided",
+            EmptyDisk::New { .. } => "new",
+            EmptyDisk::Lost { .. } => "lost",
+        }
     }
 
     /// The cluster's feature level, as this broker's copy of the controller has it.
@@ -439,17 +564,293 @@ impl Replica {
         }
     }
 
-    /// Stops taking part: no more answers to the other brokers, and every group stopped.
+    /// How this broker stands: joined, and every partition it holds started, not being rebuilt, led, and level with
+    /// its leader (members.rs [`crate::Readiness`]).
+    pub fn readiness(&self) -> crate::Readiness {
+        // A leader that has heard from most of its group within two elections' time is leading.
+        let mut r = self
+            .inner
+            .members
+            .readiness(self.inner.id, self.inner.config.timing.election_max * 2);
+        // Against what it SHOULD hold, not only what it has started: a broker that has just come up has started
+        // nothing yet, and nothing wrong with nothing is not ready.
+        r.pending = self
+            .inner
+            .wanted()
+            .keys()
+            .filter(|group| self.inner.members.get(group).is_none())
+            .count()
+            .saturating_sub(r.not_started.len());
+        r
+    }
+
+    /// The partitions this broker should hold a copy of and could not start at its last pass, each with why -
+    /// empty when all of them are up. What "ready" and `cluster status` are told from: a broker that answers and
+    /// holds partitions it cannot start is not a healthy one.
+    pub fn partitions_not_started(&self) -> Vec<(String, String)> {
+        self.inner
+            .members
+            .not_started()
+            .into_iter()
+            .map(|(group, why)| (group.to_string(), why))
+            .collect()
+    }
+
+    /// BEFORE A BROKER STOPS, IT GIVES AWAY WHAT IT LEADS (2026-11-24). Stopped as it was, every partition it led
+    /// had no leader until the others noticed and elected one - seconds in which writes to them were refused; the
+    /// restart drill in a test lane counted the refusals. Asked first, the follower furthest along takes each
+    /// group over at once, and this broker goes on answering (and passing writes on) until it has. Returns how
+    /// many groups this broker still leads when `within` is over: they are stopped as before, and elect.
+    pub async fn hand_over(&self, within: Duration) -> usize {
+        let me = self.inner.id;
+        // FIRST: from now on this broker takes no leadership back, offered or by election (members.rs `leave`).
+        self.inner.members.leave();
+        let until = tokio::time::Instant::now() + within;
+        let mut handed = 0usize;
+        // The partitions first, the cluster's own group last: a broker taking a partition over writes that down
+        // with the cluster's leader, which must not be on its way out at that moment.
+        for cluster_group in [false, true] {
+            let mut asked = BTreeMap::<GroupId, tokio::time::Instant>::new();
+            // A hand-over the other broker did not take up ends with this one leading again after an election's
+            // time: it is asked again then, not left.
+            let again = self.inner.config.timing.election_max + Duration::from_millis(200);
+            loop {
+                let mut waiting = 0usize;
+                for (group, member) in self.inner.members.all() {
+                    if matches!(group, GroupId::Controller) != cluster_group {
+                        continue;
+                    }
+                    let leader = member.leader().0;
+                    if leader == Some(me) {
+                        // Not asked again while the first asking is under way: that would only start it over.
+                        if asked.get(&group).is_none_or(|at| at.elapsed() >= again)
+                            && member.hand_over(me).await
+                        {
+                            asked.insert(group, tokio::time::Instant::now());
+                        }
+                        waiting += usize::from(asked.contains_key(&group));
+                    } else if asked.contains_key(&group) && leader.is_none() {
+                        // Given away, and nobody has yet been HEARD to lead it: not over until one is.
+                        waiting += 1;
+                    }
+                }
+                if waiting == 0 || tokio::time::Instant::now() >= until {
+                    handed += asked.len();
+                    break;
+                }
+                tokio::time::sleep(Duration::from_millis(20)).await;
+            }
+        }
+        let left = self
+            .inner
+            .members
+            .all()
+            .into_iter()
+            .filter(|(_, member)| member.leader().0 == Some(me))
+            .count();
+        if handed > 0 {
+            tracing::info!(
+                handed_over = handed,
+                still_led = left,
+                "leadership given to the other brokers before stopping"
+            );
+        }
+        left
+    }
+
+    /// Stops taking part: no more answers to the other brokers, and every group stopped. When it returns, its
+    /// tasks have ended - the listener among them - so its address is free for a broker started again on it.
     pub async fn shutdown(&self) {
         // First, so a group started meanwhile is stopped by whoever started it rather than missed here.
         self.inner.members.close();
-        for t in &self.tasks {
+        let tasks = std::mem::take(&mut *self.tasks.lock());
+        for t in &tasks {
             t.abort();
+        }
+        for t in tasks {
+            // An aborted task answers "cancelled" once it has stopped and dropped what it held.
+            let _ = t.await;
         }
         for (_, member) in self.inner.members.all() {
             member.shutdown().await;
         }
     }
+}
+
+/// Watches a copy being rebuilt and lets go of it as soon as it is level with its leader; ends then, or when the
+/// group stops.
+async fn settle_when_level(members: Arc<Members>, group: GroupId, raft: PartitionRaft) {
+    let mut metrics = raft.metrics();
+    loop {
+        match members.get(&group) {
+            Some(member) => {
+                if members.may_vote(&group, &member) && !members.is_recovering(&group) {
+                    return;
+                }
+            }
+            // Not taken in yet (this runs from its start), or stopped.
+            None if members.is_closed() => return,
+            None => {}
+        }
+        tokio::select! {
+            changed = metrics.changed() => {
+                if changed.is_err() {
+                    return;
+                }
+            }
+            () = tokio::time::sleep(Duration::from_millis(200)) => {}
+        }
+    }
+}
+
+/// As [`settle_when_level`], for the cluster's own group.
+async fn settle_controller_when_level(members: Arc<Members>) {
+    let group = GroupId::Controller;
+    loop {
+        match members.get(&group) {
+            Some(member) => {
+                if members.may_vote(&group, &member) && !members.is_recovering(&group) {
+                    return;
+                }
+            }
+            None if members.is_closed() => return,
+            None => {}
+        }
+        tokio::time::sleep(Duration::from_millis(200)).await;
+    }
+}
+
+/// The recoveries a person named that are done, a name a line: `<data>/recoveries-done`.
+const RECOVERIES_DONE: &str = "recoveries-done";
+/// How the stronger word's names are written there, so the same text given for the two words is two recoveries.
+const EMPTY_WORD: &str = "start-empty:";
+
+/// NO COPY KEPT ITS LOG. Waits `wait` for a leader - a copy that kept its log leads within moments, and this copy
+/// is then rebuilt from it and this ends. With none in all that time, and still being rebuilt, the copy takes
+/// part in starting the partition again from nothing: it may stand for election, and the group is started here if
+/// it was never started on this (emptied) disk. Every copy does the same; Raft elects one of them.
+async fn start_empty_after_wait(inner: Arc<Inner>, group: GroupId, raft: PartitionRaft, replicas: Vec<u64>) {
+    let members = Arc::clone(&inner.members);
+    let wait = inner.config.timing.empty_start_wait;
+    let until = tokio::time::Instant::now() + wait;
+    loop {
+        if members.is_closed() || !members.is_recovering(&group) {
+            return;
+        }
+        // A leader seen at any moment ends it: this copy follows that one, and is rebuilt from it.
+        if raft.metrics().borrow_watched().current_leader.is_some() {
+            return;
+        }
+        if tokio::time::Instant::now() >= until {
+            // Started only with every replica's address known, so the members are the partition's own.
+            let nodes: BTreeMap<u64, Broker> = replicas
+                .iter()
+                .filter_map(|id| inner.broker(*id).map(|b| (*id, b)))
+                .collect();
+            if nodes.len() == replicas.len() {
+                tracing::error!(
+                    %group,
+                    waited_secs = wait.as_secs(),
+                    "no copy of this partition that kept its log has led it in all that time: by a person's \
+                     word (--start-empty-where-no-copy-survived) it is started again EMPTY. What it held is \
+                     gone; what was on this disk is in the set-aside directory"
+                );
+                raft.runtime_config().elect(true);
+                if !raft.is_initialized().await.unwrap_or(true)
+                    && let Err(e) = raft.initialize(nodes).await
+                {
+                    tracing::debug!(%group, error = %e, "the group was already started");
+                }
+                return;
+            }
+        }
+        tokio::time::sleep(Duration::from_millis(200)).await;
+    }
+}
+
+fn spent_recoveries(data: &std::path::Path) -> Vec<String> {
+    std::fs::read_to_string(data.join(RECOVERIES_DONE))
+        .map(|text| {
+            text.lines()
+                .map(|l| l.trim().to_owned())
+                .filter(|l| !l.is_empty())
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+impl Inner {
+    /// A recovery a person named is over once this broker stands well again: every partition it holds started,
+    /// led and level, none being rebuilt. Its name is written down as spent - on the device, before the word is
+    /// withdrawn - and the copies here vote by the ordinary rule again.
+    fn settle_recovery(&self) {
+        let Some(name) = self.recovery.lock().clone() else {
+            return;
+        };
+        if !self
+            .members
+            .readiness(self.id, self.config.timing.election_max * 2)
+            .is_ready()
+            || self.wanted().keys().any(|g| self.members.get(g).is_none())
+        {
+            return;
+        }
+        let mut spent = spent_recoveries(&self.config.dir);
+        spent.push(name.clone());
+        let path = self.config.dir.join(RECOVERIES_DONE);
+        let written = (|| {
+            let tmp = path.with_extension("tmp");
+            std::fs::write(&tmp, spent.join("\n") + "\n")?;
+            std::fs::File::open(&tmp)?.sync_all()?;
+            std::fs::rename(&tmp, &path)?;
+            crate::snapshot::sync_dir(&self.config.dir)
+        })();
+        match written {
+            Ok(()) => {
+                self.members.accept_surviving_copies(false);
+                self.empty_start
+                    .store(false, std::sync::atomic::Ordering::Release);
+                *self.recovery.lock() = None;
+                tracing::warn!(
+                    recovery = %name,
+                    "the recovery is done on this broker: every partition it holds has a leader and is level. \
+                     --accept-surviving-copies has no effect any more and may be removed"
+                );
+            }
+            // Still in force, and tried again at the next pass: a recovery is never ended by a write that failed.
+            Err(e) => {
+                tracing::warn!(recovery = %name, error = %e, "the recovery is done but cannot be written down as done yet")
+            }
+        }
+    }
+}
+
+/// The file beside a partition's copy that says it lost what it had and is being rebuilt from the leader.
+const RECOVERING_MARK: &str = "recovering";
+
+/// Writes the mark, on the device before anything relies on it.
+fn write_mark(dir: &std::path::Path, mark: &std::path::Path) -> io::Result<()> {
+    std::fs::create_dir_all(dir)?;
+    std::fs::File::create(mark)?.sync_all()?;
+    crate::snapshot::sync_dir(dir)
+}
+
+/// Moves a copy that cannot be rebuilt out of the way, whole: `<data>/set-aside/<group>-<when>`. Kept for a person
+/// to look at; nothing in the broker reads or removes it.
+fn set_aside(data: &std::path::Path, group: &GroupId, dir: &std::path::Path) -> io::Result<PathBuf> {
+    let aside = data.join("set-aside");
+    std::fs::create_dir_all(&aside)?;
+    let when = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_or(0, |d| d.as_millis());
+    let name = group.to_string().replace(['/', ' '], "-");
+    let kept = aside.join(format!("{name}-{when}"));
+    std::fs::rename(dir, &kept)?;
+    crate::snapshot::sync_dir(&aside)?;
+    if let Some(parent) = dir.parent() {
+        crate::snapshot::sync_dir(parent)?;
+    }
+    Ok(kept)
 }
 
 /// Starts and stops partition groups as the controller's state says, whenever it changes (and every few seconds).
@@ -469,6 +870,8 @@ async fn follow_controller(inner: Arc<Inner>) {
         if let Err(e) = inner.reconcile().await {
             tracing::warn!(error = %e, "cannot start or stop a partition's group yet");
         }
+        inner.members.settle_recovered();
+        inner.settle_recovery();
         tokio::select! {
             _ = changed.changed() => {}
             () = tokio::time::sleep(Duration::from_secs(5)) => {}
@@ -623,20 +1026,49 @@ impl Inner {
     }
 
     async fn reconcile(self: &Arc<Self>) -> io::Result<()> {
+        // NO COPY BEFORE THE CLUSTER HAS THIS BROKER ON RECORD: what tells a lost disk from a new one (empty_disk.rs).
+        if !self.control.state().brokers.contains_key(&self.id) {
+            return Ok(());
+        }
         let wanted = self.wanted();
+        let mut not_started: Vec<(GroupId, String)> = Vec::new();
         for (group, (replicas, created_at, may_start)) in &wanted {
             if self.members.get(group).is_none() {
-                if self.rejoined_at.is_some_and(|at| *created_at <= at) {
+                if self.empty_disk.lock().must_catch_up(*created_at, *may_start) {
                     self.members.mark_recovering(*group);
                 }
                 // In its own task, so a stop does not cut it off half way: it finishes, and the group it started is
                 // then stopped (Members::insert refuses it once the broker is stopping).
                 let (me, group, replicas, may_start) =
                     (Arc::clone(self), *group, replicas.clone(), *may_start);
-                tokio::spawn(async move { me.start_partition(group, &replicas, may_start).await })
-                    .await
-                    .map_err(|e| io::Error::other(e.to_string()))??;
+                let started =
+                    tokio::spawn(async move { me.start_partition(group, &replicas, may_start).await })
+                        .await
+                        .map_err(|e| io::Error::other(e.to_string()))
+                        .and_then(|r| r);
+                // EACH PARTITION FAILS ALONE. One that cannot start is said, counted and tried again at the next
+                // pass; the ones after it are still started. Returning here stopped every later partition of the
+                // broker for as long as one of them could not start.
+                if let Err(e) = started {
+                    tracing::warn!(%group, error = %e, "a partition's group did not start on this broker; the others go on");
+                    not_started.push((group, e.to_string()));
+                }
             }
+        }
+        self.members.set_not_started(not_started);
+        // NOTHING IS REMOVED ON AN OLD OR EMPTY LIST. What follows stops groups and removes the directories of
+        // partitions this broker no longer holds and of topics that were deleted - by the cluster's state as this
+        // broker has it. That is only to be believed while this broker's copy of it is level with a leader it
+        // hears from: on a broker whose copy is being rebuilt, or cut off from the others, the list is short or
+        // empty, and acting on it would remove partition copies that are whole.
+        let authoritative = {
+            let r = self
+                .members
+                .readiness(self.id, self.config.timing.election_max * 2);
+            r.controller_level && !self.members.is_recovering(&GroupId::Controller)
+        };
+        if !authoritative {
+            return Ok(());
         }
         for (group, member) in self.members.all() {
             if matches!(group, GroupId::Partition { .. }) && !wanted.contains_key(&group) {
@@ -683,11 +1115,57 @@ impl Inner {
         let Some(dir) = self.partition_dir(&group) else {
             return Ok(());
         };
-        let mut log = LogStore::open(
-            dir.join("raft"),
-            self.config.log_segment_bytes,
-            Arc::clone(&self.flusher),
-        )?;
+        // A COPY BEING REBUILT STAYS ONE ACROSS A RESTART. That it lost what it had is written beside it and read
+        // back here: held in memory alone, a broker restarted half way through catching up came back with a short
+        // log and nothing to say it must not vote yet.
+        let mark = dir.join(RECOVERING_MARK);
+        if mark.exists() {
+            self.members.mark_recovering_at(group, mark.clone());
+        } else if self.members.is_recovering(&group) {
+            write_mark(&dir, &mark)?;
+            self.members.mark_recovering_at(group, mark.clone());
+        }
+        let open_log = || {
+            LogStore::open(
+                dir.join("raft"),
+                self.config.log_segment_bytes,
+                Arc::clone(&self.flusher),
+            )
+        };
+        let remote = self.config.tier.as_ref().map(|t| {
+            Arc::new(crate::tier::Fetch {
+                s3: Arc::clone(&t.s3),
+                runtime: self.runtime.clone(),
+            }) as Arc<dyn openduct_storage::Remote>
+        });
+        let open_machine = || PartitionMachine::open(dir.join("store"), self.config.store, remote.clone());
+        let mut log = open_log()?;
+        let mut machine = open_machine()?;
+        // THE COPY IS CHECKED BEFORE IT SERVES. Its Raft log holds nothing up to `purged`; only a snapshot on this
+        // disk reaching that far can rebuild it. With none, this copy is lost - whatever the reason - and trying to
+        // start it for ever helps nobody: it is set aside (kept, never removed here), and the broker takes the
+        // partition up again as a broker with an empty disk does - caught up from the leader, voting for no one
+        // until it is. The other copies are what the data lives on; with a majority of them gone the partition
+        // waits, and nothing here pretends otherwise.
+        if let Some(purged) = log.get_log_state().await?.last_purged_log_id
+            && !machine.covers(&purged)
+        {
+            drop(machine);
+            drop(log);
+            let kept = set_aside(&self.config.dir, &group, &dir)?;
+            std::fs::create_dir_all(&dir)?;
+            write_mark(&dir, &mark)?;
+            self.members.mark_recovering_at(group, mark.clone());
+            tracing::error!(
+                %group,
+                purged = %purged,
+                kept = %kept.display(),
+                "this broker's copy cannot be rebuilt: its log is purged and no snapshot on this disk covers it. \
+                 The copy is set aside and rebuilt from the partition's leader"
+            );
+            log = open_log()?;
+            machine = open_machine()?;
+        }
         let nodes: BTreeMap<u64, Broker> = replicas
             .iter()
             .filter_map(|id| self.broker(*id).map(|b| (*id, b)))
@@ -713,13 +1191,7 @@ impl Inner {
         if let (true, Some(first)) = (seeded, first) {
             log.seed(opening_entry(first, nodes.clone())).await?;
         }
-        let remote = self.config.tier.as_ref().map(|t| {
-            Arc::new(crate::tier::Fetch {
-                s3: Arc::clone(&t.s3),
-                runtime: self.runtime.clone(),
-            }) as Arc<dyn openduct_storage::Remote>
-        });
-        let machine = PartitionMachine::open(dir.join("store"), self.config.store, remote)?;
+        log.purge_no_further_than(machine.purge_floor());
         let shared = machine.shared();
         let raft = PartitionRaft::new(
             self.id,
@@ -730,6 +1202,23 @@ impl Inner {
         )
         .await
         .map_err(|e| io::Error::other(format!("{group} did not start: {e}")))?;
+        // A copy being rebuilt never stands for election: it has nothing to lead with. It follows, and is caught
+        // up; standing again is given back with its vote, once it is level with its leader (members.rs).
+        if self.members.is_recovering(&group) {
+            raft.runtime_config().elect(false);
+            // Let go of THE MOMENT it is level with its leader, not at the next look a few seconds on: a mark still
+            // on a copy that has caught up holds it back at the next start, and with most copies so marked no
+            // leader could be elected for them to be level with.
+            tokio::spawn(settle_when_level(Arc::clone(&self.members), group, raft.clone()));
+            if self.empty_start.load(std::sync::atomic::Ordering::Acquire) {
+                tokio::spawn(start_empty_after_wait(
+                    Arc::clone(self),
+                    group,
+                    raft.clone(),
+                    replicas.to_vec(),
+                ));
+            }
+        }
         if !self
             .members
             .insert(group, Member::Partition(raft.clone(), shared))
@@ -739,8 +1228,13 @@ impl Inner {
             return Ok(());
         }
         tokio::spawn(quiet::quiet_when_alone(raft.clone(), self.id));
+        // A COPY BEING REBUILT NEVER STARTS THE GROUP (found by the drill of 2026-11-24): starting it makes this copy
+        // its first leader, with nothing in it - elect(false) above does not hold that back - and with the copies
+        // being rebuilt voting (a person's first word) a partition of which no copy kept its log came back empty
+        // at once, unasked. Only the stronger word does that, after its wait (start_empty_after_wait).
         if !may_start
             || seeded
+            || self.members.is_recovering(&group)
             || raft
                 .is_initialized()
                 .await

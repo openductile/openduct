@@ -1,0 +1,7 @@
+description: The signed-in account - a call with no body
+action: get_account
+credential: { access_token: sl.test-token }
+exchanges:
+  - sent: { method: POST, url: https://api.dropboxapi.com/2/users/get_current_account }
+    answer: { body: { account_id: "dbid:AAH4f99T0taONIb-OurWxbNQ6ywGRopQngc", name: { given_name: Ann, surname: Example, display_name: Ann Example }, email: ann@example.com, email_verified: true, country: US, locale: en, account_type: { ".tag": business } } }
+result: { account_id: "dbid:AAH4f99T0taONIb-OurWxbNQ6ywGRopQngc", name: { given_name: Ann, surname: Example, display_name: Ann Example }, email: ann@example.com, email_verified: true, country: US, locale: en, account_type: { ".tag": business } }

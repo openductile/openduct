@@ -1,0 +1,37 @@
+# Made by `openduct app from-openapi`: Get Pricing.
+description: "Get Pricing, made from the API description's schemas"
+action: list_prices
+credential: { api_key: test-key }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://gateway.seven.io/api/pricing"
+      query: {}
+      headers: { x-api-key: test-key }
+    answer:
+      status: 200
+      body:
+        countCountries: 1
+        countNetworks: 1
+        countries:
+          - countryCode: example
+            countryName: example
+            countryPrefix: example
+            networks:
+              - comment: example
+                features: [example]
+                networkName: example
+                mcc: example
+                mncs: [example]
+                price: 1
+result:
+  - countryCode: example
+    countryName: example
+    countryPrefix: example
+    networks:
+      - comment: example
+        features: [example]
+        networkName: example
+        mcc: example
+        mncs: [example]
+        price: 1

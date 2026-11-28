@@ -1,0 +1,21 @@
+description: Two contacts sent at once, with a callback for this request
+action: enrich_contacts
+credential: { api_key: dc_test_key_1 }
+input:
+  contacts:
+    - { first_name: Ann, last_name: Example, company: Example Coffee }
+    - { email: bob@example.com }
+  siren: true
+  callback_url: "https://hooks.example.com/dropcontact"
+exchanges:
+  - sent:
+      method: POST
+      url: "https://api.dropcontact.com/v1/enrich/all"
+      body:
+        data:
+          - { first_name: Ann, last_name: Example, company: Example Coffee }
+          - { email: bob@example.com }
+        siren: true
+        custom_callback_url: "https://hooks.example.com/dropcontact"
+    answer: { status: 200, body: { error: false, success: true, credits_left: 1247, request_id: abcdefghijklmno } }
+result: { error: false, success: true, credits_left: 1247, request_id: abcdefghijklmno }

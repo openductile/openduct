@@ -1,0 +1,57 @@
+name: Post the week's new flyers from Google Drive to Mastodon
+description: >-
+  Every Monday at 10:00, London time, look in a Google Drive folder for the flyers, menus or offers added or changed
+  in the last week, post each one to your Mastodon account with its link, and log the post in a Google Sheet. Share
+  the folder as "anyone with the link can view" so the links open for everyone, and set the folder's id and your
+  Mastodon server below. Needs: google_drive, mastodon (a bearer token of your Mastodon app, allowed to write
+  statuses), google_sheets.
+category: Marketing
+trigger:
+  schedule: { every: week, on: [monday], at: "10:00", timezone: Europe/London }
+# What a test runs on: an event as this trigger gives it.
+sample:
+  scheduled_at: '2026-11-30T10:00:00Z'
+steps:
+  - name: flyers
+    google_drive:
+      action: find_files
+      credential: google_drive
+      # The folder's id is the end of its address in Drive.
+      q: >-
+        'your-folder-id' in parents and trashed = false and mimeType != 'application/vnd.google-apps.folder'
+        and modifiedTime > '{{ string(timestamp(value.scheduled_at) - duration('168h')) }}'
+    retry: { attempts: 3, wait: 30s }
+  - name: each
+    for_each:
+      items: steps.flyers
+      steps:
+        - name: link
+          set:
+            url: "has(item.webViewLink) && item.webViewLink != null ? item.webViewLink : 'https://drive.google.com/file/d/' + item.id + '/view'"
+            title: "regex.replace(item.name, r'\\.[A-Za-z0-9]+$', '').replace('-', ' ').replace('_', ' ')"
+        - name: post
+          http:
+            method: POST
+            # Your Mastodon server's address.
+            url: https://mastodon.social/api/v1/statuses
+            credential: mastodon
+            headers:
+              # The same file is never posted twice, even when a try is repeated.
+              Idempotency-Key: "flyer-{{ item.id }}-{{ string(timestamp(value.scheduled_at)).substring(0, 10) }}"
+            json:
+              status: "New this week: {{ steps.link.title }} {{ steps.link.url }}"
+              visibility: public
+            sample: { id: "113500000000000001", url: "https://mastodon.social/@yourshop/113500000000000001" }
+          retry: { attempts: 3, wait: 30s }
+        - name: logged
+          google_sheets:
+            action: add_row
+            credential: google_sheets
+            spreadsheet_id: your-spreadsheet-id
+            sheet: Posts
+            values:
+              - "{{ string(timestamp(value.scheduled_at)).substring(0, 10) }}"
+              - "{{ item.name }}"
+              - "{{ steps.link.url }}"
+              - "{{ steps.post.body.url }}"
+          retry: { attempts: 3, wait: 10s }

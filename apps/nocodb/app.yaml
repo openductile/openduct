@@ -1,0 +1,236 @@
+# Copyright 2026 Ductile AI, Inc
+# SPDX-License-Identifier: Apache-2.0
+# Written by hand from NocoDB's v3 API description (nocodb.com/apis/v3/swagger-v3.json) and its webhook documentation.
+app: nocodb
+name: NocoDB
+category: data
+description: Records of NocoDB tables - on NocoDB Cloud or a NocoDB of your own - listed, found, added, changed and linked.
+docs: https://nocodb.com/apis/v3/data
+hosts: [app.nocodb.com]
+base_url: https://app.nocodb.com
+# A NocoDB of your own: its address takes the place of NocoDB Cloud's.
+base_url_field: base_url
+sign_in:
+  - id: nocodb
+    label: An API token
+    fields:
+      - { name: api_token, label: "An API token (Account Settings, API Tokens)", secret: true }
+      - { name: base_url, label: "Your own NocoDB's address, such as https://nocodb.example.com (empty for NocoDB Cloud)", optional: true }
+    headers: { xc-token: "{{ credential.api_token }}" }
+# NocoDB says what was wrong in message, with a code (error).
+error: >-
+  status >= 400 && type(value) == map && has(value.message) && value.message != null
+  ? string(value.message) + (has(value.error) && value.error != null ? ' (' + string(value.error) + ')' : '') : null
+default_action: create_record
+actions:
+  list_records:
+    label: List a table's records
+    description: The records of a table (or of one of its views), by a filter and an order; every page, up to 1,000.
+    method: GET
+    path: "/api/v3/data/{{ input.base_id }}/{{ input.table_id }}/records"
+    inputs:
+      - { name: base_id, label: "The base's id (p...)", required: true }
+      - { name: table_id, label: "The table's id (m...)", required: true }
+      - { name: where, label: "Only those that match, such as (Status,eq,Open)~and(Amount,gt,100)" }
+      - { name: sort_by, label: "Order by this field (its title)" }
+      - { name: descending, label: "In descending order", kind: boolean }
+      - { name: fields, label: "Only these fields, with commas" }
+      - { name: view_id, label: "As this view shows them (its id)" }
+    query:
+      where: "{{ input.where }}"
+      sort: "{{ has(input.sort_by) && input.sort_by != null ? '{\"direction\":\"' + (has(input.descending) && input.descending == true ? 'desc' : 'asc') + '\",\"field\":\"' + input.sort_by + '\"}' : null }}"
+      fields: "{{ input.fields }}"
+      viewId: "{{ input.view_id }}"
+      pageSize: "100"
+    items: value.records
+    # NocoDB gives the next page as an address on its own host; the page number serves a NocoDB of your own too.
+    next: "!has(value.next) || value.next == null ? null : {'page': (page == null ? 1 : int(page.page)) + 1}"
+    output: { id: number, fields: record }
+  get_record:
+    label: Look up a record
+    description: One record, by its id.
+    method: GET
+    path: "/api/v3/data/{{ input.base_id }}/{{ input.table_id }}/records/{{ input.record_id }}"
+    inputs:
+      - { name: base_id, label: "The base's id", required: true }
+      - { name: table_id, label: "The table's id", required: true }
+      - { name: record_id, label: "The record's id", required: true }
+      - { name: fields, label: "Only these fields, with commas" }
+    query: { fields: "{{ input.fields }}" }
+    output: { id: number, fields: record }
+  create_record:
+    label: Add a record
+    description: "A new record, its fields by their titles, such as {Name: Ann Example, Email: ann@example.com}."
+    write: true
+    method: POST
+    path: "/api/v3/data/{{ input.base_id }}/{{ input.table_id }}/records"
+    inputs:
+      - { name: base_id, label: "The base's id", required: true }
+      - { name: table_id, label: "The table's id", required: true }
+      - { name: fields, label: "Its fields, by their titles", required: true, kind: record }
+    send: { fields: "{{ input.fields }}" }
+    result: value.records[0]
+    output: { id: number, fields: record }
+  update_record:
+    label: Change a record
+    description: Only the fields given change.
+    write: true
+    method: PATCH
+    path: "/api/v3/data/{{ input.base_id }}/{{ input.table_id }}/records"
+    inputs:
+      - { name: base_id, label: "The base's id", required: true }
+      - { name: table_id, label: "The table's id", required: true }
+      - { name: record_id, label: "The record's id", required: true }
+      - { name: fields, label: "The fields to change, by their titles", required: true, kind: record }
+    send: { id: "{{ input.record_id }}", fields: "{{ input.fields }}" }
+    result: value.records[0]
+    output: { id: number, fields: record }
+  upsert_record:
+    label: Add or change a record by its fields
+    description: Finds the record whose fields named (up to 3) hold the values given and changes it, or adds it when there is none.
+    write: true
+    method: POST
+    path: "/api/v3/data/{{ input.base_id }}/{{ input.table_id }}/records/upsert"
+    inputs:
+      - { name: base_id, label: "The base's id", required: true }
+      - { name: table_id, label: "The table's id", required: true }
+      - { name: match_on, label: "The fields to match on: a list of up to 3 titles, such as [Email]", required: true, kind: list }
+      - { name: fields, label: "The record's fields, by their titles", required: true, kind: record }
+    send: { fieldsToMergeOn: "{{ input.match_on }}", records: { fields: "{{ input.fields }}" } }
+    result: value.records[0]
+    output: { id: number, fields: record, status: text }
+  delete_record:
+    label: Remove a record
+    description: The record is removed from the table.
+    write: true
+    method: DELETE
+    path: "/api/v3/data/{{ input.base_id }}/{{ input.table_id }}/records"
+    inputs:
+      - { name: base_id, label: "The base's id", required: true }
+      - { name: table_id, label: "The table's id", required: true }
+      - { name: record_id, label: "The record's id", required: true }
+    send: { id: "{{ input.record_id }}" }
+    result: value.records[0]
+    output: { id: number }
+  count_records:
+    label: Count a table's records
+    description: How many records the table (or a filter, or a view) holds.
+    method: GET
+    path: "/api/v3/data/{{ input.base_id }}/{{ input.table_id }}/count"
+    inputs:
+      - { name: base_id, label: "The base's id", required: true }
+      - { name: table_id, label: "The table's id", required: true }
+      - { name: where, label: "Only those that match, such as (Status,eq,Open)" }
+      - { name: view_id, label: "As this view shows them (its id)" }
+    query: { where: "{{ input.where }}", viewId: "{{ input.view_id }}" }
+    output: { count: number }
+  list_linked_records:
+    label: List a record's linked records
+    description: The records a record's link field points to; every page.
+    method: GET
+    path: "/api/v3/data/{{ input.base_id }}/{{ input.table_id }}/links/{{ input.link_field_id }}/{{ input.record_id }}"
+    inputs:
+      - { name: base_id, label: "The base's id", required: true }
+      - { name: table_id, label: "The table's id", required: true }
+      - { name: link_field_id, label: "The link field's id", required: true }
+      - { name: record_id, label: "The record's id", required: true }
+      - { name: where, label: "Only those that match" }
+    query: { where: "{{ input.where }}", pageSize: "100" }
+    items: value.records
+    next: "!has(value.next) || value.next == null ? null : {'page': (page == null ? 1 : int(page.page)) + 1}"
+    output: { id: number, fields: record }
+  link_records:
+    label: Link records
+    description: Records of the linked table joined to a record, through its link field.
+    write: true
+    method: POST
+    path: "/api/v3/data/{{ input.base_id }}/{{ input.table_id }}/links/{{ input.link_field_id }}/{{ input.record_id }}"
+    inputs:
+      - { name: base_id, label: "The base's id", required: true }
+      - { name: table_id, label: "The table's id", required: true }
+      - { name: link_field_id, label: "The link field's id", required: true }
+      - { name: record_id, label: "The record's id", required: true }
+      - { name: linked_ids, label: "The records to link: a list of their ids", required: true, kind: list }
+    send: "{{ input.linked_ids.map(i, {'id': i}) }}"
+    output: { success: boolean }
+  unlink_records:
+    label: Unlink records
+    description: Records of the linked table taken off a record's link field.
+    write: true
+    method: DELETE
+    path: "/api/v3/data/{{ input.base_id }}/{{ input.table_id }}/links/{{ input.link_field_id }}/{{ input.record_id }}"
+    inputs:
+      - { name: base_id, label: "The base's id", required: true }
+      - { name: table_id, label: "The table's id", required: true }
+      - { name: link_field_id, label: "The link field's id", required: true }
+      - { name: record_id, label: "The record's id", required: true }
+      - { name: linked_ids, label: "The records to unlink: a list of their ids", required: true, kind: list }
+    send: "{{ input.linked_ids.map(i, {'id': i}) }}"
+    output: { success: boolean }
+  list_workspaces:
+    label: List workspaces
+    description: The workspaces the token may reach, on NocoDB Cloud.
+    method: GET
+    path: /api/v3/meta/workspaces
+    items: value.list
+    output: { id: text, title: text, created_at: text }
+  list_bases:
+    label: List a workspace's bases
+    description: The bases of a workspace, with their ids.
+    method: GET
+    path: "/api/v3/meta/workspaces/{{ input.workspace_id }}/bases"
+    inputs:
+      - { name: workspace_id, label: "The workspace's id (w...)", required: true }
+    items: value.list
+    output: { id: text, title: text, workspace_id: text, created_at: text }
+  list_tables:
+    label: List a base's tables
+    description: The tables of a base, with their ids.
+    method: GET
+    path: "/api/v3/meta/bases/{{ input.base_id }}/tables"
+    inputs:
+      - { name: base_id, label: "The base's id", required: true }
+    items: value.list
+    output: { id: text, title: text, description: text, base_id: text, workspace_id: text }
+  get_table:
+    label: Describe a table
+    description: A table's fields - their ids, titles and kinds - and its views.
+    method: GET
+    path: "/api/v3/meta/bases/{{ input.base_id }}/tables/{{ input.table_id }}"
+    inputs:
+      - { name: base_id, label: "The base's id", required: true }
+      - { name: table_id, label: "The table's id", required: true }
+    output: { id: text, title: text, base_id: text, display_field_id: text, fields: list, views: list }
+triggers:
+  record_event:
+    label: A record added (or changed, or removed)
+    description: >-
+      Each record added to the table (or changed or removed, as chosen), as NocoDB sends it. Turning the workflow on
+      adds a webhook to the table that carries a secret of the workflow's own in a header, and turning it off removes it.
+    inputs:
+      - { name: base_id, label: "The base's id", required: true }
+      - { name: table_id, label: "The table's id", required: true }
+      - { name: operations, label: "Which, with commas: insert (the default), update, delete" }
+    webhook:
+      signature: { header: x-webhook-token, algorithm: token }
+      secret: webhook_secret
+      id: value.id
+      # One delivery may carry several records (a bulk insert): each is a run.
+      events: "value.data.rows.map(r, {'event': value.type, 'table_id': value.data.table_id, 'table_name': value.data.table_name, 'record': r})"
+      register:
+        - method: POST
+          path: "/api/v3/meta/bases/{{ input.base_id }}/tables/{{ input.table_id }}/hooks"
+          send:
+            title: "{{ 'OpenDuct workflow ' + input.workflow }}"
+            event: record
+            operation: "{{ input.operations == null ? ['insert'] : input.operations.split(',').map(o, o.trim()) }}"
+            notification:
+              type: URL
+              payload:
+                method: POST
+                path: "{{ input.address }}"
+                headers: [{ name: x-webhook-token, value: "{{ input.secret }}", enabled: true }, { name: Content-Type, value: application/json, enabled: true }]
+            active: true
+      keep: { webhook_secret: input.secret, webhook_id: value.id }
+      unregister:
+        - { method: DELETE, path: "/api/v3/meta/bases/{{ input.base_id }}/hooks/{{ input.registered.webhook_id }}" }

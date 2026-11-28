@@ -1,0 +1,39 @@
+# Made by `openduct app from-openapi`: List prospects' flow instances.
+description: "List prospects' flow instances, made from the API description's schemas"
+action: list_flow_instances
+credential: { access_key: ann, access_key_secret: test-password }
+exchanges:
+  - sent:
+      method: POST
+      url: "https://api.gong.io/v2/flows/prospects"
+      query: {}
+      headers: { authorization: "Basic YW5uOnRlc3QtcGFzc3dvcmQ=" }
+      body: {}
+    answer:
+      status: 200
+      body:
+        requestId: "4al018gzaztcr8nbukw"
+        prospectsAssigned:
+          - flowId: "1695493301223590792"
+            flowName: example
+            crmProspectId: a5V1Q00A120DP4CVAW
+            flowInstanceId: "1234361284629356"
+            flowInstanceOwnerEmail: "ann@example.com"
+            flowInstanceOwnerFullName: example
+            flowInstanceCreateDate: example
+            flowInstanceStatus: Pending
+            workspaceId: "623457276584334"
+            exclusive: true
+result:
+  requestId: "4al018gzaztcr8nbukw"
+  prospectsAssigned:
+    - flowId: "1695493301223590792"
+      flowName: example
+      crmProspectId: a5V1Q00A120DP4CVAW
+      flowInstanceId: "1234361284629356"
+      flowInstanceOwnerEmail: "ann@example.com"
+      flowInstanceOwnerFullName: example
+      flowInstanceCreateDate: example
+      flowInstanceStatus: Pending
+      workspaceId: "623457276584334"
+      exclusive: true

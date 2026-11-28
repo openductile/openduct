@@ -1,0 +1,84 @@
+name: A business card photo becomes a lead
+description: >-
+  After a trade show or a meeting, photograph a business card and upload it on this form: OCR.space reads the card,
+  a model sorts the words into name, title, company, e-mail and phone, the lead goes into your Leads sheet with where
+  you met, and - if you tick the box - the person gets a short nice-to-meet-you e-mail from your Gmail. For founders
+  and salespeople who come home with a pocket full of cards. Needs: ocr_space (an API key, sent as the apikey
+  header), model, google_sheets, gmail.
+category: Sales
+trigger:
+  form:
+    title: Add a business card
+    fields:
+      - { name: card, label: The card, type: file, required: true, max_size: 2MB, accept: "image/*" }
+      - { name: met_at, label: Where you met, type: text, max_length: 120, placeholder: "Booth 14, Pacific Food Expo" }
+      - { name: follow_up, label: Send them a nice-to-meet-you e-mail, type: checkbox }
+    thanks: Thank you - the lead is in your sheet.
+# What a test runs on: an answer as the form gives it.
+sample:
+  card: { name: card.jpg, type: image/jpeg, size: 12, base64: "/9j/4AAQSkZJRgABAQ==" }
+  met_at: Booth 14, Pacific Food Expo
+  follow_up: true
+steps:
+  - name: ocr
+    http:
+      method: POST
+      url: https://api.ocr.space/parse/image
+      credential: ocr_space
+      form:
+        base64Image: "data:{{ value.card.type }};base64,{{ value.card.base64 }}"
+        OCREngine: "2"
+        scale: "true"
+      sample:
+        IsErroredOnProcessing: false
+        ParsedResults:
+          - ParsedText: "HARBORLINE FOODS\nNadia Kowalski\nHead of Purchasing\nnadia.k@harborline.example\n+1 (555) 014-2231\nharborline.example"
+    retry: { attempts: 3, wait: 15s }
+  - name: words
+    set:
+      text: "steps.ocr.body.IsErroredOnProcessing == false && size(steps.ocr.body.ParsedResults) > 0 ? steps.ocr.body.ParsedResults[0].ParsedText : ''"
+  - where: steps.words.text.trim() != ''
+  - name: lead
+    extract:
+      credential: model
+      text: "{{ steps.words.text }}"
+      instructions: The text was read from a business card by OCR; fix obvious OCR slips in names and e-mail addresses.
+      fields:
+        - { name: name, description: "the person's full name" }
+        - { name: title, description: their job title }
+        - { name: company }
+        - { name: email, description: their e-mail address }
+        - { name: phone, description: their phone number as printed }
+        - { name: website }
+  - name: row
+    google_sheets:
+      action: add_row
+      credential: google_sheets
+      spreadsheet_id: your-spreadsheet-id
+      sheet: Leads
+      values: >-
+        {{ [steps.lead.json.name, steps.lead.json.title, steps.lead.json.company, steps.lead.json.email,
+            steps.lead.json.phone, steps.lead.json.website, value.met_at, 'business card'] }}
+    retry: { attempts: 3, wait: 10s }
+  - name: hello
+    if:
+      when: value.follow_up == true && steps.lead.json.email != null && steps.lead.json.email.contains('@')
+      then:
+        - name: note
+          ai:
+            credential: model
+            system: >-
+              You write a short, warm follow-up e-mail after meeting someone: three sentences, no sales pitch, no
+              placeholders, signed "Best regards". Answer with the e-mail's text only.
+            prompt: >-
+              We met {{ steps.lead.json.name }} ({{ steps.lead.json.title }} at {{ steps.lead.json.company }})
+              {{ value.met_at != null && value.met_at != '' ? 'at ' + value.met_at : '' }}.
+            max_tokens: 250
+        - name: send
+          gmail:
+            action: send_email
+            credential: gmail
+            to: "{{ steps.lead.json.email }}"
+            subject: "Good to meet you{{ value.met_at != null && value.met_at != '' ? ' at ' + value.met_at : '' }}"
+            text: "{{ steps.note.text }}"
+          retry: { attempts: 3, wait: 10s }

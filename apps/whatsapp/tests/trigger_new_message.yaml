@@ -1,0 +1,8 @@
+description: Two messages in one delivery from Meta, signed with the app's secret - each runs by itself
+trigger: new_message
+credential: { access_token: EAAG1, phone_number_id: P1, api_version: v21.0, app_secret: meta_app_secret_1, verify_token: my-token }
+delivery:
+  headers: { x-hub-signature-256: "sha256=4afe58c3adaa9a01933751e2cf027e3696b0f8a143394996ff1a98992ad48b72" }
+  body: '{"object":"whatsapp_business_account","entry":[{"id":"W1","changes":[{"field":"messages","value":{"messaging_product":"whatsapp","metadata":{"display_phone_number":"15550100","phone_number_id":"P1"},"contacts":[{"profile":{"name":"Ann"},"wa_id":"15550111"}],"messages":[{"from":"15550111","id":"wamid.A","timestamp":"1700000000","type":"text","text":{"body":"hi"}},{"from":"15550111","id":"wamid.B","timestamp":"1700000001","type":"text","text":{"body":"are you open"}}]}}]}]}'
+  at: 1700000000
+ids: [wamid.A, wamid.B]

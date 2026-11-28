@@ -34,4 +34,6 @@ tokio = { version = "1.54.1", features = ["rt-multi-thread", "macros", "net", "t
 tracing = "0.1.44"
 
 [dev-dependencies]
+# The tables' tests run a broker in memory, two stores on it as two nodes (src/tables/store/tests.rs).
+openduct-storage = { version = "0.1.0", path = "../openduct-storage" }
 tempfile = "3.27.0"

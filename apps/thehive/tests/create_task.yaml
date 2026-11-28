@@ -1,0 +1,43 @@
+description: A task with a due date
+action: create_task
+credential:
+  url: https://thehive.example.com
+  api_key: test-key
+input:
+  case_id: ~8192
+  title: Block the sender
+  group: Containment
+  description: Add the sender to the block list.
+  assignee: analyst@example.com
+  due_date: '2026-12-01T17:00:00Z'
+  mandatory: true
+exchanges:
+- sent:
+    method: POST
+    url: https://thehive.example.com/api/v1/case/~8192/task
+    headers:
+      authorization: Bearer test-key
+    body:
+      title: Block the sender
+      description: Add the sender to the block list.
+      group: Containment
+      assignee: analyst@example.com
+      dueDate: 1796144400000
+      mandatory: true
+  answer:
+    status: 201
+    body: &id001
+      _id: ~12288
+      _type: Task
+      _createdAt: 1795161600000
+      title: Block the sender
+      group: Containment
+      description: Add the sender to the block list.
+      status: Waiting
+      flag: false
+      startDate: null
+      endDate: null
+      assignee: analyst@example.com
+      dueDate: 1796144400000
+      mandatory: true
+result: *id001

@@ -1,0 +1,9 @@
+action: list_pull_requests
+credential: { token: test-token-1 }
+input: { owner: example-shop, repo: website }
+exchanges:
+  - sent:
+      url: https://api.github.com/repos/example-shop/website/pulls
+      query: { per_page: "100" }
+    answer: { body: [{ number: 12, title: Winter prices, state: open }] }
+result: [{ number: 12, title: Winter prices, state: open }]

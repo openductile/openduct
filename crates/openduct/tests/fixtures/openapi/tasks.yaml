@@ -1,0 +1,127 @@
+# A description made for the tests: a small task service in OpenAPI 3.1, with each way to a next page and each
+# kind of sign-in the generator takes (and one it does not). Not a vendor's.
+openapi: 3.1.0
+info: { title: Tasks API, version: "2.0", description: "Tasks and projects of a team. More words follow." }
+externalDocs: { url: "https://tasks.example/docs/api" }
+servers: [{ url: "https://api.tasks.example/v2" }]
+security: [{ token: [] }]
+components:
+  securitySchemes:
+    token: { type: http, scheme: bearer }
+    code:
+      type: oauth2
+      flows:
+        authorizationCode: { authorizationUrl: "https://tasks.example/oauth/authorize", tokenUrl: "https://tasks.example/oauth/token", scopes: { tasks: Tasks } }
+    oidc: { type: openIdConnect, openIdConnectUrl: "https://tasks.example/.well-known/openid-configuration" }
+  schemas:
+    Task:
+      type: object
+      required: [title]
+      properties:
+        id: { type: string, readOnly: true }
+        title: { type: string, description: "What is to be done." }
+        due: { type: [string, "null"], format: date }
+        done: { type: boolean }
+        tags: { type: array, items: { type: string } }
+paths:
+  /tasks:
+    get:
+      summary: List tasks
+      description: Every task of the team, newest first.
+      parameters:
+        - { name: cursor, in: query, schema: { type: string } }
+        - { name: limit, in: query, schema: { type: integer, maximum: 200 } }
+        - { name: status, in: query, description: "Only tasks of this status.", schema: { type: string, enum: [open, done] } }
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { type: array, items: { $ref: "#/components/schemas/Task" } }
+                  meta: { type: object, properties: { next_cursor: { type: [string, "null"] } } }
+    post:
+      summary: Add a task
+      security: [{ code: [tasks] }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/Task" } } }
+      responses: { "201": { content: { application/json: { schema: { $ref: "#/components/schemas/Task" } } } } }
+  /tasks/{task_id}:
+    parameters: [{ name: task_id, in: path, required: true, description: "The task's id.", schema: { type: string } }]
+    get:
+      summary: Look up a task
+      responses: { "200": { content: { application/json: { schema: { $ref: "#/components/schemas/Task" } } } } }
+    patch:
+      summary: Change a task
+      requestBody: { content: { application/json: { schema: { $ref: "#/components/schemas/Task" } } } }
+      responses: { "200": { content: { application/json: { schema: { $ref: "#/components/schemas/Task" } } } } }
+    delete:
+      summary: Remove a task
+      responses: { "204": { description: Removed } }
+  /tasks/{task_id}/complete:
+    post:
+      summary: Mark a task done
+      parameters: [{ name: task_id, in: path, required: true, schema: { type: string } }]
+      responses: { "200": { content: { application/json: { schema: { $ref: "#/components/schemas/Task" } } } } }
+  /projects:
+    get:
+      summary: List projects
+      parameters:
+        - { name: page, in: query, schema: { type: integer } }
+        - { name: per_page, in: query, schema: { type: integer, maximum: 50 } }
+      responses:
+        "200":
+          content:
+            application/json:
+              schema: { type: array, items: { type: object, properties: { id: { type: integer }, name: { type: string } } } }
+  /projects/{project_id}/members:
+    get:
+      summary: List a project's members
+      parameters: [{ name: project_id, in: path, required: true, schema: { type: integer } }]
+      responses:
+        "200":
+          headers: { Link: { schema: { type: string } } }
+          content:
+            application/json:
+              schema: { type: array, items: { type: object, properties: { id: { type: string }, email: { type: string, format: email } } } }
+  /search:
+    get:
+      summary: Search
+      parameters:
+        - { name: q, in: query, required: true, schema: { type: string } }
+        - { name: offset, in: query, schema: { type: integer } }
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results: { type: array, items: { type: object, properties: { id: { type: string } } } }
+  /comments:
+    get:
+      summary: List comments
+      parameters: [{ name: starting_after, in: query, schema: { type: string } }]
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  has_more: { type: boolean }
+                  data: { type: array, items: { type: object, properties: { id: { type: string }, text: { type: string } } } }
+  /attachments:
+    post:
+      summary: Upload a file
+      requestBody: { content: { multipart/form-data: { schema: { type: object } } } }
+      responses: { "201": { description: Uploaded } }
+  /legacy/tasks:
+    get:
+      deprecated: true
+      summary: Old list
+      responses: { "200": { content: { application/json: { schema: { type: array, items: {} } } } } }
+webhooks:
+  taskDone: { post: { responses: { "200": { description: ok } } } }

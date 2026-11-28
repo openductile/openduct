@@ -1,0 +1,6 @@
+action: pause
+credential: { access_token: BQ-test-token }
+exchanges:
+  - sent: { method: PUT, url: https://api.spotify.com/v1/me/player/pause, query: {} }
+    answer: { status: 204 }
+result: { paused: true }

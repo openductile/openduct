@@ -1,0 +1,12 @@
+# Made by `openduct app from-openapi`: Download file.
+description: "Download file, made from the API description's schemas"
+action: get_content
+credential: { access_token: test-access-token }
+input: { file_id: file_1 }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://api.box.com/2.0/files/file_1/content"
+      query: {}
+      headers: { authorization: "Bearer test-access-token" }
+    answer: { status: 200 }

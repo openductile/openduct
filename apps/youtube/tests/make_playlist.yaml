@@ -1,0 +1,12 @@
+description: A playlist, private unless said
+action: make_playlist
+credential: { access_token: ya29.a0 }
+input: { title: Winter }
+exchanges:
+  - sent:
+      method: POST
+      url: https://www.googleapis.com/youtube/v3/playlists
+      query: { part: "snippet,status" }
+      body: { snippet: { title: Winter }, status: { privacyStatus: private } }
+    answer: { body: { id: PL2, status: { privacyStatus: private } } }
+result: { id: PL2, status: { privacyStatus: private } }

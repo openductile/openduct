@@ -1,0 +1,14 @@
+description: Leads found by a word, newest first
+action: list_leads
+credential: { api_key: hunter-test-key }
+input: { query: example.com }
+exchanges:
+  - sent:
+      method: GET
+      url: https://api.hunter.io/v2/leads
+      query: { query: example.com, sort: newest, limit: "100" }
+    answer:
+      body:
+        data: { leads: [{ id: 101, email: ann.example@example.com, first_name: Ann, last_name: Example, company: Example Inc, leads_list: { id: 7, name: Prospects, leads_count: 12 } }] }
+        meta: { count: 1, total: 1, params: { limit: 100, offset: 0 } }
+result: [{ id: 101, email: ann.example@example.com, first_name: Ann, last_name: Example, company: Example Inc, leads_list: { id: 7, name: Prospects, leads_count: 12 } }]

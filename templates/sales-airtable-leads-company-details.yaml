@@ -1,0 +1,73 @@
+name: Fill in company details for Airtable leads
+description: >-
+  Press Run to go through the leads in your Airtable base that have a website but no company details yet: each
+  website's domain is looked up with Hunter's domain search, and the lead gets the company's name, industry, size,
+  country and how many contacts Hunter knows there. A lead whose lookup fails is left as it was and the others go on.
+  Needs: airtable, hunter (header: X-API-KEY and your Hunter API key).
+category: Sales
+trigger: manual
+# What a test runs on: a run started by hand.
+sample: {}
+steps:
+  - name: leads
+    airtable:
+      action: list_records
+      credential: airtable
+      base_id: appYourBaseId
+      table: Leads
+      formula: "AND({Website} != '', {Industry} = '')"
+    retry: { attempts: 3, wait: 10s }
+  - name: each
+    for_each:
+      items: steps.leads
+      steps:
+        # example.com from https://www.example.com/about: the part a lookup needs.
+        - name: site
+          set:
+            domain: >-
+              has(item.fields.Website) && item.fields.Website != null
+              ? regex.replace(regex.replace(item.fields.Website.trim().lowerAscii(), r'^https?://(www\.)?', ''), r'[/?#].*$', '')
+              : null
+        - name: lookup
+          if:
+            when: steps.site.domain != null && steps.site.domain != ''
+            then:
+              - name: company
+                http:
+                  url: https://api.hunter.io/v2/domain-search
+                  credential: hunter
+                  query: { domain: "{{ steps.site.domain }}", limit: "10" }
+                  sample:
+                    data:
+                      domain: tidewater-logistics.example
+                      organization: Tidewater Logistics
+                      industry: Transportation & Logistics
+                      headcount: 51-200
+                      country: US
+                      emails:
+                        - { value: ops@tidewater-logistics.example, type: generic, confidence: 94 }
+                        - { value: dana.reyes@tidewater-logistics.example, type: personal, confidence: 88 }
+                retry: { attempts: 3, wait: 20s }
+                # One lead that cannot be looked up does not stop the others.
+                on_error: continue
+              - name: fill
+                if:
+                  when: has(steps.company.body) && has(steps.company.body.data) && steps.company.body.data != null
+                  then:
+                    - name: update
+                      airtable:
+                        action: update_record
+                        credential: airtable
+                        base_id: appYourBaseId
+                        table: Leads
+                        record_id: "{{ item.id }}"
+                        fields:
+                          Company: "{{ steps.company.body.data.organization }}"
+                          Industry: "{{ steps.company.body.data.industry }}"
+                          Size: "{{ steps.company.body.data.headcount }}"
+                          Country: "{{ steps.company.body.data.country }}"
+                          Contacts found: "{{ size(steps.company.body.data.emails) }}"
+                      retry: { attempts: 3, wait: 10s }
+  - name: done
+    set:
+      leads_looked_at: size(steps.leads)

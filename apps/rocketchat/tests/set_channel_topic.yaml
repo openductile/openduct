@@ -1,0 +1,7 @@
+action: set_channel_topic
+credential: { workspace: acme, user_id: uAbC123, token: rc_test_1 }
+input: { room_id: rSupp1, topic: Questions from customers }
+exchanges:
+  - sent: { method: POST, url: https://acme.rocket.chat/api/v1/channels.setTopic, body: { roomId: rSupp1, topic: Questions from customers } }
+    answer: { body: { topic: Questions from customers, success: true } }
+result: { topic: Questions from customers, success: true }

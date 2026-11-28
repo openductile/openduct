@@ -1,0 +1,77 @@
+name: Support mail becomes a Freshdesk ticket with a suggested answer
+description: >-
+  Every two minutes, new mail to your support address in Gmail becomes a Freshdesk ticket; your help pages (kept in a
+  pgvector table) are searched for the question, and a suggested answer citing them is added to the ticket as a
+  private note, for the agent to check and send. The customer gets a short Gmail reply with their ticket number.
+  Automatic senders (no-reply, mailer daemons) are left out. For small support teams who answer the same questions
+  every day. Needs: gmail, docs_db, model, freshdesk (your API key as the user name and X as the password).
+category: Support
+trigger:
+  gmail: { when: new_email, credential: gmail, q: "to:support@example.com -from:me -category:promotions", every: 2m }
+# What a test runs on: an email as this trigger gives it.
+sample:
+  id: 18c3a9f0d1e2b3c4
+  thread_id: 18c3a9f0d1e2b3c4
+  from: Kenji Watanabe <kenji.w@example.com>
+  to: support@example.com
+  subject: Can I change the delivery address after ordering?
+  date: "Fri, 27 Nov 2026 10:05:00 +0000"
+  snippet: Hi, I ordered yesterday (order 20931) and I am moving next week. Can the parcel go to my new address instead?
+  labels: [INBOX, UNREAD]
+steps:
+  - name: sender
+    set:
+      email: "cel.bind(e, regex.extract(value.from, '<([^>]+)>'), e != null ? e : value.from).trim().lowerAscii()"
+      name: "value.from.contains('<') ? value.from.substring(0, value.from.indexOf('<')).trim() : ''"
+  - where: "!steps.sender.email.matches('(no-?reply|mailer-daemon|postmaster|notifications?)@')"
+  - name: suggest
+    ask_documents:
+      credential: docs_db
+      table: help_pieces
+      embed_with: model
+      question: "{{ value.subject }}. {{ value.snippet }}"
+      top_k: 4
+      min_score: 0.35
+      instructions: Write it as a reply an agent could send, kindly, in at most five sentences.
+      max_tokens: 400
+  - name: ticket
+    http:
+      method: POST
+      # Your Freshdesk address.
+      url: https://yourcompany.freshdesk.com/api/v2/tickets
+      credential: freshdesk
+      json:
+        email: "{{ steps.sender.email }}"
+        name: "{{ steps.sender.name }}"
+        subject: "{{ value.subject }}"
+        description: "{{ value.snippet }}"
+        status: 2
+        priority: 1
+        source: 1
+      sample: { id: 1042, subject: "Can I change the delivery address after ordering?", status: 2 }
+    retry: { attempts: 3, wait: 15s }
+  - name: note
+    if:
+      when: steps.suggest.answered == true
+      then:
+        - http:
+            method: POST
+            url: "https://yourcompany.freshdesk.com/api/v2/tickets/{{ steps.ticket.body.id }}/notes"
+            credential: freshdesk
+            json:
+              private: true
+              body: >-
+                Suggested answer (check before sending):<br><br>{{ steps.suggest.text.replace('<', '&lt;') }}<br><br>From:
+                {{ steps.suggest.sources.filter(s, s.cited == true).map(s, s.source).join(', ') }}
+            sample: { id: 5521, private: true }
+          retry: { attempts: 3, wait: 15s }
+  - name: ack
+    gmail:
+      action: send_email
+      credential: gmail
+      to: "{{ steps.sender.email }}"
+      subject: "Re: {{ value.subject }} [#{{ steps.ticket.body.id }}]"
+      text: >-
+        Thank you for writing to us. Your message is ticket #{{ steps.ticket.body.id }}, and a person from our team
+        will answer you within one working day.
+    retry: { attempts: 3, wait: 15s }

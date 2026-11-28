@@ -1,0 +1,12 @@
+description: "A contact marked do-not-contact for email"
+action: do_not_contact
+credential: {"site_url": "https://mautic.example.com", "username": "admin", "password": "pw-test"}
+input: {"contact_id": 46, "comments": "Asked by phone"}
+exchanges:
+  - sent:
+      method: POST
+      url: "https://mautic.example.com/api/contacts/46/dnc/email/add"
+      headers: {"authorization": "Basic YWRtaW46cHctdGVzdA=="}
+      body: {"comments": "Asked by phone"}
+    answer: {"status": 200, "body": {"contact": {"id": 46, "isPublished": true, "dateAdded": "2026-11-24T09:00:00+00:00", "dateModified": "2026-11-27T10:00:00+00:00", "points": 0, "tags": [], "fields": {"core": {"firstname": {"alias": "firstname", "value": "Bo"}}, "all": {"id": 46, "firstname": "Bo", "lastname": "Chen", "email": "bo@example.com", "company": "", "phone": null}}}}}
+result: {"id": 46, "email": "bo@example.com", "first_name": "Bo", "last_name": "Chen", "company": "", "phone": null, "points": 0, "tags": [], "date_added": "2026-11-24T09:00:00+00:00", "date_modified": "2026-11-27T10:00:00+00:00", "fields": {"id": 46, "firstname": "Bo", "lastname": "Chen", "email": "bo@example.com", "company": "", "phone": null}}

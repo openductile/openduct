@@ -1,0 +1,11 @@
+description: A document by a file_id Telegram already has
+action: send_document
+credential: { bot_token: "123:abc" }
+input: { chat_id: "42", document: BQACAgIAAxkBAAI, caption: Your invoice }
+exchanges:
+  - sent:
+      method: POST
+      url: https://api.telegram.org/bot123:abc/sendDocument
+      body: { chat_id: "42", document: BQACAgIAAxkBAAI, caption: Your invoice }
+    answer: { body: { ok: true, result: { message_id: 10, chat: { id: 42 }, document: { file_id: BQACAgIAAxkBAAI, file_name: A-100.pdf }, caption: Your invoice } } }
+result: { message_id: 10, chat: { id: 42 }, document: { file_id: BQACAgIAAxkBAAI, file_name: A-100.pdf }, caption: Your invoice }

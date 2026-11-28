@@ -1,0 +1,7 @@
+action: list_incident_notes
+credential: { api_key: pd_test_1 }
+input: { id: PINC001 }
+exchanges:
+  - sent: { method: GET, url: https://api.pagerduty.com/incidents/PINC001/notes }
+    answer: { body: { notes: [{ id: PNOTE01, content: Rolled back the release, created_at: "2026-11-27T10:20:00Z", user: { id: PUSER01, summary: Ann Lee } }] } }
+result: [{ id: PNOTE01, content: Rolled back the release, created_at: "2026-11-27T10:20:00Z", user: { id: PUSER01, summary: Ann Lee } }]

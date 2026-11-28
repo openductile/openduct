@@ -1,0 +1,85 @@
+name: A supplier's PDF price list, read into Airtable
+description: >-
+  Run it by hand with the address of a supplier's price list - the PDF on their website or in their e-mail's link - and
+  the supplier's name: the PDF is downloaded and read, a model turns its lines into products (code, name, unit and
+  price), and each becomes a record of your Supplier prices table in Airtable, dated, so you can compare suppliers and
+  see prices change. A PDF that is a scan holds no text, and is answered as such. Set your base below. Needs: model (an
+  AI credential), airtable (a personal access token).
+category: Data
+trigger: manual
+# What a test runs on: what you give it when you press Run.
+sample:
+  url: https://supplier.example.com/files/price-list-2026-12.pdf
+  supplier: Greenleaf Packaging
+steps:
+  - where: has(value.url) && value.url.startsWith('https://')
+  - name: download
+    http:
+      url: "{{ value.url }}"
+      timeout: 60s
+      # A test answers with the list's text, as the PDF holds it; a real run downloads the PDF itself.
+      sample: |-
+        Greenleaf Packaging - price list, December 2026
+        GL-1012  Kraft mailer box, small        pack of 50   $24.90
+        GL-1014  Kraft mailer box, medium       pack of 50   $31.50
+        GL-2201  Paper tape, 50 m               roll         $4.20
+    retry: { attempts: 3, wait: 20s }
+  - name: read
+    extract_file: { file: steps.download.body }
+  - name: enough
+    if:
+      when: size(steps.read.text.trim()) < 40
+      then:
+        - stop: { error: "the price list holds almost no text - it may be a scan: ask the supplier for a PDF made from the document" }
+  - name: lines
+    ai:
+      credential: model
+      system: >-
+        You read suppliers' price lists. List every product with its code, its name, the unit it is sold in, its
+        price as a number and the price's currency (three letters). Leave out lines that are not products. Answer
+        with JSON only.
+      prompt: "{{ size(steps.read.text) > 60000 ? steps.read.text.substring(0, 60000) : steps.read.text }}"
+      schema:
+        type: object
+        properties:
+          products:
+            type: array
+            maxItems: 500
+            items:
+              type: object
+              properties:
+                code: { type: string }
+                name: { type: string }
+                unit: { type: string }
+                price: { type: number }
+                currency: { type: string }
+              required: [code, name, unit, price, currency]
+        required: [products]
+      max_tokens: 4000
+  - name: today
+    datetime: {}
+  - name: each
+    for_each:
+      items: "has(steps.lines.json.products) && steps.lines.json.products != null ? steps.lines.json.products : []"
+      steps:
+        - name: record
+          airtable:
+            action: add_record
+            credential: airtable
+            # Your base's id (app..., in its address).
+            base_id: your-base-id
+            table: Supplier prices
+            fields:
+              Supplier: "{{ value.supplier }}"
+              Code: "{{ item.code }}"
+              Product: "{{ item.name }}"
+              Unit: "{{ item.unit }}"
+              Price: "{{ item.price }}"
+              Currency: "{{ item.currency }}"
+              Date: "{{ steps.today.date }}"
+              Source: "{{ value.url }}"
+          retry: { attempts: 3, wait: 10s }
+  - name: done
+    set:
+      supplier: value.supplier
+      products: size(steps.each)

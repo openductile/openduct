@@ -1,0 +1,7 @@
+action: pause_monitor
+credential: { api_key: ur_test_1 }
+input: { id: 801 }
+exchanges:
+  - sent: { method: POST, url: https://api.uptimerobot.com/v3/monitors/801/pause }
+    answer: { status: 201, body: { id: 801, friendlyName: Shop, status: PAUSED } }
+result: { id: 801, friendlyName: Shop, status: PAUSED }

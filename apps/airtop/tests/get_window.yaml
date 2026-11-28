@@ -1,0 +1,22 @@
+description: "Look up a window"
+action: get_window
+credential: { token: test-token }
+input: { session_id: session_1, window_id: window_1 }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://api.airtop.ai/api/v1/sessions/session_1/windows/window_1"
+      query: {}
+      headers: { authorization: "Bearer test-token" }
+    answer:
+      status: 201
+      body:
+        data: { liveViewUrl: example, targetId: target_1, windowId: window_1 }
+        errors: [{ code: example, details: {}, message: example, reason: example }]
+        meta: { requestId: request_1 }
+        warnings: [{ code: example, details: {}, message: example, reason: example }]
+result:
+  data: { liveViewUrl: example, targetId: target_1, windowId: window_1 }
+  errors: [{ code: example, details: {}, message: example, reason: example }]
+  meta: { requestId: request_1 }
+  warnings: [{ code: example, details: {}, message: example, reason: example }]

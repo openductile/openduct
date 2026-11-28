@@ -201,7 +201,8 @@ describe("credentials, workspaces and AI", () => {
     render(<App />);
     fireEvent.click(await screen.findByText("Add a credential"));
     // Its kind first, from the tiles, then that kind's fields by their plain names.
-    fireEvent.click(screen.getByText("AI model"));
+    // The tiles come from their own request, which the button does not wait for: wait for them.
+    fireEvent.click(await screen.findByText("AI model"));
     // A service from the list fills in its address; "Any other" leaves it to be written.
     fireEvent.click(screen.getByText("Any other"));
     fireEvent.change(screen.getByLabelText(/Name/), { target: { value: "model" } });
@@ -292,7 +293,8 @@ describe("credentials, workspaces and AI", () => {
     render(<App />);
     fireEvent.click(await screen.findByText("sum"));
     expect(screen.getByRole("dialog", { name: "sum" }).textContent).toContain("Ask AI");
-    expect(screen.getByText("model (ai)")).toBeTruthy();
+    // The credentials come from their own request, not the workflow's: wait for them.
+    expect(await screen.findByText("model (ai)")).toBeTruthy();
     // The model is chosen from what the credential's service offers.
     expect(await screen.findByText("Some model (some-model)")).toBeTruthy();
     expect(screen.getByText("other-model")).toBeTruthy();
@@ -302,6 +304,87 @@ describe("credentials, workspaces and AI", () => {
     expect(screen.getByText("20 in / 6 out")).toBeTruthy();
     expect(screen.getByText("ignored: temperature")).toBeTruthy();
     expect(sent.find((s) => s.route === "POST /api/workflows/big-orders/preview")?.body).toMatchObject({ input: expect.anything() });
+  });
+});
+
+// G2 AI agents
+describe("AI agents", () => {
+  it("builds an agent with its tools, limits which may run, and shows each turn and tool call of a test", async () => {
+    history.replaceState(null, "", "/workflows/big-orders");
+    const agent = {
+      name: "helper",
+      agent: {
+        credential: "model",
+        instructions: "You help customers.",
+        input: "{{ value.text }}",
+        tools: [
+          {
+            name: "order_status",
+            description: "An order's status",
+            parameters: { type: "object", properties: { id: { type: "string" } }, required: ["id"] },
+            http: { url: "https://shop.example.com/orders/{{ args.id }}" },
+          },
+        ],
+      },
+    };
+    const ran = {
+      status: "done",
+      error: null,
+      ms: 900,
+      steps: [
+        {
+          name: "helper",
+          kind: "agent",
+          attempts: 1,
+          ms: 880,
+          error: null,
+          result: {
+            text: "A-1 has shipped.",
+            model: "some-model",
+            finish_reason: "stop",
+            transcript: [
+              { role: "user", content: "Where is A-1?" },
+              { role: "tool", tool: "order_status", content: 'order_status({"id":"A-1"}) -> {"status":"shipped"}' },
+              { role: "assistant", content: "A-1 has shipped." },
+            ],
+            turns: [{ turn: 1, ms: 300, tool_calls: ["order_status"] }, { turn: 2, ms: 280, tool_calls: [] }],
+            calls: [{ turn: 1, tool: "order_status", arguments: { id: "A-1" }, result: { status: "shipped" }, ms: 41 }],
+            usage: { prompt_tokens: 90, completion_tokens: 20, total_tokens: 110 },
+            metrics: { latency_ms: 880 },
+          },
+        },
+      ],
+    };
+    const sent = stand_in({
+      "GET /api/status": { body: { setup: false } },
+      "GET /api/session": { body: session },
+      "GET /api/credentials": { body: { credentials: [{ name: "model", kind: "ai", fields: [], updated: 1 }] } },
+      "GET /api/credentials/model/models": { body: { models: [] } },
+      "GET /api/workflows/big-orders": { body: { ...workflow, definition: { name: "Big orders", steps: [agent] } } },
+      "POST /api/workflows/big-orders/test": { body: { run: ran } },
+    });
+    render(<App />);
+    fireEvent.click(await screen.findByText("helper"));
+    const dialog = screen.getByRole("dialog", { name: "helper" });
+    expect(dialog.textContent).toContain("AI agent");
+    expect(within(dialog).getByDisplayValue("order_status")).toBeTruthy();
+    expect(await within(dialog).findByText("model (ai)")).toBeTruthy();
+    // A tool it may not run yet: unticked, it is left out of what may run.
+    fireEvent.click(within(dialog).getByLabelText("may run"));
+    // Another tool, added from what a tool may run.
+    fireEvent.change(within(dialog).getByLabelText("Add a tool"), { target: { value: "javascript" } });
+    expect(within(dialog).getByDisplayValue("tool_1")).toBeTruthy();
+    fireEvent.click(within(dialog).getByText("Test"));
+    expect(await screen.findByText("A-1 has shipped.", { selector: ".what" })).toBeTruthy();
+    expect(screen.getByText("41 ms")).toBeTruthy();
+    expect(screen.getByText("2 turns")).toBeTruthy();
+    expect(screen.getByText("1 tool call")).toBeTruthy();
+    const tested = sent.find((s) => s.route === "POST /api/workflows/big-orders/test")?.body as {
+      definition: { steps: { agent: { allow?: string[]; tools: { name: string }[] } }[] };
+    };
+    const sentAgent = tested.definition.steps[0]!.agent;
+    expect(sentAgent.tools.map((t) => t.name)).toEqual(["order_status", "tool_1"]);
+    expect(sentAgent.allow).toEqual(["tool_1"]);
   });
 });
 
@@ -416,7 +499,10 @@ describe("dashboard and alerts", () => {
       expect((await screen.findAllByText(name)).length).toBeGreaterThan(0);
     const on = screen.getByLabelText("Google Chat: on") as HTMLInputElement;
     expect(on.disabled).toBe(true);
-    fireEvent.change(screen.getByLabelText("Google Chat: credential"), { target: { value: "space" } });
+    // The credentials come from their own request, not the messengers': wait for the one to choose.
+    const choose = screen.getByLabelText("Google Chat: credential");
+    await within(choose).findByRole("option", { name: "space" });
+    fireEvent.change(choose, { target: { value: "space" } });
     fireEvent.click(screen.getByLabelText("Google Chat: on"));
     fireEvent.click(screen.getByText("Save"));
     await waitFor(() => expect(sent.some((x) => x.route === "PUT /api/workspaces/w1/alerts")).toBe(true));
@@ -529,7 +615,8 @@ describe("apps", () => {
     const window = await screen.findByRole("dialog", { name: "orders" });
     await waitFor(() => expect(within(window).getByLabelText("Status (optional)")).toBeTruthy());
     expect((within(window).getByLabelText("Status (optional)") as HTMLInputElement).value).toBe("paid");
-    expect(within(window).getByText("my-shop (shop_key)")).toBeTruthy();
+    // The credentials come from their own request, not the apps': wait for them.
+    expect(await within(window).findByText("my-shop (shop_key)")).toBeTruthy();
     // Another action: its inputs.
     fireEvent.change(within(window).getByLabelText("Action"), { target: { value: "add_customer" } });
     expect(within(window).getByLabelText("Email")).toBeTruthy();

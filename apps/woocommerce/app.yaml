@@ -13,6 +13,7 @@ sign_in:
       - { name: store_url, label: "The store's address, such as https://shop.example.com" }
       - { name: consumer_key, label: "Consumer key (ck_...)" }
       - { name: consumer_secret, label: "Consumer secret (cs_...)", secret: true }
+      - { name: webhook_secret, label: "A webhook's secret, for one added in WooCommerce by hand", secret: true, optional: true }
     basic: { username: "{{ credential.consumer_key }}", password: "{{ credential.consumer_secret }}" }
 error: value.message
 actions:
@@ -42,3 +43,23 @@ actions:
       - { name: order_id, label: "The order's number", required: true }
       - { name: status, label: "Its new status, such as completed", required: true }
     send: { status: "{{ input.status }}" }
+triggers:
+  new_order:
+    label: A new order
+    description: >-
+      Each order placed in the store, as WooCommerce sends it, signed. Turning the workflow on adds a webhook to the
+      store, and turning it off deletes it.
+    webhook:
+      signature: { header: x-wc-webhook-signature, encoding: base64 }
+      secret: webhook_secret
+      # WooCommerce checks a new webhook's address with an unsigned ping first.
+      ping: has(value.webhook_id)
+      id: "headers['x-wc-webhook-delivery-id']"
+      only: "headers['x-wc-webhook-topic'] == 'order.created'"
+      register:
+        - method: POST
+          path: /wp-json/wc/v3/webhooks
+          send: { name: "OpenDuct workflow {{ input.workflow }}", topic: order.created, delivery_url: "{{ input.address }}", secret: "{{ input.secret }}" }
+      keep: { webhook_secret: input.secret, webhook_id: string(value.id) }
+      unregister:
+        - { method: DELETE, path: "/wp-json/wc/v3/webhooks/{{ input.registered.webhook_id }}", query: { force: "true" } }

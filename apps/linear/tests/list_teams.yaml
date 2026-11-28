@@ -1,0 +1,14 @@
+description: Teams over two pages, the next asked for after the last one's cursor
+action: list_teams
+credential: { api_key: lin_api_test1 }
+exchanges:
+  - sent:
+      method: POST
+      url: https://api.linear.app/graphql
+      body: { query: "query($after: String) { teams(first: 100, after: $after) { nodes { id key name description } pageInfo { hasNextPage endCursor } } }" }
+    answer: { body: { data: { teams: { nodes: [{ id: tm-1, key: ENG, name: Engineering }], pageInfo: { hasNextPage: true, endCursor: cur-1 } } } } }
+  - sent:
+      url: https://api.linear.app/graphql
+      body: { query: "query($after: String) { teams(first: 100, after: $after) { nodes { id key name description } pageInfo { hasNextPage endCursor } } }", variables: { after: cur-1 }, extensions: { after: cur-1 } }
+    answer: { body: { data: { teams: { nodes: [{ id: tm-2, key: OPS, name: Operations }], pageInfo: { hasNextPage: false, endCursor: cur-2 } } } } }
+result: [{ id: tm-1, key: ENG, name: Engineering }, { id: tm-2, key: OPS, name: Operations }]

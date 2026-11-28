@@ -1,0 +1,39 @@
+description: The languages named in Spanish
+action: list_languages
+credential:
+  api_key: test-key
+input:
+  names_in: es_ES
+exchanges:
+- sent:
+    method: GET
+    url: https://api-b2b.backenster.com/b1/api/v3/getLanguages
+    query:
+      platform: api
+      code: es_ES
+    headers:
+      authorization: test-key
+  answer:
+    status: 200
+    body:
+      err: null
+      result:
+      - full_code: de_DE
+        code_alpha_1: de
+        englishName: German
+        codeName: Alemán
+        flagPath: static/flags/german
+        testWordForSyntezis: Hallo
+        rtl: 'false'
+        modes: &id001
+        - name: Translation
+          value: true
+result:
+- full_code: de_DE
+  code_alpha_1: de
+  englishName: German
+  codeName: Alemán
+  flagPath: static/flags/german
+  testWordForSyntezis: Hallo
+  rtl: 'false'
+  modes: *id001

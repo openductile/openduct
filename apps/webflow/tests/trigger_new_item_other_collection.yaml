@@ -1,0 +1,10 @@
+description: An item added to another collection is answered, and runs nothing
+trigger: new_item
+workflow: wf3
+credential: { token: test-token, "webhook_secret@wf3": whsec_test_5f3a9c }
+input: { site_id: site_1, collection_id: col_1 }
+delivery:
+  headers: { x-webflow-timestamp: "1764237600000", x-webflow-signature: "701c90e4ab440ed7f29cd5e9a27163f25689946ba487150234094a2dcef7bd5a" }
+  body: '{"triggerType":"collection_item_created","payload":{"id":"itm_10","siteId":"site_1","workspaceId":"ws_1","collectionId":"col_2","isDraft":true,"fieldData":{"name":"Team member","slug":"team-member"}}}'
+  at: 1764237605
+passed: true

@@ -1,0 +1,11 @@
+action: post
+credential: { access_token: x_test1, user_id: "2244994945" }
+input: { text: We open at nine tomorrow. }
+exchanges:
+  - sent:
+      method: POST
+      url: https://api.x.com/2/tweets
+      headers: { authorization: Bearer x_test1 }
+      body: { text: We open at nine tomorrow. }
+    answer: { status: 201, body: { data: { id: "1445880548472328192", text: We open at nine tomorrow. } } }
+result: { id: "1445880548472328192", text: We open at nine tomorrow. }

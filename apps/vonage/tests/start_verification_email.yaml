@@ -1,0 +1,28 @@
+description: A code by email, from an address
+action: start_verification
+credential:
+  api_key: abcd1234
+  api_secret: test-secret
+input:
+  brand: Sample Shop
+  to: pat@example.com
+  channel: email
+  from: codes@example.com
+exchanges:
+- sent:
+    method: POST
+    url: https://api.nexmo.com/v2/verify
+    headers:
+      authorization: Basic YWJjZDEyMzQ6dGVzdC1zZWNyZXQ=
+    body:
+      brand: Sample Shop
+      workflow:
+      - channel: email
+        to: pat@example.com
+        from: codes@example.com
+  answer:
+    status: 202
+    body:
+      request_id: c11236f4-00bf-4b89-84ba-88b25df97316
+result:
+  request_id: c11236f4-00bf-4b89-84ba-88b25df97316

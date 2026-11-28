@@ -1,0 +1,39 @@
+# Made by `openduct app from-openapi`: Get a contact.
+description: "Get a contact, made from the API description's schemas"
+action: get_contact
+credential: { token: test-token }
+input: { contact_id: contact_1 }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://api.intercom.io/contacts/contact_1"
+      query: {}
+      headers: { authorization: "Bearer test-token" }
+    answer:
+      status: 200
+      body:
+        enabled_push_messaging: true
+        type: contact
+        id: "5ba682d23d7cf92bef87bfd4"
+        external_id: f3b87a2e09d514c6c2e79b9a
+        workspace_id: ecahpwf5
+        role: user
+        email: "ann@example.com"
+        email_domain: example.com
+        email_verified: true
+        phone: example
+        whatsapp_number: example
+        name: example
+result:
+  enabled_push_messaging: true
+  type: contact
+  id: "5ba682d23d7cf92bef87bfd4"
+  external_id: f3b87a2e09d514c6c2e79b9a
+  workspace_id: ecahpwf5
+  role: user
+  email: "ann@example.com"
+  email_domain: example.com
+  email_verified: true
+  phone: example
+  whatsapp_number: example
+  name: example

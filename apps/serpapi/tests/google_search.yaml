@@ -1,0 +1,20 @@
+description: A web search from a city, in English, the key sent in the query
+action: google_search
+credential: { api_key: serp_test_key_1 }
+input: { q: plant pots wholesale, location: "Austin, Texas, United States", hl: en, gl: us }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://serpapi.com/search"
+      query: { api_key: serp_test_key_1, engine: google, q: plant pots wholesale, location: "Austin, Texas, United States", gl: us, hl: en }
+    answer:
+      status: 200
+      body:
+        search_metadata: { id: 6745a1b2c3d4e5f600000001, status: Success }
+        search_information: { query_displayed: plant pots wholesale, total_results: 1200000 }
+        organic_results:
+          - { position: 1, title: Wholesale plant pots, link: "https://pots.example/wholesale", displayed_link: "https://pots.example › wholesale", snippet: Clay and ceramic pots by the case. }
+          - { position: 2, title: Pots for growers, link: "https://growers.example/", displayed_link: "https://growers.example", snippet: Free shipping over 500 dollars. }
+result:
+  - { position: 1, title: Wholesale plant pots, link: "https://pots.example/wholesale", displayed_link: "https://pots.example › wholesale", snippet: Clay and ceramic pots by the case. }
+  - { position: 2, title: Pots for growers, link: "https://growers.example/", displayed_link: "https://growers.example", snippet: Free shipping over 500 dollars. }

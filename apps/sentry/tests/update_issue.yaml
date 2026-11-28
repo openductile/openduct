@@ -1,0 +1,70 @@
+# Made by `openduct app from-openapi`: Change an issue.
+description: "Change an issue, made from the API description's schemas"
+action: update_issue
+credential: { token: test-token }
+input: { organization_id_or_slug: example, issue_id: issue_1 }
+exchanges:
+  - sent:
+      method: PUT
+      url: "https://us.sentry.io/api/0/organizations/example/issues/issue_1/"
+      query: {}
+      headers: { authorization: "Bearer test-token" }
+      body: {}
+    answer:
+      status: 200
+      body:
+        isUnhandled: true
+        count: example
+        userCount: 1
+        firstSeen: "2026-01-15T09:30:00Z"
+        lastSeen: "2026-01-15T09:30:00Z"
+        derivedData:
+          blocker: example
+          progress: example
+          status: example
+          viewCount: 1
+          hasOpenFixPr: true
+          isAssigned: true
+          hasRootCause: true
+          lastCompletedAutofixStep: example
+          lastProgressedAt: "2026-01-15T09:30:00Z"
+          impact:
+            score: 1
+            level: super_low
+            description: example
+            citations: [{}]
+            sourceEventId: source_event_1
+        id: id_1
+        shareId: share_1
+        shortId: short_1
+        title: example
+        culprit: example
+        permalink: "https://example.com/1"
+result:
+  isUnhandled: true
+  count: example
+  userCount: 1
+  firstSeen: "2026-01-15T09:30:00Z"
+  lastSeen: "2026-01-15T09:30:00Z"
+  derivedData:
+    blocker: example
+    progress: example
+    status: example
+    viewCount: 1
+    hasOpenFixPr: true
+    isAssigned: true
+    hasRootCause: true
+    lastCompletedAutofixStep: example
+    lastProgressedAt: "2026-01-15T09:30:00Z"
+    impact:
+      score: 1
+      level: super_low
+      description: example
+      citations: [{}]
+      sourceEventId: source_event_1
+  id: id_1
+  shareId: share_1
+  shortId: short_1
+  title: example
+  culprit: example
+  permalink: "https://example.com/1"

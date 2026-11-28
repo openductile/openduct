@@ -1,0 +1,7 @@
+action: get_user
+credential: { subdomain: acme, token: zm_test_1 }
+input: { id: "8" }
+exchanges:
+  - sent: { method: GET, url: https://acme.zammad.com/api/v1/users/8 }
+    answer: { body: { id: 8, login: ann@example.com, email: ann@example.com, vip: false } }
+result: { id: 8, login: ann@example.com, email: ann@example.com, vip: false }

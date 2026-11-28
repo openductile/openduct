@@ -1,0 +1,8 @@
+description: A video, finished
+action: get_animation
+credential: { api_key: bb_ak_v5_test }
+input: { animation: ani_3 }
+exchanges:
+  - sent: { method: GET, url: "https://api.bannerbear.com/v5/animations/ani_3" }
+    answer: { status: 200, body: { uid: ani_3, status: completed, template: atpl_V1, files: { mp4: "https://videos.bannerbear.example/ani_3.mp4" }, progress: 100 } }
+result: { uid: ani_3, status: completed, template: atpl_V1, files: { mp4: "https://videos.bannerbear.example/ani_3.mp4" }, progress: 100 }

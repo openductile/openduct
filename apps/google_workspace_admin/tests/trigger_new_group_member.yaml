@@ -1,0 +1,8 @@
+trigger: new_group_member
+credential: { access_token: ya29.test }
+input: { group: sales@example.com }
+seen: { items: [["100000000000000000001", ""]] }
+exchanges:
+  - sent: { method: GET, url: https://admin.googleapis.com/admin/directory/v1/groups/sales@example.com/members, query: { maxResults: "200" } }
+    answer: { body: { members: [{ id: "100000000000000000001", email: ann@example.com, role: OWNER }, { id: "100000000000000000004", email: dan@example.com, role: MEMBER }] } }
+runs: [{ id: "100000000000000000004", email: dan@example.com, role: MEMBER }]

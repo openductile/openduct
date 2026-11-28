@@ -1,0 +1,7 @@
+action: get_activity_streams
+credential: { access_token: st_test_1 }
+input: { id: "99001", keys: "time,heartrate" }
+exchanges:
+  - sent: { method: GET, url: https://www.strava.com/api/v3/activities/99001/streams, query: { keys: "time,heartrate", key_by_type: "true" } }
+    answer: { body: { time: { data: [0, 5, 10], series_type: distance, original_size: 3, resolution: high }, heartrate: { data: [98, 121, 134], series_type: distance, original_size: 3, resolution: high } } }
+result: { time: { data: [0, 5, 10], series_type: distance, original_size: 3, resolution: high }, heartrate: { data: [98, 121, 134], series_type: distance, original_size: 3, resolution: high } }

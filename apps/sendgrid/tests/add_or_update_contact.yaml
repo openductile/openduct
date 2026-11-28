@@ -1,0 +1,19 @@
+description: A contact added to two lists, with a custom field; SendGrid answers with the job that will do it
+action: add_or_update_contact
+credential: { token: SG.test-key }
+input:
+  email: ann@example.com
+  first_name: Ann
+  last_name: Example
+  list_ids: "ca7a3796-e8a8-4029-9ccb-df8937940562, 8f1d3c5a-2b4e-4d6f-9a1b-3c5d7e9f1a2b"
+  city: Springfield
+  custom_fields: { e1_T: gold }
+exchanges:
+  - sent:
+      method: PUT
+      url: https://api.sendgrid.com/v3/marketing/contacts
+      body:
+        list_ids: [ca7a3796-e8a8-4029-9ccb-df8937940562, 8f1d3c5a-2b4e-4d6f-9a1b-3c5d7e9f1a2b]
+        contacts: [{ email: ann@example.com, first_name: Ann, last_name: Example, city: Springfield, custom_fields: { e1_T: gold } }]
+    answer: { status: 202, body: { job_id: 2387e363-4104-4225-8960-4a5758492351 } }
+result: { job_id: 2387e363-4104-4225-8960-4a5758492351 }

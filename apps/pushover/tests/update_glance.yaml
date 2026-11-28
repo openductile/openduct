@@ -1,0 +1,11 @@
+description: "A widget's figures updated"
+action: update_glance
+credential: {"token": "aTestTokenAbcdefghijklmnopqrst", "user_key": "uTestUserKeyAbcdefghijklmnopq"}
+input: {"title": "Orders today", "text": "12 orders", "count": 12}
+exchanges:
+  - sent:
+      method: POST
+      url: "https://api.pushover.net/1/glances.json"
+      body: {"token": "aTestTokenAbcdefghijklmnopqrst", "user": "uTestUserKeyAbcdefghijklmnopq", "title": "Orders today", "text": "12 orders", "count": "12"}
+    answer: {"status": 200, "body": {"status": 1, "request": "647d2300-702c-4b38-8b2f-d56326ae460b"}}
+result: {"status": 1, "request": "647d2300-702c-4b38-8b2f-d56326ae460b"}

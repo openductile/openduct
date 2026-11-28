@@ -1,0 +1,41 @@
+description: "List a conversation's messages"
+action: list_messages
+credential: { token: test-token }
+input: { conversation_id: tDtDnQdgm2LXpyiqYvZ6 }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://services.leadconnectorhq.com/conversations/tDtDnQdgm2LXpyiqYvZ6/messages"
+      query: {}
+      headers: { authorization: "Bearer test-token", version: "2021-04-15" }
+    answer:
+      status: 200
+      body:
+        lastMessageId: p1mRSHeLDhAms5q0LMr4
+        nextPage: false
+        messages:
+          - id: ve9EPM428h8vShlRW1KT
+            type: 1
+            messageType: TYPE_CALL
+            locationId: ve9EPM428h8vShlRW1KT
+            contactId: ve9EPM428h8vShlRW1KT
+            conversationId: ve9EPM428h8vShlRW1KT
+            dateAdded: "2024-03-27T18:13:49.000Z"
+            body: example
+            direction: inbound
+            status: connected
+            contentType: example
+            attachments: [example]
+result:
+  - id: ve9EPM428h8vShlRW1KT
+    type: 1
+    messageType: TYPE_CALL
+    locationId: ve9EPM428h8vShlRW1KT
+    contactId: ve9EPM428h8vShlRW1KT
+    conversationId: ve9EPM428h8vShlRW1KT
+    dateAdded: "2024-03-27T18:13:49.000Z"
+    body: example
+    direction: inbound
+    status: connected
+    contentType: example
+    attachments: [example]

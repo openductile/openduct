@@ -1,0 +1,11 @@
+description: Turning the workflow on adds a webhook to the store, with a secret of its own
+trigger: new_order
+register: true
+workflow: wf1
+address: https://studio.example/hooks/h1
+credential: { store_url: https://shop.example.com, consumer_key: ck_1, consumer_secret: cs_1 }
+exchanges:
+  - sent:
+      method: POST
+      url: https://shop.example.com/wp-json/wc/v3/webhooks
+    answer: { status: 201, body: { id: 12, topic: order.created, status: active } }

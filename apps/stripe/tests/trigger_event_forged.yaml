@@ -1,0 +1,9 @@
+description: An event signed with another secret is refused, and runs nothing
+trigger: event
+credential: { secret_key: sk_test_1, webhook_secret: whsec_test_5WbX5kEWLlfzsGNjH64I8lOOqUB6e8FH }
+input: { events: checkout.session.completed }
+delivery:
+  headers: { stripe-signature: "t=1700000000,v1=d8d1f3a43fc31a742b5940e28cd8df1fcc4cb2fb5e482ec40fcc182228323065" }
+  body: '{"id":"evt_1","object":"event","type":"checkout.session.completed","data":{"object":{"id":"cs_1","amount_total":4200,"customer_email":"ann@example.com"}}}'
+  at: 1700000100
+refused: "signature does not match"

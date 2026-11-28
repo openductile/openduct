@@ -1,0 +1,11 @@
+description: A task moved to another day and given to someone else; nothing else is sent
+action: update_task
+credential: { token: "2/1200000000000001/1209999999999999:0a1b2c3d4e5f" }
+input: { task_id: "1204000000000001", due_on: "2026-12-05", assignee: bo@example.com }
+exchanges:
+  - sent:
+      method: PUT
+      url: https://app.asana.com/api/1.0/tasks/1204000000000001
+      body: { data: { due_on: "2026-12-05", assignee: bo@example.com } }
+    answer: { body: { data: { gid: "1204000000000001", name: Send the March invoices, due_on: "2026-12-05", assignee: { gid: "1200000000000003", name: Bo Example } } } }
+result: { gid: "1204000000000001", name: Send the March invoices, due_on: "2026-12-05", assignee: { gid: "1200000000000003", name: Bo Example } }

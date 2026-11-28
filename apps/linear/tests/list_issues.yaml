@@ -1,0 +1,11 @@
+description: A team's issues in one status; filters not given are not sent
+action: list_issues
+credential: { api_key: lin_api_test1 }
+input: { team: ENG, status: Todo }
+exchanges:
+  - sent:
+      method: POST
+      url: https://api.linear.app/graphql
+      body: { query: "query($filter: IssueFilter, $after: String) { issues(first: 100, after: $after, filter: $filter) { nodes { id identifier title description priority priorityLabel url dueDate estimate createdAt updatedAt completedAt state { id name type } assignee { id name } team { id key } project { id name } labels { nodes { id name } } } pageInfo { hasNextPage endCursor } } }", variables: { filter: { team: { key: { eq: ENG } }, state: { name: { eq: Todo } } } } }
+    answer: { body: { data: { issues: { nodes: [{ id: 0b1e6a52-0000-4000-8000-000000000001, identifier: ENG-101, title: Checkout button does nothing, priority: 2, priorityLabel: High, url: "https://linear.app/example/issue/ENG-101", state: { id: st-1, name: Todo, type: unstarted }, assignee: { id: u-1, name: Ann Lee }, team: { id: tm-1, key: ENG } }], pageInfo: { hasNextPage: false, endCursor: cur-1 } } } } }
+result: [{ id: 0b1e6a52-0000-4000-8000-000000000001, identifier: ENG-101, title: Checkout button does nothing, priority: 2, priorityLabel: High, url: "https://linear.app/example/issue/ENG-101", state: { id: st-1, name: Todo, type: unstarted }, assignee: { id: u-1, name: Ann Lee }, team: { id: tm-1, key: ENG } }]

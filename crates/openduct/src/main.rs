@@ -20,9 +20,17 @@
 
 #![forbid(unsafe_code)]
 
+// developer CI/CD: the command line against a running studio.
+#[cfg(feature = "studio")]
+mod studio_client;
+#[cfg(feature = "studio")]
+mod workflow_remote;
+
 mod admin;
 #[cfg(feature = "studio")]
 mod app_cmd;
+#[cfg(feature = "studio")]
+mod app_gen; // app generator
 #[cfg(feature = "studio")]
 mod app_try;
 mod cluster;
@@ -83,8 +91,9 @@ enum Command {
     #[cfg(feature = "pipelines")]
     #[command(subcommand)]
     Pipeline(pipeline::PipelineCommand),
-    /// Check that a broker answers; exits 0 when it does, 1 when it does not.
-    Health(admin::Target),
+    /// Check that a broker answers; exits 0 when it does, 1 when it does not. With --ready, that it can be relied
+    /// on: it has joined its cluster and every partition it holds is started, led and level with its leader.
+    Health(admin::HealthArgs),
     /// Names that may sign in with SCRAM: added with a password read from standard input, or removed.
     #[command(subcommand)]
     User(security_args::UserCommand),
@@ -130,15 +139,30 @@ fn main() -> ExitCode {
             Command::Read(args) => messages::read(args).await,
             #[cfg(feature = "pipelines")]
             Command::Pipeline(command) => pipeline::command(command).await,
-            Command::Health(target) => admin::health(target).await,
+            Command::Health(args) => admin::health(args).await,
             Command::User(command) => security_args::user(command),
         }
     });
     match outcome {
         Ok(()) => ExitCode::SUCCESS,
         Err(message) => {
-            eprintln!("openduct: {message}");
-            ExitCode::FAILURE
+            // developer CI/CD: a command may end with a code of its own and nothing more to say.
+            if !message.is_empty() {
+                eprintln!("openduct: {message}");
+            }
+            ExitCode::from(failure_code())
         }
+    }
+}
+
+/// The exit code of a command that failed: 1, or a workflow command's own (developer CI/CD).
+fn failure_code() -> u8 {
+    #[cfg(feature = "studio")]
+    {
+        workflow_remote::exit_code()
+    }
+    #[cfg(not(feature = "studio"))]
+    {
+        1
     }
 }

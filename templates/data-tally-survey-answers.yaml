@@ -1,0 +1,63 @@
+name: Count a survey's answers into a summary tab
+description: >-
+  For anyone running a survey or a sign-up form that fills a Google Sheet: press Run and every multiple-choice question
+  (a column with a dozen different answers or fewer) is counted - each answer, how many gave it and what share - and
+  written to a Summary tab, the most given first, ready to chart. Free-text columns, and the columns you name, are left
+  out; answers are counted whatever their case or spaces. Run it again any time to bring it up to date. Needs: a Google
+  Sheets sign-in called sheets.
+category: Data
+trigger: manual
+# What a test runs on: what the run is given (nothing: the settings are in the first step).
+sample: {}
+steps:
+  - name: settings
+    set:
+      # Change these to your own.
+      spreadsheet: "'your-spreadsheet-id'"
+      responses: "'Responses'"
+      leave_out: "['Timestamp', 'Email', 'Name']"
+  - name: responses
+    google_sheets:
+      credential: sheets
+      action: read_rows
+      spreadsheet_id: "{{ steps.settings.spreadsheet }}"
+      range: "{{ steps.settings.responses }}"
+    retry: { attempts: 3, wait: 10s }
+  - name: tally
+    python: |
+      # The first row names the questions; every row after it is one person's answers.
+      rows = steps["responses"] or []
+      header = [str(h).strip() for h in (rows[0] if rows else [])]
+      answers = rows[1:]
+      leave_out = {h.lower() for h in steps["settings"]["leave_out"]}
+      out = [["Question", "Answer", "People", "Share"]]
+      counted = []
+      for i, question in enumerate(header):
+          if not question or question.lower() in leave_out:
+              continue
+          counts, shown = {}, {}
+          for row in answers:
+              cell = str(row[i]).strip() if i < len(row) and row[i] is not None else ""
+              if not cell:
+                  continue
+              key = " ".join(cell.lower().split())
+              counts[key] = counts.get(key, 0) + 1
+              shown.setdefault(key, cell)
+          # More than a dozen different answers: free text, not a choice.
+          if not counts or len(counts) > 12:
+              continue
+          total = sum(counts.values())
+          for key, n in sorted(counts.items(), key=lambda kv: (-kv[1], kv[0])):
+              out.append([question, shown[key], n, f"{round(100 * n / total)}%"])
+          counted.append(question)
+      # Blank rows below, so a shorter summary leaves nothing of the last one behind.
+      blank = max(0, 200 - len(out))
+      result = {"rows": out + [["", "", "", ""]] * blank, "questions": counted, "people": len(answers)}
+  - name: write
+    google_sheets:
+      credential: sheets
+      action: set_rows
+      spreadsheet_id: "{{ steps.settings.spreadsheet }}"
+      range: Summary!A1
+      rows: steps.tally.rows
+    retry: { attempts: 3, wait: 10s }

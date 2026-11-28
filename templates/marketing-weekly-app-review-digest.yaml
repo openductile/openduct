@@ -1,0 +1,71 @@
+name: A weekly look at your app's reviews and your rivals'
+description: >-
+  For app makers and their marketing: every Friday afternoon, read the week's App Store reviews of your app and of the
+  rivals you name (Apple's public review feed - no key), and email a short comparison - how many reviews, the average
+  stars, the share of one- and two-star ones, which versions they were about, and the three harshest in their own words,
+  so the team knows what to fix and what to say. Needs: a Gmail sign-in called gmail.
+category: Marketing
+trigger:
+  schedule: { every: week, on: [friday], at: "16:00", timezone: America/Los_Angeles }
+# What a test runs on: an event as this trigger gives it.
+sample:
+  scheduled_at: "2026-11-28T00:00:00Z"
+steps:
+  - name: settings
+    set:
+      # Your app first, then up to four rivals: each its App Store id (the number in its address) and a name.
+      apps: "[{'name': 'Our app', 'id': '1000000001'}, {'name': 'Rival one', 'id': '1000000002'}]"
+      country: "'us'"
+      send_to: "'product@example.com'"
+  - name: each_app
+    for_each:
+      items: steps.settings.apps
+      steps:
+        - name: app
+          set: { name: item.name }
+        - name: feed
+          http:
+            method: GET
+            url: "https://itunes.apple.com/{{ steps.settings.country }}/rss/customerreviews/page=1/id={{ item.id }}/sortby=mostrecent/json"
+            timeout: 20s
+            sample:
+              feed:
+                entry:
+                  - { "im:rating": { label: "2" }, "im:version": { label: "3.4.0" }, title: { label: Sync keeps failing }, content: { label: "Since the update my lists don't sync between phone and tablet." }, updated: { label: "2026-11-26T08:12:00-07:00" } }
+                  - { "im:rating": { label: "5" }, "im:version": { label: "3.4.0" }, title: { label: Love the new widgets }, content: { label: "Exactly what I wanted on my home screen." }, updated: { label: "2026-11-25T19:40:00-07:00" } }
+                  - { "im:rating": { label: "1" }, "im:version": { label: "3.3.2" }, title: { label: Too many ads }, content: { label: "An ad after every second tap." }, updated: { label: "2026-11-12T10:00:00-07:00" } }
+          retry: { attempts: 3, wait: 10s }
+          on_error: continue
+  - name: report
+    javascript: |
+      // The last seven days of reviews for each app, in numbers, and the harshest few of your own app's.
+      const until = new Date(value.scheduled_at);
+      const since = new Date(until.getTime() - 7 * 24 * 3600 * 1000);
+      const lines = [];
+      let harshest = [];
+      steps.each_app.forEach((r, i) => {
+        let entries = (r.feed && r.feed.body && r.feed.body.feed && r.feed.body.feed.entry) || [];
+        if (!Array.isArray(entries)) entries = [entries];
+        const week = entries
+          .filter(e => e["im:rating"] && e.updated)
+          .map(e => ({ stars: Number(e["im:rating"].label), version: (e["im:version"] || {}).label || "?",
+                       title: e.title.label, text: e.content.label, at: new Date(e.updated.label) }))
+          .filter(e => e.at >= since && e.at < until);
+        if (week.length === 0) { lines.push(`${r.app.name}: no reviews this week`); return; }
+        const average = week.reduce((s, e) => s + e.stars, 0) / week.length;
+        const low = week.filter(e => e.stars <= 2).length;
+        const versions = [...new Set(week.map(e => e.version))].join(", ");
+        lines.push(`${r.app.name}: ${week.length} reviews, ${average.toFixed(1)} stars on average, ` +
+                   `${Math.round(100 * low / week.length)}% one or two stars (versions ${versions})`);
+        if (i === 0) harshest = week.filter(e => e.stars <= 2).sort((a, b) => a.stars - b.stars).slice(0, 3);
+      });
+      const quotes = harshest.map(e => `- ${e.stars} stars, ${e.version}: "${e.title}" - ${e.text}`).join("\n");
+      return { text: `${lines.join("\n")}\n\nThe harshest of ours this week:\n${quotes || "- none"}` };
+  - name: send
+    gmail:
+      credential: gmail
+      action: send_email
+      to: "{{ steps.settings.send_to }}"
+      subject: "App reviews this week"
+      text: "{{ steps.report.text }}"
+    retry: { attempts: 3, wait: 30s }

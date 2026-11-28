@@ -1,0 +1,10 @@
+action: save_to_library
+credential: { access_token: BQ-test-token }
+input: { uris: "spotify:track:0TestTrack000000000001, spotify:album:0TestAlbum000000000001" }
+exchanges:
+  - sent:
+      method: PUT
+      url: https://api.spotify.com/v1/me/library
+      query: { uris: "spotify:track:0TestTrack000000000001,spotify:album:0TestAlbum000000000001" }
+    answer: { status: 200 }
+result: { saved: true }

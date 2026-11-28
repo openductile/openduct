@@ -1,0 +1,34 @@
+description: An employee clocked in, with a note
+action: clock_in
+credential:
+  company_domain: acme
+  api_key: test-key
+input:
+  employee_id: '101'
+  note: Opening shift
+  timezone: America/Denver
+exchanges:
+- sent:
+    method: POST
+    url: https://acme.bamboohr.com/api/v1/time_tracking/employees/101/clock_in
+    headers:
+      authorization: Basic dGVzdC1rZXk6eA==
+      accept: application/json
+    body:
+      note: Opening shift
+      timezone: America/Denver
+  answer:
+    status: 200
+    body: &id001
+      id: 32
+      employeeId: 101
+      type: clock
+      date: '2026-11-17'
+      start: '2026-11-17T15:02:00+00:00'
+      end: null
+      timezone: America/Denver
+      hours: 0
+      note: Opening shift
+      projectInfo: null
+      breakInfo: null
+result: *id001

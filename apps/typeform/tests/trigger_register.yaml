@@ -1,0 +1,13 @@
+description: Turning the workflow on adds a webhook to the form, with a secret of its own
+trigger: new_answer
+register: true
+workflow: wf1
+address: https://studio.example/hooks/h1
+credential: { token: tfp_1 }
+input: { form_id: abc123 }
+exchanges:
+  - sent:
+      method: PUT
+      url: https://api.typeform.com/forms/abc123/webhooks/openduct-wf1
+      headers: { authorization: Bearer tfp_1 }
+    answer: { body: { id: wh1, form_id: abc123, tag: openduct-wf1, url: https://studio.example/hooks/h1, enabled: true } }

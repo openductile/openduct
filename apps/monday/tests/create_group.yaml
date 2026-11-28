@@ -1,0 +1,28 @@
+description: A group on a board
+action: create_group
+credential:
+  token: monday-test-token
+input:
+  board_id: '1234567890'
+  name: Shipped
+  color: '#00c875'
+exchanges:
+- sent:
+    body:
+      query: 'mutation ($board: ID!, $name: String!, $color: String) { create_group(board_id: $board, group_name: $name, group_color:
+        $color) { id title color } }'
+      variables:
+        board: '1234567890'
+        name: Shipped
+        color: '#00c875'
+  answer:
+    body:
+      data:
+        create_group:
+          id: new_group12345
+          title: Shipped
+          color: '#00c875'
+result:
+  id: new_group12345
+  title: Shipped
+  color: '#00c875'

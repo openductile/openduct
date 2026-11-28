@@ -1,0 +1,26 @@
+description: A new text field
+action: create_field
+credential:
+  api_key: test-key
+input:
+  name: Company
+  type: text
+exchanges:
+- sent:
+    method: POST
+    url: https://connect.mailerlite.com/api/fields
+    headers:
+      authorization: Bearer test-key
+      accept: application/json
+    body:
+      name: Company
+      type: text
+  answer:
+    status: 201
+    body:
+      data: &id001
+        id: '7'
+        name: Company
+        key: company
+        type: text
+result: *id001

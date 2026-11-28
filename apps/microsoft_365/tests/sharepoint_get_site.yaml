@@ -1,0 +1,8 @@
+description: A site from its address, a slash at its end and all
+action: get_site
+credential: { access_token: eyJ0 }
+input: { site: "https://example.sharepoint.com/sites/sales/" }
+exchanges:
+  - sent: { method: GET, url: "https://graph.microsoft.com/v1.0/sites/example.sharepoint.com:/sites/sales" }
+    answer: { body: { id: "example.sharepoint.com,da60e844-ba1d-49bc-b4d4-d5e36bae9019,712a596e-90a1-49e3-9b48-bfa80bee8740", name: sales, displayName: Sales, webUrl: "https://example.sharepoint.com/sites/sales" } }
+result: { id: "example.sharepoint.com,da60e844-ba1d-49bc-b4d4-d5e36bae9019,712a596e-90a1-49e3-9b48-bfa80bee8740", name: sales, displayName: Sales, webUrl: "https://example.sharepoint.com/sites/sales" }

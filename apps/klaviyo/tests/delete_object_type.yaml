@@ -1,0 +1,12 @@
+# Made by `openduct app from-openapi`: Delete Object Type.
+description: "Delete Object Type, made from the API description's schemas"
+action: delete_object_type
+credential: { api_key: test-key }
+input: { id: "01K5YKKQKM819VVGCPZZKGE6D4" }
+exchanges:
+  - sent:
+      method: DELETE
+      url: "https://a.klaviyo.com/api/object-types/01K5YKKQKM819VVGCPZZKGE6D4"
+      query: {}
+      headers: { authorization: test-key, revision: "2026-10-15" }
+    answer: { status: 204 }

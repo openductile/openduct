@@ -1,0 +1,14 @@
+description: "The top-level collections"
+action: list_collections
+credential: { token: test-token }
+exchanges:
+  - sent:
+      method: GET
+      url: https://api.raindrop.io/rest/v1/collections
+    answer:
+      body:
+        result: true
+        items:
+          - { _id: 77, title: Suppliers, count: 12, public: false, view: list, expanded: true, sort: 0, cover: [], created: "2026-01-10T09:00:00.000Z", lastUpdate: "2026-11-26T09:00:00.000Z" }
+result:
+  - { _id: 77, title: Suppliers, count: 12, public: false, view: list, expanded: true, sort: 0, cover: [], created: "2026-01-10T09:00:00.000Z", lastUpdate: "2026-11-26T09:00:00.000Z" }

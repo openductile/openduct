@@ -1,0 +1,11 @@
+description: A switch switched over - nothing else changed
+action: toggle
+credential: { url: "http://home.example:8123", token: ha-test-token }
+input: { entity_id: switch.coffee_maker }
+exchanges:
+  - sent:
+      method: POST
+      url: "http://home.example:8123/api/services/homeassistant/toggle"
+      body: { entity_id: switch.coffee_maker }
+    answer: { status: 200, body: [{ entity_id: switch.coffee_maker, state: "on", attributes: {}, last_changed: "2026-11-27T07:00:00+00:00" }] }
+result: [{ entity_id: switch.coffee_maker, state: "on", attributes: {}, last_changed: "2026-11-27T07:00:00+00:00" }]

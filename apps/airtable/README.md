@@ -17,8 +17,15 @@ address in the browser.
 
 Field values are converted to the field's type (`typecast`), so text like `2026-11-20` fills a date field.
 
+## Triggers
+
+- **A new record** (`new_record`), asked every 5 minutes: records made since the poll before (with five minutes to
+  spare for clocks that differ), in a table of a base. The token needs data.records:read.
+
 ## Tested
 
 Recorded exchanges from Airtable's documented requests and answers (`tests/`).
 
 Run against an Airtable test base on 2026-11-16: List bases, a base's tables, List records, Add a record and Change a record worked.
+
+Triggers are tested with recorded exchanges and signed deliveries (`tests/trigger_*.yaml`), signatures made as the app documents them; none was run against a live account.

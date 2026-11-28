@@ -1,0 +1,15 @@
+description: Leads saved since the poll before, newest first; listing stops at one seen
+trigger: new_lead
+credential: { api_key: hunter-test-key }
+seen: { items: [["101", ""]] }
+exchanges:
+  - sent:
+      method: GET
+      url: https://api.hunter.io/v2/leads
+      query: { sort: newest, limit: "100" }
+    answer:
+      body:
+        data: { leads: [{ id: 103, email: cy@example.com }, { id: 102, email: bo@example.com }, { id: 101, email: ann.example@example.com }] }
+        meta: { count: 3, total: 3 }
+runs: [{ id: 102, email: bo@example.com }, { id: 103, email: cy@example.com }]
+ids: ["102", "103"]

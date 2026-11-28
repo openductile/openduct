@@ -1,0 +1,7 @@
+description: A launch of a container that is not there is refused (404)
+action: get_launch
+credential: { api_key: pb_test_key_1 }
+input: { id: "1" }
+exchanges:
+  - answer: { status: 404, body: { error: "No container exists with the provided id." } }
+error: "Phantombuster answered 404: No container exists with the provided id."

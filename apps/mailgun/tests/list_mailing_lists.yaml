@@ -1,0 +1,15 @@
+description: "The mailing lists"
+action: list_mailing_lists
+credential: {"api_key": "key-test", "domain": "mg.example.com"}
+exchanges:
+  - sent:
+      method: GET
+      url: "https://api.mailgun.net/v3/lists/pages"
+      query: {"limit": "100"}
+      headers: {"authorization": "Basic YXBpOmtleS10ZXN0"}
+    answer: {"status": 200, "body": {"items": [{"address": "news@mg.example.com", "name": "News", "description": "Monthly news", "access_level": "readonly", "reply_preference": "list", "members_count": 2, "created_at": "Mon, 02 Nov 2026 15:04:05 -0000"}], "paging": {"next": "https://api.mailgun.net/v3/lists/pages?page=next&address=news%40mg.example.com&limit=100"}}}
+  - sent:
+      method: GET
+      url: "https://api.mailgun.net/v3/lists/pages?page=next&address=news%40mg.example.com&limit=100"
+    answer: {"status": 200, "body": {"items": [], "paging": {"next": "https://api.mailgun.net/v3/lists/pages?page=next&address=news%40mg.example.com&limit=100"}}}
+result: [{"address": "news@mg.example.com", "name": "News", "description": "Monthly news", "access_level": "readonly", "reply_preference": "list", "members_count": 2, "created_at": "Mon, 02 Nov 2026 15:04:05 -0000"}]

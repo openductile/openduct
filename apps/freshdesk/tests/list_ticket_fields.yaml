@@ -1,0 +1,27 @@
+description: The fields of a ticket
+action: list_ticket_fields
+credential:
+  domain: acme
+  api_key: test-key
+exchanges:
+- sent:
+    method: GET
+    url: https://acme.freshdesk.com/api/v2/ticket_fields
+    headers:
+      authorization: Basic dGVzdC1rZXk6WA==
+  answer:
+    status: 200
+    body:
+    - id: 9
+      name: cf_order_number
+      label: Order number
+      type: custom_text
+      required_for_agents: false
+      choices: []
+result:
+- id: 9
+  name: cf_order_number
+  label: Order number
+  type: custom_text
+  required_for_agents: false
+  choices: []

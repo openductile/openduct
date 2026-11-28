@@ -1,0 +1,30 @@
+description: A contact's properties
+action: get_contact_properties
+credential:
+  api_key: test-key
+  secret_key: test-secret
+input:
+  contact_id: '1001'
+exchanges:
+- sent:
+    method: GET
+    url: https://api.mailjet.com/v3/REST/contactdata/1001
+    headers:
+      authorization: Basic dGVzdC1rZXk6dGVzdC1zZWNyZXQ=
+  answer:
+    status: 200
+    body:
+      Count: 1
+      Data:
+      - ContactID: 1001
+        ID: 1001
+        Data:
+        - Name: firstname
+          Value: Pat
+      Total: 1
+result:
+  ContactID: 1001
+  ID: 1001
+  Data:
+  - Name: firstname
+    Value: Pat

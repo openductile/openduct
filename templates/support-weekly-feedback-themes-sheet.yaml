@@ -1,0 +1,74 @@
+name: Weekly themes from the feedback sheet
+description: >-
+  Every Monday at 9:00, reads the Feedback sheet your form or team fills in, keeps the last seven days' entries, and
+  has a model sum up the themes - what people praise, what they ask for, what keeps going wrong - in a new row of the
+  Weekly themes sheet, with how many entries there were. For product and support teams who want one line a week
+  rather than a hundred rows. Needs: google_sheets, model.
+category: Support
+trigger:
+  # Choose your own time zone: the summary comes at 9:00 there, summer and winter.
+  schedule: { every: week, on: [monday], at: "09:00", timezone: America/Chicago }
+# What a test runs on: an event as this trigger gives it.
+sample:
+  scheduled_at: "2026-11-30T15:00:00Z"
+steps:
+  - name: sheet
+    google_sheets:
+      action: read_rows
+      credential: google_sheets
+      spreadsheet_id: your-spreadsheet-id
+      range: Feedback
+    retry: { attempts: 3, wait: 30s }
+  # The first row names the columns. Keeps the rows of the seven days before the run, by a date column
+  # (date, submitted or timestamp); a sheet without one has every row read.
+  - name: week
+    python: |
+      from datetime import datetime, timedelta, timezone
+
+      rows = steps["sheet"] if isinstance(steps["sheet"], list) else []
+      header = [str(h).strip().lower() for h in rows[0]] if rows else []
+      records = [dict(zip(header, r)) for r in rows[1:]]
+
+      def pick(names):
+          return next((h for h in header if h in names), None)
+
+      date_col = pick({"date", "submitted", "timestamp", "submitted at"})
+      text_col = pick({"feedback", "comment", "comments", "message", "what could be better"})
+      end = datetime.fromisoformat(value["scheduled_at"].replace("Z", "+00:00"))
+      start = end - timedelta(days=7)
+
+      def when(text):
+          for form in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%dT%H:%M:%S", "%Y-%m-%d", "%m/%d/%Y %H:%M:%S", "%m/%d/%Y"):
+              try:
+                  return datetime.strptime(str(text).strip()[:19], form).replace(tzinfo=timezone.utc)
+              except ValueError:
+                  continue
+          return None
+
+      kept = []
+      for r in records:
+          if date_col:
+              t = when(r.get(date_col, ""))
+              if t is None or not (start <= t < end):
+                  continue
+          text = r.get(text_col) if text_col else " / ".join(str(v) for v in r.values() if v)
+          if text and str(text).strip():
+              kept.append(str(text).strip())
+      print(f"{len(kept)} of {len(records)} rows in the week")
+      result = {"texts": kept, "count": len(kept), "week": start.date().isoformat()}
+  - where: steps.week.count > 0
+  - name: themes
+    summarise:
+      credential: model
+      text: steps.week.texts
+      length: five short lines
+      style: >-
+        bullets, grouped as praise, requests and problems, each with how often it came up; plain words, no names
+  - name: keep
+    google_sheets:
+      action: add_row
+      credential: google_sheets
+      spreadsheet_id: your-spreadsheet-id
+      sheet: Weekly themes
+      values: "{{ [steps.week.week, steps.week.count, steps.themes.summary] }}"
+    retry: { attempts: 3, wait: 30s }

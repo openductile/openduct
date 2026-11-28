@@ -1,0 +1,6 @@
+action: skip_to_next
+credential: { access_token: BQ-test-token }
+exchanges:
+  - sent: { method: POST, url: https://api.spotify.com/v1/me/player/next }
+    answer: { status: 204 }
+result: { skipped: true }

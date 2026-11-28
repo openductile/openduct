@@ -1,0 +1,11 @@
+description: A role taken from a member
+action: remove_role
+sign_in: discord_bot
+credential: { bot_token: test-bot-token }
+input: { guild_id: "900000000000000001", user_id: "920000000000000001", role_id: "970000000000000001" }
+exchanges:
+  - sent:
+      method: DELETE
+      url: https://discord.com/api/v10/guilds/900000000000000001/members/920000000000000001/roles/970000000000000001
+    answer: { status: 204 }
+result: { removed: true }

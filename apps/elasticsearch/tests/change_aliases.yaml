@@ -1,0 +1,21 @@
+description: An alias moved from last year's index to this year's
+action: change_aliases
+credential: {url: 'https://search.example.com:9200', api_key: VnVhQ2ZHY0JDZGJrUW0tZTVhT3g6dWkybHAyYXhUTm1zeWFrdzl0dk5udw==}
+input:
+  actions:
+  - remove: {index: orders-2025, alias: orders}
+  - add: {index: orders-2026, alias: orders}
+exchanges:
+- sent:
+    method: POST
+    url: https://search.example.com:9200/_aliases
+    query: {}
+    headers: {authorization: ApiKey VnVhQ2ZHY0JDZGJrUW0tZTVhT3g6dWkybHAyYXhUTm1zeWFrdzl0dk5udw==}
+    body:
+      actions:
+      - remove: {index: orders-2025, alias: orders}
+      - add: {index: orders-2026, alias: orders}
+  answer:
+    status: 200
+    body: {acknowledged: true, errors: false}
+result: {acknowledged: true, errors: false}

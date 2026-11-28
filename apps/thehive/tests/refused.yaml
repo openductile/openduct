@@ -1,0 +1,15 @@
+description: 'TheHive refuses: the step fails in its words'
+action: create_case
+credential:
+  url: https://thehive.example.com
+  api_key: test-key
+input:
+  title: Test
+  description: Test
+exchanges:
+- answer:
+    status: 403
+    body:
+      type: AuthorizationError
+      message: You don't have permission to perform this action
+error: 'TheHive answered 403: AuthorizationError: You don''t have permission to perform this action'

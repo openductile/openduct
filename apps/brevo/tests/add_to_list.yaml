@@ -1,0 +1,10 @@
+action: add_to_list
+credential: { api_key: xkeysib-test-1 }
+input: { list_id: "3", emails: "ann@example.com, kim@example.com" }
+exchanges:
+  - sent:
+      method: POST
+      url: https://api.brevo.com/v3/contacts/lists/3/contacts/add
+      body: { emails: [ann@example.com, kim@example.com] }
+    answer: { status: 201, body: { contacts: { success: [ann@example.com, kim@example.com], failure: [] } } }
+result: { success: [ann@example.com, kim@example.com], failure: [] }

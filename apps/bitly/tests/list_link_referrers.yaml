@@ -1,0 +1,20 @@
+# Made by `openduct app from-openapi`: Get Metrics for a Bitlink by Referrers.
+description: "Get Metrics for a Bitlink by Referrers, made from the API description's schemas"
+action: list_link_referrers
+credential: { token: test-token }
+input: { bitlink: example }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://api-ssl.bitly.com/v4/bitlinks/example/referrers"
+      query: { unit: day, units: "-1" }
+      headers: { authorization: "Bearer test-token" }
+    answer:
+      status: 200
+      body:
+        unit: example
+        units: 1
+        facet: countries
+        unit_reference: example
+        metrics: [{ clicks: 123, value: bit.ly }]
+result: [{ clicks: 123, value: bit.ly }]

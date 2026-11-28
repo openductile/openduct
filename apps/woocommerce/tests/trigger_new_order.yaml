@@ -1,0 +1,10 @@
+description: An order WooCommerce sends as it is placed, signed with the webhook's secret
+trigger: new_order
+workflow: wf1
+credential: { store_url: https://shop.example.com, consumer_key: ck_1, consumer_secret: cs_1, "webhook_secret@wf1": wc_secret_1 }
+delivery:
+  headers: { x-wc-webhook-signature: "Y+GXvBhUGphJdHNakQ9bk1kltOJI+iuLTvhxbyx3WOM=", x-wc-webhook-topic: order.created, x-wc-webhook-delivery-id: d1 }
+  body: '{"id":727,"status":"processing","total":"29.35","billing":{"email":"ann@example.com"}}'
+  at: 1700000000
+runs: [{ id: 727, status: processing, total: "29.35", billing: { email: ann@example.com } }]
+ids: [d1]

@@ -1,0 +1,31 @@
+name: E-mail orders as a spreadsheet
+description: >-
+  When a customer's orders come in over a webhook ({"customer": {"name", "email"}, "orders": [...]}), make them a
+  spreadsheet and e-mail it to the customer as an attachment, through your own mail server (an smtp credential called
+  mail). The spreadsheet stays in the run's history for 14 days, for anyone in the workspace to download.
+category: Operations
+trigger:
+  webhook: {}
+# What a test runs on: an event as this trigger gives it.
+sample:
+  customer:
+    name: Ada
+    email: ada@example.com
+  orders:
+    - { id: A-1, item: Cap, qty: 2, total: 48 }
+    - { id: A-2, item: Tote, qty: 1, total: 30 }
+steps:
+  - name: sheet
+    convert:
+      format: xlsx
+      rows: value.orders
+      columns: [id, item, qty, total]
+      sheet: Orders
+      name: "orders-{{ value.customer.name }}.xlsx"
+  - name: send
+    email:
+      credential: mail
+      to: "{{ value.customer.email }}"
+      subject: Your orders
+      text: "Hello {{ value.customer.name }}, your {{ size(value.orders) }} orders are in the spreadsheet attached."
+      attachments: steps.sheet

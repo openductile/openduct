@@ -1,0 +1,101 @@
+name: A Telegram bot that keeps your expenses in a sheet
+description: >-
+  Message your Telegram bot what you spent, as you would say it - "lunch 12.50 eur", "taxi 23", "€8.40 coffee": the
+  amount, currency and a category are read from it, a foreign amount is turned into your home currency at the day's
+  rate from Frankfurter (the European Central Bank's rates, free, no key), the expense goes into your Expenses sheet,
+  and the bot answers with what it kept. For freelancers, small teams and travellers who hate expense reports.
+  Needs: telegram, google_sheets.
+category: Finance
+trigger:
+  telegram: { when: new_message, credential: telegram, every: 1m }
+# What a test runs on: a message as this trigger gives it.
+sample:
+  message_id: 412
+  date: 1795790000
+  chat: { id: 123456789, type: private }
+  from: { id: 123456789, first_name: Ines }
+  text: lunch with client 42.80 eur
+steps:
+  - where: has(value.text) && value.text != ''
+  # Reads the amount, the currency and what it was for; your home currency is HOME.
+  - name: parse
+    python: |
+      import re
+
+      HOME = "USD"
+      SYMBOLS = {"€": "EUR", "$": "USD", "£": "GBP", "¥": "JPY", "₹": "INR"}
+      CODES = {"EUR", "USD", "GBP", "JPY", "INR", "CHF", "CAD", "AUD", "SEK", "NOK", "DKK", "PLN", "CZK", "MXN", "SGD"}
+      CATEGORIES = {
+          "Food": ["lunch", "dinner", "breakfast", "coffee", "restaurant", "snack", "groceries"],
+          "Travel": ["taxi", "uber", "train", "flight", "bus", "parking", "fuel", "gas", "hotel"],
+          "Office": ["printer", "paper", "software", "laptop", "desk", "stationery", "subscription"],
+          "Phone and internet": ["phone", "internet", "sim", "data"],
+      }
+
+      text = value["text"].strip()
+      # Every number; the amount is the one with a currency beside it, else the last ("lunch for 2, 42.80").
+      numbers = list(re.finditer(r"([€$£¥₹])?\s*(\d+(?:[.,]\d{1,2})?)\s*([A-Za-z]{3})?\b", text))
+      marked = [m for m in numbers if m.group(1) or (m.group(3) or "").upper() in CODES]
+      found = (marked or numbers or [None])[-1]
+      if not found or text.startswith("/"):
+          result = {"ok": False}
+      else:
+          symbol, number, code = found.groups()
+          currency = (code or "").upper() if (code or "").upper() in CODES else SYMBOLS.get(symbol or "", HOME)
+          what = (text[:found.start()] + " " + text[found.end():]).strip(" -,:") or "expense"
+          lower = what.lower()
+          category = next((c for c, words in CATEGORIES.items() if any(w in lower for w in words)), "Other")
+          result = {
+              "ok": True,
+              "amount": round(float(number.replace(",", ".")), 2),
+              "currency": currency,
+              "home": HOME,
+              "what": what,
+              "category": category,
+          }
+  - name: unclear
+    if:
+      when: "!steps.parse.ok"
+      then:
+        - telegram:
+            action: send
+            credential: telegram
+            chat_id: "{{ value.chat.id }}"
+            text: "Tell me what you spent and how much, as: lunch 12.50 eur, or taxi 23."
+        - stop: {}
+  - name: foreign
+    if:
+      when: steps.parse.currency != steps.parse.home
+      then:
+        - name: rate
+          http:
+            url: https://api.frankfurter.dev/v1/latest
+            query: { base: "{{ steps.parse.currency }}", symbols: "{{ steps.parse.home }}" }
+            sample: { amount: 1.0, base: EUR, date: "2026-11-27", rates: { USD: 1.0512 } }
+          retry: { attempts: 3, wait: 15s }
+  - name: expense
+    set:
+      home_amount: >-
+        steps.parse.currency == steps.parse.home ? steps.parse.amount :
+        round(steps.parse.amount * double(steps.rate.body.rates[steps.parse.home]), 2)
+      day: string(timestamp(int(value.date))).substring(0, 10)
+  - name: keep
+    google_sheets:
+      action: add_row
+      credential: google_sheets
+      spreadsheet_id: your-spreadsheet-id
+      sheet: Expenses
+      values: >-
+        {{ [steps.expense.day, value.from.first_name, steps.parse.what, steps.parse.category, steps.parse.amount,
+            steps.parse.currency, steps.expense.home_amount, steps.parse.home] }}
+    retry: { attempts: 3, wait: 10s }
+  - name: answer
+    telegram:
+      action: send
+      credential: telegram
+      chat_id: "{{ value.chat.id }}"
+      text: >-
+        Kept: {{ steps.parse.what }}, {{ '%.2f'.format([steps.parse.amount]) }} {{ steps.parse.currency }}{{
+        steps.parse.currency != steps.parse.home ? ' (' + '%.2f'.format([steps.expense.home_amount]) + ' ' +
+        steps.parse.home + ')' : '' }}, as {{ steps.parse.category }}.
+    retry: { attempts: 3, wait: 10s }

@@ -1,0 +1,21 @@
+description: "The signed-in user's To Do lists, every page"
+action: list_task_lists
+credential: { access_token: eyJ0 }
+exchanges:
+  - sent:
+      method: GET
+      url: https://graph.microsoft.com/v1.0/me/todo/lists
+      headers: { authorization: Bearer eyJ0 }
+    answer:
+      body:
+        value:
+          - { id: AAMkTasks1, displayName: Tasks, isOwner: true, isShared: false, wellknownListName: defaultList }
+        "@odata.nextLink": "https://graph.microsoft.com/v1.0/me/todo/lists?$skip=1"
+  - sent: { url: "https://graph.microsoft.com/v1.0/me/todo/lists?$skip=1" }
+    answer:
+      body:
+        value:
+          - { id: AAMkShop2, displayName: Shop orders, isOwner: true, isShared: true, wellknownListName: none }
+result:
+  - { id: AAMkTasks1, displayName: Tasks, isOwner: true, isShared: false, wellknownListName: defaultList }
+  - { id: AAMkShop2, displayName: Shop orders, isOwner: true, isShared: true, wellknownListName: none }

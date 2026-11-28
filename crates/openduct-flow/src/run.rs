@@ -60,6 +60,12 @@ pub enum Outcome {
         at: String,
         error: String,
     },
+    /// The run stopped at a step that waits - a form, an approval, a call, a time - to go on when it comes.
+    // forms-and-resume
+    Waiting {
+        at: String,
+        waiting: Box<crate::waits::Waiting>,
+    },
 }
 
 /// What one step did.
@@ -73,6 +79,9 @@ pub struct StepRecord {
     pub error: Option<String>,
     /// What a script step logged (`console.log`, `print`).
     pub logs: Vec<String>,
+    /// What a test run says beside the result: a sample answer and the request not sent (`sample`, `request`), or a
+    /// table not made yet (`note`). // test runs
+    pub test: Option<Value>,
 }
 
 /// A run, as its history keeps it.
@@ -89,6 +98,8 @@ impl RunRecord {
             Outcome::Done => ("done", None, None),
             Outcome::Skipped { at } => ("skipped", Some(at.clone()), None),
             Outcome::Failed { at, error } => ("failed", Some(at.clone()), Some(error.clone())),
+            // forms-and-resume
+            Outcome::Waiting { at, .. } => ("waiting", Some(at.clone()), None),
         };
         let steps: Vec<Json> = self
             .steps
@@ -102,19 +113,43 @@ impl RunRecord {
                 if let (false, Some(fields)) = (s.logs.is_empty(), step.as_object_mut()) {
                     fields.insert("logs".to_owned(), json!(s.logs));
                 }
+                // test runs: what is said beside the result.
+                let said = s
+                    .test
+                    .as_ref()
+                    .and_then(|t| serde_json::from_str::<Json>(&t.to_json()).ok());
+                if let (Some(Json::Object(said)), Some(fields)) = (said, step.as_object_mut()) {
+                    fields.extend(said);
+                }
                 step
             })
             .collect();
-        json!({ "status": status, "at": at, "error": error, "ms": self.ms, "steps": steps })
+        let mut out = json!({ "status": status, "at": at, "error": error, "ms": self.ms, "steps": steps });
+        // forms-and-resume: what a run that waits waits for.
+        if let (Outcome::Waiting { waiting, .. }, Some(fields)) = (&self.outcome, out.as_object_mut()) {
+            fields.insert(
+                "waiting".to_owned(),
+                json!({ "step": waiting.step, "kind": waiting.kind, "until": waiting.until, "since": waiting.since }),
+            );
+        }
+        out
     }
 }
 
 /// Where a run went: on to the next step, out at a `where`, or to its end.
 type Going<'a> = Pin<Box<dyn Future<Output = Result<Flow, (String, String)>> + Send + 'a>>;
 
+mod agent; // G2 AI agents
+mod ai_steps; // G7 more AI steps
 mod defined;
 mod more;
 mod outside;
+// forms-and-resume
+pub(crate) mod pause;
+mod samples; // test runs
+mod tables; // data tables
+
+pub(crate) use samples::http_sample; // test runs
 
 pub use outside::{DryRun, Effects, EmailRequest, HttpRequest, ScriptRequest, SqlRequest};
 pub(crate) use outside::{WRITES, sql_shown};
@@ -122,32 +157,70 @@ pub(crate) use outside::{WRITES, sql_shown};
 struct Run<'a> {
     event: &'a Event,
     effects: &'a dyn Effects,
+    /// The workflow's id: whose state a run keeps, and what an agent's memory is kept under. // data tables, G2 AI agents
+    workflow: &'a str,
     steps: Record,
     records: Vec<StepRecord>,
     taken: usize,
     deadline: Instant,
+    // forms-and-resume: what its steps that wait do, and where a run going on from a wait takes up.
+    segment: pause::Segment,
+    /// The files the run holds, shared with the workflows it runs. // G6 files
+    files: Arc<crate::files::RunFiles>,
+    /// The pieces its `store: memory` steps keep, for this run only. // vector stores
+    vectors: crate::retrieval::RunVectors,
 }
 
 enum Flow {
     Next,
     Skip(String),
     End,
+    // forms-and-resume
+    Pause(Box<crate::waits::Waiting>),
 }
 
 /// Runs `workflow` for `event`.
 pub async fn run(workflow: &Workflow, event: &Event, effects: &dyn Effects) -> RunRecord {
+    // forms-and-resume, G6 files
+    run_with(
+        workflow,
+        event,
+        effects,
+        pause::Segment::plain(workflow, effects),
+        Arc::default(),
+    )
+    .await
+}
+
+/// Runs `workflow` for `event`, its waits as `segment` says, holding its files in `files`. // forms-and-resume, G6 files
+pub(crate) async fn run_with(
+    workflow: &Workflow,
+    event: &Event,
+    effects: &dyn Effects,
+    segment: pause::Segment,
+    files: Arc<crate::files::RunFiles>,
+) -> RunRecord {
     let started = Instant::now();
     let mut run = Run {
         event,
         effects,
+        workflow: &workflow.id, // data tables, G2 AI agents
         steps: Record::new(),
         records: Vec::new(),
         taken: 0,
         deadline: started + MAX_RUN,
+        segment,
+        files,
+        vectors: crate::retrieval::RunVectors::default(), // vector stores
     };
     let outcome = match run.steps_of(&workflow.steps, &[]).await {
         Ok(Flow::Skip(at)) => Outcome::Skipped { at },
         Ok(Flow::Next | Flow::End) => Outcome::Done,
+        // forms-and-resume
+        Ok(Flow::Pause(waiting)) => Outcome::Waiting {
+            at: waiting.step.clone(),
+            waiting,
+        },
         Err((at, error)) => Outcome::Failed { at, error },
     };
     RunRecord {
@@ -184,6 +257,21 @@ fn kind_name(kind: &Kind) -> &'static str {
         Kind::Topic { .. } => "topic",
         Kind::Wait(_) => "wait",
         Kind::Stop { .. } => "stop",
+        Kind::Ai(ai) => ai.kind_name(), // G7 more AI steps
+        Kind::Agent(_) => "agent",      // G2 AI agents
+        Kind::Mcp(_) => "mcp",          // MCP
+        Kind::Retrieval(r) => r.kind(), // retrieval
+        // forms-and-resume
+        Kind::Pause(p) => p.kind_name(),
+        Kind::Table(_) => "table",              // data tables
+        Kind::State(_) => "state",              // data tables
+        Kind::Extract(_) => "extract_file",     // G6 files
+        Kind::Convert(_) => "convert",          // G6 files
+        Kind::FileDetails(_) => "file_details", // G6 files
+        Kind::Database(q) => q.db.name(),       // sql databases
+        Kind::Storage(s) => s.kind_name(),      // storage
+        Kind::Web(_) => "web",                  // web
+        Kind::Mailbox(_) => "mailbox",          // messaging
     }
 }
 
@@ -193,6 +281,8 @@ impl Run<'_> {
         let mut names = vec![
             ("steps".to_owned(), Value::record(self.steps.clone())),
             ("trigger".to_owned(), self.event.details.clone()),
+            // forms-and-resume: the addresses of the steps that wait.
+            ("links".to_owned(), Value::record(self.segment.links.clone())),
         ];
         names.extend(scope.iter().cloned());
         names
@@ -219,8 +309,14 @@ impl Run<'_> {
         if Instant::now() > self.deadline {
             return Err(fail("the run took longer than 3 hours".to_owned()));
         }
+        // forms-and-resume: a run going on from where it waited takes its steps from before as they were.
+        if let Some(flow) = self.replayed(step, scope).await? {
+            return Ok(flow);
+        }
         // Branches and loops run their own steps, which record themselves.
         match &step.kind {
+            // forms-and-resume
+            Kind::Pause(pause) => return self.pause(step, pause, scope).await,
             Kind::If {
                 when,
                 then,
@@ -243,6 +339,7 @@ impl Run<'_> {
                 return self.steps_of(if taken { then } else { otherwise }, scope).await;
             }
             Kind::ForEach { items, steps } => return self.for_each(step, items, steps, scope).await,
+            Kind::Ai(ai) => return self.ai_step(step, ai, scope).await, // G7 more AI steps
             Kind::Switch { cases, otherwise } => {
                 let names = self.names(scope);
                 let env = Env {
@@ -292,6 +389,14 @@ impl Run<'_> {
                     }
                     return Ok(Flow::Next);
                 }
+                // test runs: a sample answer, or a table not made yet, said beside the result.
+                Ok(Done::Noted(result, said)) => {
+                    self.record(step, attempt, millis(started.elapsed()), result, None);
+                    if let Some(last) = self.records.last_mut() {
+                        last.test = Some(said);
+                    }
+                    return Ok(Flow::Next);
+                }
                 Ok(Done::Skip) => {
                     self.record(step, attempt, millis(started.elapsed()), Value::Bool(false), None);
                     return Ok(Flow::Skip(step.name.clone()));
@@ -336,6 +441,8 @@ impl Run<'_> {
     }
 
     fn record(&mut self, step: &Step, attempts: u32, ms: u64, result: Value, error: Option<String>) {
+        // forms-and-resume
+        self.passed(step);
         self.steps.insert(step.name.clone(), result.clone());
         self.records.push(StepRecord {
             name: step.name.clone(),
@@ -345,6 +452,7 @@ impl Run<'_> {
             result,
             error,
             logs: Vec::new(),
+            test: None, // test runs
         });
     }
 
@@ -387,6 +495,8 @@ impl Run<'_> {
             match self.steps_of(steps, &inner).await? {
                 Flow::End => break,
                 Flow::Next | Flow::Skip(_) => {}
+                // forms-and-resume
+                Flow::Pause(waiting) => return Ok(Flow::Pause(waiting)),
             }
             let of_item: Record = steps
                 .iter()
@@ -520,7 +630,14 @@ impl Run<'_> {
                     value,
                     details: Value::from_json(&json!({ "trigger": "workflow", "depth": depth + 1 })),
                 };
-                let record = Box::pin(run(&inner, &event, self.effects)).await;
+                let record = Box::pin(run_with(
+                    &inner,
+                    &event,
+                    self.effects,
+                    pause::Segment::plain(&inner, self.effects),
+                    Arc::clone(&self.files),
+                ))
+                .await; // G6 files
                 if let Outcome::Failed { at, error } = &record.outcome {
                     return Err(format!("{} failed at {at}: {error}", inner.name));
                 }
@@ -577,10 +694,30 @@ impl Run<'_> {
                     subject: render(&mail.subject, "subject")?,
                     text: optional(mail.text.as_ref(), "text")?,
                     html: optional(mail.html.as_ref(), "html")?,
+                    // G6 files
+                    attachments: crate::files::steps::attachments(
+                        self.effects,
+                        &self.files,
+                        &mail.attachments,
+                        &env,
+                    )
+                    .await?,
                 };
                 Done::Value(self.effects.email(request).await?)
             }
-            Kind::Script { language, code, time } => {
+            // data tables: a script given the workflow's state.
+            Kind::Script {
+                language,
+                code,
+                time,
+                state: true,
+            } => {
+                let (result, logs) = tables::script(self, language, code, *time, &env).await?;
+                Done::Logged(result, logs)
+            }
+            Kind::Script {
+                language, code, time, ..
+            } => {
                 let as_json = |v: &Value| serde_json::from_str::<Json>(&v.to_json()).unwrap_or(Json::Null);
                 let mut given = serde_json::Map::new();
                 given.insert("value".to_owned(), as_json(&self.event.value));
@@ -626,7 +763,13 @@ impl Run<'_> {
                 }
                 let request = crate::apps::request(app.app, &credential, &fields)?;
                 let asked = Instant::now();
-                let mut answer = self.effects.http(request).await?;
+                // chat trigger (G8): the step a chat shows as it is made asks for its answer as events
+                let mut answer = match crate::chat::streams(&self.event.details, &step.name, app.app) {
+                    Some(reply) => {
+                        crate::chat::ask_streaming(self.effects, request, &credential, &reply).await?
+                    }
+                    None => self.effects.http(request).await?,
+                };
                 // A model that refuses an optional sampling setting is asked again without it, once.
                 let ignored = if app.app == "ai" {
                     crate::ai::refused_settings(&answer)
@@ -654,13 +797,13 @@ impl Run<'_> {
                 }
                 Done::Value(result)
             }
-            Kind::Defined(d) => Done::Value(defined::run(self.effects, d, &env).await?),
+            Kind::Defined(d) => samples::app(self, d, &env).await?, // test runs: or its recorded example
             Kind::Http(http) => {
                 let mut built = request(http, &env)?;
                 if let Some(name) = &http.credential {
                     crate::apps::authorize(&mut built, &self.effects.credential(name)?)?;
                 }
-                let answer = self.effects.http(built).await?;
+                let answer = crate::files::steps::http(self.effects, &self.files, http, built, &env).await?; // G6 files
                 if http.fail_on_status
                     && let Some(status) = status_of(&answer).filter(|s| *s >= 400)
                 {
@@ -671,7 +814,7 @@ impl Run<'_> {
                     let shown: String = body.chars().take(300).collect();
                     return Err(format!("answered {status}: {shown}"));
                 }
-                Done::Value(answer)
+                samples::http(self.effects, http, answer) // test runs: or its sample answer
             }
             Kind::Topic { name, key, value } => {
                 let key = key.as_ref().map(|k| k.render(&env)).transpose()?;
@@ -683,7 +826,34 @@ impl Run<'_> {
                 Done::Value(Value::from_json(&json!({ "waited_ms": millis(*wait) })))
             }
             Kind::Stop { error } => Done::End(error.as_ref().map(|e| e.render(&env)).transpose()?),
+            Kind::Agent(agent) => Done::Value(self.agent(step, agent, &env, scope).await?), // G2 AI agents
+            Kind::Mcp(m) => Done::Value(crate::mcp::step::run(self.effects, m, &env).await?), // MCP
+            // retrieval; vector stores: the run's own memory of pieces beside the effects
+            Kind::Retrieval(r) => {
+                Done::Value(crate::retrieval::run(r, self.effects, &env, &self.vectors).await?)
+            }
+            Kind::Table(t) => samples::table(self, t, &env).await?, // data tables; test runs: or a stand-in
+            Kind::State(s) => Done::Value(tables::state(self, s, &env).await?), // data tables
+            // G6 files
+            Kind::Extract(x) => {
+                Done::Value(crate::files::steps::extract(self.effects, &self.files, x, &env).await?)
+            }
+            Kind::Convert(c) => Done::Value(
+                crate::files::steps::convert(self.effects, &self.files, c, &step.name, &env).await?,
+            ),
+            Kind::FileDetails(d) => {
+                Done::Value(crate::files::steps::details(self.effects, &self.files, d, &env).await?)
+            }
+            Kind::Database(q) => Done::Value(crate::databases::run(self.effects, q, &env).await?), // sql databases
+            Kind::Storage(s) => {
+                Done::Value(crate::storage::run(self.effects, &self.files, s, &step.name, &env).await?)
+            } // storage
+            Kind::Web(w) => Done::Value(crate::web::run(self.effects, &self.files, w, &env).await?), // web
+            Kind::Mailbox(m) => Done::Value(crate::mailbox::run(self.effects, &self.files, m, &env).await?), // messaging
             Kind::If { .. } | Kind::ForEach { .. } | Kind::Switch { .. } => Done::Value(Value::Null),
+            Kind::Ai(_) => Done::Value(Value::Null), // G7 more AI steps: run by ai_step
+            // forms-and-resume: a step that waits is taken by `step`.
+            Kind::Pause(_) => Done::Value(Value::Null),
         })
     }
 }
@@ -692,6 +862,8 @@ enum Done {
     Value(Value),
     /// A script's answer, and what it logged.
     Logged(Value, Vec<String>),
+    /// A result, and what a test run says beside it (see [`StepRecord::test`]). // test runs
+    Noted(Value, Value),
     Skip,
     End(Option<String>),
 }
@@ -733,6 +905,7 @@ fn request(http: &Http, env: &Env<'_>) -> Result<HttpRequest, String> {
                 encoded.join("&").into_bytes(),
             ))
         }
+        Body::File(_) | Body::Multipart(_) => None, // G6 files: made by crate::files::steps::http
     };
     Ok(HttpRequest {
         read: matches!(http.method.as_str(), "GET" | "HEAD"),

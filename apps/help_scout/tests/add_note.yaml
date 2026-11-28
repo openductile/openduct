@@ -1,0 +1,15 @@
+description: A note for the team
+action: add_note
+credential: {access_token: hs-test-token}
+input: {conversation_id: '3443157477', text: Checked with the warehouse.}
+exchanges:
+- sent:
+    method: POST
+    url: https://api.helpscout.net/v2/conversations/3443157477/notes
+    query: {}
+    headers: {authorization: Bearer hs-test-token}
+    body: {text: Checked with the warehouse.}
+  answer:
+    status: 201
+    headers: {Resource-ID: '5543'}
+result: {thread_id: '5543'}

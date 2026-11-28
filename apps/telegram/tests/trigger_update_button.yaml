@@ -1,0 +1,18 @@
+description: A button pressed under a message - its data, and the press's id to answer it by
+trigger: update
+workflow: wf3
+credential: { bot_token: "123:abc", "webhook_secret@wf3": s3cr3t }
+delivery:
+  headers: { x-telegram-bot-api-secret-token: s3cr3t }
+  body: '{"update_id": 950, "callback_query": {"id": "4382bfdwdsb323b2d9", "from": {"id": 7, "first_name": "Ann"}, "message": {"message_id": 8, "chat": {"id": 42}, "text": "Approve order A-100?"}, "data": "approve:A-100"}}'
+  at: 1700000000
+runs:
+  - kind: button
+    data: approve:A-100
+    callback_query_id: "4382bfdwdsb323b2d9"
+    from: { id: 7, first_name: Ann }
+    chat_id: 42
+    message_id: 8
+    text: ""
+    message: { message_id: 8, chat: { id: 42 }, text: "Approve order A-100?" }
+ids: ["950"]

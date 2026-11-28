@@ -1,0 +1,124 @@
+name: Watch rivals' prices and tell Slack when they change
+description: >-
+  For shops that price against others: list the rival product pages to watch in a Watch sheet (your product in column A,
+  the rival's page in B), and every morning at 6:00 each page is read, its price picked out of the product data shops
+  publish for search engines (JSON-LD, or the page's price tags), written in column C with the day in D - and a Slack
+  message lists every price that went up or down since the last look. Needs: a Google Sheets sign-in called sheets, and
+  a Slack credential called slack.
+category: E-commerce
+trigger:
+  schedule: { every: day, at: "06:00", timezone: Europe/Berlin }
+# What a test runs on: an event as this trigger gives it.
+sample:
+  scheduled_at: "2026-11-27T05:00:00Z"
+steps:
+  - name: settings
+    set:
+      # Change these to your own.
+      spreadsheet: "'your-spreadsheet-id'"
+      channel: "'#pricing'"
+  - name: watch
+    google_sheets:
+      credential: sheets
+      action: read_rows
+      spreadsheet_id: "{{ steps.settings.spreadsheet }}"
+      range: Watch!A2:D
+    retry: { attempts: 3, wait: 10s }
+  - name: each_page
+    for_each:
+      items: steps.watch
+      steps:
+        - name: row
+          set:
+            product: "size(item) > 0 ? string(item[0]) : ''"
+            page: "size(item) > 1 ? string(item[1]).trim() : ''"
+            before: "size(item) > 2 ? string(item[2]) : ''"
+        - name: page
+          http:
+            method: GET
+            url: "{{ steps.row.page }}"
+            headers: { Accept: "text/html", User-Agent: "Mozilla/5.0 (compatible; PriceWatch/1.0)" }
+            response: text
+            timeout: 20s
+            fail_on_status: true
+            sample: |-
+              <html><head><title>Trail Bottle 750 ml</title>
+              <script type="application/ld+json">{"@context":"https://schema.org","@type":"Product","name":"Trail Bottle 750 ml",
+              "offers":{"@type":"Offer","price":"24.90","priceCurrency":"EUR","availability":"https://schema.org/InStock"}}</script>
+              </head><body><h1>Trail Bottle 750 ml</h1></body></html>
+          retry: { attempts: 2, wait: 10s }
+          on_error: continue
+        - name: price
+          javascript: |
+            // The price a product page publishes: JSON-LD offers first, then the price meta tags or itemprop.
+            const html = (steps.page && typeof steps.page.body === "string") ? steps.page.body : "";
+            const found = [];
+            for (const m of html.matchAll(/<script[^>]*application\/ld\+json[^>]*>([\s\S]*?)<\/script>/gi)) {
+              try {
+                const walk = x => {
+                  if (!x || typeof x !== "object") return;
+                  if (Array.isArray(x)) return x.forEach(walk);
+                  const offers = x.offers ? [].concat(x.offers) : [];
+                  for (const o of offers) {
+                    const p = o.price ?? o.lowPrice;
+                    if (p !== undefined) found.push({ price: Number(String(p).replace(",", ".")), currency: o.priceCurrency || "" });
+                  }
+                  Object.values(x).forEach(walk);
+                };
+                walk(JSON.parse(m[1]));
+              } catch (e) { /* a block that is not JSON is passed over */ }
+            }
+            if (found.length === 0) {
+              const tag = html.match(/(?:product:price:amount|itemprop=["']price["'])[^>]*content=["']([\d.,]+)/i);
+              if (tag) found.push({ price: Number(tag[1].replace(",", ".")), currency: "" });
+            }
+            const now = found.find(f => Number.isFinite(f.price));
+            // The price written last time, if there is one.
+            const said = String(steps.row.before).trim().replace(",", ".");
+            const before = said === "" || !Number.isFinite(Number(said)) ? null : Number(said);
+            return {
+              price: now ? now.price : null,
+              currency: now ? now.currency : "",
+              changed: !!now && before !== null && now.price !== before,
+              before,
+              read: !!now,
+            };
+        - name: keep
+          if:
+            when: steps.price.read
+            then:
+              - name: write
+                google_sheets:
+                  credential: sheets
+                  action: set_rows
+                  spreadsheet_id: "{{ steps.settings.spreadsheet }}"
+                  range: "Watch!C{{ index + 2 }}:D{{ index + 2 }}"
+                  rows: "[[steps.price.price, string(value.scheduled_at).substring(0, 10)]]"
+                retry: { attempts: 3, wait: 10s }
+  - name: report
+    javascript: |
+      // Every price that moved, and every page that could not be read, in one message.
+      const moved = [], unread = [];
+      steps.each_page.forEach(r => {
+        if (!r.row.page) return;
+        if (!r.price.read) { unread.push(`${r.row.product}: ${r.row.page}`); return; }
+        if (r.price.changed) {
+          const up = r.price.price > r.price.before;
+          const pct = r.price.before ? Math.round(1000 * (r.price.price - r.price.before) / r.price.before) / 10 : 0;
+          moved.push(`${up ? "UP" : "DOWN"} ${r.row.product}: ${r.price.before} -> ${r.price.price} ${r.price.currency} (${pct > 0 ? "+" : ""}${pct}%) ${r.row.page}`);
+        }
+      });
+      const parts = [];
+      if (moved.length) parts.push(`Rival prices that changed:\n${moved.join("\n")}`);
+      if (unread.length) parts.push(`No price found on:\n${unread.join("\n")}`);
+      return { text: parts.join("\n\n"), any: parts.length > 0 };
+  - name: tell
+    if:
+      when: steps.report.any
+      then:
+        - name: post
+          slack:
+            credential: slack
+            channel: "{{ steps.settings.channel }}"
+            text: "{{ steps.report.text }}"
+          retry: { attempts: 3, wait: 10s }

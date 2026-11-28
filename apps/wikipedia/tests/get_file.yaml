@@ -1,0 +1,8 @@
+description: A file's addresses
+action: get_file
+credential: { contact: ops@example.com }
+input: { title: Example_planet.jpg }
+exchanges:
+  - sent: { method: GET, url: https://en.wikipedia.org/w/rest.php/v1/file/Example_planet.jpg }
+    answer: { body: { title: Example planet.jpg, file_description_url: "//commons.wikimedia.org/wiki/File:Example_planet.jpg", original: { mediatype: BITMAP, size: 120000, width: 2000, height: 2000, url: "https://upload.wikimedia.org/example/Example_planet.jpg" } } }
+result: { title: Example planet.jpg, file_description_url: "//commons.wikimedia.org/wiki/File:Example_planet.jpg", original: { mediatype: BITMAP, size: 120000, width: 2000, height: 2000, url: "https://upload.wikimedia.org/example/Example_planet.jpg" } }

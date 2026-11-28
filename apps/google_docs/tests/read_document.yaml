@@ -1,0 +1,19 @@
+description: A document named by its address; its text, paragraph after paragraph, without the table
+action: read_document
+credential: { access_token: ya29.a0 }
+input: { document: "https://docs.google.com/document/d/1AbCdEfGhIjKlMnOpQrStUvWxYz0123456789/edit?tab=t.0" }
+exchanges:
+  - sent:
+      method: GET
+      url: https://docs.googleapis.com/v1/documents/1AbCdEfGhIjKlMnOpQrStUvWxYz0123456789
+    answer:
+      body:
+        documentId: 1AbCdEfGhIjKlMnOpQrStUvWxYz0123456789
+        title: Meeting notes
+        body:
+          content:
+            - { sectionBreak: {}, endIndex: 1 }
+            - paragraph: { elements: [{ textRun: { content: "Agenda\n" } }] }
+            - paragraph: { elements: [{ textRun: { content: "Prices go " } }, { textRun: { content: "up in May.\n" } }] }
+            - { table: { rows: 1, columns: 1 } }
+result: { id: 1AbCdEfGhIjKlMnOpQrStUvWxYz0123456789, title: Meeting notes, text: "Agenda\nPrices go up in May.\n" }

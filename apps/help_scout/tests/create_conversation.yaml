@@ -1,0 +1,36 @@
+description: A conversation started as if the customer wrote in; its id comes in a header
+action: create_conversation
+credential: {access_token: hs-test-token}
+input:
+  mailbox_id: 85
+  subject: Where is my order?
+  customer_email: ann@example.com
+  customer_first_name: Ann
+  text: I ordered last week and nothing came.
+  tags: [orders]
+exchanges:
+- sent:
+    method: POST
+    url: https://api.helpscout.net/v2/conversations
+    query: {}
+    headers: {authorization: Bearer hs-test-token}
+    body:
+      subject: Where is my order?
+      type: email
+      mailboxId: 85
+      status: active
+      customer: {email: ann@example.com, firstName: Ann}
+      threads:
+      - type: customer
+        customer: {email: ann@example.com}
+        text: I ordered last week and nothing came.
+      tags: [orders]
+  answer:
+    status: 201
+    headers: {Resource-ID: '3443157477', Location: 'https://api.helpscout.net/v2/conversations/3443157477', Web-Location: 'https://secure.helpscout.net/conversation/3443157477/1042'}
+    body:
+      threadIds: [5541]
+result:
+  id: '3443157477'
+  thread_ids: [5541]
+  web_url: https://secure.helpscout.net/conversation/3443157477/1042

@@ -1,0 +1,8 @@
+description: A ticket changed since the poll before runs again
+trigger: updated_ticket
+credential: { subdomain: acme, email: agent@example.com, api_token: t1 }
+seen: { items: [] }
+exchanges:
+  - sent: { query: { sort_by: updated_at, sort_order: desc, per_page: "100" } }
+    answer: { body: { tickets: [{ id: 41, status: solved, updated_at: "2026-11-27T10:00:00Z" }] } }
+runs: [{ id: 41, status: solved, updated_at: "2026-11-27T10:00:00Z" }]

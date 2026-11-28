@@ -1,0 +1,17 @@
+description: Remove comment
+action: remove_comment
+credential: {api_key: pubkey-test-1, api_secret: secret-test-1, access_token: token-test-1}
+input: {post: '6002'}
+exchanges:
+- sent:
+    method: POST
+    url: https://disqus.com/api/3.0/posts/remove.json
+    query: {api_key: pubkey-test-1, api_secret: secret-test-1, access_token: token-test-1}
+    body: {post: '6002'}
+  answer:
+    status: 200
+    body:
+      code: 0
+      response:
+      - {id: '6002'}
+result: {id: '6002'}

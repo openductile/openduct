@@ -1,0 +1,14 @@
+# Made by `openduct app from-openapi`: Update a single contact by ID or email.
+description: "Update a single contact by ID or email, made from the API description's schemas"
+action: update_contact
+credential: { token: test-token }
+input: { id: id_1 }
+exchanges:
+  - sent:
+      method: PATCH
+      url: "https://api.resend.com/contacts/id_1"
+      query: {}
+      headers: { authorization: "Bearer test-token" }
+      body: {}
+    answer: { status: 200, body: { object: contact, id: "479e3145-dd38-476b-932c-529ceb705947" } }
+result: { object: contact, id: "479e3145-dd38-476b-932c-529ceb705947" }

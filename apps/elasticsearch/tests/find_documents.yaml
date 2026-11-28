@@ -1,0 +1,261 @@
+description: Every paid order, the next hundred asked from where the page before ended
+action: find_documents
+credential: {url: 'https://search.example.com:9200', api_key: VnVhQ2ZHY0JDZGJrUW0tZTVhT3g6dWkybHAyYXhUTm1zeWFrdzl0dk5udw==}
+input:
+  index: orders
+  query:
+    match: {status: paid}
+  fields: order,total
+exchanges:
+- sent:
+    method: POST
+    url: https://search.example.com:9200/orders/_search
+    query: {}
+    headers: &id002 {authorization: ApiKey VnVhQ2ZHY0JDZGJrUW0tZTVhT3g6dWkybHAyYXhUTm1zeWFrdzl0dk5udw==}
+    body:
+      query:
+        match: {status: paid}
+      _source: [order, total]
+      size: 100
+  answer:
+    status: 200
+    body:
+      took: 3
+      timed_out: false
+      _shards: {total: 1, successful: 1, skipped: 0, failed: 0}
+      hits:
+        total: {value: 101, relation: eq}
+        max_score: 1.0
+        hits:
+        - &id001
+          _index: orders
+          _id: o-1001
+          _score: 1.0
+          _source: {order: '1001', status: paid, total: 25, email: ann@example.com}
+        - *id001
+        - *id001
+        - *id001
+        - *id001
+        - *id001
+        - *id001
+        - *id001
+        - *id001
+        - *id001
+        - *id001
+        - *id001
+        - *id001
+        - *id001
+        - *id001
+        - *id001
+        - *id001
+        - *id001
+        - *id001
+        - *id001
+        - *id001
+        - *id001
+        - *id001
+        - *id001
+        - *id001
+        - *id001
+        - *id001
+        - *id001
+        - *id001
+        - *id001
+        - *id001
+        - *id001
+        - *id001
+        - *id001
+        - *id001
+        - *id001
+        - *id001
+        - *id001
+        - *id001
+        - *id001
+        - *id001
+        - *id001
+        - *id001
+        - *id001
+        - *id001
+        - *id001
+        - *id001
+        - *id001
+        - *id001
+        - *id001
+        - *id001
+        - *id001
+        - *id001
+        - *id001
+        - *id001
+        - *id001
+        - *id001
+        - *id001
+        - *id001
+        - *id001
+        - *id001
+        - *id001
+        - *id001
+        - *id001
+        - *id001
+        - *id001
+        - *id001
+        - *id001
+        - *id001
+        - *id001
+        - *id001
+        - *id001
+        - *id001
+        - *id001
+        - *id001
+        - *id001
+        - *id001
+        - *id001
+        - *id001
+        - *id001
+        - *id001
+        - *id001
+        - *id001
+        - *id001
+        - *id001
+        - *id001
+        - *id001
+        - *id001
+        - *id001
+        - *id001
+        - *id001
+        - *id001
+        - *id001
+        - *id001
+        - *id001
+        - *id001
+        - *id001
+        - *id001
+        - *id001
+        - *id001
+- sent:
+    method: POST
+    url: https://search.example.com:9200/orders/_search
+    query: {}
+    headers: *id002
+    body:
+      query:
+        match: {status: paid}
+      _source: [order, total]
+      size: 100
+      from: 100
+  answer:
+    status: 200
+    body:
+      took: 3
+      timed_out: false
+      _shards: {total: 1, successful: 1, skipped: 0, failed: 0}
+      hits:
+        total: {value: 101, relation: eq}
+        max_score: 1.0
+        hits:
+        - &id003
+          _index: orders
+          _id: o-1002
+          _score: 1.0
+          _source: {order: '1002', status: paid, total: 40, email: bob@example.com}
+result:
+- *id001
+- *id001
+- *id001
+- *id001
+- *id001
+- *id001
+- *id001
+- *id001
+- *id001
+- *id001
+- *id001
+- *id001
+- *id001
+- *id001
+- *id001
+- *id001
+- *id001
+- *id001
+- *id001
+- *id001
+- *id001
+- *id001
+- *id001
+- *id001
+- *id001
+- *id001
+- *id001
+- *id001
+- *id001
+- *id001
+- *id001
+- *id001
+- *id001
+- *id001
+- *id001
+- *id001
+- *id001
+- *id001
+- *id001
+- *id001
+- *id001
+- *id001
+- *id001
+- *id001
+- *id001
+- *id001
+- *id001
+- *id001
+- *id001
+- *id001
+- *id001
+- *id001
+- *id001
+- *id001
+- *id001
+- *id001
+- *id001
+- *id001
+- *id001
+- *id001
+- *id001
+- *id001
+- *id001
+- *id001
+- *id001
+- *id001
+- *id001
+- *id001
+- *id001
+- *id001
+- *id001
+- *id001
+- *id001
+- *id001
+- *id001
+- *id001
+- *id001
+- *id001
+- *id001
+- *id001
+- *id001
+- *id001
+- *id001
+- *id001
+- *id001
+- *id001
+- *id001
+- *id001
+- *id001
+- *id001
+- *id001
+- *id001
+- *id001
+- *id001
+- *id001
+- *id001
+- *id001
+- *id001
+- *id001
+- *id001
+- *id003

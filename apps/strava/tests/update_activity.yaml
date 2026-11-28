@@ -1,0 +1,7 @@
+action: update_activity
+credential: { access_token: st_test_1 }
+input: { id: "99001", name: Easy recovery run, gear_id: g5678 }
+exchanges:
+  - sent: { method: PUT, url: https://www.strava.com/api/v3/activities/99001, body: { name: Easy recovery run, gear_id: g5678 } }
+    answer: { body: { id: 99001, name: Easy recovery run, gear_id: g5678 } }
+result: { id: 99001, name: Easy recovery run, gear_id: g5678 }

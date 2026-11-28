@@ -1,0 +1,55 @@
+name: Send an e-mail, and follow up if there is no answer in three days
+description: >-
+  Press Run with who it is to, the subject and your message: it is sent from your Gmail, the run waits three days,
+  and if no reply has come from that address by then, a model writes a short, friendly follow-up in your words -
+  no pressure, one clear question - and sends it in the same subject. If they answered, nothing more is sent. For
+  founders and salespeople whose best leads go quiet. Needs: gmail, model.
+category: Sales
+trigger: manual
+# What a test runs on: what you give when you press Run.
+sample:
+  to: hannah.olsen@fjordbuild.example
+  subject: Your site's booking form
+  text: >-
+    Hi Hannah, thanks for the chat at the meetup. As promised, here is how our booking form could replace the phone
+    calls your office takes for site visits - two minutes to set up, no new app for your customers. Would a 15-minute
+    look next week help?
+steps:
+  - where: has(value.to) && value.to.contains('@')
+  - name: first
+    gmail:
+      action: send_email
+      credential: gmail
+      to: "{{ value.to }}"
+      subject: "{{ value.subject }}"
+      text: "{{ value.text }}"
+    retry: { attempts: 3, wait: 15s }
+  - name: three_days
+    wait: 3d
+  - name: replies
+    gmail:
+      action: find_emails
+      credential: gmail
+      q: "from:{{ value.to }} newer_than:4d"
+    retry: { attempts: 3, wait: 15s }
+  - name: quiet
+    if:
+      when: size(steps.replies) == 0
+      then:
+        - name: nudge
+          ai:
+            credential: model
+            system: >-
+              You write a follow-up to an e-mail that had no answer: three sentences at most, friendly, no guilt and
+              no "just checking in", one easy question to answer. Keep the sender's tone. Answer with the e-mail's
+              text only, without a subject or a signature.
+            prompt: "The first e-mail, sent three days ago:\n{{ value.text }}"
+            max_tokens: 200
+        - name: follow_up
+          gmail:
+            action: send_email
+            credential: gmail
+            to: "{{ value.to }}"
+            subject: "Re: {{ value.subject }}"
+            text: "{{ steps.nudge.text }}"
+          retry: { attempts: 3, wait: 15s }

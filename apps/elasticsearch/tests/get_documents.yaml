@@ -1,0 +1,31 @@
+description: Two orders at once
+action: get_documents
+credential: {url: 'https://search.example.com:9200', api_key: VnVhQ2ZHY0JDZGJrUW0tZTVhT3g6dWkybHAyYXhUTm1zeWFrdzl0dk5udw==}
+input:
+  index: orders
+  ids: [o-1001, o-1002]
+exchanges:
+- sent:
+    method: POST
+    url: https://search.example.com:9200/orders/_mget
+    query: {}
+    headers: {authorization: ApiKey VnVhQ2ZHY0JDZGJrUW0tZTVhT3g6dWkybHAyYXhUTm1zeWFrdzl0dk5udw==}
+    body:
+      ids: [o-1001, o-1002]
+  answer:
+    status: 200
+    body:
+      docs:
+      - &id001
+        _index: orders
+        _id: o-1001
+        _version: 1
+        _seq_no: 0
+        _primary_term: 1
+        found: true
+        _source: {order: '1001', total: 25}
+      - {_index: orders, _id: o-1002, found: false}
+result:
+  docs:
+  - *id001
+  - {_index: orders, _id: o-1002, found: false}

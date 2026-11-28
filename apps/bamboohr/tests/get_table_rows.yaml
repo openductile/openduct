@@ -1,0 +1,33 @@
+description: An employee's job rows
+action: get_table_rows
+credential:
+  company_domain: acme
+  api_key: test-key
+input:
+  employee_id: '101'
+  table: jobInfo
+exchanges:
+- sent:
+    method: GET
+    url: https://acme.bamboohr.com/api/v1/employees/101/tables/jobInfo
+    headers:
+      authorization: Basic dGVzdC1rZXk6eA==
+      accept: application/json
+  answer:
+    status: 200
+    body:
+    - id: '7'
+      employeeId: '101'
+      date: '2024-03-01'
+      jobTitle: Store Manager
+      department: Operations
+      location: Denver
+      reportsTo: Ben Tester
+result:
+- id: '7'
+  employeeId: '101'
+  date: '2024-03-01'
+  jobTitle: Store Manager
+  department: Operations
+  location: Denver
+  reportsTo: Ben Tester

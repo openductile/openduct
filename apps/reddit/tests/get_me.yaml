@@ -1,0 +1,7 @@
+description: The account the sign-in acts as
+action: get_me
+credential: { access_token: test-reddit-token }
+exchanges:
+  - sent: { method: GET, url: https://oauth.reddit.com/api/v1/me, headers: { authorization: Bearer test-reddit-token, user-agent: "server:openduct-workflows:v1.0" } }
+    answer: { body: { id: 1abcde, name: example_shop, created_utc: 1700000000, link_karma: 120, comment_karma: 340 } }
+result: { id: 1abcde, name: example_shop, created_utc: 1700000000, link_karma: 120, comment_karma: 340 }

@@ -1,0 +1,22 @@
+description: "A report waited for, a minute at most by default"
+action: wait_for_report
+credential: { base_url: "https://cortex.example.com:9001", api_key: test-key }
+input: { job_id: AWNei4vH3rJ8unegCPC1 }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://cortex.example.com:9001/api/job/AWNei4vH3rJ8unegCPC1/waitreport"
+      query: { atMost: 1minute }
+    answer:
+      body:
+        id: AWNei4vH3rJ8unegCPC1
+        status: Success
+        data: bad.example
+        dataType: domain
+        report: { success: true, summary: { taxonomies: [{ level: malicious, namespace: DNSBL, predicate: Listed, value: "1" }] }, artifacts: [] }
+result:
+  id: AWNei4vH3rJ8unegCPC1
+  status: Success
+  data: bad.example
+  dataType: domain
+  report: { success: true, summary: { taxonomies: [{ level: malicious, namespace: DNSBL, predicate: Listed, value: "1" }] }, artifacts: [] }

@@ -1,0 +1,11 @@
+description: Two addresses that get no more email at all
+action: unsubscribe
+credential: { token: SG.test-key }
+input: { emails: "ann@example.com, bo@example.com" }
+exchanges:
+  - sent:
+      method: POST
+      url: https://api.sendgrid.com/v3/asm/suppressions/global
+      body: { recipient_emails: [ann@example.com, bo@example.com] }
+    answer: { status: 201, body: { recipient_emails: [ann@example.com, bo@example.com] } }
+result: { recipient_emails: [ann@example.com, bo@example.com] }

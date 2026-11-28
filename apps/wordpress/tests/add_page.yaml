@@ -1,0 +1,10 @@
+action: add_page
+credential: { site_url: "https://blog.example.com", username: ann, application_password: "abcd efgh ijkl mnop" }
+input: { title: Contact, content: "<p>Call us.</p>", status: publish }
+exchanges:
+  - sent:
+      method: POST
+      url: https://blog.example.com/wp-json/wp/v2/pages
+      body: { title: Contact, content: "<p>Call us.</p>", status: publish }
+    answer: { status: 201, body: { id: 7, status: publish, link: "https://blog.example.com/contact/" } }
+result: { id: 7, status: publish, link: "https://blog.example.com/contact/" }

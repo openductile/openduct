@@ -1,0 +1,60 @@
+# Made by `openduct app from-openapi`: Retrieve a list of domains.
+description: "Retrieve a list of domains, made from the API description's schemas"
+action: list_domains
+credential: { token: test-token }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://api.resend.com/domains"
+      query: { limit: "100" }
+      headers: { authorization: "Bearer test-token" }
+    answer:
+      status: 200
+      body:
+        object: list
+        has_more: true
+        data:
+          - id: d91cd9bd-1176-453e-8fc1-35364d380206
+            name: example.com
+            status: pending
+            created_at: example
+            region: us-east-1
+            open_tracking: true
+            click_tracking: true
+            capabilities: { sending: enabled, receiving: enabled }
+  - sent:
+      method: GET
+      url: "https://api.resend.com/domains"
+      query: { limit: "100", after: d91cd9bd-1176-453e-8fc1-35364d380206 }
+      headers: { authorization: "Bearer test-token" }
+    answer:
+      status: 200
+      body:
+        object: list
+        has_more: false
+        data:
+          - id: id_2
+            name: example.com
+            status: pending
+            created_at: example
+            region: us-east-1
+            open_tracking: true
+            click_tracking: true
+            capabilities: { sending: enabled, receiving: enabled }
+result:
+  - id: d91cd9bd-1176-453e-8fc1-35364d380206
+    name: example.com
+    status: pending
+    created_at: example
+    region: us-east-1
+    open_tracking: true
+    click_tracking: true
+    capabilities: { sending: enabled, receiving: enabled }
+  - id: id_2
+    name: example.com
+    status: pending
+    created_at: example
+    region: us-east-1
+    open_tracking: true
+    click_tracking: true
+    capabilities: { sending: enabled, receiving: enabled }

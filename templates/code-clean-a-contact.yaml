@@ -2,7 +2,7 @@ name: Clean a contact with Python
 description: >-
   When a contact comes in over a webhook, tidy it with Python - names in title case, a valid e-mail address or none,
   phone digits only, the day it came in - and write it to the contacts topic. print shows in the run.
-category: Code
+category: Data
 trigger:
   webhook: {}
 # What a test runs on: an event as this trigger gives it.

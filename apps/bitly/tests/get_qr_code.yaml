@@ -1,0 +1,79 @@
+# Made by `openduct app from-openapi`: Retrieve a QR Code.
+description: "Retrieve a QR Code, made from the API description's schemas"
+action: get_qr_code
+credential: { token: test-token }
+input: { qrcode_id: qrcode_1 }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://api-ssl.bitly.com/v4/qr-codes/qrcode_1"
+      query: {}
+      headers: { authorization: "Bearer test-token" }
+    answer:
+      status: 200
+      body:
+        qrcode_id: qrcode_1
+        group_guid: group_guid_1
+        title: example
+        gs1: { values: [{ key: example, value: example }] }
+        render_customizations:
+          background_color: example
+          dot_pattern_color: example
+          dot_pattern_type: standard
+          corners:
+            corner_1: { inner_color: example, outer_color: example, shape: standard }
+            corner_2: { inner_color: example, outer_color: example, shape: standard }
+            corner_3: { inner_color: example, outer_color: example, shape: standard }
+          gradient: { style: no_gradient, angle: 1, colors: [{}], exclude_corners: true }
+          background_gradient: { style: no_gradient, angle: 1, colors: [{}], exclude_corners: true }
+          logo: { image_guid: image_guid_1 }
+          frame:
+            id: none
+            colors: { primary: example, secondary: example, background: example }
+            text: { primary: {}, secondary: {} }
+          text:
+            center: { content: example, color: example }
+            top: { content: example, color: example }
+            bottom: { content: example, color: example }
+          branding: { bitly_brand: true }
+          spec_settings: { error_correction: 1 }
+        qr_code_type: bitlink
+        bitlink_id: bitlink_1
+        domain: example
+        long_urls: [example]
+        serialized_content: example
+        archived: true
+        created: example
+result:
+  qrcode_id: qrcode_1
+  group_guid: group_guid_1
+  title: example
+  gs1: { values: [{ key: example, value: example }] }
+  render_customizations:
+    background_color: example
+    dot_pattern_color: example
+    dot_pattern_type: standard
+    corners:
+      corner_1: { inner_color: example, outer_color: example, shape: standard }
+      corner_2: { inner_color: example, outer_color: example, shape: standard }
+      corner_3: { inner_color: example, outer_color: example, shape: standard }
+    gradient: { style: no_gradient, angle: 1, colors: [{}], exclude_corners: true }
+    background_gradient: { style: no_gradient, angle: 1, colors: [{}], exclude_corners: true }
+    logo: { image_guid: image_guid_1 }
+    frame:
+      id: none
+      colors: { primary: example, secondary: example, background: example }
+      text: { primary: {}, secondary: {} }
+    text:
+      center: { content: example, color: example }
+      top: { content: example, color: example }
+      bottom: { content: example, color: example }
+    branding: { bitly_brand: true }
+    spec_settings: { error_correction: 1 }
+  qr_code_type: bitlink
+  bitlink_id: bitlink_1
+  domain: example
+  long_urls: [example]
+  serialized_content: example
+  archived: true
+  created: example

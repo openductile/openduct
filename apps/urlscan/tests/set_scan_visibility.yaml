@@ -1,0 +1,7 @@
+action: set_scan_visibility
+credential: { api_key: us_test_1 }
+input: { uuid: 0e37e828-a9d9-45c0-ac50-1ca579b86c72, visibility: private }
+exchanges:
+  - sent: { method: PUT, url: https://urlscan.io/api/v1/result/0e37e828-a9d9-45c0-ac50-1ca579b86c72/visibility/, body: { visibility: private } }
+    answer: { body: { uuid: 0e37e828-a9d9-45c0-ac50-1ca579b86c72, message: Visibility updated, visibility: private } }
+result: { uuid: 0e37e828-a9d9-45c0-ac50-1ca579b86c72, message: Visibility updated, visibility: private }

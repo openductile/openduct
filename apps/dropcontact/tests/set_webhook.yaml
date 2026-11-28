@@ -1,0 +1,11 @@
+description: The account's own address for results set
+action: set_webhook
+credential: { api_key: dc_test_key_1 }
+input: { callback_url: "https://hooks.example.com/dropcontact" }
+exchanges:
+  - sent:
+      method: PUT
+      url: "https://api.dropcontact.com/v1/enrich/webhook"
+      body: { callback_url: "https://hooks.example.com/dropcontact" }
+    answer: { status: 200, body: { error: false, success: true, callback_url: "https://hooks.example.com/dropcontact" } }
+result: { error: false, success: true, callback_url: "https://hooks.example.com/dropcontact" }

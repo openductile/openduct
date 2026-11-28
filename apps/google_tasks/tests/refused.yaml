@@ -1,0 +1,7 @@
+description: A list that is not there - Google's own words
+action: get_task
+credential: { access_token: ya29.test }
+input: { list_id: nothere, task_id: dGFzazE }
+exchanges:
+  - answer: { status: 404, body: { error: { code: 404, message: Task list not found., status: NOT_FOUND } } }
+error: "Google Tasks answered 404: Task list not found."

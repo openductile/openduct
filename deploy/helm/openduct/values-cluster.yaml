@@ -1,0 +1,12 @@
+# Copyright 2026 Ductile AI, Inc
+# SPDX-License-Identifier: Apache-2.0
+#
+# A cluster of three nodes: every partition kept on three, losing one loses nothing.
+#
+#   helm install openduct deploy/helm/openduct -f deploy/helm/openduct/values-cluster.yaml
+replicas: 3
+cluster:
+  replicationFactor: 3
+resources:
+  requests: { cpu: "1", memory: 2Gi }
+  limits: { memory: 6Gi }

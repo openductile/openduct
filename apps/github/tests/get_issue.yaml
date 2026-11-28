@@ -1,0 +1,9 @@
+action: get_issue
+credential: { token: test-token-1 }
+input: { owner: example-shop, repo: website, number: 1347 }
+exchanges:
+  - sent:
+      method: GET
+      url: https://api.github.com/repos/example-shop/website/issues/1347
+    answer: { body: { number: 1347, title: Checkout button is grey, state: open } }
+result: { number: 1347, title: Checkout button is grey, state: open }

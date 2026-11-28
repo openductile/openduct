@@ -1,0 +1,11 @@
+description: "The sending domains"
+action: list_domains
+credential: {"api_key": "key-test", "domain": "mg.example.com"}
+exchanges:
+  - sent:
+      method: GET
+      url: "https://api.mailgun.net/v4/domains"
+      query: {"limit": "1000"}
+      headers: {"authorization": "Basic YXBpOmtleS10ZXN0"}
+    answer: {"status": 200, "body": {"total_count": 1, "items": [{"id": "d1", "name": "mg.example.com", "state": "active", "type": "custom", "created_at": "Mon, 02 Nov 2026 15:04:05 UTC", "web_prefix": "email"}]}}
+result: [{"id": "d1", "name": "mg.example.com", "state": "active", "type": "custom", "created_at": "Mon, 02 Nov 2026 15:04:05 UTC", "web_prefix": "email"}]

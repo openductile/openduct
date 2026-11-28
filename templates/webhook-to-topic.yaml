@@ -1,6 +1,6 @@
 name: Webhook to a topic
 description: Receive deliveries from any system on a webhook, tidy them, and keep each one in a topic for other workflows and apps to read.
-category: Basics
+category: Engineering
 trigger:
   webhook: {}
 # What a test runs on: an event as this trigger gives it.

@@ -1,0 +1,10 @@
+description: The room behind an address
+action: find_room
+credential: { homeserver: "https://matrix.example.org", token: syt_test_token }
+input: { room_alias: "#support:example.org" }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://matrix.example.org/_matrix/client/v3/directory/room/%23support:example.org"
+    answer: { status: 200, body: { room_id: "!abc123:example.org", servers: [example.org] } }
+result: { room_id: "!abc123:example.org", servers: [example.org] }

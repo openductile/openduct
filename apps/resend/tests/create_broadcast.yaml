@@ -1,0 +1,14 @@
+# Made by `openduct app from-openapi`: Create a broadcast.
+description: "Create a broadcast, made from the API description's schemas"
+action: create_broadcast
+credential: { token: test-token }
+input: { segment_id: segment_1, from: example, subject: example }
+exchanges:
+  - sent:
+      method: POST
+      url: "https://api.resend.com/broadcasts"
+      query: {}
+      headers: { authorization: "Bearer test-token" }
+      body: { segment_id: segment_1, from: example, subject: example }
+    answer: { status: 201, body: { id: "78261eea-8f8b-4381-83c6-79fa7120f1cf", object: broadcast } }
+result: { id: "78261eea-8f8b-4381-83c6-79fa7120f1cf", object: broadcast }

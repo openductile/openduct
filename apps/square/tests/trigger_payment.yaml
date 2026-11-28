@@ -1,0 +1,11 @@
+description: A payment Square sends, signed with the subscription's key over the address and the body
+trigger: payment
+workflow: wf1
+credential: { access_token: sq_1, "webhook_secret@wf1": sq_signature_key_1 }
+delivery:
+  address: https://studio.example/hooks/h1
+  headers: { x-square-hmacsha256-signature: "bnKcJFSAcCDmOkyYA7eJXzk63f7gUWHQuvHdyKw5E7g=" }
+  body: '{"merchant_id":"M1","type":"payment.created","event_id":"ev-1","data":{"type":"payment","id":"pay1","object":{"payment":{"id":"pay1","amount_money":{"amount":1200,"currency":"USD"},"status":"COMPLETED"}}}}'
+  at: 1700000000
+runs: [{ id: pay1, amount_money: { amount: 1200, currency: USD }, status: COMPLETED }]
+ids: [ev-1]

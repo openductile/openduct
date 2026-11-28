@@ -1,0 +1,37 @@
+description: An insert, tagged - how many rows it added comes back in stats
+action: run_sql
+credential: { account: exampleorg-example1, token: pat-test-1 }
+input:
+  statement: "insert into leads (email, source) values (?, ?)"
+  bindings: { "1": { type: TEXT, value: bo@example.com }, "2": { type: TEXT, value: website } }
+  query_tag: openduct-leads
+exchanges:
+  - sent:
+      method: POST
+      url: https://exampleorg-example1.snowflakecomputing.com/api/v2/statements
+      body:
+        statement: "insert into leads (email, source) values (?, ?)"
+        bindings: { "1": { type: TEXT, value: bo@example.com }, "2": { type: TEXT, value: website } }
+        parameters: { query_tag: openduct-leads }
+    answer:
+      status: 200
+      body:
+        code: "090001"
+        sqlState: "00000"
+        message: Statement executed successfully.
+        statementHandle: 01b2c3d4-0000-4000-8000-000000000002
+        resultSetMetaData:
+          numRows: 1
+          rowType: [{ name: number of rows inserted, type: FIXED, nullable: false }]
+          partitionInfo: [{ rowCount: 1 }]
+        data: [["1"]]
+        stats: { numRowsInserted: 1 }
+result:
+  statement_handle: 01b2c3d4-0000-4000-8000-000000000002
+  code: "090001"
+  message: Statement executed successfully.
+  columns: [number of rows inserted]
+  rows: [["1"]]
+  row_count: 1
+  partitions: 1
+  stats: { numRowsInserted: 1 }

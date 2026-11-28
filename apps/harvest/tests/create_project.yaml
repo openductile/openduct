@@ -1,0 +1,32 @@
+description: A project billed by its own hourly rate, budgeted in hours
+action: create_project
+credential: {access_token: hv-test-token, account_id: '100200'}
+input: {client_id: 5735776, name: Website, is_billable: true, bill_by: Project, budget_by: project, hourly_rate: 100.0, budget: 200.0}
+exchanges:
+- sent:
+    method: POST
+    url: https://api.harvestapp.com/v2/projects
+    headers: {authorization: Bearer hv-test-token, harvest-account-id: '100200', user-agent: 'OpenDuct (https://github.com/openductile/openduct)'}
+    query: {}
+    body: {client_id: 5735776, name: Website, is_billable: true, bill_by: Project, budget_by: project, hourly_rate: 100.0,
+      budget: 200.0}
+  answer:
+    status: 201
+    body: &id001
+      id: 14307913
+      client: {id: 5735776, name: Shop Example, currency: USD}
+      name: Website
+      code: WEB
+      is_active: true
+      is_billable: true
+      is_fixed_fee: false
+      bill_by: Project
+      hourly_rate: 100.0
+      budget: 200.0
+      budget_by: project
+      notes: ''
+      starts_on: '2026-11-01'
+      ends_on: null
+      created_at: '2026-11-01T09:00:00Z'
+      updated_at: '2026-11-01T09:00:00Z'
+result: *id001

@@ -1,0 +1,12 @@
+description: A time entry removed
+action: delete_time_entry
+credential: {access_token: hv-test-token, account_id: '100200'}
+input: {time_entry_id: '636709355'}
+exchanges:
+- sent:
+    method: DELETE
+    url: https://api.harvestapp.com/v2/time_entries/636709355
+    headers: {authorization: Bearer hv-test-token, harvest-account-id: '100200', user-agent: 'OpenDuct (https://github.com/openductile/openduct)'}
+    query: {}
+  answer: {status: 200}
+result: {deleted: true}

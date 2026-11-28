@@ -1,0 +1,8 @@
+description: A user's posts
+action: list_user_posts
+credential: { access_token: test-reddit-token }
+input: { username: example_shop }
+exchanges:
+  - sent: { method: GET, url: https://oauth.reddit.com/user/example_shop/submitted, query: { limit: "100" } }
+    answer: { body: { kind: Listing, data: { after: null, before: null, children: [{ kind: t3, data: { id: 1h2ab3c, name: t3_1h2ab3c, title: How do you price custom orders?, author: example_shop, subreddit: smallbusiness, selftext: "", url: "https://www.reddit.com/r/smallbusiness/comments/1h2ab3c/", permalink: /r/smallbusiness/comments/1h2ab3c/, created_utc: 1764237600, score: 12, num_comments: 3, over_18: false } }] } } }
+result: [{ id: 1h2ab3c, name: t3_1h2ab3c, title: How do you price custom orders?, author: example_shop, subreddit: smallbusiness, selftext: "", url: "https://www.reddit.com/r/smallbusiness/comments/1h2ab3c/", permalink: /r/smallbusiness/comments/1h2ab3c/, created_utc: 1764237600, score: 12, num_comments: 3, over_18: false }]

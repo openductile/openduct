@@ -1,0 +1,16 @@
+description: "A job that succeeded since the last poll starts a run"
+trigger: job_finished
+credential: { base_url: "https://cortex.example.com:9001", api_key: test-key }
+seen: { items: [["AWNei4vH3rJ8unegCPB9", ""]] }
+exchanges:
+  - sent:
+      method: POST
+      url: "https://cortex.example.com:9001/api/job/_search"
+      query: { range: "0-100", sort: "-createdAt" }
+      body: { query: { status: Success } }
+    answer:
+      body:
+        - { id: AWNei4vH3rJ8unegCPC1, analyzerName: DNSBL_1_0, status: Success, data: bad.example, dataType: domain }
+        - { id: AWNei4vH3rJ8unegCPB9, analyzerName: Abuse_Finder_3_0, status: Success, data: 203.0.113.7, dataType: ip }
+runs:
+  - { id: AWNei4vH3rJ8unegCPC1, analyzerName: DNSBL_1_0, status: Success, data: bad.example, dataType: domain }

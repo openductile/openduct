@@ -1,0 +1,17 @@
+description: Only the fields given are changed, and an email added
+action: update_customer
+credential: {access_token: hs-test-token}
+input: {customer_id: '29418', job_title: Founder, add_email: ann@shop.example}
+exchanges:
+- sent:
+    method: PATCH
+    url: https://api.helpscout.net/v2/customers/29418
+    query: {}
+    headers: {authorization: Bearer hs-test-token}
+    body:
+    - {op: replace, path: /jobTitle, value: Founder}
+    - op: add
+      path: /emails
+      value: {type: work, value: ann@shop.example}
+  answer: {status: 204}
+result: {changed: true}

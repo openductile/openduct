@@ -1,0 +1,7 @@
+description: "A field the kind does not have: the step fails in Salesforce's words, with its code"
+action: create_record
+credential: { access_token: "00D000000000001!AQ.test", instance: examplecorp.my.salesforce.com }
+input: { object: Lead, fields: { LastName: Lee, Shoe_Size__c: 9 } }
+exchanges:
+  - answer: { status: 400, body: [{ message: "No such column 'Shoe_Size__c' on sobject of type Lead", errorCode: INVALID_FIELD }] }
+error: "Salesforce answered 400: No such column 'Shoe_Size__c' on sobject of type Lead (INVALID_FIELD)"

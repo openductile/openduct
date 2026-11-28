@@ -1,0 +1,12 @@
+description: "seven refuses an SMS with a return code (900: the key is not known): the step fails"
+action: send_sms
+credential: { api_key: wrong-key }
+input: { to: "+4915112345678", text: Your order has shipped }
+exchanges:
+  - sent:
+      method: POST
+      url: "https://gateway.seven.io/api/sms"
+      headers: { x-api-key: wrong-key }
+      body: { to: "+4915112345678", text: Your order has shipped }
+    answer: { status: 200, body: { success: "900" } }
+error: "return code 900"

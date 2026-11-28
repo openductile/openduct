@@ -1,0 +1,44 @@
+description: "Start a browser session"
+action: create_session
+credential: { token: test-token }
+exchanges:
+  - sent:
+      method: POST
+      url: "https://api.airtop.ai/api/v1/sessions"
+      query: {}
+      headers: { authorization: "Bearer test-token" }
+      body: {}
+    answer:
+      status: 201
+      body:
+        data:
+          cdpUrl: example
+          cdpWsUrl: example
+          chromedriverUrl: example
+          configuration: { baseProfileId: base_profile_1, persistProfile: true, timeoutMinutes: 1 }
+          currentUsage: 1
+          dateCreated: "2026-01-15T09:30:00Z"
+          id: "00000000-0000-4000-8000-000000000001"
+          lastActivity: "2026-01-15T09:30:00Z"
+          profileId: profile_1
+          status: example
+          viceUrl: example
+        errors: [{ code: example, details: {}, message: example, reason: example }]
+        meta: { requestId: request_1 }
+        warnings: [{ code: example, details: {}, message: example, reason: example }]
+result:
+  data:
+    cdpUrl: example
+    cdpWsUrl: example
+    chromedriverUrl: example
+    configuration: { baseProfileId: base_profile_1, persistProfile: true, timeoutMinutes: 1 }
+    currentUsage: 1
+    dateCreated: "2026-01-15T09:30:00Z"
+    id: "00000000-0000-4000-8000-000000000001"
+    lastActivity: "2026-01-15T09:30:00Z"
+    profileId: profile_1
+    status: example
+    viceUrl: example
+  errors: [{ code: example, details: {}, message: example, reason: example }]
+  meta: { requestId: request_1 }
+  warnings: [{ code: example, details: {}, message: example, reason: example }]

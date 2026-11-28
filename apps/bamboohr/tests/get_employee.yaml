@@ -1,0 +1,29 @@
+description: One employee, with the fields asked for
+action: get_employee
+credential:
+  company_domain: acme
+  api_key: test-key
+input:
+  employee_id: '101'
+  fields: firstName,lastName,workEmail
+exchanges:
+- sent:
+    method: GET
+    url: https://acme.bamboohr.com/api/v1/employees/101
+    query:
+      fields: firstName,lastName,workEmail
+    headers:
+      authorization: Basic dGVzdC1rZXk6eA==
+      accept: application/json
+  answer:
+    status: 200
+    body:
+      id: '101'
+      firstName: Ada
+      lastName: Sample
+      workEmail: ada@example.com
+result:
+  id: '101'
+  firstName: Ada
+  lastName: Sample
+  workEmail: ada@example.com

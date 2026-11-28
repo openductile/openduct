@@ -1,0 +1,21 @@
+description: A lead list read over two pages, the second asked from the 100th lead
+action: list_leads
+credential: { api_key: pb_test_key_1 }
+input: { list_id: "991122", with_companies: true }
+exchanges:
+  - sent:
+      method: POST
+      url: "https://api.phantombuster.com/api/v2/org-storage/leads/by-list/991122"
+      body: { paginationOptions: { paginationSize: 100, paginationOffset: 0 }, withCompanies: true }
+    answer:
+      status: 200
+      body:
+        totalCount: 101
+        leads: [{ id: l001 }, { id: l002 }, { id: l003 }, { id: l004 }, { id: l005 }, { id: l006 }, { id: l007 }, { id: l008 }, { id: l009 }, { id: l010 }, { id: l011 }, { id: l012 }, { id: l013 }, { id: l014 }, { id: l015 }, { id: l016 }, { id: l017 }, { id: l018 }, { id: l019 }, { id: l020 }, { id: l021 }, { id: l022 }, { id: l023 }, { id: l024 }, { id: l025 }, { id: l026 }, { id: l027 }, { id: l028 }, { id: l029 }, { id: l030 }, { id: l031 }, { id: l032 }, { id: l033 }, { id: l034 }, { id: l035 }, { id: l036 }, { id: l037 }, { id: l038 }, { id: l039 }, { id: l040 }, { id: l041 }, { id: l042 }, { id: l043 }, { id: l044 }, { id: l045 }, { id: l046 }, { id: l047 }, { id: l048 }, { id: l049 }, { id: l050 }, { id: l051 }, { id: l052 }, { id: l053 }, { id: l054 }, { id: l055 }, { id: l056 }, { id: l057 }, { id: l058 }, { id: l059 }, { id: l060 }, { id: l061 }, { id: l062 }, { id: l063 }, { id: l064 }, { id: l065 }, { id: l066 }, { id: l067 }, { id: l068 }, { id: l069 }, { id: l070 }, { id: l071 }, { id: l072 }, { id: l073 }, { id: l074 }, { id: l075 }, { id: l076 }, { id: l077 }, { id: l078 }, { id: l079 }, { id: l080 }, { id: l081 }, { id: l082 }, { id: l083 }, { id: l084 }, { id: l085 }, { id: l086 }, { id: l087 }, { id: l088 }, { id: l089 }, { id: l090 }, { id: l091 }, { id: l092 }, { id: l093 }, { id: l094 }, { id: l095 }, { id: l096 }, { id: l097 }, { id: l098 }, { id: l099 }, { id: l100 }]
+  - sent:
+      body: { paginationOptions: { paginationSize: 100, paginationOffset: 100 }, withCompanies: true }
+    answer:
+      status: 200
+      body:
+        totalCount: 101
+        leads: [{ id: l101, firstName: Ann, lastName: Example, companyName: Example Coffee, professionalEmails: [ann@example.com] }]

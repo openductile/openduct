@@ -1,0 +1,23 @@
+description: A dynamic template filled in, in an unsubscribe group, sent through an EU subuser's key
+action: send_email
+sign_in: sendgrid_eu
+credential: { token: SG.eu-test-key }
+input:
+  to: ann@example.com
+  from: news@shop.example
+  template_id: d-0123456789abcdef0123456789abcdef
+  template_data: { first_name: Ann, order: "1042" }
+  unsubscribe_group: 21
+exchanges:
+  - sent:
+      method: POST
+      url: https://api.eu.sendgrid.com/v3/mail/send
+      body:
+        personalizations:
+          - to: [{ email: ann@example.com }]
+            dynamic_template_data: { first_name: Ann, order: "1042" }
+        from: { email: news@shop.example }
+        template_id: d-0123456789abcdef0123456789abcdef
+        asm: { group_id: 21 }
+    answer: { status: 202 }
+result: { sent: true }

@@ -1,0 +1,106 @@
+name: A daily page speed check, explained on Telegram
+description: >-
+  Every morning at 7:00 London time, measure your key pages on a phone with Google's PageSpeed Insights, keep each
+  page's score and timings in a Google Sheet so trends show, and send your web team a Telegram message: the scores,
+  and for the slowest page what slows it most, explained in plain words by a model. List your pages in the first
+  step. Needs: Google Sheets (sheets), a Telegram bot (bot) and an AI credential (model).
+category: Engineering
+trigger:
+  schedule: { every: day, at: "07:00", timezone: Europe/London }
+# What a test runs on: an event as this trigger gives it.
+sample:
+  scheduled_at: '2026-11-27T07:00:00Z'
+steps:
+  - name: pages
+    set:
+      # Your key pages: the home page, a product, the checkout.
+      list: "['https://www.example.com/', 'https://www.example.com/products/canvas-tote', 'https://www.example.com/cart']"
+  - name: measured
+    for_each:
+      items: steps.pages.list
+      steps:
+        - name: psi
+          http:
+            url: https://www.googleapis.com/pagespeedonline/v5/runPagespeed
+            query: { url: "{{ item }}", strategy: mobile, category: performance }
+            # A page takes a while to measure.
+            timeout: 90s
+            sample:
+              id: https://www.example.com/
+              lighthouseResult:
+                categories: { performance: { score: 0.58 } }
+                audits:
+                  largest-contentful-paint: { numericValue: 4210.5, displayValue: 4.2 s }
+                  cumulative-layout-shift: { numericValue: 0.12, displayValue: "0.12" }
+                  total-blocking-time: { numericValue: 380, displayValue: 380 ms }
+                  render-blocking-resources: { title: Eliminate render-blocking resources, details: { type: opportunity, overallSavingsMs: 1250 } }
+                  uses-optimized-images: { title: Efficiently encode images, details: { type: opportunity, overallSavingsMs: 900 } }
+                  unused-javascript: { title: Reduce unused JavaScript, details: { type: opportunity, overallSavingsMs: 450 } }
+          retry: { attempts: 3, wait: 60s }
+  - name: scores
+    javascript: |
+      // Each page's score (0 to 100), its main timings, and its three biggest savings, from the Lighthouse report.
+      const day = value.scheduled_at.slice(0, 10);
+      const pages = steps.pages.list.map((url, i) => {
+        const lr = (((steps.measured[i] || {}).psi || {}).body || {}).lighthouseResult || {};
+        const audits = lr.audits || {};
+        const perf = ((lr.categories || {}).performance || {}).score;
+        const ms = key => (audits[key] || {}).numericValue;
+        const savings = Object.values(audits)
+          .filter(a => a && a.details && a.details.type === "opportunity" && a.details.overallSavingsMs > 100)
+          .sort((a, b) => b.details.overallSavingsMs - a.details.overallSavingsMs)
+          .slice(0, 3)
+          .map(a => `${a.title} (about ${(a.details.overallSavingsMs / 1000).toFixed(1)} s)`);
+        return {
+          url, score: perf == null ? null : Math.round(perf * 100),
+          lcp: ms("largest-contentful-paint") == null ? null : Math.round(ms("largest-contentful-paint") / 100) / 10,
+          cls: ms("cumulative-layout-shift"), tbt: ms("total-blocking-time"), savings,
+        };
+      });
+      const measured = pages.filter(p => p.score != null).sort((a, b) => a.score - b.score);
+      const lines = pages.map(p => `${p.score == null ? "not measured" : p.score + "/100"}  ${p.url}` +
+        (p.lcp == null ? "" : `  (largest paint ${p.lcp} s)`));
+      return {
+        day, lines: lines.join("\n"), worst: measured[0] || null,
+        rows: pages.map(p => [day, p.url, p.score == null ? "" : p.score, p.lcp == null ? "" : p.lcp, p.cls == null ? "" : p.cls, p.tbt == null ? "" : p.tbt]),
+      };
+  - name: log
+    for_each:
+      items: steps.scores.rows
+      steps:
+        - name: row
+          google_sheets:
+            action: add_row
+            credential: sheets
+            spreadsheet_id: your-sheet-id
+            sheet: Page speed
+            values: "{{ item }}"
+          retry: { attempts: 3, wait: 30s }
+  - name: explain
+    if:
+      when: steps.scores.worst != null && steps.scores.worst.score < 90
+      then:
+        - name: advice
+          ai:
+            credential: model
+            system: >-
+              You explain a web page's speed problems to a small web team in plain words: what each problem is, why
+              it slows the page on a phone, and the first thing to try. At most five short lines.
+            prompt: >-
+              The slowest page: {{ steps.scores.worst.url }}, score {{ steps.scores.worst.score }}/100, largest paint
+              {{ steps.scores.worst.lcp }} s, layout shift {{ steps.scores.worst.cls }}, blocking time {{ steps.scores.worst.tbt }} ms.
+              Its biggest savings: {{ steps.scores.worst.savings.join('; ') }}
+            max_tokens: 400
+        - name: tell
+          telegram:
+            credential: bot
+            chat_id: "-1001234567890"
+            text: "Page speed on a phone, {{ steps.scores.day }}:\n{{ steps.scores.lines }}\n\nThe slowest, {{ steps.scores.worst.url }}:\n{{ steps.advice.text }}"
+          retry: { attempts: 3, wait: 20s }
+      else:
+        - name: all_good
+          telegram:
+            credential: bot
+            chat_id: "-1001234567890"
+            text: "Page speed on a phone, {{ steps.scores.day }}:\n{{ steps.scores.lines }}"
+          retry: { attempts: 3, wait: 20s }

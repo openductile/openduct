@@ -1,0 +1,37 @@
+description: "List a space's folders"
+action: list_folders
+credential: { api_key: test-key }
+input: { space_id: 789 }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://api.clickup.com/api/v2/space/789/folder"
+      query: {}
+      headers: { authorization: test-key }
+    answer:
+      status: 200
+      body:
+        folders:
+          - id: id_1
+            name: example
+            orderindex: 1
+            override_statuses: true
+            hidden: true
+            space: { id: id_1, name: example, access: true }
+            task_count: example
+            archived: true
+            statuses: [{ id: id_1, status: example, orderindex: 1, color: example, type: example }]
+            lists: [example]
+            parent_folder: example
+result:
+  - id: id_1
+    name: example
+    orderindex: 1
+    override_statuses: true
+    hidden: true
+    space: { id: id_1, name: example, access: true }
+    task_count: example
+    archived: true
+    statuses: [{ id: id_1, status: example, orderindex: 1, color: example, type: example }]
+    lists: [example]
+    parent_folder: example

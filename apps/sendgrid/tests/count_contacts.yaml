@@ -1,0 +1,7 @@
+description: How many contacts there are
+action: count_contacts
+credential: { token: SG.test-key }
+exchanges:
+  - sent: { method: GET, url: https://api.sendgrid.com/v3/marketing/contacts/count }
+    answer: { body: { contact_count: 1250, billable_count: 1200, billable_breakdown: { total: 1200, breakdown: {} } } }
+result: { contact_count: 1250, billable_count: 1200, billable_breakdown: { total: 1200, breakdown: {} } }

@@ -1,0 +1,12 @@
+description: "A contact made"
+action: save_contact
+credential: {"api_key": "test-key"}
+input: {"email": "cy@example.com", "first_name": "Cy", "last_name": "Park", "job_title": "Buyer"}
+exchanges:
+  - sent:
+      method: POST
+      url: "https://api.lemlist.com/api/contacts"
+      headers: {"authorization": "Basic OnRlc3Qta2V5"}
+      body: {"email": "cy@example.com", "firstName": "Cy", "lastName": "Park", "jobTitle": "Buyer"}
+    answer: {"status": 200, "body": {"success": true, "data": {"_id": "ctc_C3", "email": "cy@example.com"}, "warnings": []}}
+result: {"success": true, "data": {"_id": "ctc_C3", "email": "cy@example.com"}, "warnings": []}

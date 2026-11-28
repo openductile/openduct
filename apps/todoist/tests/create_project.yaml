@@ -1,0 +1,7 @@
+action: create_project
+credential: { token: todoist-test-token }
+input: { name: Orders, description: Supplier orders, color: blue, view_style: list }
+exchanges:
+  - sent: { method: POST, url: https://api.todoist.com/api/v1/projects, body: { name: Orders, description: Supplier orders, color: blue, view_style: list } }
+    answer: { body: { id: 6Xproj0000000001, name: Orders, description: Supplier orders, color: blue, parent_id: null, is_favorite: false, is_shared: false, is_archived: false, inbox_project: false, view_style: list } }
+result: { id: 6Xproj0000000001, name: Orders, description: Supplier orders, color: blue, parent_id: null, is_favorite: false, is_shared: false, is_archived: false, inbox_project: false, view_style: list }

@@ -1,0 +1,89 @@
+name: A shop chat that knows your stock and tracks parcels
+description: >-
+  A chat for your online shop, on a page of its own or on your site with one script tag. An AI agent answers
+  shoppers from your Stock sheet (product, price, in stock, ships in) and tracks a parcel through AfterShip when given
+  a tracking number, remembering the conversation. After each answer, a quick look by AI spots a shopper asking for a
+  bulk or business quote, and adds them to your Chat leads sheet for sales to follow up. Needs: model (ai), sheets
+  (google_sheets), aftership (header: as-api-key and your AfterShip key).
+category: E-commerce
+trigger:
+  chat:
+    texts:
+      title: Ask the shop
+      welcome: Hi! Ask about a product, stock or your parcel.
+      placeholder: Your question
+    # The sites that may show the chat (add yours), beside its own page.
+    origins: []
+    history: 10
+    limits: { message: 1500, per_session: 20, per_address: 60 }
+# What a test runs on: a message as this trigger gives it.
+sample:
+  message: Do you have the oak serving board in stock? We'd need 40 for our restaurant group.
+  session: 3d2c1b0a99f8e7d6c5b4a3928170f6e5
+  history:
+    - { role: user, content: Hi }
+    - { role: assistant, content: "Hi! Ask about a product, stock or your parcel." }
+  person: {}
+steps:
+  - name: helper
+    agent:
+      credential: model
+      instructions: >-
+        You answer the shoppers of an online homeware shop, kindly and in at most four sentences. Before you say
+        anything about a product's price or stock, read the Stock sheet with read_stock. For a parcel, ask for the
+        tracking number and look it up with track_parcel. Never promise delivery days the tools do not give. For 20
+        or more of an item, say the team sends a business quote by e-mail and ask for their e-mail address.
+      input: "{{ value.message }}"
+      tools:
+        - name: read_stock
+          description: The Stock sheet - product, price, in stock (a number), ships in (days).
+          google_sheets: { action: read_rows, credential: sheets, spreadsheet_id: your-spreadsheet-id, range: "Stock!A1:D500" }
+        - name: track_parcel
+          description: Where a parcel is, by its tracking number.
+          parameters:
+            type: object
+            properties:
+              number: { type: string, description: "The tracking number, letters and digits", pattern: "^[A-Za-z0-9-]{6,40}$" }
+            required: [number]
+          http:
+            url: https://api.aftership.com/tracking/2024-10/trackings
+            credential: aftership
+            query: { tracking_numbers: "{{ args.number }}" }
+      allow: [read_stock, track_parcel]
+      memory: { key: "{{ value.session }}", window: 10 }
+      max_turns: 5
+      max_tool_calls: 4
+  - name: lead
+    ai:
+      credential: model
+      system: >-
+        You read one exchange in a shop's chat. Say whether the shopper is asking for a bulk or business quote (20 or
+        more items, a company, a restaurant, an event), and what they want.
+      prompt: "Shopper: {{ value.message }}\nShop: {{ steps.helper.text }}"
+      schema:
+        type: object
+        properties:
+          quote: { type: boolean }
+          wants: { type: string, description: "what and how many, in a few words" }
+        required: [quote, wants]
+      max_tokens: 120
+  - name: keep_lead
+    if:
+      when: steps.lead.json.quote == true
+      then:
+        - name: add
+          google_sheets:
+            action: add_row
+            credential: sheets
+            spreadsheet_id: your-spreadsheet-id
+            sheet: Chat leads
+            # An e-mail address the shopper wrote is picked out here, not by the model.
+            values:
+              - "{{ value.session }}"
+              - "{{ steps.lead.json.wants }}"
+              - "{{ regex.extract(value.message, r'[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}') }}"
+              - "{{ value.message }}"
+          retry: { attempts: 3, wait: 10s }
+  - name: reply
+    respond:
+      body: { text: "{{ steps.helper.text }}" }

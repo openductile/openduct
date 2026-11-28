@@ -1,0 +1,8 @@
+description: Tags with how many posts each has
+action: list_tags
+credential: { site: acme, content_key: 22444f78447824223cefc48aaa }
+input: { with_counts: true }
+exchanges:
+  - sent: { method: GET, url: https://acme.ghost.io/ghost/api/content/tags/, query: { key: 22444f78447824223cefc48aaa, include: count.posts, limit: "100" } }
+    answer: { body: { tags: [{ id: 6744a1b2c3d4e5f600000030, name: News, slug: news, count: { posts: 12 } }], meta: { pagination: { page: 1, limit: 100, pages: 1, total: 1, next: null, prev: null } } } }
+result: [{ id: 6744a1b2c3d4e5f600000030, name: News, slug: news, count: { posts: 12 } }]

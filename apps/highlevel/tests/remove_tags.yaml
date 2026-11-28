@@ -1,0 +1,13 @@
+description: "Take tags off a contact"
+action: remove_tags
+credential: { token: test-token }
+input: { contact_id: sx6wyHhbFdRXh302LLNR, tags: [example] }
+exchanges:
+  - sent:
+      method: DELETE
+      url: "https://services.leadconnectorhq.com/contacts/sx6wyHhbFdRXh302LLNR/tags"
+      query: {}
+      headers: { authorization: "Bearer test-token", version: "2021-07-28" }
+      body: { tags: [example] }
+    answer: { status: 200, body: { tags: [example] } }
+result: { tags: [example] }

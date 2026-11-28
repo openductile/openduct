@@ -1,0 +1,19 @@
+description: A site's details
+action: get_forum
+credential: {api_key: pubkey-test-1, api_secret: secret-test-1, access_token: token-test-1}
+input: {forum: shop-example}
+exchanges:
+- sent:
+    method: GET
+    url: https://disqus.com/api/3.0/forums/details.json
+    query: {api_key: pubkey-test-1, api_secret: secret-test-1, access_token: token-test-1, forum: shop-example}
+  answer:
+    status: 200
+    body:
+      code: 0
+      response: &id001
+        id: shop-example
+        name: Shop Example
+        founder: '100'
+        favicon: {permalink: 'https://disqus.com/api/forums/favicons/shop-example.jpg'}
+result: *id001

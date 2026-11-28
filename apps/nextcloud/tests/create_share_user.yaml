@@ -1,0 +1,12 @@
+description: A folder shared with a person, who may change and add to it
+action: create_share
+credential: { url: "https://cloud.example.com/", username: ann, password: app-pass-1 }
+input: { path: /Projects/Spring, share_type: 0, share_with: bob, permissions: 7, note: The spring catalogue }
+exchanges:
+  - sent:
+      url: "https://cloud.example.com/ocs/v2.php/apps/files_sharing/api/v1/shares"
+      body: { path: /Projects/Spring, shareType: 0, shareWith: bob, permissions: 7, note: The spring catalogue }
+    answer:
+      status: 200
+      body: { ocs: { meta: { status: ok, statuscode: 200 }, data: { id: "43", share_type: 0, share_with: bob, share_with_displayname: Bob Example, path: /Projects/Spring, item_type: folder, permissions: 7, note: The spring catalogue } } }
+result: { id: "43", share_type: 0, share_with: bob, share_with_displayname: Bob Example, path: /Projects/Spring, item_type: folder, permissions: 7, note: The spring catalogue }

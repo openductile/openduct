@@ -1,0 +1,11 @@
+description: Turning the workflow on gives Telegram its address and the secret to send with each delivery
+trigger: message
+register: true
+workflow: wf1
+address: https://studio.example/hooks/h1
+credential: { bot_token: "123:abc" }
+exchanges:
+  - sent:
+      method: POST
+      url: https://api.telegram.org/bot123:abc/setWebhook
+    answer: { body: { ok: true, result: true, description: Webhook was set } }

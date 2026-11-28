@@ -1,0 +1,7 @@
+action: get_scan_dom
+credential: { api_key: us_test_1 }
+input: { uuid: 0e37e828-a9d9-45c0-ac50-1ca579b86c72 }
+exchanges:
+  - sent: { method: GET, url: https://urlscan.io/dom/0e37e828-a9d9-45c0-ac50-1ca579b86c72/ }
+    answer: { headers: { content-type: text/plain }, body: "<html><body>Sign in</body></html>" }
+result: { html: "<html><body>Sign in</body></html>" }

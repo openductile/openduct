@@ -1,0 +1,24 @@
+description: A refunded order's conversion retracted, by its order id
+action: upload_conversion_adjustments
+credential: { access_token: ya29.test }
+input:
+  customer_id: "1234567890"
+  adjustments:
+    - { conversionAction: customers/1234567890/conversionActions/42, adjustmentType: RETRACTION, adjustmentDateTime: "2026-11-27 10:00:00+00:00", orderId: A-1042 }
+  developer_token: devtok-test
+exchanges:
+  - sent:
+      method: POST
+      url: "https://googleads.googleapis.com/v26/customers/1234567890:uploadConversionAdjustments"
+      body:
+        conversionAdjustments:
+          - { conversionAction: customers/1234567890/conversionActions/42, adjustmentType: RETRACTION, adjustmentDateTime: "2026-11-27 10:00:00+00:00", orderId: A-1042 }
+        partialFailure: true
+    answer:
+      status: 200
+      body:
+        results: [{ conversionAction: customers/1234567890/conversionActions/42, orderId: A-1042, adjustmentType: RETRACTION, adjustmentDateTime: "2026-11-27 10:00:00+00:00" }]
+        jobId: "8812346"
+result:
+  results: [{ conversionAction: customers/1234567890/conversionActions/42, orderId: A-1042, adjustmentType: RETRACTION, adjustmentDateTime: "2026-11-27 10:00:00+00:00" }]
+  jobId: "8812346"

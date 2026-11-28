@@ -1,0 +1,74 @@
+# Made by `openduct app from-openapi`: List tasks.
+description: "List tasks, made from the API description's schemas"
+action: list_tasks
+credential: { access_token: test-access-token }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://api.keap.com/crm/rest/v2/tasks"
+      query: { page_size: "100" }
+      headers: { authorization: "Bearer test-access-token" }
+    answer:
+      status: 200
+      body:
+        tasks:
+          - id: 123
+            title: example
+            description: example
+            type: CALL
+            priority: CRITICAL
+            completed: false
+            create_time: "2024-01-10T08:00:00Z"
+            modification_time: "2024-03-15T10:30:00Z"
+            completion_time: "2024-03-20T14:00:00Z"
+            due_time: "2024-03-18T17:00:00Z"
+            remind_time_mins: "5"
+            assigned_to_user_id: 456
+        next_page_token: token_2
+  - sent:
+      method: GET
+      url: "https://api.keap.com/crm/rest/v2/tasks"
+      query: { page_size: "100", page_token: token_2 }
+      headers: { authorization: "Bearer test-access-token" }
+    answer:
+      status: 200
+      body:
+        tasks:
+          - id: id_2
+            title: example
+            description: example
+            type: CALL
+            priority: CRITICAL
+            completed: false
+            create_time: "2024-01-10T08:00:00Z"
+            modification_time: "2024-03-15T10:30:00Z"
+            completion_time: "2024-03-20T14:00:00Z"
+            due_time: "2024-03-18T17:00:00Z"
+            remind_time_mins: "5"
+            assigned_to_user_id: 456
+        next_page_token: null
+result:
+  - id: 123
+    title: example
+    description: example
+    type: CALL
+    priority: CRITICAL
+    completed: false
+    create_time: "2024-01-10T08:00:00Z"
+    modification_time: "2024-03-15T10:30:00Z"
+    completion_time: "2024-03-20T14:00:00Z"
+    due_time: "2024-03-18T17:00:00Z"
+    remind_time_mins: "5"
+    assigned_to_user_id: 456
+  - id: id_2
+    title: example
+    description: example
+    type: CALL
+    priority: CRITICAL
+    completed: false
+    create_time: "2024-01-10T08:00:00Z"
+    modification_time: "2024-03-15T10:30:00Z"
+    completion_time: "2024-03-20T14:00:00Z"
+    due_time: "2024-03-18T17:00:00Z"
+    remind_time_mins: "5"
+    assigned_to_user_id: 456

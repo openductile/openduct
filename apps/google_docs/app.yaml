@@ -1,0 +1,76 @@
+# Copyright 2026 Ductile AI, Inc
+# SPDX-License-Identifier: Apache-2.0
+app: google_docs
+name: Google Docs
+category: files
+description: Documents in Google Docs, made, read and written to.
+docs: https://developers.google.com/workspace/docs/api/reference/rest
+hosts: [docs.googleapis.com]
+base_url: https://docs.googleapis.com/v1
+sign_in:
+  - id: google_docs
+    label: Sign in with Google
+    oauth2:
+      authorize: https://accounts.google.com/o/oauth2/v2/auth
+      token: https://oauth2.googleapis.com/token
+      scopes: [https://www.googleapis.com/auth/documents]
+      extra: { access_type: offline, prompt: consent }
+    headers:
+      Authorization: "Bearer {{ credential.access_token }}"
+error: value.error.message
+default_action: add_text
+actions:
+  make_document:
+    label: Make a document
+    description: A new, empty document in My Drive, with its title.
+    write: true
+    method: POST
+    path: /documents
+    inputs:
+      - { name: title, label: "The document's title", required: true }
+    send: { title: "{{ input.title }}" }
+    result: "{'id': value.documentId, 'title': value.title, 'url': 'https://docs.google.com/document/d/' + value.documentId + '/edit'}"
+  read_document:
+    label: Read a document
+    description: Its title and its text, paragraph by paragraph (tables and pictures are left out).
+    method: GET
+    # A document's address (https://docs.google.com/document/d/<id>/edit) or its id.
+    path: "/documents/{{ input.document.contains('/d/') ? regex.extract(input.document, r'/d/([A-Za-z0-9_-]+)') : input.document }}"
+    inputs:
+      - { name: document, label: "The document: its address or its id", required: true }
+    result: >-
+      {'id': value.documentId, 'title': value.title,
+       'text': value.body.content.filter(c, has(c.paragraph)).map(c, c.paragraph.elements.filter(e, has(e.textRun)).map(e, e.textRun.content).join('')).join('')}
+  add_text:
+    label: Add text at the end
+    description: Text written after what the document already has.
+    write: true
+    method: POST
+    path: "/documents/{{ input.document.contains('/d/') ? regex.extract(input.document, r'/d/([A-Za-z0-9_-]+)') : input.document }}:batchUpdate"
+    inputs:
+      - { name: document, label: "The document: its address or its id", required: true }
+      - { name: text, label: "The text to add (a new line starts a new paragraph)", required: true }
+    send:
+      requests:
+        - insertText:
+            text: "{{ input.text }}"
+            endOfSegmentLocation: { segmentId: "" }
+    result: "{'id': value.documentId}"
+  replace_text:
+    label: Replace text
+    description: Every place the document says one thing, made to say another - such as [customer] in a copy of a letter.
+    write: true
+    method: POST
+    path: "/documents/{{ input.document.contains('/d/') ? regex.extract(input.document, r'/d/([A-Za-z0-9_-]+)') : input.document }}:batchUpdate"
+    inputs:
+      - { name: document, label: "The document: its address or its id", required: true }
+      - { name: find, label: "The text to find", required: true }
+      - { name: replace_with, label: "What it becomes (nothing, to remove it)" }
+      - { name: match_case, label: "Only where its capitals are the same", kind: boolean }
+    send:
+      requests:
+        - replaceAllText:
+            containsText: { text: "{{ input.find }}", matchCase: "{{ input.match_case == true }}" }
+            replaceText: "{{ has(input.replace_with) && input.replace_with != null ? input.replace_with : '' }}"
+    # Google leaves the count out when it is 0.
+    result: "{'id': value.documentId, 'replaced': has(value.replies[0].replaceAllText.occurrencesChanged) ? value.replies[0].replaceAllText.occurrencesChanged : 0}"

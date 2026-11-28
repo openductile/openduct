@@ -1,0 +1,11 @@
+description: A record's status changed
+action: update_record
+credential: { api_token: test-nocodb-token }
+input: { base_id: pexample0001, table_id: mexample0001, record_id: "1", fields: { Status: Closed } }
+exchanges:
+  - sent:
+      method: PATCH
+      url: https://app.nocodb.com/api/v3/data/pexample0001/mexample0001/records
+      body: { id: "1", fields: { Status: Closed } }
+    answer: { body: { records: [{ id: 1, fields: { Status: Closed } }] } }
+result: { id: 1, fields: { Status: Closed } }

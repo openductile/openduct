@@ -1,0 +1,7 @@
+description: The workspaces the token may reach
+action: list_workspaces
+credential: { api_token: test-nocodb-token }
+exchanges:
+  - sent: { method: GET, url: https://app.nocodb.com/api/v3/meta/workspaces }
+    answer: { body: { list: [{ id: wexample0001, title: Example Co, created_at: "2026-01-05T10:00:00Z" }] } }
+result: [{ id: wexample0001, title: Example Co, created_at: "2026-01-05T10:00:00Z" }]

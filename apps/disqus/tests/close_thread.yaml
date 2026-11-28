@@ -1,0 +1,17 @@
+description: A thread closed
+action: close_thread
+credential: {api_key: pubkey-test-1, api_secret: secret-test-1, access_token: token-test-1}
+input: {thread: '7001'}
+exchanges:
+- sent:
+    method: POST
+    url: https://disqus.com/api/3.0/threads/close.json
+    query: {api_key: pubkey-test-1, api_secret: secret-test-1, access_token: token-test-1}
+    body: {thread: '7001'}
+  answer:
+    status: 200
+    body:
+      code: 0
+      response:
+      - {id: '7001'}
+result: {id: '7001'}

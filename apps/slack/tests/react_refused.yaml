@@ -1,0 +1,7 @@
+description: A reaction already there - Slack says no with ok false
+action: react
+credential: { bot_token: xoxb-1 }
+input: { channel: C0123456, ts: "1700000050.000200", emoji: thumbsup }
+exchanges:
+  - answer: { body: { ok: false, error: already_reacted } }
+error: "Slack refused it: already_reacted"

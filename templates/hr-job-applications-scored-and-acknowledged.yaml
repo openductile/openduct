@@ -1,0 +1,95 @@
+name: Job applications read, scored and acknowledged
+description: >-
+  Candidates apply on a form with their CV as a PDF. Its text is read, a model compares it with what the role needs -
+  only the skills and experience the role names, never age, gender, origin or anything else not asked for - and gives
+  a score with its reasons; the application goes to your Candidates sheet in Google Sheets, the candidate gets a
+  thank-you from Gmail, and the hiring manager hears at once about a strong one. A person decides; the score only
+  sorts. Describe your roles in the first step. Needs: an AI credential (model), Google Sheets (sheets) and Gmail
+  (gmail).
+category: HR
+trigger:
+  form:
+    title: Apply to join us
+    description: We read every application and answer within a week.
+    fields:
+      - { name: name, label: Your name, type: text, required: true, max_length: 100 }
+      - { name: email, label: Your e-mail, type: email, required: true }
+      - { name: role, label: The role, type: dropdown, options: [Customer Support Lead, Warehouse Associate, Bookkeeper], required: true }
+      - { name: cv, label: Your CV (PDF), type: file, accept: ".pdf,application/pdf", max_size: 2000000, required: true }
+      - { name: why, label: "Why this role?", type: long_text, max_length: 1500 }
+    thanks: Thank you for applying - we will write to you within a week.
+# What a test runs on: an answer as the form gives it.
+sample:
+  name: Jordan Avery
+  email: jordan.avery@example.com
+  role: Customer Support Lead
+  cv:
+    name: jordan-avery-cv.pdf
+    type: application/pdf
+    size: 789
+    base64: JVBERi0xLjQKMSAwIG9iago8PCAvVHlwZSAvQ2F0YWxvZyAvUGFnZXMgMiAwIFIgPj4KZW5kb2JqCjIgMCBvYmoKPDwgL1R5cGUgL1BhZ2VzIC9LaWRzIFszIDAgUl0gL0NvdW50IDEgPj4KZW5kb2JqCjMgMCBvYmoKPDwgL1R5cGUgL1BhZ2UgL1BhcmVudCAyIDAgUiAvTWVkaWFCb3ggWzAgMCA2MTIgNzkyXSAvQ29udGVudHMgNCAwIFIgL1Jlc291cmNlcyA8PCAvRm9udCA8PCAvRjEgNSAwIFIgPj4gPj4gPj4KZW5kb2JqCjQgMCBvYmoKPDwgL0xlbmd0aCAyNDQgPj4Kc3RyZWFtCkJUIC9GMSAxMSBUZiA0MCA3NjAgVGQgMTQgVEwgKEpvcmRhbiBBdmVyeSAtIEN1c3RvbWVyIFN1cHBvcnQgTGVhZCkgVGogVCogKGpvcmRhbi5hdmVyeUBleGFtcGxlLmNvbSkgVGogVCogKDYgeWVhcnMgaW4gY3VzdG9tZXIgc3VwcG9ydDsgMyBsZWFkaW5nIGEgdGVhbSBvZiA4LikgVGogVCogKFplbmRlc2ssIEludGVyY29tLCBTUUwgYmFzaWNzLiBDdXQgZmlyc3QtcmVwbHkgdGltZSBmcm9tIDloIHRvIDJoLikgVGogVCogRVQKZW5kc3RyZWFtCmVuZG9iago1IDAgb2JqCjw8IC9UeXBlIC9Gb250IC9TdWJ0eXBlIC9UeXBlMSAvQmFzZUZvbnQgL0hlbHZldGljYSA+PgplbmRvYmoKeHJlZgowIDYKMDAwMDAwMDAwMCA2NTUzNSBmIAowMDAwMDAwMDA5IDAwMDAwIG4gCjAwMDAwMDAwNTggMDAwMDAgbiAKMDAwMDAwMDExNSAwMDAwMCBuIAowMDAwMDAwMjQxIDAwMDAwIG4gCjAwMDAwMDA1MzYgMDAwMDAgbiAKdHJhaWxlcgo8PCAvU2l6ZSA2IC9Sb290IDEgMCBSID4+CnN0YXJ0eHJlZgo2MDYKJSVFT0YK
+  why: I love making a support team calm and quick.
+steps:
+  - name: roles
+    set:
+      # What each role needs, and who hires for it.
+      needs: >-
+        {'Customer Support Lead': {'needs': 'at least 3 years in customer support, 1 leading people; a help desk tool; clear writing; calm with upset customers', 'manager': 'support-lead-hiring@example.com'},
+         'Warehouse Associate': {'needs': 'warehouse or retail stock work; forklift licence a plus; careful with counts; early shifts', 'manager': 'ops@example.com'},
+         'Bookkeeper': {'needs': 'bookkeeping for small companies; QuickBooks or Xero; payroll; month-end close', 'manager': 'finance@example.com'}}
+  - name: file
+    convert: { format: base64, base64: value.cv.base64, name: "{{ value.cv.name }}", type: application/pdf }
+  - name: cv
+    extract_file: { file: steps.file, format: pdf }
+  - name: score
+    ai:
+      credential: model
+      system: >-
+        You help a small company sort job applications. Compare the CV only with what the role needs. Ignore - and
+        never mention - age, gender, origin, religion, family, health, photos or anything else the role does not ask
+        for. The score is 0 to 100: how much of what the role needs the CV shows. Reasons are short and factual.
+      prompt: >-
+        The role: {{ value.role }}. It needs: {{ steps.roles.needs[value.role].needs }}
+        The candidate says why: {{ value.why }}
+        The CV:
+        {{ steps.cv.text.substring(0, math.least(size(steps.cv.text), 15000)) }}
+      max_tokens: 500
+      schema:
+        type: object
+        properties:
+          score: { type: integer, minimum: 0, maximum: 100 }
+          strengths: { type: array, items: { type: string }, maxItems: 4 }
+          gaps: { type: array, items: { type: string }, maxItems: 4 }
+        required: [score, strengths, gaps]
+  - name: said
+    set:
+      score: "steps.score.json.score == null ? 0 : steps.score.json.score"
+      strengths: "steps.score.json.strengths == null ? '' : steps.score.json.strengths.join('; ')"
+      gaps: "steps.score.json.gaps == null ? '' : steps.score.json.gaps.join('; ')"
+  - name: keep
+    google_sheets:
+      action: add_row
+      credential: sheets
+      spreadsheet_id: your-sheet-id
+      sheet: Candidates
+      values: ["{{ value.role }}", "{{ value.name }}", "{{ value.email }}", "{{ steps.said.score }}", "{{ steps.said.strengths }}", "{{ steps.said.gaps }}", "{{ value.cv.name }}", new]
+    retry: { attempts: 3, wait: 30s }
+  - name: thanks
+    gmail:
+      action: send_email
+      credential: gmail
+      to: "{{ value.email }}"
+      subject: "Your application for {{ value.role }}"
+      text: "Dear {{ value.name }},\n\nThank you for applying for the {{ value.role }} role. A person on our team reads every application, and we will write to you within a week.\n\nKind regards,\nThe hiring team at Example Goods"
+    retry: { attempts: 3, wait: 30s }
+  - name: strong
+    if:
+      when: steps.said.score >= 75
+      then:
+        - gmail:
+            action: send_email
+            credential: gmail
+            to: "{{ steps.roles.needs[value.role].manager }}"
+            subject: "A strong candidate for {{ value.role }}: {{ value.name }} ({{ steps.said.score }})"
+            text: "{{ value.name }} <{{ value.email }}> applied for {{ value.role }}.\nStrengths: {{ steps.said.strengths }}\nGaps: {{ steps.said.gaps }}\n\nThe CV and the score are in the Candidates sheet."
+          retry: { attempts: 3, wait: 30s }

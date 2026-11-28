@@ -1,0 +1,14 @@
+# Made by `openduct app from-openapi`: Create an inbox.
+description: "Create an inbox, made from the API description's schemas"
+action: create_inbox
+credential: { token: test-token }
+input: { email_address: "ann@example.com" }
+exchanges:
+  - sent:
+      method: POST
+      url: "https://api.resend.com/inboxes"
+      query: {}
+      headers: { authorization: "Bearer test-token" }
+      body: { email_address: "ann@example.com" }
+    answer: { status: 201, body: { object: inbox, id: b3e2b2b6-3f0e-4c8e-9ad3-2f43a1e2c7f1 } }
+result: { object: inbox, id: b3e2b2b6-3f0e-4c8e-9ad3-2f43a1e2c7f1 }

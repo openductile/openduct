@@ -1,0 +1,137 @@
+# Copyright 2026 Ductile AI, Inc
+# SPDX-License-Identifier: Apache-2.0
+# Pushover: written by hand from Pushover's API documentation, https://pushover.net/api (with /api/receipts and
+# /api/glances), fetched 2026-11-27. Labels and descriptions are our own words.
+app: pushover
+name: Pushover
+category: messaging
+description: Notifications pushed to people's phones, tablets and desktops through Pushover.
+docs: https://pushover.net/api
+hosts: [api.pushover.net]
+base_url: https://api.pushover.net/1
+sign_in:
+  - id: pushover
+    label: An application token
+    fields:
+      - { name: token, label: "The application's API token (Pushover: Your Applications)", secret: true }
+      - { name: user_key, label: "Who gets the notifications unless a step says: a user or group key", secret: true }
+# Pushover takes its token with each request's parameters, not in a header.
+error: "status >= 400 && has(value.errors) && size(value.errors) > 0 ? value.errors.join('; ') : null"
+default_action: send_notification
+actions:
+  send_notification:
+    label: Send a notification
+    description: A notification to the credential's user or group, or to another, on all their devices or one; an emergency one repeats until someone acknowledges it.
+    write: true
+    method: POST
+    path: /messages.json
+    body: form
+    inputs:
+      - { name: message, label: "The message (at most 1,024 characters)", required: true }
+      - { name: title, label: "Its title (the application's name when left out)" }
+      - { name: url, label: "A link shown with it" }
+      - { name: url_title, label: "The link's words" }
+      - { name: priority, label: "How urgent: -2 (silent), -1 (quiet), 0 (normal), 1 (high) or 2 (emergency)", kind: number }
+      - { name: retry, label: "For an emergency: repeat every so many seconds (30 at least)", kind: number }
+      - { name: expire, label: "For an emergency: stop repeating after so many seconds (10,800 at most)", kind: number }
+      - { name: tags, label: "For an emergency: tags to cancel it by later (with commas)" }
+      - { name: sound, label: "A sound by its name (the person's own when left out)" }
+      - { name: device, label: "Only to this device (several with commas)" }
+      - { name: html, label: "The message is HTML", kind: boolean }
+      - { name: ttl, label: "Delete it from the devices after so many seconds", kind: number }
+      - { name: image_base64, label: "An image to show with it, as Base64" }
+      - { name: image_type, label: "The image's type, such as image/jpeg" }
+      - { name: user, label: "To this user or group key instead (several with commas)" }
+    send:
+      token: "{{ credential.token }}"
+      user: "{{ has(input.user) && input.user != null ? input.user : credential.user_key }}"
+      message: "{{ input.message }}"
+      title: "{{ input.title }}"
+      url: "{{ input.url }}"
+      url_title: "{{ input.url_title }}"
+      priority: "{{ input.priority }}"
+      retry: "{{ input.retry }}"
+      expire: "{{ input.expire }}"
+      tags: "{{ input.tags }}"
+      sound: "{{ input.sound }}"
+      device: "{{ input.device }}"
+      html: "{{ has(input.html) && input.html == true ? 1 : null }}"
+      ttl: "{{ input.ttl }}"
+      attachment_base64: "{{ input.image_base64 }}"
+      attachment_type: "{{ input.image_type }}"
+    output: { status: number, request: text, receipt: text }
+  check_user:
+    label: Check a user or group key
+    description: Whether a key is right and has a device to send to, and which devices.
+    method: POST
+    path: /users/validate.json
+    body: form
+    inputs:
+      - { name: user, label: "The user or group key (the credential's when left out)" }
+      - { name: device, label: "Check this device of theirs" }
+    send:
+      token: "{{ credential.token }}"
+      user: "{{ has(input.user) && input.user != null ? input.user : credential.user_key }}"
+      device: "{{ input.device }}"
+    output: { status: number, group: number, devices: list, licenses: list, request: text }
+  list_sounds:
+    label: List sounds
+    description: The sounds a notification may make, Pushover's and the account's own, by name.
+    method: GET
+    path: /sounds.json
+    query: { token: "{{ credential.token }}" }
+    result: value.sounds
+    output: { pushover: text, bike: text, cashregister: text, none: text }
+  get_receipt:
+    label: Look up an emergency notification
+    description: Whether an emergency notification was acknowledged, when and by whom, and whether it has expired.
+    method: GET
+    path: "/receipts/{{ input.receipt }}.json"
+    inputs: [{ name: receipt, label: "Its receipt, which Send a notification gave", required: true }]
+    query: { token: "{{ credential.token }}" }
+    output: { status: number, acknowledged: number, acknowledged_at: number, acknowledged_by: text, acknowledged_by_device: text, last_delivered_at: number, expired: number, expires_at: number, called_back: number, called_back_at: number }
+  cancel_emergency:
+    label: Stop an emergency notification
+    description: An emergency notification stops repeating, by its receipt.
+    write: true
+    method: POST
+    path: "/receipts/{{ input.receipt }}/cancel.json"
+    body: form
+    inputs: [{ name: receipt, label: "Its receipt, which Send a notification gave", required: true }]
+    send: { token: "{{ credential.token }}" }
+    output: { status: number, request: text }
+  cancel_emergency_by_tag:
+    label: Stop emergency notifications by tag
+    description: Every emergency notification sent with a tag stops repeating.
+    write: true
+    method: POST
+    path: "/receipts/cancel_by_tag/{{ input.tag }}.json"
+    body: form
+    inputs: [{ name: tag, label: "The tag", required: true }]
+    send: { token: "{{ credential.token }}" }
+    output: { status: number, canceled: number, request: text }
+  update_glance:
+    label: Update a widget
+    description: The figures on a person's watch or home-screen widget (Pushover's Glances) - a title, a line or two, a count or a percentage.
+    write: true
+    method: POST
+    path: /glances.json
+    body: form
+    inputs:
+      - { name: title, label: "What it shows, such as Orders today" }
+      - { name: text, label: "Its main line" }
+      - { name: subtext, label: "A second line" }
+      - { name: count, label: "A count", kind: number }
+      - { name: percent, label: "A percentage (0 to 100)", kind: number }
+      - { name: device, label: "Only on this device" }
+      - { name: user, label: "For this user key instead of the credential's" }
+    send:
+      token: "{{ credential.token }}"
+      user: "{{ has(input.user) && input.user != null ? input.user : credential.user_key }}"
+      title: "{{ input.title }}"
+      text: "{{ input.text }}"
+      subtext: "{{ input.subtext }}"
+      count: "{{ input.count }}"
+      percent: "{{ input.percent }}"
+      device: "{{ input.device }}"
+    output: { status: number, request: text }

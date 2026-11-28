@@ -1,0 +1,8 @@
+description: Two orders linked to a customer
+action: link_records
+credential: { api_token: test-nocodb-token }
+input: { base_id: pexample0001, table_id: mexample0001, link_field_id: cexample0001, record_id: "1", linked_ids: [31, 32] }
+exchanges:
+  - sent: { method: POST, url: https://app.nocodb.com/api/v3/data/pexample0001/mexample0001/links/cexample0001/1, body: [{ id: 31 }, { id: 32 }] }
+    answer: { body: { success: true } }
+result: { success: true }

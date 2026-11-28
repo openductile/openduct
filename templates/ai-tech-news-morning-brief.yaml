@@ -1,0 +1,46 @@
+name: A morning brief of the tech news, in Slack
+description: >-
+  Each weekday at 8:30, New York time, read the stories on the front page of Hacker News through its public search
+  API, have a model pick the five that matter most to an engineering team and say why in a line each, and post the
+  brief to your team's Slack channel with the links. No key is needed for the news. Needs: model (an AI credential),
+  slack.
+category: AI
+trigger:
+  schedule: { every: weekday, at: "08:30", timezone: America/New_York }
+# What a test runs on: an event as this trigger gives it.
+sample:
+  scheduled_at: '2026-11-27T13:30:00Z'
+steps:
+  - name: front_page
+    http:
+      url: https://hn.algolia.com/api/v1/search
+      query: { tags: front_page, hitsPerPage: "30" }
+      timeout: 20s
+      # A test answers with this, sending nothing: the shape of the search API's answer.
+      sample:
+        hits:
+          - { objectID: "41000001", title: A new release of a popular database engine, url: "https://db.example.com/blog/release", points: 412, num_comments: 188 }
+          - { objectID: "41000002", title: How we cut our cloud bill in half, url: "https://blog.example.com/cloud-bill", points: 305, num_comments: 141 }
+          - { objectID: "41000003", title: "Ask HN: How do you run on-call for a small team?", points: 198, num_comments: 260 }
+    retry: { attempts: 3, wait: 30s }
+  - where: steps.front_page.body.hits != null && size(steps.front_page.body.hits) > 0
+  - name: brief
+    ai:
+      credential: model
+      system: >-
+        You write a short morning brief for a software team. From the stories given, pick the five that matter most
+        to people who build and run software, most important first. One line each: the title as a Slack link
+        (<link|title>), then why it matters in at most fifteen words. No greeting, nothing else.
+      # One line a story; a story with no link of its own is a discussion on the site itself.
+      prompt: >-
+        Today's front page (points, comments, title, link):
+        {{ steps.front_page.body.hits.map(h, string(has(h.points) && h.points != null ? h.points : 0) + ' points, '
+           + string(has(h.num_comments) && h.num_comments != null ? h.num_comments : 0) + ' comments: ' + h.title
+           + ' ' + (has(h.url) && h.url != null ? h.url : 'https://news.ycombinator.com/item?id=' + h.objectID)).join('\n') }}
+      max_tokens: 600
+  - name: post
+    slack:
+      credential: slack
+      channel: "#engineering"
+      text: "This morning's tech news:\n{{ steps.brief.text }}"
+    retry: { attempts: 3, wait: 10s }

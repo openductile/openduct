@@ -1,0 +1,17 @@
+description: A ticket to the trash
+action: delete_ticket
+credential:
+  domain: acme
+  api_key: test-key
+input:
+  ticket_id: '20'
+exchanges:
+- sent:
+    method: DELETE
+    url: https://acme.freshdesk.com/api/v2/tickets/20
+    headers:
+      authorization: Basic dGVzdC1rZXk6WA==
+  answer:
+    status: 204
+result:
+  deleted: true

@@ -1,0 +1,15 @@
+description: Every session of a user ended
+action: sign_user_out
+sign_in: microsoft_entra_admin
+credential: {access_token: eyJ0-admin}
+input: {user: 4562bcc8-c436-4f95-b7c0-4f8ce89dca5e}
+exchanges:
+- sent:
+    method: POST
+    url: https://graph.microsoft.com/v1.0/users/4562bcc8-c436-4f95-b7c0-4f8ce89dca5e/revokeSignInSessions
+    headers: {authorization: Bearer eyJ0-admin}
+    query: {}
+  answer:
+    status: 200
+    body: {'@odata.context': 'https://graph.microsoft.com/v1.0/$metadata#Edm.Boolean', value: true}
+result: {signed_out: true}

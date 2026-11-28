@@ -1,0 +1,73 @@
+name: Next year's public holidays for every country your team works in
+description: >-
+  Press Run with the countries your people work in and the year: each country's public holidays are read from
+  Nager.Date (free, no key), merged into one calendar - a day several countries share shown once, with all of them -
+  and e-mailed to your people team as a month-by-month list with a spreadsheet attached, ready for planning leave,
+  launches and support cover. For HR and operations teams with staff in several countries. Needs: mail.
+category: HR
+trigger: manual
+# What a test runs on: what you give when you press Run.
+sample:
+  countries: [US, GB, DE, IN]
+  year: 2027
+  to: people-team@example.com
+steps:
+  - where: type(value.countries) == list && size(value.countries) > 0 && size(value.countries) <= 30
+  - name: each
+    for_each:
+      items: value.countries
+      steps:
+        - name: holidays
+          http:
+            url: "https://date.nager.at/api/v3/PublicHolidays/{{ value.year }}/{{ item.upperAscii() }}"
+            sample:
+              - { date: "2027-01-01", localName: "New Year's Day", name: "New Year's Day", countryCode: US, global: true }
+              - { date: "2027-05-31", localName: Memorial Day, name: Memorial Day, countryCode: US, global: true }
+              - { date: "2027-12-25", localName: Christmas Day, name: Christmas Day, countryCode: US, global: true }
+          retry: { attempts: 3, wait: 15s }
+  # One list: each day once, with every country that has it, by month.
+  - name: calendar
+    javascript: |
+      const byDay = new Map();
+      value.countries.forEach((cc, i) => {
+        const found = (steps.each[i] && steps.each[i].holidays && steps.each[i].holidays.body) || [];
+        for (const h of found) {
+          // A holiday of only some regions (global false) is marked as such.
+          const where = h.global === false ? `${cc} (some regions)` : cc;
+          const day = byDay.get(h.date) || { date: h.date, names: new Set(), countries: [] };
+          day.names.add(h.name);
+          if (!day.countries.includes(where)) day.countries.push(where);
+          byDay.set(h.date, day);
+        }
+      });
+      const days = [...byDay.values()].sort((a, b) => a.date.localeCompare(b.date));
+      const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September",
+        "October", "November", "December"];
+      const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+      const month = d => MONTHS[new Date(d + "T00:00:00Z").getUTCMonth()];
+      const weekday = d => DAYS[new Date(d + "T00:00:00Z").getUTCDay()];
+      const lines = [];
+      let current = "";
+      for (const d of days) {
+        if (month(d.date) !== current) { current = month(d.date); lines.push("", current.toUpperCase()); }
+        lines.push(`${d.date} ${weekday(d.date)}  ${[...d.names].join(" / ")}  -  ${d.countries.join(", ")}`);
+      }
+      return {
+        count: days.length,
+        text: lines.join("\n").trim(),
+        rows: days.map(d => ({ date: d.date, weekday: weekday(d.date), holiday: [...d.names].join(" / "), countries: d.countries.join(", ") })),
+      };
+  - name: sheet
+    convert:
+      format: xlsx
+      rows: steps.calendar.rows
+      columns: [date, weekday, holiday, countries]
+      sheet: Holidays
+      name: "public-holidays-{{ value.year }}.xlsx"
+  - name: send
+    email:
+      credential: mail
+      to: "{{ value.to }}"
+      subject: "Public holidays {{ value.year }}: {{ value.countries.join(', ') }}"
+      text: "{{ steps.calendar.count }} days off across {{ value.countries.join(', ') }}.\n\n{{ steps.calendar.text }}"
+      attachments: steps.sheet

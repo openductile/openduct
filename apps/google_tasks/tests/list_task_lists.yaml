@@ -1,0 +1,16 @@
+description: The account's task lists
+action: list_task_lists
+credential: { access_token: ya29.test }
+exchanges:
+  - sent:
+      method: GET
+      url: https://tasks.googleapis.com/tasks/v1/users/@me/lists
+      query: { maxResults: "1000" }
+      headers: { authorization: Bearer ya29.test }
+    answer:
+      body:
+        kind: tasks#taskLists
+        items:
+          - { kind: tasks#taskList, id: MDEyMzQ1Njc4OTAxMjM0NTY3ODk6MDow, title: My Tasks, updated: "2026-11-27T09:00:00.000Z", selfLink: "https://www.googleapis.com/tasks/v1/users/@me/lists/MDEyMzQ1Njc4OTAxMjM0NTY3ODk6MDow" }
+result:
+  - { kind: tasks#taskList, id: MDEyMzQ1Njc4OTAxMjM0NTY3ODk6MDow, title: My Tasks, updated: "2026-11-27T09:00:00.000Z", selfLink: "https://www.googleapis.com/tasks/v1/users/@me/lists/MDEyMzQ1Njc4OTAxMjM0NTY3ODk6MDow" }

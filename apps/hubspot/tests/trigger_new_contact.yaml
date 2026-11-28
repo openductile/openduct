@@ -1,0 +1,19 @@
+description: Contacts added since the last poll, the newest asked for
+trigger: new_contact
+credential: { access_token: pat-na1-1 }
+seen: { items: [["101", ""]] }
+exchanges:
+  - sent:
+      method: POST
+      url: https://api.hubapi.com/crm/v3/objects/contacts/search
+      body:
+        sorts: [{ propertyName: createdate, direction: DESCENDING }]
+        properties: [email, firstname, lastname, phone, company, createdate]
+        limit: 100
+    answer:
+      body:
+        results:
+          - { id: "102", properties: { email: ann@example.com, firstname: Ann } }
+          - { id: "101", properties: { email: bob@example.com, firstname: Bob } }
+        paging: { next: { after: "2" } }
+ids: ["102"]

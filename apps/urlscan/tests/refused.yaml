@@ -1,0 +1,6 @@
+description: A key urlscan.io does not take
+action: get_quotas
+credential: { api_key: wrong }
+exchanges:
+  - answer: { status: 401, body: { message: "API key supplied but not found in database!", status: 401 } }
+error: "urlscan.io answered 401: API key supplied but not found in database!"

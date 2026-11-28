@@ -1,0 +1,8 @@
+description: A user's comments, the top first
+action: list_user_comments
+credential: { access_token: test-reddit-token }
+input: { username: example_maker, sort: top }
+exchanges:
+  - sent: { method: GET, url: https://oauth.reddit.com/user/example_maker/comments, query: { sort: top, limit: "100" } }
+    answer: { body: { kind: Listing, data: { after: null, children: [{ kind: t1, data: { id: m1x2y3z, name: t1_m1x2y3z, author: example_maker, body: By the hour., subreddit: smallbusiness, link_id: t3_1h2ab3c } }] } } }
+result: [{ id: m1x2y3z, name: t1_m1x2y3z, author: example_maker, body: By the hour., subreddit: smallbusiness, link_id: t3_1h2ab3c }]

@@ -1,0 +1,11 @@
+description: "The custom domains the user may shorten with"
+action: list_domains
+credential: { token: test-token }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://api-ssl.bitly.com/v4/bsds"
+      query: {}
+      headers: { authorization: "Bearer test-token" }
+    answer: { status: 200, body: { bsds: [go.shop.example] } }
+result: { bsds: [go.shop.example] }

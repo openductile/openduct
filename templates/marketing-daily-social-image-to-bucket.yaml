@@ -1,0 +1,72 @@
+name: A social post and its image, ready each weekday morning
+description: >-
+  Every weekday at 7:30 Paris time, a model writes the day's social post for your brand - a theme for each day of the
+  week - with a prompt for its picture; an image model draws it, the image is filed in your S3 bucket (or R2, MinIO,
+  any S3-compatible store), and your social team gets the caption and a link to the image in Discord, to check and
+  post. Nothing is posted for you. Describe your brand and themes in the first step. Needs: an AI credential (model),
+  an OpenAI API key as a bearer credential (openai), an s3 credential (media_bucket) and a Discord webhook
+  (team_discord).
+category: Marketing
+trigger:
+  schedule: { every: weekday, at: "07:30", timezone: Europe/Paris }
+# What a test runs on: an event as this trigger gives it.
+sample:
+  scheduled_at: '2026-11-27T06:30:00Z'
+steps:
+  - name: brand
+    set:
+      about: "'A small bakery in Lyon: sourdough, seasonal pastries, a warm and simple tone, no hashtags beyond two.'"
+      # A theme for each weekday, Monday first.
+      theme: >-
+        ['a behind-the-scenes moment in the bakery at dawn', 'one ingredient and where it comes from',
+         'a customer favourite and why people love it', 'a tip for keeping bread fresh at home',
+         'what is new on the counter this weekend'][timestamp(value.scheduled_at).getDayOfWeek('Europe/Paris') - 1]
+      day: "value.scheduled_at.substring(0, 10)"
+  - name: post
+    ai:
+      credential: model
+      system: "You write social media posts for this brand: {{ steps.brand.about }}"
+      prompt: "Today's theme: {{ steps.brand.theme }}. Write the post, and a prompt for a photo-like picture to go with it (no text in the picture, no faces)."
+      max_tokens: 500
+      schema:
+        type: object
+        properties:
+          caption: { type: string, description: "The post, at most 60 words" }
+          picture: { type: string, description: "What the picture shows, in one or two sentences" }
+        required: [caption, picture]
+  - name: draw
+    http:
+      method: POST
+      credential: openai
+      url: https://api.openai.com/v1/images/generations
+      json:
+        model: gpt-image-1
+        prompt: "{{ steps.post.json.picture != null ? steps.post.json.picture : steps.brand.theme }}, natural light, warm colours, square photo"
+        size: 1024x1024
+        n: 1
+      timeout: 120s
+      sample:
+        created: 1795768200
+        data:
+          - b64_json: iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==
+    retry: { attempts: 2, wait: 30s }
+  - name: image
+    convert: { format: base64, base64: "steps.draw.body.data[0].b64_json", name: "post-{{ steps.brand.day }}.png", type: image/png }
+  - name: filed
+    storage:
+      action: write
+      credential: media_bucket
+      path: "social/{{ steps.brand.day }}.png"
+      file: steps.image
+      overwrite: true
+  - name: link
+    storage:
+      action: presign
+      credential: media_bucket
+      path: "social/{{ steps.brand.day }}.png"
+      expires: 3d
+  - name: tell
+    discord:
+      credential: team_discord
+      text: "**Today's post** ({{ steps.brand.theme }}):\n{{ steps.post.json.caption }}\n\nImage (link works for 3 days): {{ steps.link.url }}"
+    retry: { attempts: 3, wait: 20s }

@@ -1,0 +1,7 @@
+description: No company named - Hunter's own words
+action: find_email
+credential: { api_key: hunter-test-key }
+input: { first_name: Ann, last_name: Example }
+exchanges:
+  - answer: { status: 400, body: { errors: [{ id: wrong_params, code: 400, details: "You are missing the domain or company parameter" }] } }
+error: "Hunter answered 400: You are missing the domain or company parameter"

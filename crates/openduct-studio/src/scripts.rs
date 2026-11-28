@@ -38,8 +38,9 @@ impl openduct_flow::Scripts for Scripts {
                 time: request.time,
             };
             match runner.run(&script).await {
+                // data tables: `state`, what the script left in its workflow's state.
                 Ok(answer) => Ok(Value::from_json(
-                    &json!({ "result": answer.result, "logs": answer.logs }),
+                    &json!({ "result": answer.result, "logs": answer.logs, "state": answer.state }),
                 )),
                 Err(failure) if failure.logs.is_empty() => Err(failure.error),
                 Err(failure) => Err(format!(

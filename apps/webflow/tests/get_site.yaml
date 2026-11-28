@@ -1,0 +1,79 @@
+# Made by `openduct app from-openapi`: Get Site.
+description: "Get Site, made from the API description's schemas"
+action: get_site
+credential: { token: test-token }
+input: { site_id: site_1 }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://api.webflow.com/v2/sites/site_1"
+      query: {}
+      headers: { authorization: "Bearer test-token" }
+    answer:
+      status: 200
+      body:
+        id: "580e63e98c9a982ac9b8b741"
+        workspaceId: "580e63e98c9a982ac9b8b741"
+        createdOn: "2016-10-24T19:41:29.156Z"
+        displayName: api_docs_sample_json
+        shortName: api-docs-sample-json
+        lastPublished: "2016-10-24T19:43:17.271Z"
+        lastUpdated: "2016-10-24T19:43:17.271Z"
+        previewUrl: "https://example.com/1"
+        timeZone: example
+        parentFolderId: "1as2d3f4g5h6j7k8l9z0x1c2v3b4n5m6"
+        customDomains:
+          - id: "589a331aa51e760df7ccb89d"
+            url: test-api-domain.com
+            lastPublished: "2022-12-07T16:51:37.571Z"
+        locales:
+          primary:
+            id: "653fd9af6a07fc9cfd7a5e57"
+            cmsLocaleId: "653ad57de882f528b32e810e"
+            enabled: false
+            displayName: example
+            displayImageId: display_image_1
+            redirect: true
+            subdirectory: example
+            tag: en-US
+          secondary:
+            - id: "653fd9af6a07fc9cfd7a5e57"
+              cmsLocaleId: "653ad57de882f528b32e810e"
+              enabled: false
+              displayName: example
+              displayImageId: display_image_1
+              redirect: true
+              subdirectory: example
+              tag: en-US
+result:
+  id: "580e63e98c9a982ac9b8b741"
+  workspaceId: "580e63e98c9a982ac9b8b741"
+  createdOn: "2016-10-24T19:41:29.156Z"
+  displayName: api_docs_sample_json
+  shortName: api-docs-sample-json
+  lastPublished: "2016-10-24T19:43:17.271Z"
+  lastUpdated: "2016-10-24T19:43:17.271Z"
+  previewUrl: "https://example.com/1"
+  timeZone: example
+  parentFolderId: "1as2d3f4g5h6j7k8l9z0x1c2v3b4n5m6"
+  customDomains:
+    - { id: "589a331aa51e760df7ccb89d", url: test-api-domain.com, lastPublished: "2022-12-07T16:51:37.571Z" }
+  locales:
+    primary:
+      id: "653fd9af6a07fc9cfd7a5e57"
+      cmsLocaleId: "653ad57de882f528b32e810e"
+      enabled: false
+      displayName: example
+      displayImageId: display_image_1
+      redirect: true
+      subdirectory: example
+      tag: en-US
+    secondary:
+      - id: "653fd9af6a07fc9cfd7a5e57"
+        cmsLocaleId: "653ad57de882f528b32e810e"
+        enabled: false
+        displayName: example
+        displayImageId: display_image_1
+        redirect: true
+        subdirectory: example
+        tag: en-US

@@ -47,3 +47,27 @@ actions:
     inputs:
       - { name: message_id, label: "The email's id (from Find emails)", required: true }
     query: { format: full }
+triggers:
+  new_email:
+    label: A new email
+    description: >-
+      Each email that arrives (or that a search finds), read in full, asked for every few minutes. The run gets who
+      it is from and to, its subject and date, a short piece of its text, its labels, and the whole message.
+    inputs:
+      - { name: q, label: "Only mail like this, as Gmail searches", description: "Such as in:inbox, from:shop@example.com or has:attachment" }
+    poll:
+      action: find_emails
+      input: { q: "{{ input.q }}" }
+      newest_first: true
+      id: item.id
+      each: { action: read_email, input: { message_id: "{{ item.id }}" } }
+      # A field the message lacks would make the whole of it null: each one that may be missing is asked for first.
+      event: >-
+        cel.bind(h, has(item.payload) && has(item.payload.headers) ? item.payload.headers : [],
+          {'id': item.id, 'thread_id': has(item.threadId) ? item.threadId : null,
+           'from': h.filter(x, x.name.lowerAscii() == 'from').map(x, x.value).join(', '),
+           'to': h.filter(x, x.name.lowerAscii() == 'to').map(x, x.value).join(', '),
+           'subject': h.filter(x, x.name.lowerAscii() == 'subject').map(x, x.value).join(' '),
+           'date': h.filter(x, x.name.lowerAscii() == 'date').map(x, x.value).join(' '),
+           'snippet': has(item.snippet) ? item.snippet : '', 'labels': has(item.labelIds) ? item.labelIds : [],
+           'message': item})

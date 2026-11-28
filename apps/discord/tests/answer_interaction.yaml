@@ -1,0 +1,12 @@
+description: A slash command answered after the trigger said the bot is thinking - its original reply set
+action: answer_interaction
+sign_in: discord_bot
+credential: { bot_token: test-bot-token }
+input: { application_id: "1000000000000000001", token: dGVzdC1jb21tYW5kLXRva2Vu, text: "Tea is 4.50" }
+exchanges:
+  - sent:
+      method: PATCH
+      url: https://discord.com/api/v10/webhooks/1000000000000000001/dGVzdC1jb21tYW5kLXRva2Vu/messages/@original
+      body: { content: "Tea is 4.50" }
+    answer: { body: { id: "950000000000000009", content: "Tea is 4.50", channel_id: "910000000000000001" } }
+result: { id: "950000000000000009", content: "Tea is 4.50", channel_id: "910000000000000001" }

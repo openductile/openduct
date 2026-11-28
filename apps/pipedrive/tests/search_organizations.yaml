@@ -1,0 +1,14 @@
+description: "Search organizations: each match out of Pipedrive's wrapping, over two pages by its cursor"
+action: search_organizations
+credential: { api_key: test-pipedrive-token }
+input: { term: Example }
+exchanges:
+  - sent:
+      method: GET
+      url: https://api.pipedrive.com/api/v2/organizations/search
+      query: { term: Example, limit: "100" }
+      headers: { x-api-token: test-pipedrive-token }
+    answer: { body: { success: true, data: { items: [{ result_score: 0.9, item: { id: 3, type: organization, name: Example Co } }] }, additional_data: { next_cursor: eyJmaWVsZCI6ImlkIiwiaWQiOjJ9 } } }
+  - sent: { method: GET, url: https://api.pipedrive.com/api/v2/organizations/search, query: { term: Example, limit: "100", cursor: eyJmaWVsZCI6ImlkIiwiaWQiOjJ9 } }
+    answer: { body: { success: true, data: { items: [{ result_score: 0.5, item: { id: 4, type: organization, name: Example Supplies } }] }, additional_data: { next_cursor: null } } }
+result: [{ id: 3, type: organization, name: Example Co }, { id: 4, type: organization, name: Example Supplies }]

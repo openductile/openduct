@@ -1,0 +1,7 @@
+description: A template that is not the account's is refused, in APITemplate.io's words
+action: create_pdf
+credential: { api_key: at_test_key_1 }
+input: { template_id: nosuchtemplate, data: { name: Ann } }
+exchanges:
+  - answer: { status: 400, body: { status: error, message: "Template not found" } }
+error: "APITemplate.io answered 400: Template not found"

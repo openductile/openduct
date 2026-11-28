@@ -1,0 +1,10 @@
+description: Turning the workflow off removes the webhook
+trigger: record_event
+unregister: true
+workflow: wf1
+credential: { api_token: test-nocodb-token, "webhook_secret@wf1": s3cret-token-1, "webhook_id@wf1": hkexample0001 }
+input: { base_id: pexample0001, table_id: mexample0001 }
+exchanges:
+  - sent: { method: DELETE, url: https://app.nocodb.com/api/v3/meta/bases/pexample0001/hooks/hkexample0001 }
+    answer: { body: {} }
+kept: { webhook_secret: "", webhook_id: "" }

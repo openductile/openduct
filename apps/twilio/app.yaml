@@ -37,3 +37,15 @@ actions:
     query: { To: "{{ input.to }}", PageSize: "100" }
     items: value.messages
     next: "value.next_page_uri == null ? null : 'https://api.twilio.com' + value.next_page_uri"
+triggers:
+  new_sms:
+    label: A new message to a number
+    description: Each text message sent to one of your numbers, the newest asked for every minute.
+    inputs:
+      - { name: to, label: "Your number (as +15550100)", required: true }
+    poll:
+      action: list_messages
+      input: { to: "{{ input.to }}" }
+      newest_first: true
+      id: item.sid
+      every: 1m

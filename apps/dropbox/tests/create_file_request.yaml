@@ -1,0 +1,10 @@
+description: A link to collect signed contracts until a day
+action: create_file_request
+credential: { access_token: sl.test-token }
+input: { title: Signed contract, destination: /Contracts/Example Co, deadline: "2026-12-15T17:00:00Z" }
+exchanges:
+  - sent:
+      url: https://api.dropboxapi.com/2/file_requests/create
+      body: { title: Signed contract, destination: /Contracts/Example Co, deadline: { deadline: "2026-12-15T17:00:00Z" }, open: true }
+    answer: { body: { id: oaCAVmEyrqYnkZX9955Y, url: "https://www.dropbox.com/request/oaCAVmEyrqYnkZX9955Y", title: Signed contract, destination: /Contracts/Example Co, created: "2026-11-27T10:00:00Z", deadline: { deadline: "2026-12-15T17:00:00Z" }, is_open: true, file_count: 0 } }
+result: { id: oaCAVmEyrqYnkZX9955Y, url: "https://www.dropbox.com/request/oaCAVmEyrqYnkZX9955Y", title: Signed contract, destination: /Contracts/Example Co, created: "2026-11-27T10:00:00Z", deadline: { deadline: "2026-12-15T17:00:00Z" }, is_open: true, file_count: 0 }

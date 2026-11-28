@@ -1,0 +1,20 @@
+description: Issues first seen since the poll before, the newest asked for; listing stops at one seen before
+trigger: new_issue
+credential: { token: sntrys_test }
+input: { organization_id_or_slug: acme }
+seen: { items: [["4500000001", ""]] }
+exchanges:
+  - sent:
+      method: GET
+      url: https://us.sentry.io/api/0/organizations/acme/issues/
+      query: { sort: new }
+      headers: { authorization: Bearer sntrys_test }
+    answer:
+      headers: { Link: '<https://us.sentry.io/api/0/organizations/acme/issues/?sort=new&cursor=0:0:1>; rel="previous"; results="false"; cursor="0:0:1", <https://us.sentry.io/api/0/organizations/acme/issues/?sort=new&cursor=0:100:0>; rel="next"; results="true"; cursor="0:100:0"' }
+      body:
+        - { id: "4500000003", shortId: SHOP-WEB-5, title: "Error: payment timed out", level: error, status: unresolved, firstSeen: "2026-11-27T10:05:00Z" }
+        - { id: "4500000002", shortId: SHOP-WEB-4, title: "TypeError: price is null", level: error, status: unresolved, firstSeen: "2026-11-27T09:40:00Z" }
+        - { id: "4500000001", shortId: SHOP-WEB-3, title: "TypeError: cart is undefined", level: error, status: unresolved, firstSeen: "2026-11-26T08:00:00Z" }
+runs:
+  - { id: "4500000002", shortId: SHOP-WEB-4, title: "TypeError: price is null", level: error, status: unresolved, firstSeen: "2026-11-27T09:40:00Z" }
+  - { id: "4500000003", shortId: SHOP-WEB-5, title: "Error: payment timed out", level: error, status: unresolved, firstSeen: "2026-11-27T10:05:00Z" }

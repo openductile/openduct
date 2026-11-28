@@ -1,0 +1,12 @@
+description: "A book put on the To read shelf: Google answers 204, with nothing"
+action: add_to_bookshelf
+credential: { access_token: ya29.test }
+input: { shelf: "2", volume_id: zyTCAlFPjgYC }
+exchanges:
+  - sent:
+      method: POST
+      url: https://books.googleapis.com/books/v1/mylibrary/bookshelves/2/addVolume
+      query: { volumeId: zyTCAlFPjgYC }
+      headers: { authorization: Bearer ya29.test }
+    answer: { status: 204 }
+result: { added: true }

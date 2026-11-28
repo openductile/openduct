@@ -1,0 +1,128 @@
+name: Expense claims from a photo of the receipt
+description: >-
+  For small teams without an expense tool: a person photographs a receipt and uploads it on a form page; the text on it
+  is read (OCR.space) and a model picks out the shop, the day, the total and a likely category. The person gets an email
+  to check those on a short form (filled in already), then their manager gets one to approve or reject, with a comment,
+  within five days - and the claim is kept in an expenses data table with how it ended, and the person is told. Needs:
+  an OCR.space key as a header credential called ocr (apikey), an AI credential called model, a mail server credential
+  called mail, and a data table expenses (person, email, shop, day, amount, currency, category, note, status, comment).
+category: Finance
+trigger:
+  form:
+    title: Claim an expense
+    description: A clear photo of the whole receipt, up to 1 MB. You will get an email to check what we read.
+    fields:
+      - { name: name, label: Your name, type: text, required: true, max_length: 80 }
+      - { name: email, label: Your work email, type: email, required: true }
+      - { name: receipt, label: The receipt, type: file, required: true, accept: ".jpg,.jpeg,.png,.pdf,image/*,application/pdf", max_size: 1MB }
+      - { name: why, label: "What it was for", type: text, max_length: 200 }
+    thanks: Thank you - check your email in a minute to confirm the amount.
+# What a test runs on: an event as this trigger gives it (the receipt's bytes, in Base64, as a form gives a file).
+sample:
+  name: Jordan Example
+  email: jordan@example.com
+  why: Lunch with a customer
+  receipt:
+    name: receipt.png
+    type: image/png
+    size: 68
+    base64: iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==
+steps:
+  - name: settings
+    set:
+      # Who approves, and the categories you book expenses under.
+      manager: "'manager@example.com'"
+      categories: "['Travel', 'Meals', 'Supplies', 'Software', 'Other']"
+  - name: ocr
+    http:
+      method: POST
+      url: https://api.ocr.space/parse/image
+      credential: ocr
+      form:
+        base64Image: "data:{{ value.receipt.type }};base64,{{ value.receipt.base64 }}"
+        OCREngine: "2"
+        scale: "true"
+      timeout: 60s
+      fail_on_status: true
+      sample:
+        IsErroredOnProcessing: false
+        ParsedResults:
+          - ParsedText: "CORNER BISTRO\n12 Example Street\n27/11/2026 12:41\n2 x Soup of the day 13.00\n1 x Sparkling water 3.50\nTOTAL EUR 16.50\nCard ****1234"
+    retry: { attempts: 2, wait: 10s }
+  - name: read
+    extract:
+      credential: model
+      text: "{{ size(steps.ocr.body.ParsedResults) > 0 ? steps.ocr.body.ParsedResults[0].ParsedText : '' }}"
+      instructions: "The text of a shop's receipt, read from a photo: it may have mistakes. Take the total paid, not a line."
+      fields:
+        - { name: shop, type: string, description: "the shop's or restaurant's name" }
+        - { name: day, type: date, description: the day of the purchase }
+        - { name: total, type: number, description: the total paid }
+        - { name: currency, type: string, description: "the currency's code, as EUR or USD" }
+        - { name: category, type: string, description: "one of: Travel, Meals, Supplies, Software, Other" }
+  - name: ask_to_check
+    email:
+      credential: mail
+      to: "{{ value.email }}"
+      subject: Check your expense claim
+      text: >-
+        Hello {{ value.name }}, we read your receipt as {{ steps.read.json.total }} {{ steps.read.json.currency }} at
+        {{ steps.read.json.shop }} on {{ steps.read.json.day }}. Check it, change what is wrong and send it on here:
+        {{ links.check }}
+    retry: { attempts: 3, wait: 30s }
+  - name: check
+    form:
+      title: Your expense claim
+      description: "What we read from {{ value.receipt.name }}. Change anything that is wrong, then send it to {{ steps.settings.manager }}."
+      fields:
+        - { name: shop, label: Shop, type: text, required: true, default: "{{ steps.read.json.shop }}" }
+        - { name: day, label: Day, type: date, required: true, default: "{{ steps.read.json.day }}" }
+        - { name: amount, label: Amount, type: number, required: true, min: 0.01, default: "{{ steps.read.json.total }}" }
+        - { name: currency, label: Currency, type: text, required: true, max_length: 3, default: "{{ steps.read.json.currency }}" }
+        - { name: category, label: Category, type: dropdown, required: true, options: "{{ steps.settings.categories }}", default: "{{ steps.read.json.category }}" }
+        - { name: note, label: "What it was for", type: text, max_length: 200, default: "{{ value.why }}" }
+      timeout: 7d
+  - name: ask_manager
+    email:
+      credential: mail
+      to: "{{ steps.settings.manager }}"
+      subject: "Expense to approve: {{ steps.check.amount }} {{ steps.check.currency }} from {{ value.name }}"
+      text: >-
+        {{ value.name }} claims {{ steps.check.amount }} {{ steps.check.currency }} for {{ steps.check.category }} at
+        {{ steps.check.shop }} on {{ steps.check.day }} ({{ steps.check.note }}). Approve or reject it here:
+        {{ links.decide }}
+    retry: { attempts: 3, wait: 30s }
+  - name: decide
+    approval:
+      title: "{{ steps.check.amount }} {{ steps.check.currency }} for {{ value.name }}?"
+      description: "{{ steps.check.category }} at {{ steps.check.shop }} on {{ steps.check.day }}: {{ steps.check.note }}"
+      comment: true
+      approve: Approve
+      reject: Reject
+      timeout: 5d
+      on_timeout: continue
+  - name: keep
+    table:
+      name: expenses
+      action: insert
+      row:
+        person: "{{ value.name }}"
+        email: "{{ value.email }}"
+        shop: "{{ steps.check.shop }}"
+        day: "{{ steps.check.day }}"
+        amount: "{{ steps.check.amount }}"
+        currency: "{{ steps.check.currency }}"
+        category: "{{ steps.check.category }}"
+        note: "{{ steps.check.note }}"
+        status: "{{ steps.decide.decision }}"
+        comment: "{{ steps.decide.comment }}"
+  - name: tell
+    email:
+      credential: mail
+      to: "{{ value.email }}"
+      subject: "Your expense claim: {{ steps.decide.decision == 'approved' ? 'approved' : steps.decide.decision == 'rejected' ? 'not approved' : 'not answered yet' }}"
+      text: >-
+        Your claim of {{ steps.check.amount }} {{ steps.check.currency }} at {{ steps.check.shop }} was
+        {{ steps.decide.decision == 'approved' ? 'approved' : steps.decide.decision == 'rejected' ? 'not approved' : 'not answered within five days: ask ' + steps.settings.manager }}.
+        {{ steps.decide.comment != null && steps.decide.comment != '' ? 'Comment: ' + steps.decide.comment : '' }}
+    retry: { attempts: 3, wait: 30s }

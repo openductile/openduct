@@ -1,0 +1,8 @@
+description: With change if there, a contact already there is changed (Brevo answers 204)
+action: create_contact
+credential: { api_key: xkeysib-test-1 }
+input: { email: ann@example.com, attributes: { LASTNAME: Lee-Smith }, update_if_there: true }
+exchanges:
+  - sent: { body: { email: ann@example.com, attributes: { LASTNAME: Lee-Smith }, updateEnabled: true } }
+    answer: { status: 204 }
+result: { created: false }

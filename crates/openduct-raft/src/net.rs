@@ -870,7 +870,13 @@ async fn handle(members: &Members, group: GroupId, request: Request) -> Response
     match request {
         Request::Append(rpc) => match AppendEntriesRequest::try_from(rpc) {
             Ok(rpc) => match member.append(rpc).await {
-                Ok(result) => Response::Append(result.map(|l| l.map(Into::into)).map_err(Into::into)),
+                Ok(result) => {
+                    // Taken from a leader this copy accepts: it is being led (what "ready" asks, members.rs).
+                    if result.is_ok() {
+                        members.heard_from_leader(&group);
+                    }
+                    Response::Append(result.map(|l| l.map(Into::into)).map_err(Into::into))
+                }
                 Err(e) => Response::Failed(e),
             },
             Err(e) => Response::Failed(e),
@@ -886,6 +892,10 @@ async fn handle(members: &Members, group: GroupId, request: Request) -> Response
             .vote(rpc.into(), true)
             .await
             .map_or_else(Response::Failed, |v| Response::Vote((&v).into())),
+        // A broker that is stopping takes no leadership: it would lead until it is killed (members.rs `leave`).
+        Request::TransferLeader(_) if members.is_leaving() => {
+            Response::Failed("this broker is stopping: it takes no leadership".to_owned())
+        }
         Request::TransferLeader(req) => match member.take_leadership(req.into()).await {
             Ok(answer) => Response::TransferLeader(answer.map_err(Into::into)),
             Err(e) => Response::Failed(e),
@@ -951,7 +961,7 @@ async fn serve_snapshot(r: &mut Reader, w: &mut Writer, members: &Members) -> st
     }
     let files = Arc::new(SnapshotFiles::new(dir, header.manifest));
     // Moved in among the group's snapshots once installed; removed if Raft does not want it.
-    files.retire();
+    files.discard_unless_taken_in();
     let meta = match types::SnapshotMeta::try_from(header.meta) {
         Ok(meta) => meta,
         Err(e) => return send(w, &Response::Failed(e)).await,

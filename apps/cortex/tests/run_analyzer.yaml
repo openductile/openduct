@@ -1,0 +1,40 @@
+description: "An address sent to an analyzer, with its TLP and a note"
+action: run_analyzer
+credential: { base_url: "https://cortex.example.com:9001", api_key: test-key }
+input: { analyzer_id: 220483fde9608c580fb6a2508ff3d2d3, data: 203.0.113.7, data_type: ip, tlp: 1, message: "From the login alert" }
+exchanges:
+  - sent:
+      method: POST
+      url: "https://cortex.example.com:9001/api/analyzer/220483fde9608c580fb6a2508ff3d2d3/run"
+      query: {}
+      headers: { authorization: Bearer test-key }
+      body: { data: 203.0.113.7, dataType: ip, tlp: 1, message: "From the login alert" }
+    answer:
+      body:
+        id: AWNei4vH3rJ8unegCPB9
+        analyzerId: 220483fde9608c580fb6a2508ff3d2d3
+        analyzerName: Abuse_Finder_3_0
+        analyzerDefinitionId: Abuse_Finder_3_0
+        status: Waiting
+        data: 203.0.113.7
+        dataType: ip
+        tlp: 1
+        message: "From the login alert"
+        parameters: "{}"
+        organization: shop
+        createdAt: 1764237600000
+        createdBy: analyst
+result:
+  id: AWNei4vH3rJ8unegCPB9
+  analyzerId: 220483fde9608c580fb6a2508ff3d2d3
+  analyzerName: Abuse_Finder_3_0
+  analyzerDefinitionId: Abuse_Finder_3_0
+  status: Waiting
+  data: 203.0.113.7
+  dataType: ip
+  tlp: 1
+  message: "From the login alert"
+  parameters: "{}"
+  organization: shop
+  createdAt: 1764237600000
+  createdBy: analyst

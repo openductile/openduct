@@ -1,0 +1,18 @@
+description: Articles that hold the words, the best first; the contact sent in the User-Agent, as Wikimedia asks
+action: search_articles
+credential: { contact: ops@example.com }
+input: { q: solar system, limit: 2 }
+exchanges:
+  - sent:
+      method: GET
+      url: https://en.wikipedia.org/w/rest.php/v1/search/page
+      query: { q: solar system, limit: "2" }
+      headers: { user-agent: "OpenDuct-workflow/1.0 (ops@example.com)" }
+    answer:
+      body:
+        pages:
+          - { id: 26903, key: Solar_System, title: Solar System, excerpt: "The <span class=\"searchmatch\">Solar System</span> is the gravitationally bound system", matched_title: null, description: The Sun and the objects that orbit it, thumbnail: null }
+          - { id: 1133784, key: Formation_and_evolution_of_the_Solar_System, title: Formation and evolution of the Solar System, excerpt: "...", matched_title: null, description: null, thumbnail: null }
+result:
+  - { id: 26903, key: Solar_System, title: Solar System, excerpt: "The <span class=\"searchmatch\">Solar System</span> is the gravitationally bound system", matched_title: null, description: The Sun and the objects that orbit it, thumbnail: null }
+  - { id: 1133784, key: Formation_and_evolution_of_the_Solar_System, title: Formation and evolution of the Solar System, excerpt: "...", matched_title: null, description: null, thumbnail: null }

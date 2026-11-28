@@ -1,0 +1,7 @@
+description: The Events API refuses an event missing what a trigger needs, in its words
+action: send_alert
+credential: { api_key: pd_test_1 }
+input: { routing_key: R0UT1NGKEYEXAMPLE0000000000000000, summary: Disk full }
+exchanges:
+  - answer: { status: 400, body: { status: invalid event, message: Event object is invalid, errors: ["'payload.severity' is missing or blank"] } }
+error: "PagerDuty answered 400: Event object is invalid"

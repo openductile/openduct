@@ -1,0 +1,29 @@
+description: A thread for a new page
+action: create_thread
+credential: {api_key: pubkey-test-1, api_secret: secret-test-1, access_token: token-test-1}
+input: {forum: shop-example, title: Winter sale, url: 'https://shop.example/sale', identifier: sale-2026}
+exchanges:
+- sent:
+    method: POST
+    url: https://disqus.com/api/3.0/threads/create.json
+    query: {api_key: pubkey-test-1, api_secret: secret-test-1, access_token: token-test-1}
+    body: {forum: shop-example, title: Winter sale, url: 'https://shop.example/sale', identifier: sale-2026}
+  answer:
+    status: 200
+    body:
+      code: 0
+      response: &id001
+        id: '7002'
+        forum: shop-example
+        title: Winter sale
+        link: https://shop.example/sale
+        identifiers: [sale-2026]
+        author: '101'
+        createdAt: '2026-11-27T12:00:00'
+        isClosed: false
+        isDeleted: false
+        posts: 0
+        likes: 0
+        dislikes: 0
+        message: ''
+result: *id001

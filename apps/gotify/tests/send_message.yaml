@@ -1,0 +1,13 @@
+description: "A notification sent with an application's token"
+action: send_message
+credential: { base_url: "https://gotify.example.com", token: AzyoeNS.D4iJLVa }
+input: { title: New order, message: "**Order 1042** is paid: $58.00", priority: 5 }
+exchanges:
+  - sent:
+      method: POST
+      url: "https://gotify.example.com/message"
+      headers: { x-gotify-key: AzyoeNS.D4iJLVa }
+      body: { title: New order, message: "**Order 1042** is paid: $58.00", priority: 5 }
+    answer:
+      body: { id: 25, appid: 5, title: New order, message: "**Order 1042** is paid: $58.00", priority: 5, date: "2026-11-27T10:36:10.5045044Z" }
+result: { id: 25, appid: 5, title: New order, message: "**Order 1042** is paid: $58.00", priority: 5, date: "2026-11-27T10:36:10.5045044Z" }

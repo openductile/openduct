@@ -1,0 +1,7 @@
+action: get_text
+credential: { api_key: md_test_1 }
+input: { inference_id: a06d6ecf-0000-4000-8000-0000000000a5 }
+exchanges:
+  - sent: { method: GET, url: https://api-v2.mindee.net/v2/products/ocr/results/a06d6ecf-0000-4000-8000-0000000000a5 }
+    answer: { body: { inference: { id: a06d6ecf-0000-4000-8000-0000000000a5, result: { pages: [{ content: "Dear Ann, thank you for your order." }] } } } }
+result: { id: a06d6ecf-0000-4000-8000-0000000000a5, result: { pages: [{ content: "Dear Ann, thank you for your order." }] } }

@@ -1,0 +1,70 @@
+name: Meeting notes in, decisions and action items out
+description: >-
+  Paste a meeting's rough notes into a form: a model sums the meeting up, lists what was decided, and pulls out each
+  action item with its owner and due date. The meeting goes in a row of your Meetings sheet, and each action item in
+  a row of the Action items sheet, ready to sort by owner or date. For teams that take notes but lose track of who
+  does what. Needs: model, google_sheets.
+category: Productivity
+trigger:
+  form:
+    title: Meeting notes
+    fields:
+      - { name: meeting, label: Meeting, type: text, required: true, max_length: 120 }
+      - { name: date, label: Held on, type: date, required: true }
+      - { name: notes, label: "The notes, as they are", type: long_text, required: true, max_length: 20000 }
+    thanks: Thank you - the action items are in the sheet.
+# What a test runs on: an answer as the form gives it.
+sample:
+  meeting: Spring catalogue planning
+  date: "2026-11-26"
+  notes: >-
+    Present: Ines, Paul, Wen. Shoot moved to Feb 9 because the studio is booked. Paul to get two quotes from
+    printers by Dec 4. Wen drafts the product list, 40 items max, by Dec 11. Ines checks the budget with finance
+    next week. Agreed: no price changes in the catalogue this time. Open question: do we print 5,000 or 8,000?
+steps:
+  - name: read
+    extract:
+      credential: model
+      text: "Meeting: {{ value.meeting }}, held {{ value.date }}.\n{{ value.notes }}"
+      instructions: >-
+        Dates are in the year of the meeting or after it, as YYYY-MM-DD; leave a due date empty when none was said.
+        An owner is the person's first name as the notes give it.
+      schema:
+        type: object
+        properties:
+          summary: { type: string, description: "two sentences at most" }
+          decisions: { type: array, items: { type: string } }
+          open_questions: { type: array, items: { type: string } }
+          actions:
+            type: array
+            items:
+              type: object
+              properties:
+                task: { type: string }
+                owner: { type: string }
+                due: { type: string, description: "YYYY-MM-DD, or empty" }
+              required: [task, owner]
+        required: [summary, decisions, actions]
+  - name: meeting_row
+    google_sheets:
+      action: add_row
+      credential: google_sheets
+      spreadsheet_id: your-spreadsheet-id
+      sheet: Meetings
+      values: >-
+        {{ [value.date, value.meeting, steps.read.json.summary,
+            has(steps.read.json.decisions) && steps.read.json.decisions != null ? steps.read.json.decisions.join('; ') : '',
+            has(steps.read.json.open_questions) && steps.read.json.open_questions != null ? steps.read.json.open_questions.join('; ') : ''] }}
+    retry: { attempts: 3, wait: 10s }
+  - name: actions
+    for_each:
+      items: "has(steps.read.json.actions) && steps.read.json.actions != null ? steps.read.json.actions : []"
+      steps:
+        - name: action_row
+          google_sheets:
+            action: add_row
+            credential: google_sheets
+            spreadsheet_id: your-spreadsheet-id
+            sheet: Action items
+            values: "{{ [value.date, value.meeting, item.owner, item.task, has(item.due) && item.due != null ? item.due : '', 'open'] }}"
+          retry: { attempts: 3, wait: 10s }

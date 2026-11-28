@@ -1,0 +1,248 @@
+# Copyright 2026 Ductile AI, Inc
+# SPDX-License-Identifier: Apache-2.0
+# APITemplate.io: made by `openduct app from-openapi` from
+# https://apitemplateio.s3.ap-southeast-1.amazonaws.com/redoc_apiv2/apitemplateiov2_api.yaml (Apache 2.0 licence;
+# APITemplate.io API Reference Version 2.0, OpenAPI 3.0; last changed 2026-11-24, fetched 2026-11-27), then finished
+# by hand.
+app: apitemplate
+name: APITemplate.io
+category: documents
+description: Make PDFs and images - invoices, certificates, social posts - from templates, HTML, Markdown or a web page.
+docs: "https://apitemplate.io/apiv2/"
+hosts: [rest.apitemplate.io, rest-au.apitemplate.io, rest-de.apitemplate.io, rest-us.apitemplate.io]
+# The account's region, if it is not the default one: rest-au, rest-de or rest-us.
+base_url: "https://rest{{ has(credential.region) && credential.region != null && credential.region != '' ? '-' + credential.region : '' }}.apitemplate.io"
+sign_in:
+  - id: apitemplate
+    label: "An API key"
+    fields:
+      - { name: api_key, label: "The API key (APITemplate.io, API Integration)", secret: true }
+      - { name: region, label: "The account's region if not the default: au, de or us", optional: true }
+    headers: { X-API-KEY: "{{ credential.api_key }}" }
+default_action: create_pdf
+error: "has(value.status) && value.status == 'error' ? value.message : null"
+actions:
+  create_pdf:
+    label: "Make a PDF from a template"
+    description: "Fills one of the account's PDF templates with the data given, and gives the PDF's address."
+    write: true
+    method: POST
+    path: "/v2/create-pdf"
+    timeout: 120
+    inputs:
+      - { name: template_id, label: "The template's id (Manage Templates)", required: true }
+      - { name: data, label: "The data the template shows, as a record (invoice_number, items ...)", required: true, kind: record }
+      - { name: filename, label: "The file's name, ending in .pdf (by default an id)" }
+      - { name: expiration, label: "Keep the PDF this many minutes, 1 to 10080 (by default for good)", kind: number }
+      - { name: meta, label: "A reference of your own, shown with the file later" }
+    query:
+      template_id: "{{ input.template_id }}"
+      filename: "{{ input.filename }}"
+      expiration: "{{ input.expiration }}"
+      meta: "{{ input.meta }}"
+    send: "{{ input.data }}"
+    output:
+      status: text
+      download_url: text
+      template_id: text
+      total_pages: number
+      transaction_ref: text
+      post_actions: list
+  create_image:
+    label: "Make an image from a template"
+    description: "Fills one of the account's image templates, changing its texts and pictures, and gives the image's address (JPEG and PNG)."
+    write: true
+    method: POST
+    path: "/v2/create-image"
+    timeout: 120
+    inputs:
+      - { name: template_id, label: "The template's id (Manage Templates)", required: true }
+      - name: overrides
+        label: "What to change: a list of records, each naming a layer (name) and what to set (text, src, color ...)"
+        required: true
+        kind: list
+      - { name: output_image_type, label: "Which: jpegOnly, pngOnly or all (by default)" }
+      - { name: expiration, label: "Keep the image this many minutes, 1 to 10080 (by default for good)", kind: number }
+      - { name: meta, label: "A reference of your own, shown with the file later" }
+    query:
+      template_id: "{{ input.template_id }}"
+      output_image_type: "{{ input.output_image_type }}"
+      expiration: "{{ input.expiration }}"
+      meta: "{{ input.meta }}"
+    send: { overrides: "{{ input.overrides }}" }
+    output:
+      status: text
+      download_url: text
+      download_url_png: text
+      template_id: text
+      transaction_ref: text
+      post_actions: list
+  create_pdf_from_html:
+    label: "Make a PDF from HTML"
+    description: "Makes a PDF of the HTML given, with its CSS, filling in the data given; with the paper size and margins asked for."
+    write: true
+    method: POST
+    path: "/v2/create-pdf-from-html"
+    timeout: 120
+    inputs:
+      - { name: body, label: "The HTML", required: true }
+      - { name: css, label: "Its CSS" }
+      - { name: data, label: "Data the HTML names, as a record", kind: record }
+      - name: settings
+        label: "Page settings: paper_size (A4, Letter ...), orientation (1 portrait, 2 landscape), margin_top ..."
+        kind: record
+      - { name: filename, label: "The file's name, ending in .pdf (by default an id)" }
+      - { name: expiration, label: "Keep the PDF this many minutes, 1 to 10080 (by default for good)", kind: number }
+      - { name: meta, label: "A reference of your own, shown with the file later" }
+    query:
+      filename: "{{ input.filename }}"
+      expiration: "{{ input.expiration }}"
+      meta: "{{ input.meta }}"
+    send:
+      body: "{{ input.body }}"
+      css: "{{ input.css }}"
+      data: "{{ input.data }}"
+      settings: "{{ input.settings }}"
+    output:
+      status: text
+      download_url: text
+      total_pages: number
+      transaction_ref: text
+      post_actions: list
+  create_pdf_from_markdown:
+    label: "Make a PDF from Markdown"
+    description: "Makes a PDF of the Markdown given, with CSS and data if given."
+    write: true
+    method: POST
+    path: "/v2/create-pdf-from-markdown"
+    timeout: 120
+    inputs:
+      - { name: body, label: "The Markdown", required: true }
+      - { name: css, label: "CSS for it" }
+      - { name: data, label: "Data the Markdown names", kind: record }
+      - name: settings
+        label: "Page settings: paper_size (A4, Letter ...), orientation (1 portrait, 2 landscape), margin_top ..."
+        kind: record
+      - { name: filename, label: "The file's name, ending in .pdf (by default an id)" }
+      - { name: expiration, label: "Keep the PDF this many minutes, 1 to 10080 (by default for good)", kind: number }
+      - { name: meta, label: "A reference of your own, shown with the file later" }
+    query:
+      filename: "{{ input.filename }}"
+      expiration: "{{ input.expiration }}"
+      meta: "{{ input.meta }}"
+    send:
+      body: "{{ input.body }}"
+      css: "{{ input.css }}"
+      data: "{{ input.data }}"
+      settings: "{{ input.settings }}"
+    output:
+      status: text
+      download_url: text
+      total_pages: number
+      transaction_ref: text
+      post_actions: list
+  create_pdf_from_url:
+    label: "Make a PDF of a web page"
+    description: "Makes a PDF of the web page at the address given."
+    write: true
+    method: POST
+    path: "/v2/create-pdf-from-url"
+    timeout: 120
+    inputs:
+      - { name: url, label: "The page's address", required: true }
+      - name: settings
+        label: "Page settings: paper_size (A4, Letter ...), orientation (1 portrait, 2 landscape), margin_top ..."
+        kind: record
+      - { name: filename, label: "The file's name, ending in .pdf (by default an id)" }
+      - { name: expiration, label: "Keep the PDF this many minutes, 1 to 10080 (by default for good)", kind: number }
+      - { name: meta, label: "A reference of your own, shown with the file later" }
+    query:
+      filename: "{{ input.filename }}"
+      expiration: "{{ input.expiration }}"
+      meta: "{{ input.meta }}"
+    send: { url: "{{ input.url }}", settings: "{{ input.settings }}" }
+    output:
+      status: text
+      download_url: text
+      total_pages: number
+      transaction_ref: text
+      post_actions: list
+  merge_pdfs:
+    label: "Join PDFs into one"
+    description: "Joins the PDFs at the addresses given, in that order, into one PDF."
+    write: true
+    method: POST
+    path: "/v2/merge-pdfs"
+    timeout: 120
+    inputs:
+      - { name: urls, label: "The PDFs' addresses, in order", required: true, kind: list }
+      - { name: expiration, label: "Keep the PDF this many minutes, 1 to 10080 (by default for good)", kind: number }
+      - { name: meta, label: "A reference of your own, shown with the file later" }
+    query: { meta: "{{ input.meta }}" }
+    send: { urls: "{{ input.urls }}", expiration: "{{ input.expiration }}" }
+    output: { status: text, primary_url: text, total_pages: number, transaction_ref: text }
+  list_templates:
+    label: "List templates"
+    description: "The account's PDF and image templates, with their ids."
+    method: GET
+    path: "/v2/list-templates"
+    inputs:
+      - { name: format, label: "Only templates of PDF or JPEG" }
+      - { name: group_name, label: "Only templates of this group" }
+    query: { format: "{{ input.format }}", group_name: "{{ input.group_name }}", limit: "100" }
+    items: value.templates
+    next: "size(value.templates) < 100 ? null : {'offset': (page == null ? 0 : int(page['offset'])) + 100}"
+    output:
+      template_id: text
+      name: text
+      status: text
+      format: text
+      created_at: text
+      updated_at: text
+      group_name: text
+  list_objects:
+    label: "List the files made"
+    description: "The PDFs and images the account has made, the latest first, with their addresses."
+    method: GET
+    path: "/v2/list-objects"
+    inputs:
+      - { name: template_id, label: "Only files of this template" }
+      - { name: transaction_type, label: "Only files of this kind: PDF, JPEG or MERGE" }
+    query:
+      template_id: "{{ input.template_id }}"
+      transaction_type: "{{ input.transaction_type }}"
+      limit: "100"
+    items: value.objects
+    next: "size(value.objects) < 100 ? null : {'offset': (page == null ? 0 : int(page['offset'])) + 100}"
+    output:
+      transaction_ref: text
+      meta: text
+      transaction_type: text
+      primary_url: text
+      secondary_url: text
+      deleted_at: text
+      created_at: text
+  delete_object:
+    label: "Remove a file made"
+    description: "Removes a PDF or image the account made from APITemplate.io's storage; its address stops working."
+    write: true
+    method: GET
+    path: "/v2/delete-object"
+    inputs:
+      - { name: transaction_ref, label: "The file's transaction_ref", required: true }
+    query: { transaction_ref: "{{ input.transaction_ref }}" }
+    output: { status: text, transaction_ref: text }
+  get_account:
+    label: "Check the account"
+    description: "The account's plan, and how many files it may still make this period."
+    method: GET
+    path: "/v2/account-information"
+    output:
+      status: text
+      subscription_product: text
+      subscription_status: text
+      subscription_current_period_end: text
+      api_quota: number
+      api_remaining: number
+      template_count: number
+      template_quota: number

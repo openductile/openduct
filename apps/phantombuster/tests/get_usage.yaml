@@ -1,0 +1,11 @@
+description: The workspace's plan and what it has used
+action: get_usage
+credential: { api_key: pb_test_key_1 }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://api.phantombuster.com/api/v2/orgs/fetch-resources"
+    answer:
+      status: 200
+      body: { planName: Starter, agentCount: 5, dailyExecutionTime: 12, monthlyExecutionTime: 340, monthlyDiscoveredMail: 40, monthlyAiCredit: 120 }
+result: { planName: Starter, agentCount: 5, dailyExecutionTime: 12, monthlyExecutionTime: 340, monthlyDiscoveredMail: 40, monthlyAiCredit: 120 }

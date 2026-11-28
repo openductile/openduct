@@ -1,0 +1,10 @@
+description: One message by its event id
+action: get_event
+credential: { homeserver: "https://matrix.example.org", token: syt_test_token }
+input: { room_id: "!abc123:example.org", event_id: "$ev1" }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://matrix.example.org/_matrix/client/v3/rooms/!abc123:example.org/event/$ev1"
+    answer: { status: 200, body: { event_id: "$ev1", type: m.room.message, sender: "@ann:example.org", content: { msgtype: m.text, body: Order A-1042 shipped }, origin_server_ts: 1764230400000, room_id: "!abc123:example.org" } }
+result: { event_id: "$ev1", type: m.room.message, sender: "@ann:example.org", content: { msgtype: m.text, body: Order A-1042 shipped }, origin_server_ts: 1764230400000, room_id: "!abc123:example.org" }

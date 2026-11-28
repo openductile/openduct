@@ -23,8 +23,15 @@ Under Credentials, add a Google Calendar credential and **Connect**.
 - **List events** (`list_events`): of your own calendar (`primary`) or another's id, between two times; every page.
 - **Add an event** (`add_event`): title, start and end (with their time zone offset), and who is asked.
 
+## Triggers
+
+- **A new event** (`new_event`) and **An event added or changed** (`changed_event`), asked every 5 minutes, in one
+  calendar (`primary` for your own). Each poll asks for what changed since the newest change it dealt with.
+
 ## Tested
 
 Recorded exchanges from Google's documented requests and answers (`tests/`).
 
 Run against a Google account on 2026-11-16: List events and Add an event (nobody asked) worked.
+
+Triggers are tested with recorded exchanges and signed deliveries (`tests/trigger_*.yaml`), signatures made as the app documents them; none was run against a live account.

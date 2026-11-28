@@ -1,0 +1,6 @@
+action: list_starred_segments
+credential: { access_token: st_test_1 }
+exchanges:
+  - sent: { method: GET, url: https://www.strava.com/api/v3/segments/starred, query: { per_page: "200" } }
+    answer: { body: [{ id: 6001, name: Hill climb, activity_type: Run, distance: 820.0, average_grade: 6.1, climb_category: 1 }] }
+result: [{ id: 6001, name: Hill climb, activity_type: Run, distance: 820.0, average_grade: 6.1, climb_category: 1 }]

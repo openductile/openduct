@@ -1,0 +1,11 @@
+description: A product photo's background removal started
+action: remove_background
+credential: { api_key: bb_ak_v5_test }
+input: { image_url: "https://shop.example.com/p/mug.jpg" }
+exchanges:
+  - sent:
+      method: POST
+      url: "https://api.bannerbear.com/v5/tools/remove_bg"
+      body: { image_url: "https://shop.example.com/p/mug.jpg" }
+    answer: { status: 202, body: { uid: job_K9, tool: remove_bg, status: pending, progress: 0, inputs: { image_url: "https://shop.example.com/p/mug.jpg" }, outputs: {}, self: "https://api.bannerbear.com/v5/tool_jobs/job_K9", created_at: "2026-11-27T09:00:00Z" } }
+result: { uid: job_K9, tool: remove_bg, status: pending, progress: 0, inputs: { image_url: "https://shop.example.com/p/mug.jpg" }, outputs: {}, self: "https://api.bannerbear.com/v5/tool_jobs/job_K9", created_at: "2026-11-27T09:00:00Z" }

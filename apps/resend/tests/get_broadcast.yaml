@@ -1,0 +1,39 @@
+# Made by `openduct app from-openapi`: Retrieve a single broadcast.
+description: "Retrieve a single broadcast, made from the API description's schemas"
+action: get_broadcast
+credential: { token: test-token }
+input: { id: id_1 }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://api.resend.com/broadcasts/id_1"
+      query: {}
+      headers: { authorization: "Bearer test-token" }
+    answer:
+      status: 200
+      body:
+        id: e169aa45-1ecf-4183-9955-b1499d5701d3
+        name: example
+        audience_id: audience_1
+        segment_id: segment_1
+        from: example
+        subject: example
+        reply_to: [example]
+        preview_text: example
+        status: draft
+        created_at: example
+        scheduled_at: example
+        sent_at: example
+result:
+  id: e169aa45-1ecf-4183-9955-b1499d5701d3
+  name: example
+  audience_id: audience_1
+  segment_id: segment_1
+  from: example
+  subject: example
+  reply_to: [example]
+  preview_text: example
+  status: draft
+  created_at: example
+  scheduled_at: example
+  sent_at: example

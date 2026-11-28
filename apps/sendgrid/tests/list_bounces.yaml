@@ -1,0 +1,11 @@
+description: Bounces over two pages - a full page means there may be another
+action: list_bounces
+credential: { token: SG.test-key }
+input: { email: ann@example.com }
+exchanges:
+  - sent:
+      method: GET
+      url: https://api.sendgrid.com/v3/suppression/bounces
+      query: { email: ann@example.com, limit: "100" }
+    answer: { body: [{ created: 1764100000, email: ann@example.com, reason: "550 5.1.1 The email account that you tried to reach does not exist", status: "5.1.1" }] }
+result: [{ created: 1764100000, email: ann@example.com, reason: "550 5.1.1 The email account that you tried to reach does not exist", status: "5.1.1" }]

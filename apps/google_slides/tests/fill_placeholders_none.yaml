@@ -1,0 +1,9 @@
+description: A placeholder found nowhere - Google leaves its count out
+action: fill_placeholders
+credential: { access_token: ya29.test }
+input: { presentation: 1CoPyOfTheTemplate0123456789abcdefg, values: { "{{total}}": 1250 } }
+exchanges:
+  - sent:
+      body: { requests: [{ replaceAllText: { containsText: { text: "{{total}}", matchCase: true }, replaceText: "1250" } }] }
+    answer: { body: { presentationId: 1CoPyOfTheTemplate0123456789abcdefg, replies: [{ replaceAllText: {} }] } }
+result: { id: 1CoPyOfTheTemplate0123456789abcdefg, replaced: 0 }

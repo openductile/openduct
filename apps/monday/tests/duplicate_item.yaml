@@ -1,0 +1,26 @@
+description: A copy of an item with its updates
+action: duplicate_item
+credential:
+  token: monday-test-token
+input:
+  board_id: '1234567890'
+  item_id: '9876543210'
+  with_updates: true
+exchanges:
+- sent:
+    body:
+      query: 'mutation ($board: ID!, $item: ID, $updates: Boolean) { duplicate_item(board_id: $board, item_id: $item, with_updates:
+        $updates) { id name } }'
+      variables:
+        board: '1234567890'
+        item: '9876543210'
+        updates: true
+  answer:
+    body:
+      data:
+        duplicate_item:
+          id: '9876543212'
+          name: Order 1042 (copy)
+result:
+  id: '9876543212'
+  name: Order 1042 (copy)

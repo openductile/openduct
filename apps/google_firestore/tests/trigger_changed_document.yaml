@@ -1,0 +1,32 @@
+description: A document changed since the poll before runs again
+trigger: changed_document
+credential:
+  access_token: ya29.test
+input:
+  project_id: sample-shop
+  collection: orders
+seen:
+  items:
+  - - projects/sample-shop/databases/(default)/documents/orders/A-100
+    - '"2026-11-20T10:00:00.000000Z"'
+exchanges:
+- answer:
+    status: 200
+    body:
+      documents:
+      - name: projects/sample-shop/databases/(default)/documents/orders/A-100
+        fields:
+          customer:
+            stringValue: Pat Sample
+          total:
+            doubleValue: 42.5
+          items:
+            integerValue: '3'
+          paid:
+            booleanValue: true
+          status:
+            stringValue: new
+        createTime: '2026-11-20T10:00:00.000000Z'
+        updateTime: '2026-11-21T08:00:00.000000Z'
+ids:
+- projects/sample-shop/databases/(default)/documents/orders/A-100

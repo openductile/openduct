@@ -1,0 +1,20 @@
+description: A list with a sample of its contacts
+action: get_list
+credential: { token: SG.test-key }
+input: { list_id: ca7a3796-e8a8-4029-9ccb-df8937940562, contact_sample: true }
+exchanges:
+  - sent:
+      method: GET
+      url: https://api.sendgrid.com/v3/marketing/lists/ca7a3796-e8a8-4029-9ccb-df8937940562
+      query: { contact_sample: "true" }
+    answer:
+      body:
+        id: ca7a3796-e8a8-4029-9ccb-df8937940562
+        name: Newsletter
+        contact_count: 1180
+        contact_sample: [{ id: 3d5f1c2a-7b9e-4c1d-8e2f-a1b2c3d4e5f6, email: ann@example.com }]
+result:
+  id: ca7a3796-e8a8-4029-9ccb-df8937940562
+  name: Newsletter
+  contact_count: 1180
+  contact_sample: [{ id: 3d5f1c2a-7b9e-4c1d-8e2f-a1b2c3d4e5f6, email: ann@example.com }]

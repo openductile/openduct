@@ -1,0 +1,12 @@
+description: "A build run again"
+action: restart_build
+credential: { token: test-token }
+input: { build_id: 86601346 }
+exchanges:
+  - sent:
+      method: POST
+      url: "https://api.travis-ci.com/build/86601346/restart"
+    answer:
+      status: 202
+      body: { "@type": pending, build: { "@type": build, id: 86601346, number: "212", state: failed }, state_change: restart, resource_type: build }
+result: { "@type": pending, build: { "@type": build, id: 86601346, number: "212", state: failed }, state_change: restart, resource_type: build }

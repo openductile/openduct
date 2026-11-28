@@ -1,0 +1,16 @@
+description: The active urgent incidents, the newest first, over two pages
+action: list_incidents
+credential: { instance: acme, username: integration.user, password: pw-test-1 }
+input: { query: active=true^urgency=1, fields: "sys_id,number" }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://acme.service-now.com/api/now/table/incident"
+      query: { sysparm_query: "active=true^urgency=1^ORDERBYDESCsys_created_on", sysparm_fields: "sys_id,number", sysparm_exclude_reference_link: "true", sysparm_limit: "100" }
+    answer:
+      status: 200
+      body:
+        result: [{ number: INC0000001 }, { number: INC0000002 }, { number: INC0000003 }, { number: INC0000004 }, { number: INC0000005 }, { number: INC0000006 }, { number: INC0000007 }, { number: INC0000008 }, { number: INC0000009 }, { number: INC0000010 }, { number: INC0000011 }, { number: INC0000012 }, { number: INC0000013 }, { number: INC0000014 }, { number: INC0000015 }, { number: INC0000016 }, { number: INC0000017 }, { number: INC0000018 }, { number: INC0000019 }, { number: INC0000020 }, { number: INC0000021 }, { number: INC0000022 }, { number: INC0000023 }, { number: INC0000024 }, { number: INC0000025 }, { number: INC0000026 }, { number: INC0000027 }, { number: INC0000028 }, { number: INC0000029 }, { number: INC0000030 }, { number: INC0000031 }, { number: INC0000032 }, { number: INC0000033 }, { number: INC0000034 }, { number: INC0000035 }, { number: INC0000036 }, { number: INC0000037 }, { number: INC0000038 }, { number: INC0000039 }, { number: INC0000040 }, { number: INC0000041 }, { number: INC0000042 }, { number: INC0000043 }, { number: INC0000044 }, { number: INC0000045 }, { number: INC0000046 }, { number: INC0000047 }, { number: INC0000048 }, { number: INC0000049 }, { number: INC0000050 }, { number: INC0000051 }, { number: INC0000052 }, { number: INC0000053 }, { number: INC0000054 }, { number: INC0000055 }, { number: INC0000056 }, { number: INC0000057 }, { number: INC0000058 }, { number: INC0000059 }, { number: INC0000060 }, { number: INC0000061 }, { number: INC0000062 }, { number: INC0000063 }, { number: INC0000064 }, { number: INC0000065 }, { number: INC0000066 }, { number: INC0000067 }, { number: INC0000068 }, { number: INC0000069 }, { number: INC0000070 }, { number: INC0000071 }, { number: INC0000072 }, { number: INC0000073 }, { number: INC0000074 }, { number: INC0000075 }, { number: INC0000076 }, { number: INC0000077 }, { number: INC0000078 }, { number: INC0000079 }, { number: INC0000080 }, { number: INC0000081 }, { number: INC0000082 }, { number: INC0000083 }, { number: INC0000084 }, { number: INC0000085 }, { number: INC0000086 }, { number: INC0000087 }, { number: INC0000088 }, { number: INC0000089 }, { number: INC0000090 }, { number: INC0000091 }, { number: INC0000092 }, { number: INC0000093 }, { number: INC0000094 }, { number: INC0000095 }, { number: INC0000096 }, { number: INC0000097 }, { number: INC0000098 }, { number: INC0000099 }, { number: INC0000100 }]
+  - sent:
+      query: { sysparm_query: "active=true^urgency=1^ORDERBYDESCsys_created_on", sysparm_fields: "sys_id,number", sysparm_exclude_reference_link: "true", sysparm_limit: "100", sysparm_offset: "100" }
+    answer: { status: 200, body: { result: [{ number: INC0000101 }] } }

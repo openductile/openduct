@@ -1,0 +1,53 @@
+# Made by `openduct app from-openapi`: List an issue's events.
+description: "List an issue's events, made from the API description's schemas"
+action: list_issue_events
+credential: { token: test-token }
+input: { organization_id_or_slug: example, issue_id: issue_1 }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://us.sentry.io/api/0/organizations/example/issues/issue_1/events/"
+      query: {}
+      headers: { authorization: "Bearer test-token" }
+    answer:
+      status: 200
+      body:
+        - id: id_1
+          event.type: example
+          groupID: group_1
+          eventID: event_1
+          projectID: project_1
+          message: example
+          title: example
+          location: example
+          culprit: example
+          user:
+            id: id_1
+            email: "ann@example.com"
+            username: example
+            ip_address: example
+            name: example
+            geo: {}
+            data: {}
+          tags: [{ query: example, key: example, value: example }]
+          platform: example
+result:
+  - id: id_1
+    event.type: example
+    groupID: group_1
+    eventID: event_1
+    projectID: project_1
+    message: example
+    title: example
+    location: example
+    culprit: example
+    user:
+      id: id_1
+      email: "ann@example.com"
+      username: example
+      ip_address: example
+      name: example
+      geo: {}
+      data: {}
+    tags: [{ query: example, key: example, value: example }]
+    platform: example

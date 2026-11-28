@@ -1,0 +1,7 @@
+action: list_teams
+credential: { api_key: pd_test_1 }
+input: { query: shop }
+exchanges:
+  - sent: { method: GET, url: https://api.pagerduty.com/teams, query: { limit: "100", query: shop } }
+    answer: { body: { offset: 0, limit: 100, more: false, teams: [{ id: PTEAM01, name: Shop team }] } }
+result: [{ id: PTEAM01, name: Shop team }]

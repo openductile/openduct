@@ -1,0 +1,7 @@
+action: get_incident
+credential: { api_key: ur_test_1 }
+input: { id: inc_7f3a }
+exchanges:
+  - sent: { method: GET, url: https://api.uptimerobot.com/v3/incidents/inc_7f3a }
+    answer: { body: { id: inc_7f3a, status: resolved, type: Downtime, reason: Service Unavailable, monitor: { id: 801, friendlyName: Shop }, startedAt: "2026-11-27T09:55:00Z", resolvedAt: "2026-11-27T10:13:40Z", duration: 1120 } }
+result: { id: inc_7f3a, status: resolved, type: Downtime, reason: Service Unavailable, monitor: { id: 801, friendlyName: Shop }, startedAt: "2026-11-27T09:55:00Z", resolvedAt: "2026-11-27T10:13:40Z", duration: 1120 }

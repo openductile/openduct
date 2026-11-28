@@ -1,0 +1,19 @@
+description: A meeting with a waiting room and registration approved at once
+action: create_meeting
+credential: { access_token: zoom-test-token }
+input: { topic: Monthly supplier call, start_time: "2026-12-01T15:00:00", timezone: America/New_York, duration: 45, agenda: Prices for next year, waiting_room: true, registration: auto }
+exchanges:
+  - sent:
+      method: POST
+      url: https://api.zoom.us/v2/users/me/meetings
+      headers: { authorization: Bearer zoom-test-token }
+      body:
+        topic: Monthly supplier call
+        type: 2
+        start_time: "2026-12-01T15:00:00"
+        timezone: America/New_York
+        duration: 45
+        agenda: Prices for next year
+        settings: { waiting_room: true, approval_type: 0 }
+    answer: { status: 201, body: { id: 85700000001, uuid: "aBcDeFgHiJkLmNoPqRsT0w==", topic: Monthly supplier call, type: 2, start_time: "2026-12-01T20:00:00Z", timezone: America/New_York, duration: 45, agenda: Prices for next year, join_url: "https://us02web.zoom.us/j/85700000001?pwd=test", start_url: "https://us02web.zoom.us/s/85700000001?zak=test", password: "123456", host_id: host-test-1, settings: { waiting_room: true } } }
+result: { id: 85700000001, uuid: "aBcDeFgHiJkLmNoPqRsT0w==", topic: Monthly supplier call, type: 2, start_time: "2026-12-01T20:00:00Z", timezone: America/New_York, duration: 45, agenda: Prices for next year, join_url: "https://us02web.zoom.us/j/85700000001?pwd=test", start_url: "https://us02web.zoom.us/s/85700000001?zak=test", password: "123456", host_id: host-test-1, settings: { waiting_room: true } }

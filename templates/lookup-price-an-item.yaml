@@ -2,7 +2,7 @@ name: Price an item from your price list
 description: >-
   Upload your price list as /prices.csv (sku,name,price). When an item comes in over a webhook ({"sku", "qty"}),
   look its price up, work out the line's total, and keep it in the priced topic; an unknown sku goes to CatchErr.
-category: Lookups
+category: Sales
 trigger:
   webhook: {}
 # What a test runs on: an event as this trigger gives it.

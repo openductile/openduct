@@ -1,0 +1,275 @@
+# Copyright 2026 Ductile AI, Inc
+# SPDX-License-Identifier: Apache-2.0
+#
+# Written from Strava's own API description (https://developers.strava.com/swagger/swagger.json and the files it
+# refers to, last modified 2026-11-17, fetched 2026-11-27), bundled into one and shown by `openduct app from-openapi`.
+app: strava
+name: Strava
+category: fitness
+description: An athlete's activities (runs, rides, swims), their laps, kudos and comments, clubs, routes and gear.
+docs: https://developers.strava.com/docs/reference/
+hosts: [www.strava.com]
+base_url: https://www.strava.com/api/v3
+sign_in:
+  - id: strava
+    label: Sign in with Strava
+    oauth2:
+      authorize: https://www.strava.com/api/v3/oauth/authorize
+      token: https://www.strava.com/api/v3/oauth/token
+      # Strava takes the scopes separated by commas, as one value.
+      scopes: ["read,profile:read_all,activity:read_all,activity:write"]
+    headers: { Authorization: "Bearer {{ credential.access_token }}" }
+actions:
+  me:
+    label: Who I am
+    description: The athlete signed in, with their id (which the routes and statistics ask for).
+    method: GET
+    path: /athlete
+    output: &athlete { id: number, username: text, firstname: text, lastname: text, city: text, country: text, sex: text, premium: boolean, weight: number, ftp: number, measurement_preference: text, created_at: text }
+  athlete_stats:
+    label: An athlete's totals
+    description: Totals of rides, runs and swims (count, distance, time, climbing) over the last four weeks, the year, and ever.
+    method: GET
+    path: "/athletes/{{ input.id }}/stats"
+    inputs:
+      - { name: id, label: "The athlete's id (yours, from Who I am)", required: true }
+    output: { biggest_ride_distance: number, biggest_climb_elevation_gain: number, recent_ride_totals: record, recent_run_totals: record, recent_swim_totals: record, ytd_ride_totals: record, ytd_run_totals: record, ytd_swim_totals: record, all_ride_totals: record, all_run_totals: record, all_swim_totals: record }
+  list_activities:
+    label: List my activities
+    description: The athlete's activities, the newest first, between two times if given; every page up to the most.
+    method: GET
+    path: /athlete/activities
+    inputs:
+      - { name: after, label: "Only after this time (seconds since 1970)", kind: number }
+      - { name: before, label: "Only before this time (seconds since 1970)", kind: number }
+    query: { after: "{{ input.after }}", before: "{{ input.before }}", per_page: "200" }
+    items: value
+    next: "size(value) < 200 ? null : {'page': (page == null ? 1 : int(page.page)) + 1}"
+    output: &activity
+      id: number
+      name: text
+      sport_type: text
+      start_date: text
+      start_date_local: text
+      timezone: text
+      distance: number
+      moving_time: number
+      elapsed_time: number
+      total_elevation_gain: number
+      average_speed: number
+      max_speed: number
+      average_heartrate: number
+      kudos_count: number
+      comment_count: number
+      commute: boolean
+      trainer: boolean
+      private: boolean
+      gear_id: text
+      map: record
+  get_activity:
+    label: Get an activity
+    description: One activity in full, with its description, splits, best efforts and segments.
+    method: GET
+    path: "/activities/{{ input.id }}"
+    inputs:
+      - { name: id, label: "The activity's id", required: true }
+      - { name: include_all_efforts, label: "With every segment effort", kind: boolean }
+    query: { include_all_efforts: "{{ input.include_all_efforts }}" }
+    output: *activity
+  create_activity:
+    label: Add an activity by hand
+    description: An activity with no recording (a gym session, a class), with its sport, when, how long and how far.
+    write: true
+    method: POST
+    path: /activities
+    body: form
+    inputs:
+      - { name: name, label: Name, required: true }
+      - { name: sport_type, label: "The sport (such as Run, Ride, Swim, Walk, WeightTraining, Yoga)", required: true }
+      - { name: start_date_local, label: "When it started, local time (such as 2026-11-27T07:30:00Z)", required: true }
+      - { name: elapsed_time, label: "How long, in seconds", required: true, kind: number }
+      - { name: distance, label: "How far, in meters", kind: number }
+      - { name: description, label: Description }
+      - { name: trainer, label: "On a training machine", kind: boolean }
+      - { name: commute, label: "A commute", kind: boolean }
+    send:
+      name: "{{ input.name }}"
+      sport_type: "{{ input.sport_type }}"
+      start_date_local: "{{ input.start_date_local }}"
+      elapsed_time: "{{ input.elapsed_time }}"
+      distance: "{{ input.distance }}"
+      description: "{{ input.description }}"
+      trainer: "{{ input.trainer == true ? 1 : 0 }}"
+      commute: "{{ input.commute == true ? 1 : 0 }}"
+    output: *activity
+  update_activity:
+    label: Change an activity
+    description: Its name, sport, description, gear, or whether it is a commute, on a trainer, or hidden from the feed.
+    write: true
+    method: PUT
+    path: "/activities/{{ input.id }}"
+    inputs:
+      - { name: id, label: "The activity's id", required: true }
+      - { name: name, label: Name }
+      - { name: sport_type, label: "The sport (such as Run, Ride)" }
+      - { name: description, label: Description }
+      - { name: gear_id, label: "The gear's id (none: no gear)" }
+      - { name: trainer, label: "On a training machine", kind: boolean }
+      - { name: hide_from_home, label: "Hidden from the home feed", kind: boolean }
+    send:
+      name: "{{ input.name }}"
+      sport_type: "{{ input.sport_type }}"
+      description: "{{ input.description }}"
+      gear_id: "{{ input.gear_id }}"
+      trainer: "{{ input.trainer }}"
+      hide_from_home: "{{ input.hide_from_home }}"
+    output: *activity
+  list_activity_laps:
+    label: An activity's laps
+    description: "An activity's laps: distance, time and speed of each."
+    method: GET
+    path: "/activities/{{ input.id }}/laps"
+    inputs:
+      - { name: id, label: "The activity's id", required: true }
+    items: value
+    output: { id: number, name: text, lap_index: number, distance: number, elapsed_time: number, moving_time: number, average_speed: number, max_speed: number, total_elevation_gain: number, start_date_local: text }
+  activity_zones:
+    label: An activity's heart-rate and power zones
+    description: Time spent in each heart-rate (and power) zone, for an athlete with a Strava subscription.
+    method: GET
+    path: "/activities/{{ input.id }}/zones"
+    inputs:
+      - { name: id, label: "The activity's id", required: true }
+    items: value
+    output: { type: text, score: number, sensor_based: boolean, points: number, distribution_buckets: list }
+  list_activity_comments:
+    label: An activity's comments
+    description: "The comments on an activity."
+    method: GET
+    path: "/activities/{{ input.id }}/comments"
+    inputs:
+      - { name: id, label: "The activity's id", required: true }
+    query: { page_size: "200" }
+    items: value
+    output: { id: number, activity_id: number, text: text, athlete: record, created_at: text }
+  list_activity_kudos:
+    label: Who gave kudos to an activity
+    description: "The athletes who gave kudos to an activity, every page."
+    method: GET
+    path: "/activities/{{ input.id }}/kudos"
+    inputs:
+      - { name: id, label: "The activity's id", required: true }
+    query: { per_page: "200" }
+    items: value
+    next: "size(value) < 200 ? null : {'page': (page == null ? 1 : int(page.page)) + 1}"
+    output: { firstname: text, lastname: text }
+  get_activity_streams:
+    label: An activity's recorded data
+    description: >-
+      The data recorded along an activity, point by point, keyed by kind: time, distance, latlng, altitude,
+      heartrate, cadence, watts...
+    method: GET
+    path: "/activities/{{ input.id }}/streams"
+    inputs:
+      - { name: id, label: "The activity's id", required: true }
+      - { name: keys, label: "Which, separated by commas (time, distance, latlng, altitude, velocity_smooth, heartrate, cadence, watts, temp, moving, grade_smooth)", required: true }
+    query: { keys: "{{ input.keys }}", key_by_type: "true" }
+    output: { time: record, distance: record, latlng: record, altitude: record, heartrate: record, cadence: record, watts: record }
+  list_clubs:
+    label: My clubs
+    description: "The clubs the athlete is a member of, every page."
+    method: GET
+    path: /athlete/clubs
+    query: { per_page: "200" }
+    items: value
+    next: "size(value) < 200 ? null : {'page': (page == null ? 1 : int(page.page)) + 1}"
+    output: &club { id: number, name: text, sport_type: text, city: text, country: text, private: boolean, member_count: number, url: text }
+  get_club:
+    label: Get a club
+    description: "One club: its sport, place and how many members it has."
+    method: GET
+    path: "/clubs/{{ input.id }}"
+    inputs:
+      - { name: id, label: "The club's id", required: true }
+    output: *club
+  list_routes:
+    label: An athlete's routes
+    description: "The routes an athlete made, every page."
+    method: GET
+    path: "/athletes/{{ input.id }}/routes"
+    inputs:
+      - { name: id, label: "The athlete's id (yours, from Who I am)", required: true }
+    query: { per_page: "200" }
+    items: value
+    next: "size(value) < 200 ? null : {'page': (page == null ? 1 : int(page.page)) + 1}"
+    output: &route { id: number, id_str: text, name: text, description: text, distance: number, elevation_gain: number, estimated_moving_time: number, type: number, sub_type: number, private: boolean, starred: boolean, created_at: text, map: record }
+  get_route:
+    label: Get a route
+    description: "One route: its distance, climbing and how long it takes."
+    method: GET
+    path: "/routes/{{ input.id }}"
+    inputs:
+      - { name: id, label: "The route's id", required: true }
+    output: *route
+  get_gear:
+    label: Get gear
+    description: A bike or a pair of shoes, with the distance done on it.
+    method: GET
+    path: "/gear/{{ input.id }}"
+    inputs:
+      - { name: id, label: "The gear's id (such as b1234 or g5678)", required: true }
+    output: { id: text, name: text, primary: boolean, distance: number, brand_name: text, model_name: text, description: text }
+  list_starred_segments:
+    label: My starred segments
+    description: "The segments the athlete starred, every page."
+    method: GET
+    path: /segments/starred
+    query: { per_page: "200" }
+    items: value
+    next: "size(value) < 200 ? null : {'page': (page == null ? 1 : int(page.page)) + 1}"
+    output: &segment { id: number, name: text, activity_type: text, distance: number, average_grade: number, maximum_grade: number, elevation_high: number, elevation_low: number, climb_category: number, city: text, country: text, private: boolean, starred: boolean }
+  get_segment:
+    label: Get a segment
+    description: "One segment: its distance, grades and elevation."
+    method: GET
+    path: "/segments/{{ input.id }}"
+    inputs:
+      - { name: id, label: "The segment's id", required: true }
+    output: *segment
+  explore_segments:
+    label: Find segments in an area
+    description: The most popular segments inside a box on the map.
+    method: GET
+    path: /segments/explore
+    inputs:
+      - { name: bounds, label: "The box: south-west latitude, longitude, north-east latitude, longitude (separated by commas)", required: true }
+      - { name: activity_type, label: "running or riding" }
+    query: { bounds: "{{ input.bounds }}", activity_type: "{{ input.activity_type }}" }
+    items: value.segments
+    output: { id: number, name: text, climb_category: number, avg_grade: number, distance: number, elev_difference: number, start_latlng: list, end_latlng: list }
+  get_upload:
+    label: Get an upload
+    description: Whether a file sent to Strava has become an activity yet, and which.
+    method: GET
+    path: "/uploads/{{ input.id }}"
+    inputs:
+      - { name: id, label: "The upload's id", required: true }
+    output: { id: number, id_str: text, external_id: text, status: text, error: text, activity_id: number }
+  athlete_zones:
+    label: My heart-rate and power zones
+    description: "The athlete's own heart-rate (and power) zones."
+    method: GET
+    path: /athlete/zones
+    output: { heart_rate: record, power: record }
+triggers:
+  new_activity:
+    label: A new activity
+    description: Each activity the athlete records or adds, asked for every few minutes.
+    poll:
+      method: GET
+      path: /athlete/activities
+      query: { per_page: "50" }
+      items: value
+      newest_first: true
+      id: string(item.id)
+      every: 10m

@@ -1,0 +1,21 @@
+description: A place's newest reviews
+action: google_maps_reviews
+credential: { api_key: serp_test_key_1 }
+input: { place_id: ChIJexample0001, sort_by: newestFirst }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://serpapi.com/search"
+      query: { api_key: serp_test_key_1, engine: google_maps_reviews, place_id: ChIJexample0001, sort_by: newestFirst }
+    answer:
+      status: 200
+      body:
+        place_info: { title: Example Coffee, address: "100 Example St, Austin, TX", rating: 4.6, reviews: 212, type: Coffee shop }
+        reviews:
+          - { rating: 5, date: a day ago, iso_date: "2026-11-26T15:00:00Z", review_id: r1, user: { name: Bob Example }, snippet: Great espresso. }
+        serpapi_pagination: { next_page_token: tok2, next: "https://serpapi.com/search.json?engine=google_maps_reviews&next_page_token=tok2&place_id=ChIJexample0001" }
+result:
+  place_info: { title: Example Coffee, address: "100 Example St, Austin, TX", rating: 4.6, reviews: 212, type: Coffee shop }
+  reviews:
+    - { rating: 5, date: a day ago, iso_date: "2026-11-26T15:00:00Z", review_id: r1, user: { name: Bob Example }, snippet: Great espresso. }
+  serpapi_pagination: { next_page_token: tok2, next: "https://serpapi.com/search.json?engine=google_maps_reviews&next_page_token=tok2&place_id=ChIJexample0001" }

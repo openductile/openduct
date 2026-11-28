@@ -1,0 +1,18 @@
+description: Leads newest first over two pages, the fields asked for
+action: list_records
+credential: { access_token: 1000.test.token }
+input: { module: Leads, fields: "Last_Name, Email, Company" }
+exchanges:
+  - sent:
+      method: GET
+      url: https://www.zohoapis.com/crm/v8/Leads
+      query: { fields: "Last_Name,Email,Company", sort_by: Created_Time, sort_order: desc, per_page: "200" }
+      headers: { authorization: Zoho-oauthtoken 1000.test.token }
+    answer: { body: { data: [{ id: "1000000000000000102", Last_Name: Kim, Email: kim@example.com, Company: Example Co }], info: { page: 1, per_page: 200, count: 1, more_records: true, sort_by: Created_Time, sort_order: desc } } }
+  - sent:
+      url: https://www.zohoapis.com/crm/v8/Leads
+      query: { fields: "Last_Name,Email,Company", sort_by: Created_Time, sort_order: desc, per_page: "200", page: "2" }
+    answer: { body: { data: [{ id: "1000000000000000101", Last_Name: Lee, Email: ann@example.com, Company: Example Ltd }], info: { page: 2, per_page: 200, count: 1, more_records: false } } }
+result:
+  - { id: "1000000000000000102", Last_Name: Kim, Email: kim@example.com, Company: Example Co }
+  - { id: "1000000000000000101", Last_Name: Lee, Email: ann@example.com, Company: Example Ltd }

@@ -1,0 +1,9 @@
+description: Turning the workflow off removes its webhook
+trigger: new_order
+unregister: true
+workflow: wf2
+credential: { token: test-token, "webhook_secret@wf2": whsec_test_5f3a9c, "webhook_id@wf2": wh_2 }
+input: { site_id: site_1 }
+exchanges:
+  - sent: { method: DELETE, url: "https://api.webflow.com/v2/webhooks/wh_2" }
+    answer: { status: 204 }

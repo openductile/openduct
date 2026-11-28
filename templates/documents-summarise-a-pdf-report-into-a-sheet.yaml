@@ -1,0 +1,86 @@
+name: Summarise an uploaded PDF report, in your language
+description: >-
+  A form where your team uploads a PDF report: its text is read, summed up in five lines by a model, translated by
+  DeepL when the reader asked for another language, and kept as a row of your Reports sheet (who sent it, its title,
+  pages and summary); the PDF itself is kept in your S3 bucket (or any S3-compatible store) under the day it came.
+  For managers who get more reports than they can read. Needs: model, deepl (an API key, sent as Authorization:
+  DeepL-Auth-Key ...), reports_s3, google_sheets.
+category: Documents
+trigger:
+  form:
+    title: Summarise a report
+    description: Upload a PDF of up to 2 MB. Its summary goes to the Reports sheet.
+    fields:
+      - { name: email, label: Your e-mail, type: email, required: true }
+      - { name: title, label: "The report's title", type: text, required: true, max_length: 150 }
+      - { name: report, label: The PDF, type: file, required: true, max_size: 2MB, accept: ".pdf,application/pdf" }
+      - name: language
+        label: Summary in
+        type: dropdown
+        required: true
+        options: [EN-US, DE, FR, ES, IT, NL, PT-BR, JA]
+    thanks: Thank you - the summary will be in the Reports sheet in a minute.
+# What a test runs on: an answer as the form gives it.
+sample:
+  email: grace.okafor@example.com
+  title: Q3 2026 operations report
+  language: DE
+  report:
+    name: q3-operations.pdf
+    type: application/pdf
+    size: 865
+    base64: JVBERi0xLjQKMSAwIG9iago8PCAvVHlwZSAvQ2F0YWxvZyAvUGFnZXMgMiAwIFIgPj4KZW5kb2JqCjIgMCBvYmoKPDwgL1R5cGUgL1BhZ2VzIC9LaWRzIFszIDAgUl0gL0NvdW50IDEgPj4KZW5kb2JqCjMgMCBvYmoKPDwgL1R5cGUgL1BhZ2UgL1BhcmVudCAyIDAgUiAvTWVkaWFCb3ggWzAgMCA2MTIgNzkyXSAvQ29udGVudHMgNCAwIFIgL1Jlc291cmNlcyA8PCAvRm9udCA8PCAvRjEgNSAwIFIgPj4gPj4gPj4KZW5kb2JqCjQgMCBvYmoKPDwgL0xlbmd0aCAzMjAgPj4Kc3RyZWFtCkJUIC9GMSAxMSBUZiA1MCA3ODAgVGQgMTQgVEwgKEhhcmJvciBTdXBwbHkgQ28uIC0gUTMgMjAyNiBvcGVyYXRpb25zIHJlcG9ydCkgJyAoT3JkZXJzIHNoaXBwZWQ6IDQsMjEwIFwodXAgMTIlIG9uIFEyXCkuKSAnIChPbi10aW1lIGRlbGl2ZXJ5OiA5NC4xJS4gUmV0dXJuczogMi4zJS4pICcgKFdhcmVob3VzZSBCIHJlYWNoZWQgY2FwYWNpdHkgaW4gQXVndXN0OyBhIHNlY29uZCBzaGlmdCBzdGFydHMgaW4gT2N0b2Jlci4pICcgKEZyZWlnaHQgY29zdHMgcm9zZSA3JTsgd2UgbW92ZWQgMzAlIG9mIHBhcmNlbHMgdG8gcmVnaW9uYWwgY2FycmllcnMuKSAnIEVUCmVuZHN0cmVhbQplbmRvYmoKNSAwIG9iago8PCAvVHlwZSAvRm9udCAvU3VidHlwZSAvVHlwZTEgL0Jhc2VGb250IC9IZWx2ZXRpY2EgPj4KZW5kb2JqCnhyZWYKMCA2CjAwMDAwMDAwMDAgNjU1MzUgZiAKMDAwMDAwMDAwOSAwMDAwMCBuIAowMDAwMDAwMDU4IDAwMDAwIG4gCjAwMDAwMDAxMTUgMDAwMDAgbiAKMDAwMDAwMDI0MSAwMDAwMCBuIAowMDAwMDAwNjEyIDAwMDAwIG4gCnRyYWlsZXIKPDwgL1NpemUgNiAvUm9vdCAxIDAgUiA+PgpzdGFydHhyZWYKNjgyCiUlRU9GCg==
+steps:
+  - name: pdf
+    convert:
+      format: base64
+      base64: value.report.base64
+      name: "{{ regex.replace(value.report.name, '[^A-Za-z0-9._-]', '-') }}"
+      type: application/pdf
+  - name: read
+    extract_file: { file: steps.pdf, format: pdf }
+  - where: steps.read.text.trim() != ''
+  - name: summary
+    summarise:
+      credential: model
+      text: "{{ steps.read.text }}"
+      length: five short lines
+      style: bullets, the figures that matter kept, for a manager in a hurry
+  - name: words
+    if:
+      when: value.language != 'EN-US'
+      then:
+        - name: translated
+          http:
+            method: POST
+            url: https://api-free.deepl.com/v2/translate
+            credential: deepl
+            json:
+              text: ["{{ steps.summary.summary }}"]
+              target_lang: "{{ value.language }}"
+            sample:
+              translations:
+                - detected_source_language: EN
+                  text: "- 4.210 versandte Bestellungen (+12 % gegenüber Q2)\n- Pünktliche Lieferung 94,1 %, Retouren 2,3 %"
+          retry: { attempts: 3, wait: 10s }
+  - name: text
+    set:
+      summary: "value.language != 'EN-US' ? steps.translated.body.translations[0].text : steps.summary.summary"
+  - name: day
+    datetime: { timezone: UTC, format: "%Y-%m-%d" }
+  - name: archive
+    storage:
+      action: write
+      credential: reports_s3
+      path: "reports/{{ steps.day.formatted }}/{{ steps.pdf.name }}"
+      file: steps.pdf
+      overwrite: true
+    retry: { attempts: 3, wait: 10s }
+  - name: row
+    google_sheets:
+      action: add_row
+      credential: google_sheets
+      spreadsheet_id: your-spreadsheet-id
+      sheet: Reports
+      values: "{{ [steps.day.formatted, value.email, value.title, steps.read.pages, steps.text.summary, 'reports/' + steps.day.formatted + '/' + steps.pdf.name] }}"
+    retry: { attempts: 3, wait: 10s }

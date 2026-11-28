@@ -1,0 +1,14 @@
+description: Page after page while WordPress says there are more pages
+action: list_posts
+credential: { site_url: "https://blog.example.com", username: ann, application_password: "abcd efgh ijkl mnop" }
+input: { search: winter }
+exchanges:
+  - sent:
+      method: GET
+      url: https://blog.example.com/wp-json/wp/v2/posts
+      query: { search: winter, per_page: "100" }
+    answer: { headers: { X-WP-Total: "101", X-WP-TotalPages: "2" }, body: [{ id: 1 }] }
+  - sent:
+      query: { search: winter, per_page: "100", page: "2" }
+    answer: { headers: { X-WP-Total: "101", X-WP-TotalPages: "2" }, body: [{ id: 2 }] }
+result: [{ id: 1 }, { id: 2 }]

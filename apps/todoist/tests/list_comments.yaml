@@ -1,0 +1,7 @@
+action: list_comments
+credential: { token: todoist-test-token }
+input: { task_id: 6Xtest0000000001 }
+exchanges:
+  - sent: { method: GET, url: https://api.todoist.com/api/v1/comments, query: { task_id: 6Xtest0000000001, limit: "200" } }
+    answer: { body: { results: [{ id: 6Xnote0000000001, content: Asked for a quote., posted_uid: "1000001", posted_at: "2026-11-27T11:00:00.000000Z" }] } }
+result: [{ id: 6Xnote0000000001, content: Asked for a quote., posted_uid: "1000001", posted_at: "2026-11-27T11:00:00.000000Z" }]

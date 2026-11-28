@@ -1,0 +1,8 @@
+description: The saved file is there
+action: save_url_status
+credential: { access_token: sl.test-token }
+input: { async_job_id: 34g93hh34h04y384084 }
+exchanges:
+  - sent: { url: https://api.dropboxapi.com/2/files/save_url/check_job_status, body: { async_job_id: 34g93hh34h04y384084 } }
+    answer: { body: { ".tag": complete, id: "id:a4ayc_80_OEAAAAAAAAAZf", name: INV-2001.pdf, path_display: /Invoices/INV-2001.pdf, size: 51002 } }
+result: { ".tag": complete, id: "id:a4ayc_80_OEAAAAAAAAAZf", name: INV-2001.pdf, path_display: /Invoices/INV-2001.pdf, size: 51002 }

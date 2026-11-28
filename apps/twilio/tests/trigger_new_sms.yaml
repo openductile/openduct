@@ -1,0 +1,18 @@
+description: Text messages to the number since the last poll, the newest asked for
+trigger: new_sms
+credential: { account_sid: AC1, auth_token: t1 }
+input: { to: "+15550100" }
+seen: { items: [["SM1", ""]] }
+exchanges:
+  - sent:
+      method: GET
+      url: https://api.twilio.com/2010-04-01/Accounts/AC1/Messages.json
+      query: { To: "+15550100", PageSize: "100" }
+    answer:
+      body:
+        messages:
+          - { sid: SM3, from: "+15550111", body: "Is it open?" }
+          - { sid: SM2, from: "+15550112", body: "Thanks" }
+          - { sid: SM1, from: "+15550113", body: "Hi" }
+        next_page_uri: /2010-04-01/Accounts/AC1/Messages.json?Page=1
+ids: [SM2, SM3]

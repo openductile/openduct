@@ -1,0 +1,20 @@
+description: Each row a record of the columns' names, numbers and true/false as such
+action: run_query
+credential: { access_token: ya29.bq-test }
+input: { project_id: example-shop-1, query: "SELECT * FROM shop.orders ORDER BY placed" }
+exchanges:
+  - sent:
+      method: POST
+      url: https://bigquery.googleapis.com/bigquery/v2/projects/example-shop-1/queries
+      headers: { authorization: Bearer ya29.bq-test }
+      body: { query: "SELECT * FROM shop.orders ORDER BY placed", useLegacySql: false, maxResults: 10000, timeoutMs: 180000, formatOptions: { timestampOutputFormat: ISO8601_STRING } }
+    answer:
+      body:
+        kind: bigquery#queryResponse
+        schema: { fields: [{ name: order_id, type: STRING, mode: NULLABLE }, { name: total, type: NUMERIC, mode: NULLABLE }, { name: paid, type: BOOLEAN, mode: NULLABLE }, { name: placed, type: TIMESTAMP, mode: NULLABLE }, { name: tags, type: STRING, mode: REPEATED }, { name: note, type: STRING, mode: NULLABLE }, { name: ship_to, type: RECORD, mode: NULLABLE, fields: [{ name: city, type: STRING }] }] }
+        jobReference: { projectId: example-shop-1, jobId: job_test_1, location: US }
+        totalRows: "2"
+        rows: [{ f: [{ v: A-1001 }, { v: "120.50" }, { v: "true" }, { v: "2026-11-27T09:00:00Z" }, { v: [{ v: gift }, { v: rush }] }, { v: 'Leave at "back" door' }, { v: { f: [{ v: Austin }] } }] }, { f: [{ v: A-1002 }, { v: "8" }, { v: "false" }, { v: "2026-11-27T10:00:00Z" }, { v: [] }, { v: null }, { v: null }] }]
+        jobComplete: true
+        cacheHit: false
+result: [{ order_id: A-1001, total: 120.50, paid: true, placed: "2026-11-27T09:00:00Z", tags: [gift, rush], note: 'Leave at "back" door', ship_to: null }, { order_id: A-1002, total: 8, paid: false, placed: "2026-11-27T10:00:00Z", tags: [], note: null, ship_to: null }]

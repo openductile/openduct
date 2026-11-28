@@ -1,0 +1,11 @@
+description: A heartbeat has no address and no timeout
+action: create_monitor
+credential: { api_key: ur_test_1 }
+input: { friendly_name: Nightly backup, type: HEARTBEAT, interval: 86400 }
+exchanges:
+  - sent:
+      method: POST
+      url: https://api.uptimerobot.com/v3/monitors
+      body: { friendlyName: Nightly backup, type: HEARTBEAT, interval: 86400 }
+    answer: { status: 201, body: { id: 804, friendlyName: Nightly backup, type: HEARTBEAT, status: STARTED } }
+result: { id: 804, friendlyName: Nightly backup, type: HEARTBEAT, status: STARTED }

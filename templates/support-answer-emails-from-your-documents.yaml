@@ -1,0 +1,88 @@
+name: Answer help e-mails from your own documents, with sources
+description: >-
+  Each new e-mail to your help address in Gmail is read in full, and its question answered from your own documents -
+  policies, guides, FAQs kept in Postgres with pgvector by "Keep documents for answers" - citing the passages it rests
+  on. A confident answer goes back to the customer from Gmail, with its sources; when the documents do not cover it,
+  the e-mail goes to your team instead, with what was found. Needs: Gmail (gmail), a PostgreSQL database with
+  pgvector (docs_db) and an AI credential (model).
+category: Support
+trigger:
+  gmail: { when: new_email, credential: gmail, q: "to:help@example.com in:inbox -from:me", every: 2m }
+# What a test runs on: an email as this trigger gives it.
+sample:
+  id: 18c3a1b2c3d4e5f6
+  thread_id: 18c3a1b2c3d4e5f6
+  from: Lena Fischer <lena.fischer@example.com>
+  to: help@example.com
+  subject: Returning a gift
+  date: "Fri, 27 Nov 2026 11:20:00 +0000"
+  snippet: Hi, I got a kettle as a present but already have one. Can I return it without the receipt?
+  labels: [INBOX, UNREAD]
+  message:
+    id: 18c3a1b2c3d4e5f6
+    payload:
+      mimeType: multipart/alternative
+      parts:
+        - mimeType: text/plain
+          body:
+            data: SGksCgpJIGdvdCBhIGtldHRsZSBhcyBhIHByZXNlbnQgYnV0IGFscmVhZHkgaGF2ZSBvbmUuIENhbiBJIHJldHVybiBpdCB3aXRob3V0IHRoZSByZWNlaXB0PyBJdCBpcyBzdGlsbCBpbiBpdHMgYm94LgoKVGhhbmtzLApMZW5hCgpPbiBUaHUsIDI2IE5vdiAyMDI2LCBTaG9wIDxzaG9wQGV4YW1wbGUuY29tPiB3cm90ZToKPiBZb3VyIG9yZGVyIGhhcyBzaGlwcGVkLgo=
+steps:
+  # No answering machines, and no answering ourselves.
+  - where: >-
+      !value.from.lowerAscii().contains('no-reply') && !value.from.lowerAscii().contains('noreply')
+      && !value.from.lowerAscii().contains('mailer-daemon')
+  - name: body
+    python: |
+      import base64, re
+      def text_of(part):
+          # The first plain-text part of the message, its Base64 (URL-safe) decoded.
+          if part.get("mimeType") == "text/plain" and (part.get("body") or {}).get("data"):
+              data = part["body"]["data"]
+              return base64.urlsafe_b64decode(data + "=" * (-len(data) % 4)).decode("utf-8", "replace")
+          for p in part.get("parts") or []:
+              found = text_of(p)
+              if found:
+                  return found
+          return ""
+      text = text_of((value.get("message") or {}).get("payload") or {}) or value.get("snippet") or ""
+      # Only the new words: the quoted earlier mail, from "On ... wrote:" or lines starting with >, is cut.
+      text = re.split(r"\n\s*On .{0,200}wrote:\s*\n", text, maxsplit=1)[0]
+      text = "\n".join(l for l in text.splitlines() if not l.startswith(">")).strip()
+      result = {"text": text[:6000]}
+  - name: answer
+    ask_documents:
+      credential: docs_db
+      table: doc_pieces
+      embed_with: model
+      question: "{{ value.subject }}\n{{ steps.body.text }}"
+      top_k: 4
+      min_score: 0.4
+      instructions: >-
+        You answer a shop's customers by e-mail, warmly and in at most six sentences. If the passages do not
+        answer the question fully, say exactly: NOT COVERED.
+      max_tokens: 500
+  - name: sure
+    set:
+      yes: "steps.answer.answered && size(steps.answer.cited) > 0 && !steps.answer.text.contains('NOT COVERED')"
+      sources: "steps.answer.sources.filter(s, s.cited).map(s, '- ' + s.source).join('\\n')"
+  - name: send
+    if:
+      when: steps.sure.yes
+      then:
+        - name: reply
+          gmail:
+            action: send_email
+            credential: gmail
+            to: "{{ value.from }}"
+            subject: "Re: {{ value.subject }}"
+            text: "{{ regex.replace(steps.answer.text, ' ?\\\\[[0-9, ]+\\\\]', '') }}\n\nThis answer comes from:\n{{ steps.sure.sources }}\n\nIf it does not help, just reply and a person will answer.\nThe team at Example Home"
+          retry: { attempts: 3, wait: 30s }
+      else:
+        - name: to_team
+          gmail:
+            action: send_email
+            credential: gmail
+            to: team@example.com
+            subject: "Needs a person: {{ value.subject }}"
+            text: "{{ value.from }} wrote:\n\n{{ steps.body.text }}\n\nOur documents did not answer it with confidence. Closest passages:\n{{ steps.answer.sources.map(s, '- ' + s.source + ' (' + string(s.score) + ')').join('\\n') }}"
+          retry: { attempts: 3, wait: 30s }

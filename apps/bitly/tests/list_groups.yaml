@@ -1,0 +1,33 @@
+# Made by `openduct app from-openapi`: Retrieve Groups.
+description: "Retrieve Groups, made from the API description's schemas"
+action: list_groups
+credential: { token: test-token }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://api-ssl.bitly.com/v4/groups"
+      query: {}
+      headers: { authorization: "Bearer test-token" }
+    answer:
+      status: 200
+      body:
+        groups:
+          - references: {}
+            name: example
+            guid: guid_1
+            created: example
+            modified: example
+            is_active: true
+            role: example
+            organization_guid: organization_guid_1
+            bsds: [example]
+result:
+  - references: {}
+    name: example
+    guid: guid_1
+    created: example
+    modified: example
+    is_active: true
+    role: example
+    organization_guid: organization_guid_1
+    bsds: [example]

@@ -1,0 +1,24 @@
+description: Posts of a tag with their authors, over two pages (the answer names the next), the key in the address
+action: list_posts
+credential: { site: acme, content_key: 22444f78447824223cefc48aaa }
+input: { filter: "tag:news", include: authors }
+exchanges:
+  - sent:
+      method: GET
+      url: https://acme.ghost.io/ghost/api/content/posts/
+      query: { key: 22444f78447824223cefc48aaa, filter: "tag:news", include: authors, limit: "100" }
+      headers: { accept-version: v6.0 }
+    answer:
+      body:
+        posts: [{ id: 6744a1b2c3d4e5f600000001, title: Our winter opening hours, slug: winter-opening-hours, published_at: "2026-11-27T10:00:00.000+00:00" }]
+        meta: { pagination: { page: 1, limit: 100, pages: 2, total: 101, next: 2, prev: null } }
+  - sent:
+      url: https://acme.ghost.io/ghost/api/content/posts/
+      query: { key: 22444f78447824223cefc48aaa, filter: "tag:news", include: authors, limit: "100", page: "2" }
+    answer:
+      body:
+        posts: [{ id: 6744a1b2c3d4e5f600000000, title: Hello from the shop, slug: hello, published_at: "2026-10-01T09:00:00.000+00:00" }]
+        meta: { pagination: { page: 2, limit: 100, pages: 2, total: 101, next: null, prev: 1 } }
+result:
+  - { id: 6744a1b2c3d4e5f600000001, title: Our winter opening hours, slug: winter-opening-hours, published_at: "2026-11-27T10:00:00.000+00:00" }
+  - { id: 6744a1b2c3d4e5f600000000, title: Hello from the shop, slug: hello, published_at: "2026-10-01T09:00:00.000+00:00" }

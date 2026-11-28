@@ -1,0 +1,7 @@
+description: Outside the 24 hours a text is refused - in Meta's words
+action: send
+credential: { access_token: EAAG1, phone_number_id: "1234", api_version: v21.0 }
+input: { to: "16505551234", text: Hello }
+exchanges:
+  - answer: { status: 400, body: { error: { message: "(#131047) Re-engagement message", type: OAuthException, code: 131047 } } }
+error: "WhatsApp Business answered 400: (#131047) Re-engagement message"

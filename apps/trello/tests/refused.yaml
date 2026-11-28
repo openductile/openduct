@@ -1,0 +1,7 @@
+description: "A card that is not there: Trello's few words, as plain text"
+action: get_card
+credential: { api_key: testkey0123456789, token: ATTAtesttoken0123 }
+input: { card_id: notacard }
+exchanges:
+  - answer: { status: 400, body: invalid id }
+error: "Trello answered 400: invalid id"

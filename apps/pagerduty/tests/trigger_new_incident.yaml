@@ -1,0 +1,16 @@
+description: Incidents opened since the last poll, the newest asked for first, run oldest first
+trigger: new_incident
+credential: { api_key: pd_test_1 }
+seen: { items: [[PINC001, ""]] }
+exchanges:
+  - sent:
+      method: GET
+      url: https://api.pagerduty.com/incidents
+      query: { limit: "100", sort_by: "created_at:desc" }
+    answer:
+      body:
+        offset: 0
+        limit: 100
+        more: true
+        incidents: [{ id: PINC003, title: Slow search }, { id: PINC002, title: Login errors }, { id: PINC001, title: Checkout is down }]
+ids: [PINC002, PINC003]

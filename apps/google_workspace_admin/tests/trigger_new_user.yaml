@@ -1,0 +1,13 @@
+description: Accounts not seen before run; those seen do not
+trigger: new_user
+credential: { access_token: ya29.test }
+seen: { items: [["100000000000000000001", ""], ["100000000000000000002", ""]] }
+exchanges:
+  - sent: { method: GET, url: https://admin.googleapis.com/admin/directory/v1/users, query: { customer: my_customer, maxResults: "500" } }
+    answer:
+      body:
+        users:
+          - { id: "100000000000000000001", primaryEmail: ann@example.com }
+          - { id: "100000000000000000002", primaryEmail: bob@example.com }
+          - { id: "100000000000000000004", primaryEmail: dan@example.com }
+ids: ["100000000000000000004"]

@@ -1,0 +1,29 @@
+description: 'A new employee: its ID from the Location header'
+action: create_employee
+credential:
+  company_domain: acme
+  api_key: test-key
+input:
+  first_name: Fay
+  last_name: Newhire
+  work_email: fay@example.com
+  hire_date: '2026-12-01'
+exchanges:
+- sent:
+    method: POST
+    url: https://acme.bamboohr.com/api/v1/employees
+    headers:
+      authorization: Basic dGVzdC1rZXk6eA==
+      accept: application/json
+    body:
+      firstName: Fay
+      lastName: Newhire
+      workEmail: fay@example.com
+      hireDate: '2026-12-01'
+  answer:
+    status: 201
+    headers:
+      Location: https://acme.bamboohr.com/api/v1/employees/123
+result:
+  id: '123'
+  location: https://acme.bamboohr.com/api/v1/employees/123

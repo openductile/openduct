@@ -1,0 +1,20 @@
+description: "Short links made in a group since the last poll, the newest listed first"
+trigger: new_link
+credential: { token: test-token }
+input: { group_guid: Bx1ab23cD4E }
+seen: { items: [["bit.ly/3xMpl01", ""]] }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://api-ssl.bitly.com/v4/groups/Bx1ab23cD4E/bitlinks"
+      query: { size: "50" }
+      headers: { authorization: "Bearer test-token" }
+    answer:
+      status: 200
+      body:
+        links:
+          - { link: "https://bit.ly/3xMpl02", id: bit.ly/3xMpl02, long_url: "https://shop.example/winter", created_at: "2026-11-27T11:00:00+0000" }
+          - { link: "https://bit.ly/3xMpl01", id: bit.ly/3xMpl01, long_url: "https://shop.example/spring-sale", created_at: "2026-11-27T10:00:00+0000" }
+        pagination: { next: "https://api-ssl.bitly.com/v4/groups/Bx1ab23cD4E/bitlinks?search_after=xyz", search_after: xyz, size: 50 }
+runs:
+  - { link: "https://bit.ly/3xMpl02", id: bit.ly/3xMpl02, long_url: "https://shop.example/winter", created_at: "2026-11-27T11:00:00+0000" }

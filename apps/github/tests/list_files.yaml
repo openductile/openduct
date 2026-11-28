@@ -1,0 +1,9 @@
+action: list_files
+credential: { token: test-token-1 }
+input: { owner: example-shop, repo: website, folder: docs }
+exchanges:
+  - sent:
+      url: https://api.github.com/repos/example-shop/website/contents/docs
+    answer:
+      body: [{ type: file, name: prices.md, path: docs/prices.md, size: 24, sha: a1, url: "https://api.github.com/x" }, { type: dir, name: img, path: docs/img, size: 0, sha: b2 }]
+result: [{ name: prices.md, path: docs/prices.md, type: file, size: 24, sha: a1 }, { name: img, path: docs/img, type: dir, size: 0, sha: b2 }]

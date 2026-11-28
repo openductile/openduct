@@ -1,0 +1,13 @@
+# Made by `openduct app from-openapi`: Delete a Bitlink.
+description: "Delete a Bitlink, made from the API description's schemas"
+action: delete_link
+credential: { token: test-token }
+input: { bitlink: example }
+exchanges:
+  - sent:
+      method: DELETE
+      url: "https://api-ssl.bitly.com/v4/bitlinks/example"
+      query: {}
+      headers: { authorization: "Bearer test-token" }
+    answer: { status: 200, body: { links_deleted: [{ id: id_1 }] } }
+result: { links_deleted: [{ id: id_1 }] }

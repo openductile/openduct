@@ -1,0 +1,11 @@
+description: The direct message with a person, for sending to
+action: open_dm
+credential: { bot_token: xoxb-1 }
+input: { users: W012A3CDE }
+exchanges:
+  - sent:
+      method: POST
+      url: https://slack.com/api/conversations.open
+      body: { users: W012A3CDE }
+    answer: { body: { ok: true, channel: { id: D069C7QFK } } }
+result: { id: D069C7QFK }

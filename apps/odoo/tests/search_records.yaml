@@ -1,0 +1,12 @@
+description: Companies over two pages - a full page means there may be another
+action: search_records
+credential: { address: "https://mycompany.example.com", database: mycompany, api_key: 6578616d706c65206b6579 }
+input: { model: res.partner, domain: [["is_company", "=", true]], fields: "name, email" }
+exchanges:
+  - sent:
+      method: POST
+      url: https://mycompany.example.com/json/2/res.partner/search_read
+      headers: { authorization: bearer 6578616d706c65206b6579, x-odoo-database: mycompany }
+      body: { domain: [["is_company", "=", true]], fields: [name, email], limit: 100 }
+    answer: { body: [{ id: 25, name: Example Deco, email: info@deco.example }] }
+result: [{ id: 25, name: Example Deco, email: info@deco.example }]

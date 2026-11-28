@@ -1,0 +1,11 @@
+description: A plain message posted to a room, with the transaction id the workflow gave
+action: send_message
+credential: { homeserver: "https://matrix.example.org", token: syt_test_token }
+input: { room_id: "!abc123:example.org", text: Order A-1042 shipped, transaction_id: run-7f3a }
+exchanges:
+  - sent:
+      method: PUT
+      url: "https://matrix.example.org/_matrix/client/v3/rooms/!abc123:example.org/send/m.room.message/run-7f3a"
+      body: { msgtype: m.text, body: Order A-1042 shipped }
+    answer: { status: 200, body: { event_id: "$ev1" } }
+result: { event_id: "$ev1" }

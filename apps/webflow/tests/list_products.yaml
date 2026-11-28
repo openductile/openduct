@@ -1,0 +1,17 @@
+description: Every page of items, followed by the pagination Webflow gives
+action: list_products
+credential: { token: test-token }
+input: { site_id: site_1 }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://api.webflow.com/v2/sites/site_1/products"
+      query: { limit: "100" }
+      headers: { authorization: "Bearer test-token" }
+    answer: { status: 200, body: { items: [{ product: { id: prd_1, fieldData: { name: Mug, slug: mug } }, skus: [{ id: sku_1 }] }], pagination: { limit: 1, offset: 0, total: 2 } } }
+  - sent:
+      method: GET
+      url: "https://api.webflow.com/v2/sites/site_1/products"
+      query: { limit: "100", offset: "1" }
+    answer: { status: 200, body: { items: [{ product: { id: prd_2, fieldData: { name: Tote bag, slug: tote-bag } }, skus: [{ id: sku_2 }] }], pagination: { limit: 1, offset: 1, total: 2 } } }
+result: [{ product: { id: prd_1, fieldData: { name: Mug, slug: mug } }, skus: [{ id: sku_1 }] }, { product: { id: prd_2, fieldData: { name: Tote bag, slug: tote-bag } }, skus: [{ id: sku_2 }] }]

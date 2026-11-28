@@ -1,0 +1,8 @@
+description: One row
+action: get_row
+credential: { token: br-test-token }
+input: { table_id: 1203, row_id: 1 }
+exchanges:
+  - sent: { method: GET, url: https://api.baserow.io/api/database/rows/table/1203/1/, query: { user_field_names: "true" } }
+    answer: { body: { id: 1, order: "1.00000000000000000000", Name: Ann Example, Email: ann@example.com } }
+result: { id: 1, order: "1.00000000000000000000", Name: Ann Example, Email: ann@example.com }

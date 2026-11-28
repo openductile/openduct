@@ -1,0 +1,10 @@
+description: "The sounds"
+action: list_sounds
+credential: {"token": "aTestTokenAbcdefghijklmnopqrst", "user_key": "uTestUserKeyAbcdefghijklmnopq"}
+exchanges:
+  - sent:
+      method: GET
+      url: "https://api.pushover.net/1/sounds.json"
+      query: {"token": "aTestTokenAbcdefghijklmnopqrst"}
+    answer: {"status": 200, "body": {"sounds": {"pushover": "Pushover (default)", "bike": "Bike", "cashregister": "Cash Register", "none": "None (silent)"}, "status": 1, "request": "r1"}}
+result: {"pushover": "Pushover (default)", "bike": "Bike", "cashregister": "Cash Register", "none": "None (silent)"}

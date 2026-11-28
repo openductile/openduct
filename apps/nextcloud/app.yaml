@@ -1,0 +1,345 @@
+# Copyright 2026 Ductile AI, Inc
+# SPDX-License-Identifier: Apache-2.0
+# Nextcloud, written by hand from Nextcloud's own OpenAPI descriptions (nextcloud/server at e44a50265673:
+# apps/files_sharing/openapi.json, apps/provisioning_api/openapi-full.json, core/openapi.json; nextcloud/spreed at
+# aa0cecdc7319: openapi.json - all AGPL-3.0-or-later) and its WebDAV reference
+# (https://docs.nextcloud.com/server/latest/developer_manual/client_apis/WebDAV/basic.html), read 2026-11-27.
+app: nextcloud
+name: Nextcloud
+category: storage
+description: Share files, read and remove them, manage users and groups, and post to Talk, on your own Nextcloud.
+docs: "https://docs.nextcloud.com/server/latest/developer_manual/client_apis/"
+base_url_field: url
+sign_in:
+  - id: nextcloud
+    label: "A user name and app password"
+    fields:
+      - { name: url, label: "The Nextcloud's address, such as https://cloud.example.com" }
+      - { name: username, label: "The user name" }
+      - { name: password, label: "An app password (Personal settings, Security, Devices & sessions)", secret: true }
+    basic: { username: "{{ credential.username }}", password: "{{ credential.password }}" }
+    headers: { OCS-APIRequest: "true", Accept: application/json }
+# Nextcloud's OCS answers say what went wrong in ocs.meta.message.
+error: >-
+  type(value) == map && 'ocs' in value && type(value.ocs) == map && 'meta' in value.ocs
+  && value.ocs.meta.status == 'failure' && 'message' in value.ocs.meta && value.ocs.meta.message != ''
+  ? value.ocs.meta.message : null
+default_action: create_share
+actions:
+  create_share:
+    label: "Share a file or folder"
+    description: "Shares a file or folder by a public link, with a person, a group or an email address; gives the share and its link."
+    write: true
+    method: POST
+    path: /ocs/v2.php/apps/files_sharing/api/v1/shares
+    inputs:
+      - { name: path, label: "The file or folder, from the top of your files: /Invoices/2026-11.pdf", required: true }
+      - name: share_type
+        label: "How: 3 a public link (by default), 0 a person, 1 a group, 4 an email address"
+        kind: number
+      - { name: share_with, label: "Who: the person's user name, the group's name or the email address (not for a link)" }
+      - { name: permissions, label: "What they may do: 1 read (by default for a link), 2 change, 4 add, 8 remove, 16 share - added up", kind: number }
+      - { name: password, label: "A password the link asks for" }
+      - { name: expire_date, label: "The day it ends, as 2026-12-31" }
+      - { name: note, label: "A note to the person it is shared with" }
+      - { name: label, label: "A label for the link" }
+    send:
+      path: "{{ input.path }}"
+      shareType: "{{ has(input.share_type) && input.share_type != null ? int(input.share_type) : 3 }}"
+      shareWith: "{{ input.share_with }}"
+      permissions: "{{ input.permissions }}"
+      password: "{{ input.password }}"
+      expireDate: "{{ input.expire_date }}"
+      note: "{{ input.note }}"
+      label: "{{ input.label }}"
+    result: value.ocs.data
+    output:
+      id: text
+      share_type: number
+      share_with: text
+      share_with_displayname: text
+      path: text
+      item_type: text
+      mimetype: text
+      permissions: number
+      url: text
+      token: text
+      expiration: text
+      note: text
+      label: text
+      uid_owner: text
+      stime: number
+  list_shares:
+    label: "List shares"
+    description: "The shares you made - of one file or folder if asked, or those shared with you."
+    method: GET
+    path: /ocs/v2.php/apps/files_sharing/api/v1/shares
+    inputs:
+      - { name: path, label: "Only the shares of this file or folder" }
+      - { name: subfiles, label: "The shares of what is in that folder", kind: boolean }
+      - { name: shared_with_me, label: "Those shared with you, not by you", kind: boolean }
+    query:
+      path: "{{ input.path }}"
+      subfiles: "{{ input.subfiles }}"
+      shared_with_me: "{{ input.shared_with_me }}"
+    items: value.ocs.data
+    output:
+      id: text
+      share_type: number
+      share_with: text
+      path: text
+      item_type: text
+      permissions: number
+      url: text
+      expiration: text
+  get_share:
+    label: "Look up a share"
+    description: "One share by its id."
+    method: GET
+    path: "/ocs/v2.php/apps/files_sharing/api/v1/shares/{{ input.id }}"
+    inputs: [{ name: id, label: "The share's id", required: true }]
+    result: "size(value.ocs.data) > 0 ? value.ocs.data[0] : null"
+    output:
+      id: text
+      share_type: number
+      share_with: text
+      path: text
+      permissions: number
+      url: text
+      expiration: text
+      note: text
+  update_share:
+    label: "Change a share"
+    description: "Changes what a share allows, its password, end date, note or label."
+    write: true
+    method: PUT
+    path: "/ocs/v2.php/apps/files_sharing/api/v1/shares/{{ input.id }}"
+    inputs:
+      - { name: id, label: "The share's id", required: true }
+      - { name: permissions, label: "What they may do: 1 read, 2 change, 4 add, 8 remove, 16 share - added up", kind: number }
+      - { name: password, label: "A new password for the link" }
+      - { name: expire_date, label: "The day it ends, as 2026-12-31" }
+      - { name: note, label: "A note" }
+      - { name: label, label: "A label for the link" }
+    send:
+      permissions: "{{ input.permissions }}"
+      password: "{{ input.password }}"
+      expireDate: "{{ input.expire_date }}"
+      note: "{{ input.note }}"
+      label: "{{ input.label }}"
+    result: value.ocs.data
+    output:
+      id: text
+      share_type: number
+      path: text
+      permissions: number
+      url: text
+      expiration: text
+      note: text
+      label: text
+  delete_share:
+    label: "Stop sharing"
+    description: "Removes a share; the file or folder stays."
+    write: true
+    method: DELETE
+    path: "/ocs/v2.php/apps/files_sharing/api/v1/shares/{{ input.id }}"
+    inputs: [{ name: id, label: "The share's id", required: true }]
+    result: value.ocs.meta
+    output: { status: text, statuscode: number, message: text }
+  read_file:
+    label: "Read a text file"
+    description: "The contents of a text file (a .txt, .csv, .md, .json ...) in your files."
+    method: GET
+    path: "/remote.php/dav/files/{{ credential.username }}/{{ input.path }}"
+    inputs:
+      - { name: path, label: "The file, from the top of your files: Reports/2026-11.csv", required: true }
+  delete_file:
+    label: "Remove a file or folder"
+    description: "Moves a file or folder (and all in it) to the trash."
+    write: true
+    method: DELETE
+    path: "/remote.php/dav/files/{{ credential.username }}/{{ input.path }}"
+    inputs:
+      - { name: path, label: "The file or folder, from the top of your files", required: true }
+  search_files:
+    label: "Search files"
+    description: "The files whose names match the words given, each with its folder and address."
+    method: GET
+    path: /ocs/v2.php/search/providers/files/search
+    inputs:
+      - { name: term, label: "What to look for", required: true }
+      - { name: limit, label: "At most this many", kind: number }
+    query: { term: "{{ input.term }}", limit: "{{ input.limit }}" }
+    items: value.ocs.data.entries
+    output: { title: text, subline: text, resourceUrl: text, thumbnailUrl: text, attributes: record }
+  create_user:
+    label: "Add a user"
+    description: "Adds a user, with their name, email, groups and quota; without a password, Nextcloud emails them to set one."
+    write: true
+    method: POST
+    path: /ocs/v2.php/cloud/users
+    inputs:
+      - { name: userid, label: "The user name they sign in with", required: true }
+      - { name: display_name, label: "Their name as shown" }
+      - { name: email, label: "Their email address (needed when no password is given)" }
+      - { name: password, label: "A password" }
+      - { name: groups, label: "Their groups", kind: list }
+      - { name: quota, label: "How much they may keep, such as 5 GB" }
+      - { name: language, label: "Their language, such as en or de" }
+    send:
+      userid: "{{ input.userid }}"
+      displayName: "{{ input.display_name }}"
+      email: "{{ input.email }}"
+      password: "{{ input.password }}"
+      groups: "{{ input.groups }}"
+      quota: "{{ input.quota }}"
+      language: "{{ input.language }}"
+    result: value.ocs.data
+    output: { id: text }
+  get_user:
+    label: "Look up a user"
+    description: "A user's name, email, groups, quota, language, and when they last signed in."
+    method: GET
+    path: "/ocs/v2.php/cloud/users/{{ input.userid }}"
+    inputs: [{ name: userid, label: "Their user name", required: true }]
+    result: value.ocs.data
+    output:
+      id: text
+      displayname: text
+      email: text
+      enabled: boolean
+      groups: list
+      quota: record
+      language: text
+      lastLogin: number
+      manager: text
+  list_users:
+    label: "List users"
+    description: "The user names of the users, or of those that match the words given."
+    method: GET
+    path: /ocs/v2.php/cloud/users
+    inputs:
+      - { name: search, label: "Only those that match these words" }
+    query: { search: "{{ input.search }}", limit: "100" }
+    items: value.ocs.data.users
+    next: "size(value.ocs.data.users) < 100 ? null : {'offset': (page == null ? 0 : int(page.offset)) + 100}"
+  update_user:
+    label: "Change a user"
+    description: "Changes one of a user's details: displayname, email, quota, language, phone, address, website, password ..."
+    write: true
+    method: PUT
+    path: "/ocs/v2.php/cloud/users/{{ input.userid }}"
+    inputs:
+      - { name: userid, label: "Their user name", required: true }
+      - { name: key, label: "What to change: displayname, email, quota, language, locale, phone, address, website, password ...", required: true }
+      - { name: value, label: "Its new value", required: true }
+    send: { key: "{{ input.key }}", value: "{{ input.value }}" }
+    result: value.ocs.meta
+    output: { status: text, statuscode: number, message: text }
+  disable_user:
+    label: "Turn a user off"
+    description: "Stops a user from signing in; their files stay."
+    write: true
+    method: PUT
+    path: "/ocs/v2.php/cloud/users/{{ input.userid }}/disable"
+    inputs: [{ name: userid, label: "Their user name", required: true }]
+    result: value.ocs.meta
+    output: { status: text, statuscode: number, message: text }
+  enable_user:
+    label: "Turn a user back on"
+    description: "Lets a user that was turned off sign in again."
+    write: true
+    method: PUT
+    path: "/ocs/v2.php/cloud/users/{{ input.userid }}/enable"
+    inputs: [{ name: userid, label: "Their user name", required: true }]
+    result: value.ocs.meta
+    output: { status: text, statuscode: number, message: text }
+  add_user_to_group:
+    label: "Add a user to a group"
+    description: "Puts a user in a group, giving them what is shared with it."
+    write: true
+    method: POST
+    path: "/ocs/v2.php/cloud/users/{{ input.userid }}/groups"
+    inputs:
+      - { name: userid, label: "Their user name", required: true }
+      - { name: groupid, label: "The group", required: true }
+    send: { groupid: "{{ input.groupid }}" }
+    result: value.ocs.meta
+    output: { status: text, statuscode: number, message: text }
+  list_groups:
+    label: "List groups"
+    description: "The groups, or those that match the words given."
+    method: GET
+    path: /ocs/v2.php/cloud/groups
+    inputs:
+      - { name: search, label: "Only those that match these words" }
+    query: { search: "{{ input.search }}", limit: "100" }
+    items: value.ocs.data.groups
+    next: "size(value.ocs.data.groups) < 100 ? null : {'offset': (page == null ? 0 : int(page.offset)) + 100}"
+  create_group:
+    label: "Add a group"
+    description: "Adds a group."
+    write: true
+    method: POST
+    path: /ocs/v2.php/cloud/groups
+    inputs:
+      - { name: groupid, label: "The group's id", required: true }
+      - { name: displayname, label: "Its name as shown" }
+    send: { groupid: "{{ input.groupid }}", displayname: "{{ input.displayname }}" }
+    result: value.ocs.meta
+    output: { status: text, statuscode: number, message: text }
+  send_talk_message:
+    label: "Post to a Talk conversation"
+    description: "Posts a message to a Nextcloud Talk conversation, as a reply if asked, or without notifying anyone."
+    write: true
+    method: POST
+    path: "/ocs/v2.php/apps/spreed/api/v1/chat/{{ input.token }}"
+    inputs:
+      - { name: token, label: "The conversation's token (the last part of its address: /call/<token>)", required: true }
+      - { name: message, label: "The message", required: true }
+      - { name: reply_to, label: "The id of the message it answers", kind: number }
+      - { name: silent, label: "Post it without notifying anyone", kind: boolean }
+    send:
+      message: "{{ input.message }}"
+      replyTo: "{{ input.reply_to }}"
+      silent: "{{ input.silent }}"
+    result: value.ocs.data
+    output:
+      id: number
+      token: text
+      message: text
+      actorId: text
+      actorDisplayName: text
+      timestamp: number
+      messageType: text
+      parent: record
+  list_talk_conversations:
+    label: "List Talk conversations"
+    description: "The Talk conversations you are in, each with its token, name, kind and unread messages."
+    method: GET
+    path: /ocs/v2.php/apps/spreed/api/v4/room
+    items: value.ocs.data
+    output:
+      id: number
+      token: text
+      type: number
+      name: text
+      displayName: text
+      description: text
+      unreadMessages: number
+      lastActivity: number
+      lastMessage: record
+triggers:
+  new_talk_message:
+    label: A new message in Talk
+    description: Each message posted to a Talk conversation (not the conversation's own notices), asked for every few minutes.
+    inputs:
+      - { name: token, label: "The conversation's token", required: true }
+    poll:
+      method: GET
+      path: "/ocs/v2.php/apps/spreed/api/v1/chat/{{ input.token }}"
+      query: { lookIntoFuture: "0", limit: "100", setReadMarker: "0", markNotificationsAsRead: "0" }
+      items: "value.ocs.data.filter(m, !('systemMessage' in m) || m.systemMessage == '')"
+      newest_first: true
+      id: string(item.id)
+      every: 5m

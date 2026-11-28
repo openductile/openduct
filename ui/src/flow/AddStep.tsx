@@ -23,6 +23,15 @@ const FAMILIES: { family: Family; label: string }[] = [
 const WORDS: Record<string, string> = {
   ai: "llm model chat prompt summarise summarize classify extract write answer",
   embed: "vector embedding rag search similar meaning",
+  // G7 more AI steps
+  classify: "classify classifier categorise categorize sort route label intent topic triage",
+  sentiment: "sentiment mood tone feeling positive negative review emotion",
+  extract: "extract extractor parse fields structured output json schema information entities",
+  summarise: "summarise summarize summary digest shorten condense tldr",
+  agent: "agent tools tool calling assistant chatbot memory goal autonomous function", // G2 AI agents
+  split_text: "split chunk chunks splitter text document loader pieces paragraphs markdown html rag", // retrieval
+  vector_store: "vector store pgvector embeddings index similarity search nearest knowledge base rag upsert delete qdrant weaviate milvus zilliz chroma pinecone redis mongodb atlas memory", // retrieval, vector stores
+  ask_documents: "rag answer question documents knowledge base sources citations retrieval qa chat docs", // retrieval
   set: "map fields transform compute shape",
   where: "filter condition only when skip keep drop",
   if: "branch condition else decide split route",
@@ -35,8 +44,13 @@ const WORDS: Record<string, string> = {
   run_workflow: "run call workflow subworkflow sub reuse another execute",
   for_each: "loop each list items repeat iterate",
   http: "api rest request call get post webhook",
+  mcp: "mcp model context protocol tool tools server assistant agent ai", // MCP
   lookup: "csv file table find row rates",
+  table: "data table rows database store save insert update upsert delete count find keep", // data tables
+  state: "remember static data state keep between runs counter last seen memory", // data tables
   postgres: "sql database query insert pgvector rag",
+  mysql: "sql database query insert select mariadb", // sql databases
+  sqlserver: "sql database query insert select mssql microsoft azure t-sql", // sql databases
   email: "mail smtp send",
   telegram: "chat message bot notify",
   slack: "chat message channel notify",
@@ -49,6 +63,16 @@ const WORDS: Record<string, string> = {
   python: "py code snippet script",
   wait: "delay sleep pause",
   stop: "end fail finish",
+  // G6 files
+  extract_file: "file read parse csv json xlsx xls excel spreadsheet sheet pdf text html upload attachment binary import",
+  convert: "file write make csv json xlsx excel spreadsheet text export report base64 download attachment binary",
+  file_details: "file name rename type size mime extension binary",
+  // storage
+  storage: "file files folder disk sftp ftp ftps s3 bucket minio r2 wasabi backblaze upload download list move copy delete local on-premise share azure blob container gcs google cloud storage dropbox box onedrive sharepoint drive google drive docs", // storage places
+  compress: "zip unzip gzip tar archive pack unpack compress extract",
+  redis: "redis cache key value counter queue list publish channel valkey",
+  web: "web page site scrape scraping crawl crawler spider fetch html markdown text url link links selector css sitemap rss atom feed news blog read extract", // web
+  mailbox: "email mail imap inbox mailbox gmail outlook message attachment invoice read unread folder move archive", // messaging
 };
 
 function matches(query: string, kind: { kind: string; label: string; hint: string }): boolean {

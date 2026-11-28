@@ -1,0 +1,55 @@
+name: Sum up a recorded support call
+description: >-
+  Your phone or meeting tool sends each recorded call's transcript to this workflow's address when the call ends
+  ({"call_id", "agent", "customer", "duration_s", "transcript"}). A model sums the call up - what the customer
+  wanted, what was agreed, what is left to do and by whom, and how the customer felt - and the workflow answers the
+  call with it as JSON, for your tool to keep beside the recording. Needs: model (an AI credential).
+category: Support
+trigger:
+  # Left empty here: each workflow made from the template is given a token of its own.
+  webhook: { token: "" }
+# What a test runs on: an event as this trigger gives it.
+sample:
+  call_id: call-20261127-0931
+  agent: Chris
+  customer: Pat Morgan
+  duration_s: 412
+  transcript: |-
+    Chris: Thanks for calling, this is Chris. How can I help?
+    Pat: Hi, my order came yesterday but the blender jar is cracked.
+    Chris: I am sorry to hear that. Can you give me the order number?
+    Pat: It is A-2291.
+    Chris: Thank you. I can send a new jar today, it should arrive by Tuesday. Could you send us a photo of the crack?
+    Pat: Sure, I will send it this afternoon. Thanks, that is quick.
+steps:
+  - where: has(value.transcript) && size(value.transcript) > 20
+  - name: summary
+    ai:
+      credential: model
+      system: >-
+        You sum up recorded customer service calls for the team's records. Use only what was said in the call.
+        Answer with JSON only.
+      prompt: "A call of {{ int(value.duration_s / 60) }} minutes between {{ value.agent }} (our team) and {{ value.customer }}:\n\n{{ value.transcript }}"
+      schema:
+        type: object
+        properties:
+          reason: { type: string, description: "What the customer called about, in one sentence" }
+          agreed: { type: string, description: "What was agreed or done, in one or two sentences" }
+          to_do:
+            type: array
+            items:
+              type: object
+              properties:
+                who: { type: string, enum: [us, customer] }
+                what: { type: string }
+              required: [who, what]
+          mood: { type: string, enum: [happy, neutral, unhappy] }
+          order: { type: string, description: "An order number said in the call, or an empty text" }
+        required: [reason, agreed, to_do, mood, order]
+      max_tokens: 500
+  - name: reply
+    respond:
+      status: 200
+      body:
+        call_id: "{{ value.call_id }}"
+        summary: "{{ steps.summary.json }}"

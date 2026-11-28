@@ -1,0 +1,13 @@
+description: "The analyzers that take a domain"
+action: list_analyzers_for_type
+credential: { base_url: "https://cortex.example.com:9001/", api_key: test-key }
+input: { data_type: domain }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://cortex.example.com:9001/api/analyzer/type/domain"
+    answer:
+      body:
+        - { id: 220483fde9608c580fb6a2508ff3d2d3, name: Abuse_Finder_3_0, dataTypeList: [ip, domain, fqdn, url, mail] }
+result:
+  - { id: 220483fde9608c580fb6a2508ff3d2d3, name: Abuse_Finder_3_0, dataTypeList: [ip, domain, fqdn, url, mail] }

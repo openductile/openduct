@@ -1,0 +1,7 @@
+action: create_group
+credential: { workspace: acme, user_id: uAbC123, token: rc_test_1 }
+input: { name: management, members: ann }
+exchanges:
+  - sent: { method: POST, url: https://acme.rocket.chat/api/v1/groups.create, body: { name: management, members: [ann] } }
+    answer: { body: { group: { _id: gMgmt1, name: management, t: p }, success: true } }
+result: { _id: gMgmt1, name: management, t: p }

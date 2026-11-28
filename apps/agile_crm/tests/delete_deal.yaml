@@ -1,0 +1,12 @@
+description: A deal removed
+action: delete_deal
+credential: {domain: shopexample, email: dana@shop.example, api_key: agile-test-key}
+input: {deal_id: '5717827835133952'}
+exchanges:
+- sent:
+    method: DELETE
+    url: https://shopexample.agilecrm.com/dev/api/opportunity/5717827835133952
+    headers: {authorization: Basic ZGFuYUBzaG9wLmV4YW1wbGU6YWdpbGUtdGVzdC1rZXk=, accept: application/json}
+    query: {}
+  answer: {status: 204}
+result: {deleted: true}

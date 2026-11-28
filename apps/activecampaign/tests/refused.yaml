@@ -1,0 +1,18 @@
+description: 'ActiveCampaign refuses a contact whose email it has: the step fails in its words'
+action: create_contact
+credential:
+  account: shopexample
+  api_key: test-key
+input:
+  email: ann@example.com
+exchanges:
+- answer:
+    status: 422
+    body:
+      errors:
+      - title: Email address already exists in the system.
+        detail: ''
+        code: duplicate
+        source:
+          pointer: /data/attributes/email
+error: 'ActiveCampaign answered 422: Email address already exists in the system.'

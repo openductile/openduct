@@ -1,0 +1,18 @@
+description: A contact made by a sub-account signed in with HighLevel; the sub-account's id given to the step
+action: create_contact
+sign_in: highlevel_oauth
+credential: { access_token: test-oauth-token }
+input: { location_id: i2SpAtBVHSVea1sL6oah, first_name: Ann, last_name: Example, email: ann@example.com, tags: [website] }
+exchanges:
+  - sent:
+      method: POST
+      url: "https://services.leadconnectorhq.com/contacts/"
+      headers: { authorization: "Bearer test-oauth-token", version: "2021-07-28" }
+      body: { firstName: Ann, lastName: Example, email: ann@example.com, tags: [website], locationId: i2SpAtBVHSVea1sL6oah }
+    answer: { status: 201, body: { contact: { id: seD4PfOuKoVMLkEZqohJ, firstName: Ann, lastName: Example, email: ann@example.com, tags: [website] } } }
+result:
+  id: seD4PfOuKoVMLkEZqohJ
+  firstName: Ann
+  lastName: Example
+  email: ann@example.com
+  tags: [website]

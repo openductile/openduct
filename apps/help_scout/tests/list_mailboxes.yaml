@@ -1,0 +1,21 @@
+description: The account's inboxes
+action: list_mailboxes
+sign_in: help_scout_app
+credential: {client_id: hs-app-1, client_secret: hs-secret-1, access_token: hs-test-token}
+exchanges:
+- sent:
+    method: GET
+    url: https://api.helpscout.net/v2/mailboxes
+    query: {}
+    headers: {authorization: Bearer hs-test-token}
+  answer:
+    status: 200
+    body:
+      _embedded:
+        mailboxes:
+        - &id001 {id: 85, name: Support, slug: 83ebc5d87292a795, email: support@shop.example, createdAt: '2025-06-05T09:17:15Z',
+          updatedAt: '2026-11-11T12:20:39Z'}
+      _links:
+        self: {href: 'https://api.helpscout.net/v2/x'}
+result:
+- *id001

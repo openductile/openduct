@@ -1,0 +1,29 @@
+description: "Track time"
+action: track_time
+credential: { api_key: test-key }
+input: { team_id: 123, start: 1, duration: 1 }
+exchanges:
+  - sent:
+      method: POST
+      url: "https://api.clickup.com/api/v2/team/123/time_entries"
+      query: {}
+      headers: { authorization: test-key }
+      body: { start: 1, duration: 1 }
+    answer:
+      status: 200
+      body:
+        description: example
+        tags: [{ name: example, tag_fg: example, tag_bg: example }]
+        start: 1
+        billable: true
+        duration: 1
+        assignee: 1
+        tid: tid_1
+result:
+  description: example
+  tags: [{ name: example, tag_fg: example, tag_bg: example }]
+  start: 1
+  billable: true
+  duration: 1
+  assignee: 1
+  tid: tid_1

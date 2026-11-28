@@ -1,0 +1,12 @@
+description: "A mailing list made"
+action: create_mailing_list
+credential: {"api_key": "key-test", "domain": "mg.example.com"}
+input: {"address": "news@mg.example.com", "name": "News", "description": "Monthly news"}
+exchanges:
+  - sent:
+      method: POST
+      url: "https://api.mailgun.net/v3/lists"
+      headers: {"authorization": "Basic YXBpOmtleS10ZXN0"}
+      body: {"address": "news@mg.example.com", "name": "News", "description": "Monthly news"}
+    answer: {"status": 200, "body": {"list": {"address": "news@mg.example.com", "name": "News", "description": "Monthly news", "access_level": "readonly", "reply_preference": "list", "members_count": 0, "created_at": "Mon, 02 Nov 2026 15:04:05 -0000"}, "message": "Mailing list has been created"}}
+result: {"address": "news@mg.example.com", "name": "News", "description": "Monthly news", "access_level": "readonly", "reply_preference": "list", "members_count": 0, "created_at": "Mon, 02 Nov 2026 15:04:05 -0000"}

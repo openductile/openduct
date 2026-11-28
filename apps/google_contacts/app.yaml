@@ -1,0 +1,186 @@
+# Copyright 2026 Ductile AI, Inc
+# SPDX-License-Identifier: Apache-2.0
+# Google Contacts, through Google's People API: written by hand from Google's discovery document,
+# https://people.googleapis.com/$discovery/rest?version=v1 (revision 20261122, fetched 2026-11-27), and its reference
+# pages (CC BY 4.0). Labels and descriptions are our own words.
+app: google_contacts
+name: Google Contacts
+category: crm
+description: The people in a Google account's contacts, and their groups.
+docs: https://developers.google.com/people/api/rest
+hosts: [people.googleapis.com]
+base_url: https://people.googleapis.com/v1
+sign_in:
+  - id: google_contacts
+    label: Sign in with Google
+    oauth2:
+      authorize: https://accounts.google.com/o/oauth2/v2/auth
+      token: https://oauth2.googleapis.com/token
+      scopes: [https://www.googleapis.com/auth/contacts]
+      extra: { access_type: offline, prompt: consent }
+    headers:
+      Authorization: "Bearer {{ credential.access_token }}"
+error: value.error.message
+actions:
+  list_contacts:
+    label: List contacts
+    description: Every contact, most recently changed first, each with its name, emails, phones, company and groups.
+    method: GET
+    path: /people/me/connections
+    query: { personFields: "names,emailAddresses,phoneNumbers,organizations,addresses,birthdays,biographies,urls,memberships,metadata", sortOrder: LAST_MODIFIED_DESCENDING, pageSize: "1000" }
+    items: "has(value.connections) ? value.connections.map(p, {'resource_name': p.resourceName, 'etag': p.etag, 'name': has(p.names) && has(p.names[0].displayName) ? p.names[0].displayName : '', 'given_name': has(p.names) && has(p.names[0].givenName) ? p.names[0].givenName : '', 'family_name': has(p.names) && has(p.names[0].familyName) ? p.names[0].familyName : '', 'email': has(p.emailAddresses) ? p.emailAddresses[0].value : '', 'emails': has(p.emailAddresses) ? p.emailAddresses.map(e, e.value) : [], 'phone': has(p.phoneNumbers) ? p.phoneNumbers[0].value : '', 'phones': has(p.phoneNumbers) ? p.phoneNumbers.map(e, e.value) : [], 'company': has(p.organizations) && has(p.organizations[0].name) ? p.organizations[0].name : '', 'job_title': has(p.organizations) && has(p.organizations[0].title) ? p.organizations[0].title : '', 'notes': has(p.biographies) ? p.biographies[0].value : '', 'groups': has(p.memberships) ? p.memberships.filter(m, has(m.contactGroupMembership)).map(m, m.contactGroupMembership.contactGroupResourceName) : [], 'person': p}) : []"
+    next: "has(value.nextPageToken) ? {'pageToken': value.nextPageToken} : null"
+    output: { resource_name: text, etag: text, name: text, given_name: text, family_name: text, email: text, emails: list, phone: text, phones: list, company: text, job_title: text, notes: text, groups: list, person: record }
+  search_contacts:
+    label: Find contacts
+    description: Contacts whose name, email, phone or company starts with the words given (at most 30).
+    method: GET
+    path: /people:searchContacts
+    inputs:
+      - { name: query, label: "The start of a name, email, phone number or company", required: true }
+    query: { query: "{{ input.query }}", readMask: "names,emailAddresses,phoneNumbers,organizations,addresses,birthdays,biographies,urls,memberships,metadata", pageSize: "30" }
+    result: "has(value.results) ? value.results.map(r, {'resource_name': r.person.resourceName, 'etag': r.person.etag, 'name': has(r.person.names) && has(r.person.names[0].displayName) ? r.person.names[0].displayName : '', 'given_name': has(r.person.names) && has(r.person.names[0].givenName) ? r.person.names[0].givenName : '', 'family_name': has(r.person.names) && has(r.person.names[0].familyName) ? r.person.names[0].familyName : '', 'email': has(r.person.emailAddresses) ? r.person.emailAddresses[0].value : '', 'emails': has(r.person.emailAddresses) ? r.person.emailAddresses.map(e, e.value) : [], 'phone': has(r.person.phoneNumbers) ? r.person.phoneNumbers[0].value : '', 'phones': has(r.person.phoneNumbers) ? r.person.phoneNumbers.map(e, e.value) : [], 'company': has(r.person.organizations) && has(r.person.organizations[0].name) ? r.person.organizations[0].name : '', 'job_title': has(r.person.organizations) && has(r.person.organizations[0].title) ? r.person.organizations[0].title : '', 'notes': has(r.person.biographies) ? r.person.biographies[0].value : '', 'groups': has(r.person.memberships) ? r.person.memberships.filter(m, has(m.contactGroupMembership)).map(m, m.contactGroupMembership.contactGroupResourceName) : [], 'person': r.person}) : []"
+    output: { resource_name: text, etag: text, name: text, given_name: text, family_name: text, email: text, emails: list, phone: text, phones: list, company: text, job_title: text, notes: text, groups: list, person: record }
+  get_contact:
+    label: Look up a contact
+    description: One contact, with its etag, which changing it needs.
+    method: GET
+    path: "/{{ input.contact.startsWith('people/') ? input.contact : 'people/' + input.contact }}"
+    inputs:
+      - { name: contact, label: "The contact (people/... or its id)", required: true }
+    query: { personFields: "names,emailAddresses,phoneNumbers,organizations,addresses,birthdays,biographies,urls,memberships,metadata" }
+    result: "{'resource_name': value.resourceName, 'etag': value.etag, 'name': has(value.names) && has(value.names[0].displayName) ? value.names[0].displayName : '', 'given_name': has(value.names) && has(value.names[0].givenName) ? value.names[0].givenName : '', 'family_name': has(value.names) && has(value.names[0].familyName) ? value.names[0].familyName : '', 'email': has(value.emailAddresses) ? value.emailAddresses[0].value : '', 'emails': has(value.emailAddresses) ? value.emailAddresses.map(e, e.value) : [], 'phone': has(value.phoneNumbers) ? value.phoneNumbers[0].value : '', 'phones': has(value.phoneNumbers) ? value.phoneNumbers.map(e, e.value) : [], 'company': has(value.organizations) && has(value.organizations[0].name) ? value.organizations[0].name : '', 'job_title': has(value.organizations) && has(value.organizations[0].title) ? value.organizations[0].title : '', 'notes': has(value.biographies) ? value.biographies[0].value : '', 'groups': has(value.memberships) ? value.memberships.filter(m, has(m.contactGroupMembership)).map(m, m.contactGroupMembership.contactGroupResourceName) : [], 'person': value}"
+    output: { resource_name: text, etag: text, name: text, given_name: text, family_name: text, email: text, emails: list, phone: text, phones: list, company: text, job_title: text, notes: text, groups: list, person: record }
+  create_contact:
+    label: Add a contact
+    description: A new contact, with a name, email, phone, company, job title and notes.
+    write: true
+    method: POST
+    path: /people:createContact
+    inputs:
+      - { name: given_name, label: First name }
+      - { name: family_name, label: Last name }
+      - { name: email, label: Email }
+      - { name: phone, label: Phone }
+      - { name: company, label: Company }
+      - { name: job_title, label: Job title }
+      - { name: notes, label: Notes }
+    query: { personFields: "names,emailAddresses,phoneNumbers,organizations,addresses,birthdays,biographies,urls,memberships,metadata" }
+    send:
+      names: "{{ has(input.given_name) || has(input.family_name) ? [{'givenName': has(input.given_name) ? input.given_name : null, 'familyName': has(input.family_name) ? input.family_name : null}] : null }}"
+      emailAddresses: "{{ has(input.email) && input.email != null ? [{'value': input.email}] : null }}"
+      phoneNumbers: "{{ has(input.phone) && input.phone != null ? [{'value': input.phone}] : null }}"
+      organizations: "{{ has(input.company) || has(input.job_title) ? [{'name': has(input.company) ? input.company : null, 'title': has(input.job_title) ? input.job_title : null}] : null }}"
+      biographies: "{{ has(input.notes) && input.notes != null ? [{'value': input.notes, 'contentType': 'TEXT_PLAIN'}] : null }}"
+    result: "{'resource_name': value.resourceName, 'etag': value.etag, 'name': has(value.names) && has(value.names[0].displayName) ? value.names[0].displayName : '', 'given_name': has(value.names) && has(value.names[0].givenName) ? value.names[0].givenName : '', 'family_name': has(value.names) && has(value.names[0].familyName) ? value.names[0].familyName : '', 'email': has(value.emailAddresses) ? value.emailAddresses[0].value : '', 'emails': has(value.emailAddresses) ? value.emailAddresses.map(e, e.value) : [], 'phone': has(value.phoneNumbers) ? value.phoneNumbers[0].value : '', 'phones': has(value.phoneNumbers) ? value.phoneNumbers.map(e, e.value) : [], 'company': has(value.organizations) && has(value.organizations[0].name) ? value.organizations[0].name : '', 'job_title': has(value.organizations) && has(value.organizations[0].title) ? value.organizations[0].title : '', 'notes': has(value.biographies) ? value.biographies[0].value : '', 'groups': has(value.memberships) ? value.memberships.filter(m, has(m.contactGroupMembership)).map(m, m.contactGroupMembership.contactGroupResourceName) : [], 'person': value}"
+    output: { resource_name: text, etag: text, name: text, given_name: text, family_name: text, email: text, emails: list, phone: text, phones: list, company: text, job_title: text, notes: text, groups: list, person: record }
+  update_contact:
+    label: Change a contact
+    description: The fields given replace the contact's own; the others stay as they are. Google asks for the etag Look up a contact gave, so a change made meanwhile is not lost.
+    write: true
+    method: PATCH
+    path: "/{{ input.contact.startsWith('people/') ? input.contact : 'people/' + input.contact }}:updateContact"
+    inputs:
+      - { name: contact, label: "The contact (people/... or its id)", required: true }
+      - { name: etag, label: "Its etag, from Look up a contact", required: true }
+      - { name: given_name, label: First name }
+      - { name: family_name, label: Last name }
+      - { name: email, label: Email }
+      - { name: phone, label: Phone }
+      - { name: company, label: Company }
+      - { name: job_title, label: Job title }
+      - { name: notes, label: Notes }
+    query:
+      updatePersonFields: >-
+        {{ [has(input.given_name) || has(input.family_name) ? 'names' : '', has(input.email) ? 'emailAddresses' : '',
+        has(input.phone) ? 'phoneNumbers' : '', has(input.company) || has(input.job_title) ? 'organizations' : '',
+        has(input.notes) ? 'biographies' : ''].filter(f, f != '').join(',') }}
+      personFields: "names,emailAddresses,phoneNumbers,organizations,addresses,birthdays,biographies,urls,memberships,metadata"
+    send:
+      etag: "{{ input.etag }}"
+      names: "{{ has(input.given_name) || has(input.family_name) ? [{'givenName': has(input.given_name) ? input.given_name : null, 'familyName': has(input.family_name) ? input.family_name : null}] : null }}"
+      emailAddresses: "{{ has(input.email) && input.email != null ? [{'value': input.email}] : null }}"
+      phoneNumbers: "{{ has(input.phone) && input.phone != null ? [{'value': input.phone}] : null }}"
+      organizations: "{{ has(input.company) || has(input.job_title) ? [{'name': has(input.company) ? input.company : null, 'title': has(input.job_title) ? input.job_title : null}] : null }}"
+      biographies: "{{ has(input.notes) && input.notes != null ? [{'value': input.notes, 'contentType': 'TEXT_PLAIN'}] : null }}"
+    result: "{'resource_name': value.resourceName, 'etag': value.etag, 'name': has(value.names) && has(value.names[0].displayName) ? value.names[0].displayName : '', 'given_name': has(value.names) && has(value.names[0].givenName) ? value.names[0].givenName : '', 'family_name': has(value.names) && has(value.names[0].familyName) ? value.names[0].familyName : '', 'email': has(value.emailAddresses) ? value.emailAddresses[0].value : '', 'emails': has(value.emailAddresses) ? value.emailAddresses.map(e, e.value) : [], 'phone': has(value.phoneNumbers) ? value.phoneNumbers[0].value : '', 'phones': has(value.phoneNumbers) ? value.phoneNumbers.map(e, e.value) : [], 'company': has(value.organizations) && has(value.organizations[0].name) ? value.organizations[0].name : '', 'job_title': has(value.organizations) && has(value.organizations[0].title) ? value.organizations[0].title : '', 'notes': has(value.biographies) ? value.biographies[0].value : '', 'groups': has(value.memberships) ? value.memberships.filter(m, has(m.contactGroupMembership)).map(m, m.contactGroupMembership.contactGroupResourceName) : [], 'person': value}"
+    output: { resource_name: text, etag: text, name: text, given_name: text, family_name: text, email: text, emails: list, phone: text, phones: list, company: text, job_title: text, notes: text, groups: list, person: record }
+  delete_contact:
+    label: Delete a contact
+    description: A contact removed from the account.
+    write: true
+    method: DELETE
+    path: "/{{ input.contact.startsWith('people/') ? input.contact : 'people/' + input.contact }}:deleteContact"
+    inputs:
+      - { name: contact, label: "The contact (people/... or its id)", required: true }
+    result: "{'deleted': true}"
+    output: { deleted: boolean }
+  list_groups:
+    label: List contact groups
+    description: The account's labels for contacts, and Google's own groups (myContacts, starred), with how many each holds.
+    method: GET
+    path: /contactGroups
+    query: { pageSize: "1000" }
+    items: "has(value.contactGroups) ? value.contactGroups : []"
+    next: "has(value.nextPageToken) ? {'pageToken': value.nextPageToken} : null"
+    output: { resourceName: text, etag: text, name: text, formattedName: text, groupType: text, memberCount: number, metadata: record }
+  create_group:
+    label: Make a contact group
+    description: A new label for contacts; its name must not be taken.
+    write: true
+    method: POST
+    path: /contactGroups
+    inputs:
+      - { name: name, label: "Its name", required: true }
+    send: { contactGroup: { name: "{{ input.name }}" } }
+    output: { resourceName: text, etag: text, name: text, formattedName: text, groupType: text, metadata: record }
+  add_to_group:
+    label: Add contacts to a group
+    description: Contacts given a group's label (or starred, with contactGroups/starred).
+    write: true
+    method: POST
+    path: "/{{ input.group.startsWith('contactGroups/') ? input.group : 'contactGroups/' + input.group }}/members:modify"
+    inputs:
+      - { name: group, label: "The group (contactGroups/... or its id)", required: true }
+      - { name: contacts, label: "The contacts (people/...)", required: true, kind: list }
+    send: { resourceNamesToAdd: "{{ input.contacts }}" }
+    output: { notFoundResourceNames: list, canNotRemoveLastContactGroupResourceNames: list }
+  remove_from_group:
+    label: Take contacts out of a group
+    description: Contacts no longer under a group's label.
+    write: true
+    method: POST
+    path: "/{{ input.group.startsWith('contactGroups/') ? input.group : 'contactGroups/' + input.group }}/members:modify"
+    inputs:
+      - { name: group, label: "The group (contactGroups/... or its id)", required: true }
+      - { name: contacts, label: "The contacts (people/...)", required: true, kind: list }
+    send: { resourceNamesToRemove: "{{ input.contacts }}" }
+    output: { notFoundResourceNames: list, canNotRemoveLastContactGroupResourceNames: list }
+triggers:
+  new_contact:
+    label: A new contact
+    description: Each contact added to the account, asked for every few minutes.
+    poll:
+      method: GET
+      path: /people/me/connections
+      query: { personFields: "names,emailAddresses,phoneNumbers,organizations,addresses,birthdays,biographies,urls,memberships,metadata", sortOrder: LAST_MODIFIED_DESCENDING, pageSize: "100" }
+      items: "has(value.connections) ? value.connections : []"
+      next: "has(value.nextPageToken) ? {'pageToken': value.nextPageToken} : null"
+      newest_first: true
+      id: item.resourceName
+      event: "{'resource_name': item.resourceName, 'etag': item.etag, 'name': has(item.names) && has(item.names[0].displayName) ? item.names[0].displayName : '', 'given_name': has(item.names) && has(item.names[0].givenName) ? item.names[0].givenName : '', 'family_name': has(item.names) && has(item.names[0].familyName) ? item.names[0].familyName : '', 'email': has(item.emailAddresses) ? item.emailAddresses[0].value : '', 'emails': has(item.emailAddresses) ? item.emailAddresses.map(e, e.value) : [], 'phone': has(item.phoneNumbers) ? item.phoneNumbers[0].value : '', 'phones': has(item.phoneNumbers) ? item.phoneNumbers.map(e, e.value) : [], 'company': has(item.organizations) && has(item.organizations[0].name) ? item.organizations[0].name : '', 'job_title': has(item.organizations) && has(item.organizations[0].title) ? item.organizations[0].title : '', 'notes': has(item.biographies) ? item.biographies[0].value : '', 'groups': has(item.memberships) ? item.memberships.filter(m, has(m.contactGroupMembership)).map(m, m.contactGroupMembership.contactGroupResourceName) : [], 'person': item}"
+      every: 5m
+  changed_contact:
+    label: A contact added or changed
+    description: Each contact added or changed, asked for every few minutes.
+    poll:
+      method: GET
+      path: /people/me/connections
+      query: { personFields: "names,emailAddresses,phoneNumbers,organizations,addresses,birthdays,biographies,urls,memberships,metadata", sortOrder: LAST_MODIFIED_DESCENDING, pageSize: "100" }
+      items: "has(value.connections) ? value.connections : []"
+      next: "has(value.nextPageToken) ? {'pageToken': value.nextPageToken} : null"
+      newest_first: true
+      id: item.resourceName
+      version: item.etag
+      event: "{'resource_name': item.resourceName, 'etag': item.etag, 'name': has(item.names) && has(item.names[0].displayName) ? item.names[0].displayName : '', 'given_name': has(item.names) && has(item.names[0].givenName) ? item.names[0].givenName : '', 'family_name': has(item.names) && has(item.names[0].familyName) ? item.names[0].familyName : '', 'email': has(item.emailAddresses) ? item.emailAddresses[0].value : '', 'emails': has(item.emailAddresses) ? item.emailAddresses.map(e, e.value) : [], 'phone': has(item.phoneNumbers) ? item.phoneNumbers[0].value : '', 'phones': has(item.phoneNumbers) ? item.phoneNumbers.map(e, e.value) : [], 'company': has(item.organizations) && has(item.organizations[0].name) ? item.organizations[0].name : '', 'job_title': has(item.organizations) && has(item.organizations[0].title) ? item.organizations[0].title : '', 'notes': has(item.biographies) ? item.biographies[0].value : '', 'groups': has(item.memberships) ? item.memberships.filter(m, has(m.contactGroupMembership)).map(m, m.contactGroupMembership.contactGroupResourceName) : [], 'person': item}"
+      every: 5m

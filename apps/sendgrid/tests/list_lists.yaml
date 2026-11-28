@@ -1,0 +1,23 @@
+description: Every list, over two pages - the next page's address as SendGrid gives it
+action: list_lists
+credential: { token: SG.test-key }
+exchanges:
+  - sent:
+      method: GET
+      url: https://api.sendgrid.com/v3/marketing/lists
+      query: { page_size: "100" }
+    answer:
+      body:
+        result: [{ id: ca7a3796-e8a8-4029-9ccb-df8937940562, name: Newsletter, contact_count: 1180 }]
+        _metadata:
+          self: "https://api.sendgrid.com/v3/marketing/lists?page_size=100"
+          next: "https://api.sendgrid.com/v3/marketing/lists?page_size=100&page_token=Wzk5XQ"
+          count: 2
+  - sent: { url: "https://api.sendgrid.com/v3/marketing/lists?page_size=100&page_token=Wzk5XQ" }
+    answer:
+      body:
+        result: [{ id: 8f1d3c5a-2b4e-4d6f-9a1b-3c5d7e9f1a2b, name: Customers, contact_count: 70 }]
+        _metadata: { self: "https://api.sendgrid.com/v3/marketing/lists?page_size=100&page_token=Wzk5XQ", count: 2 }
+result:
+  - { id: ca7a3796-e8a8-4029-9ccb-df8937940562, name: Newsletter, contact_count: 1180 }
+  - { id: 8f1d3c5a-2b4e-4d6f-9a1b-3c5d7e9f1a2b, name: Customers, contact_count: 70 }

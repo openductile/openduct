@@ -1,0 +1,16 @@
+description: An approved template, its body's placeholders filled in order
+action: send_template
+credential: { access_token: EAAG1, phone_number_id: "1234", api_version: v21.0 }
+input: { to: "16505551234", template: order_confirmation, language: en_US, values: [Jessica, SKBUP2-4CPIG9] }
+exchanges:
+  - sent:
+      method: POST
+      url: https://graph.facebook.com/v21.0/1234/messages
+      body:
+        messaging_product: whatsapp
+        recipient_type: individual
+        to: "16505551234"
+        type: template
+        template: { name: order_confirmation, language: { code: en_US }, components: [{ type: body, parameters: [{ type: text, text: Jessica }, { type: text, text: SKBUP2-4CPIG9 }] }] }
+    answer: { body: { messaging_product: whatsapp, contacts: [{ input: "16505551234", wa_id: "16505551234" }], messages: [{ id: wamid.T1 }] } }
+result: { messaging_product: whatsapp, contacts: [{ input: "16505551234", wa_id: "16505551234" }], messages: [{ id: wamid.T1 }] }

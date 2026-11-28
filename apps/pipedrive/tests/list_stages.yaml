@@ -1,0 +1,67 @@
+description: "List stages"
+action: list_stages
+credential: { api_key: test-key }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://api.pipedrive.com/api/v2/stages"
+      query: { limit: "100" }
+      headers: { x-api-token: test-key }
+    answer:
+      status: 200
+      body:
+        success: true
+        data:
+          - id: 1
+            order_nr: 1
+            name: example
+            is_deleted: true
+            deal_probability: 1
+            pipeline_id: 1
+            is_deal_rot_enabled: true
+            days_to_rotten: 1
+            add_time: example
+            update_time: example
+        additional_data: { next_cursor: token_2 }
+  - sent:
+      method: GET
+      url: "https://api.pipedrive.com/api/v2/stages"
+      query: { limit: "100", cursor: token_2 }
+      headers: { x-api-token: test-key }
+    answer:
+      status: 200
+      body:
+        success: true
+        data:
+          - id: id_2
+            order_nr: 1
+            name: example
+            is_deleted: true
+            deal_probability: 1
+            pipeline_id: 1
+            is_deal_rot_enabled: true
+            days_to_rotten: 1
+            add_time: example
+            update_time: example
+        additional_data: { next_cursor: null }
+result:
+  - id: 1
+    order_nr: 1
+    name: example
+    is_deleted: true
+    deal_probability: 1
+    pipeline_id: 1
+    is_deal_rot_enabled: true
+    days_to_rotten: 1
+    add_time: example
+    update_time: example
+  - id: id_2
+    order_nr: 1
+    name: example
+    is_deleted: true
+    deal_probability: 1
+    pipeline_id: 1
+    is_deal_rot_enabled: true
+    days_to_rotten: 1
+    add_time: example
+    update_time: example

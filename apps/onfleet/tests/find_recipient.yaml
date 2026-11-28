@@ -1,0 +1,25 @@
+description: A recipient by phone
+action: find_recipient
+credential:
+  api_key: test-key
+input:
+  phone: '+14155550100'
+exchanges:
+- sent:
+    method: GET
+    url: https://onfleet.com/api/v2/recipients/phone/+14155550100
+    headers:
+      authorization: Basic dGVzdC1rZXk6
+  answer:
+    status: 200
+    body: &id001
+      id: xX87G1gSkeLvGXlHn2tn0~iB
+      organization: yAM*fDkztrT3gUcz9mNDgNOL
+      timeCreated: 1795161600000
+      timeLastModified: 1795161600000
+      name: Pat Sample
+      phone: '+14155550100'
+      notes: Ring twice
+      skipSMSNotifications: false
+      metadata: []
+result: *id001

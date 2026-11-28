@@ -1,0 +1,17 @@
+description: A row seen before whose cells changed runs again
+trigger: changed_row
+credential: { token: test-token }
+input: { doc_id: AbCDeFGH, table_id_or_name: grid-Orders }
+# A version is kept as the first 16 hex digits of the SHA-256 of its JSON (here each row's updatedAt).
+seen: { items: [["i-row1", "74f2bd2393e97f87"], ["i-row2", "21e5f97e4e3e67f4"]] }
+exchanges:
+  - sent:
+      url: https://docs.superhuman.com/apis/v1/docs/AbCDeFGH/tables/grid-Orders/rows
+      query: { useColumnNames: "true", limit: "25" }
+    answer:
+      body:
+        items:
+          - { id: i-row1, name: Order 1, updatedAt: "2026-11-27T11:30:00.000Z", values: { Customer: ann@example.com, Total: 15 } }
+          - { id: i-row2, name: Order 2, updatedAt: "2026-11-27T10:00:00.000Z", values: { Customer: bob@example.com, Total: 30 } }
+runs:
+  - { id: i-row1, name: Order 1, updatedAt: "2026-11-27T11:30:00.000Z", values: { Customer: ann@example.com, Total: 15 } }

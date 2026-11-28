@@ -1,0 +1,15 @@
+description: A contact seen before whose update time changed runs again
+trigger: updated_contact
+credential: { access_token: test-access-token }
+# A version is kept as the first 16 hex digits of the SHA-256 of its JSON (here "2026-11-27T09:00:00Z").
+seen: { items: [["101", "5db88ba44a3ba5c6"]] }
+exchanges:
+  - sent:
+      url: https://api.keap.com/crm/rest/v2/contacts
+      query: { order_by: update_time desc, page_size: "100" }
+    answer:
+      body:
+        contacts:
+          - { id: "101", given_name: Ann, job_title: Owner, update_time: "2026-11-27T11:30:00Z" }
+runs:
+  - { id: "101", given_name: Ann, job_title: Owner, update_time: "2026-11-27T11:30:00Z" }

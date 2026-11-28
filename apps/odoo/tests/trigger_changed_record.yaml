@@ -1,0 +1,10 @@
+description: A record changed since the poll before runs again
+trigger: changed_record
+credential: { address: "https://mycompany.example.com", api_key: 6578616d706c65206b6579 }
+input: { model: sale.order, fields: "name,state" }
+seen: { items: [["31", "d5d0b6915aa6cf52"]] }
+exchanges:
+  - sent:
+      body: { domain: [], fields: [name, state, write_date], order: write_date desc, limit: 100 }
+    answer: { body: [{ id: 31, name: S00031, state: sale, write_date: "2026-11-27 11:00:00" }] }
+runs: [{ id: 31, name: S00031, state: sale, write_date: "2026-11-27 11:00:00" }]

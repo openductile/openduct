@@ -1,0 +1,11 @@
+description: A delivery whose signature is another's (the PING's on a command) is refused, and runs nothing
+trigger: interaction
+sign_in: discord_bot
+credential: { bot_token: test-bot-token, public_key: 3a2e578f29addf031da4172d5c614f059c027eba074c2e13ab54bc7cc51c1180 }
+delivery:
+  headers:
+    x-signature-ed25519: f733edf7af021366636e915a45d55311444580a2feaf9e06b73c4d7e7c576d22a4c967659757bfbd5bd6ebcb749b466919156f95e3d5716293e06acc85ab0702
+    x-signature-timestamp: "1700000000"
+  body: '{"id":"1100000000000000002","application_id":"1000000000000000001","type":2,"token":"dGVzdC1jb21tYW5kLXRva2Vu","guild_id":"900000000000000001","channel_id":"910000000000000001","member":{"user":{"id":"920000000000000001","username":"ann"}},"data":{"id":"930000000000000001","name":"price","type":1,"options":[{"name":"item","type":3,"value":"tea"}]},"version":1}'
+  at: 1700000010
+refused: "401 the delivery's signature does not match"

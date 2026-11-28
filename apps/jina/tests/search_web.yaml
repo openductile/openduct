@@ -1,0 +1,25 @@
+description: A web search on one site, five results, titles and descriptions only
+action: search_web
+credential: { api_key: jina_test_0a1b2c3d4e5f }
+input: { q: return policy, num: 5, site: example.com, gl: us, read_pages: false }
+exchanges:
+  - sent:
+      method: POST
+      url: "https://s.jina.ai/"
+      headers:
+        authorization: Bearer jina_test_0a1b2c3d4e5f
+        accept: application/json
+        x-site: example.com
+        x-respond-with: no-content
+      body: { q: return policy, num: 5, gl: us }
+    answer:
+      status: 200
+      body:
+        code: 200
+        status: 20000
+        data:
+          - { title: Returns and refunds, url: "https://example.com/help/returns", description: Send anything back within 30 days. }
+          - { title: Shipping, url: "https://example.com/help/shipping", description: Orders ship in two days. }
+result:
+  - { title: Returns and refunds, url: "https://example.com/help/returns", description: Send anything back within 30 days. }
+  - { title: Shipping, url: "https://example.com/help/shipping", description: Orders ship in two days. }

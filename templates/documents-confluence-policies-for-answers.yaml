@@ -1,0 +1,71 @@
+name: Keep your Confluence policies ready for answers
+description: >-
+  Every night at 2:00, read the pages of your policies space in Confluence that changed since the night before (all of
+  them, the first night), cut each into pieces, turn them into vectors and keep them in PostgreSQL with pgvector - a
+  page changed again replaces its old pieces. The people team gets an e-mail listing what was updated, and "A chat
+  that answers staff questions from your policies" answers from them (set your site and space below). Needs:
+  confluence (a basic credential: your Atlassian e-mail and an API token), policies_db (postgres with pgvector), model
+  (an AI credential that makes embeddings), mail (your mail server).
+category: Documents
+trigger:
+  schedule: { every: day, at: "02:00", timezone: America/Chicago }
+# What a test runs on: an event as this trigger gives it.
+sample:
+  scheduled_at: '2026-11-27T08:00:00Z'
+steps:
+  - name: kept
+    state: { get: indexed_once }
+  - name: pages
+    http:
+      # Your Confluence site's address.
+      url: https://your-site.atlassian.net/wiki/rest/api/content/search
+      credential: confluence
+      query:
+        cql: "space = HR AND type = page{{ steps.kept.indexed_once == true ? ' AND lastmodified >= now(\"-1d\")' : '' }}"
+        expand: body.storage,version
+        limit: "100"
+      timeout: 60s
+      sample:
+        results:
+          - id: "65601"
+            title: Paid leave
+            body:
+              storage:
+                value: "<h1>Paid leave</h1><p>Everyone gets 25 days of paid leave a year, from their first day.</p><h2>Carrying days over</h2><p>Up to 5 unused days carry over to the next year.</p>"
+            version: { when: "2026-11-26T15:02:00Z" }
+            _links: { webui: /spaces/HR/pages/65601/Paid+leave }
+        _links: { base: "https://your-site.atlassian.net/wiki" }
+    retry: { attempts: 3, wait: 1m }
+  - name: each
+    for_each:
+      items: "has(steps.pages.body.results) ? steps.pages.body.results : []"
+      steps:
+        - name: split
+          split_text:
+            text: "{{ item.body.storage.value }}"
+            format: html
+            source: "confluence-{{ item.id }}"
+            size: 1200
+            overlap: 150
+            metadata:
+              title: "{{ item.title }}"
+              url: "{{ steps.pages.body._links.base }}{{ item._links.webui }}"
+        - name: stored
+          vector_store:
+            action: add
+            credential: policies_db
+            table: policy_pieces
+            create: true
+            embed_with: model
+            pieces: steps.split.pieces
+  - name: remember
+    state: { set: { indexed_once: true } }
+  - where: size(steps.each) > 0
+  - name: tell
+    email:
+      credential: mail
+      to: people@example.com
+      subject: "{{ size(steps.each) }} policy pages updated for answers"
+      text: >-
+        These pages were read again last night, and the chat answers from them as they are now:
+        {{ steps.pages.body.results.map(p, '\n- ' + p.title).join('') }}

@@ -1,0 +1,41 @@
+description: The asteroids passing Earth on one day, grouped by day as NeoWs answers
+action: asteroids_by_date
+credential: { api_key: nasa-test-key }
+input: { start_date: "2026-11-27", end_date: "2026-11-27" }
+exchanges:
+  - sent:
+      method: GET
+      url: https://api.nasa.gov/neo/rest/v1/feed
+      query: { api_key: nasa-test-key, start_date: "2026-11-27", end_date: "2026-11-27" }
+    answer:
+      status: 200
+      body:
+        links: { self: "https://api.nasa.gov/neo/rest/v1/feed?start_date=2026-11-27&end_date=2026-11-27" }
+        element_count: 1
+        near_earth_objects:
+          "2026-11-27":
+            - neo_reference_id: "3000001"
+              name: (2026 XA1)
+              absolute_magnitude_h: 24.1
+              is_potentially_hazardous_asteroid: false
+              estimated_diameter: { meters: { estimated_diameter_min: 35.1, estimated_diameter_max: 78.5 } }
+              close_approach_data:
+                - close_approach_date: "2026-11-27"
+                  relative_velocity: { kilometers_per_second: 9.8 }
+                  miss_distance: { lunar: 12.4, kilometers: 4766000 }
+                  orbiting_body: Earth
+result:
+  links: { self: "https://api.nasa.gov/neo/rest/v1/feed?start_date=2026-11-27&end_date=2026-11-27" }
+  element_count: 1
+  near_earth_objects:
+    "2026-11-27":
+      - neo_reference_id: "3000001"
+        name: (2026 XA1)
+        absolute_magnitude_h: 24.1
+        is_potentially_hazardous_asteroid: false
+        estimated_diameter: { meters: { estimated_diameter_min: 35.1, estimated_diameter_max: 78.5 } }
+        close_approach_data:
+          - close_approach_date: "2026-11-27"
+            relative_velocity: { kilometers_per_second: 9.8 }
+            miss_distance: { lunar: 12.4, kilometers: 4766000 }
+            orbiting_body: Earth

@@ -2,7 +2,7 @@ name: Tell Slack when a payment fails
 description: >-
   When Stripe reports a failed payment (point a Stripe webhook for payment_intent.payment_failed at this workflow's
   address), post who, how much and why to your team's Slack channel, so someone can follow up the same day.
-category: Messaging
+category: Finance
 trigger:
   webhook: {}
 # What a test runs on: an event as this trigger gives it.

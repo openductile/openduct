@@ -1,0 +1,461 @@
+# Copyright 2026 Ductile AI, Inc
+# SPDX-License-Identifier: Apache-2.0
+# MailerLite: written by hand from MailerLite's API reference, https://developers.mailerlite.com/ (read 2026-11-27).
+app: mailerlite
+name: MailerLite
+category: email
+description: Subscribers, groups, segments, forms and email campaigns in MailerLite.
+docs: https://developers.mailerlite.com/getting-started
+hosts: [connect.mailerlite.com]
+base_url: https://connect.mailerlite.com/api
+sign_in:
+  - id: mailerlite
+    label: An API key
+    fields:
+      - { name: api_key, label: The API key, secret: true }
+      - { name: webhook_secret, label: "A webhook's secret, for a webhook made in MailerLite by hand", secret: true, optional: true }
+    headers:
+      Authorization: "Bearer {{ credential.api_key }}"
+      Accept: application/json
+# MailerLite says what is wrong in a message, and field by field.
+error: >-
+  status < 400 ? null
+  : (has(value.errors) && value.errors != null && size(value.errors) > 0
+    ? value.message + ' ' + value.errors.map(k, value.errors[k].join(' ')).join(' ')
+    : (has(value.message) ? value.message : null))
+actions:
+  list_subscribers:
+    label: List subscribers
+    description: "Subscribers, newest first, or those of a status or group, or who joined between two days; every page."
+    method: GET
+    path: /subscribers
+    inputs:
+      - { name: status, label: "Only these: active, unsubscribed, unconfirmed, bounced or junk" }
+      - { name: group, label: "Only this group's (its ID or name)" }
+      - { name: subscribed_from, label: "Joined on or after (YYYY-MM-DD)" }
+      - { name: subscribed_to, label: "Joined on or before (YYYY-MM-DD)" }
+    query:
+      "filter[status]": "{{ input.status }}"
+      "filter[group]": "{{ input.group }}"
+      "filter[subscribed_from]": "{{ input.subscribed_from }}"
+      "filter[subscribed_to]": "{{ input.subscribed_to }}"
+      limit: "1000"
+    items: value.data
+    next: value.links.next
+    output: &subscriber
+      id: text
+      email: text
+      status: text
+      source: text
+      fields: record
+      groups: list
+      sent: number
+      opens_count: number
+      clicks_count: number
+      open_rate: number
+      click_rate: number
+      subscribed_at: text
+      unsubscribed_at: text
+      created_at: text
+      updated_at: text
+  get_subscriber:
+    label: Get a subscriber
+    description: One subscriber, by their ID or email.
+    method: GET
+    path: "/subscribers/{{ input.subscriber }}"
+    inputs:
+      - { name: subscriber, label: "Their ID or email", required: true }
+    result: value.data
+    output: *subscriber
+  add_subscriber:
+    label: Add or update a subscriber
+    description: "A subscriber by email, added or, when there already, updated: what is given is set, and groups added, nothing taken away."
+    write: true
+    method: POST
+    path: /subscribers
+    inputs:
+      - { name: email, label: Email, required: true }
+      - { name: name, label: First name }
+      - { name: last_name, label: Last name }
+      - { name: company, label: Company }
+      - { name: city, label: City }
+      - { name: state, label: State }
+      - { name: country, label: Country }
+      - { name: zip, label: ZIP or postal code }
+      - { name: phone, label: Phone }
+      - { name: groups, label: "Groups to add them to (their IDs)", kind: list }
+      - { name: status, label: "active, unsubscribed, unconfirmed, bounced or junk" }
+      - name: resubscribe
+        label: Bring back an unsubscribed subscriber
+        description: "true only when they asked to subscribe again."
+        kind: boolean
+    send:
+      email: "{{ input.email }}"
+      # MailerLite's own fields, by their keys; others are set with Change a subscriber.
+      fields:
+        name: "{{ input.name }}"
+        last_name: "{{ input.last_name }}"
+        company: "{{ input.company }}"
+        city: "{{ input.city }}"
+        state: "{{ input.state }}"
+        country: "{{ input.country }}"
+        z_i_p: "{{ input.zip }}"
+        phone: "{{ input.phone }}"
+      groups: "{{ input.groups }}"
+      status: "{{ input.status }}"
+      resubscribe: "{{ input.resubscribe }}"
+    result: value.data
+    output: *subscriber
+  update_subscriber:
+    label: Change a subscriber
+    description: "Changes a subscriber's fields or status; groups given become their only groups."
+    write: true
+    method: PUT
+    path: "/subscribers/{{ input.subscriber_id }}"
+    inputs:
+      - { name: subscriber_id, label: "The subscriber's ID", required: true }
+      - { name: email, label: "A new email (once a month at most)" }
+      - { name: fields, label: "Fields to change, by their key (null clears one)", kind: record }
+      - { name: groups, label: "All the groups they are to be in (their IDs)", kind: list }
+      - { name: status, label: "unsubscribed, bounced or junk" }
+    send:
+      email: "{{ input.email }}"
+      fields: "{{ input.fields }}"
+      groups: "{{ input.groups }}"
+      status: "{{ input.status }}"
+    result: value.data
+    output: *subscriber
+  delete_subscriber:
+    label: Remove a subscriber
+    description: "Takes a subscriber off the account; what is known of them is kept, should they come back."
+    write: true
+    method: DELETE
+    path: "/subscribers/{{ input.subscriber_id }}"
+    inputs:
+      - { name: subscriber_id, label: "The subscriber's ID", required: true }
+    result: "{'removed': true}"
+    output: { removed: boolean }
+  list_groups:
+    label: List groups
+    description: "The account's groups, with how many are active in each and how they open and click."
+    method: GET
+    path: /groups
+    inputs:
+      - { name: name, label: "Only those whose name has this" }
+    query: { "filter[name]": "{{ input.name }}", limit: "1000" }
+    items: value.data
+    next: value.links.next
+    output: &group
+      id: text
+      name: text
+      active_count: number
+      sent_count: number
+      opens_count: number
+      open_rate: record
+      clicks_count: number
+      click_rate: record
+      unsubscribed_count: number
+      unconfirmed_count: number
+      bounced_count: number
+      created_at: text
+  create_group:
+    label: Add a group
+    description: A new group of subscribers.
+    write: true
+    method: POST
+    path: /groups
+    inputs:
+      - { name: name, label: Name, required: true }
+    send: { name: "{{ input.name }}" }
+    result: value.data
+    output: *group
+  rename_group:
+    label: Rename a group
+    description: A group given a new name.
+    write: true
+    method: PUT
+    path: "/groups/{{ input.group_id }}"
+    inputs:
+      - { name: group_id, label: "The group's ID", required: true }
+      - { name: name, label: The new name, required: true }
+    send: { name: "{{ input.name }}" }
+    result: value.data
+    output: *group
+  delete_group:
+    label: Delete a group
+    description: "Deletes a group; its subscribers stay on the account."
+    write: true
+    method: DELETE
+    path: "/groups/{{ input.group_id }}"
+    inputs:
+      - { name: group_id, label: "The group's ID", required: true }
+    result: "{'deleted': true}"
+    output: { deleted: boolean }
+  list_group_subscribers:
+    label: "List a group's subscribers"
+    description: "The subscribers in a group (the active ones by default); every page."
+    method: GET
+    path: "/groups/{{ input.group_id }}/subscribers"
+    inputs:
+      - { name: group_id, label: "The group's ID", required: true }
+      - { name: status, label: "active (the default), unsubscribed, unconfirmed, bounced or junk" }
+    query: { "filter[status]": "{{ input.status }}", limit: "1000" }
+    items: value.data
+    next: value.links.next
+    output: *subscriber
+  add_to_group:
+    label: Add a subscriber to a group
+    description: An existing subscriber put in a group.
+    write: true
+    method: POST
+    path: "/subscribers/{{ input.subscriber_id }}/groups/{{ input.group_id }}"
+    inputs:
+      - { name: subscriber_id, label: "The subscriber's ID", required: true }
+      - { name: group_id, label: "The group's ID", required: true }
+    result: value.data
+    output: *group
+  remove_from_group:
+    label: Take a subscriber out of a group
+    description: "A subscriber taken out of a group; they stay on the account."
+    write: true
+    method: DELETE
+    path: "/subscribers/{{ input.subscriber_id }}/groups/{{ input.group_id }}"
+    inputs:
+      - { name: subscriber_id, label: "The subscriber's ID", required: true }
+      - { name: group_id, label: "The group's ID", required: true }
+    result: "{'removed': true}"
+    output: { removed: boolean }
+  list_segments:
+    label: List segments
+    description: "The account's segments (subscribers chosen by rules), with how many are in each."
+    method: GET
+    path: /segments
+    query: { limit: "250" }
+    items: value.data
+    next: value.links.next
+    output: { id: text, name: text, total: number, open_rate: record, click_rate: record, created_at: text }
+  list_segment_subscribers:
+    label: "List a segment's subscribers"
+    description: "The subscribers a segment's rules choose (the active ones by default); every page."
+    method: GET
+    path: "/segments/{{ input.segment_id }}/subscribers"
+    inputs:
+      - { name: segment_id, label: "The segment's ID", required: true }
+      - { name: status, label: "active (the default), unsubscribed, unconfirmed, bounced or junk" }
+    query: { "filter[status]": "{{ input.status }}", limit: "1000" }
+    items: value.data
+    next: value.links.next
+    output: *subscriber
+  list_fields:
+    label: List fields
+    description: "The fields a subscriber has, with the key each is set by."
+    method: GET
+    path: /fields
+    query: { limit: "1000" }
+    items: value.data
+    next: value.links.next
+    output: &field { id: text, name: text, key: text, type: text }
+  create_field:
+    label: Add a field
+    description: "A new field for subscribers: text, number or date."
+    write: true
+    method: POST
+    path: /fields
+    inputs:
+      - { name: name, label: Name, required: true }
+      - { name: type, label: "text, number or date (it cannot be changed later)", required: true }
+    send: { name: "{{ input.name }}", type: "{{ input.type }}" }
+    result: value.data
+    output: *field
+  list_campaigns:
+    label: List campaigns
+    description: "Email campaigns, each with its emails and how it went; of a status (sent, draft, ready) if asked."
+    method: GET
+    path: /campaigns
+    inputs:
+      - { name: status, label: "Only these: sent, draft or ready" }
+      - { name: type, label: "Only these: regular, ab, resend, rss or multivariate" }
+    query: { "filter[status]": "{{ input.status }}", "filter[type]": "{{ input.type }}", limit: "100" }
+    items: value.data
+    next: value.links.next
+    output: &campaign
+      id: text
+      name: text
+      type: text
+      status: text
+      emails: list
+      filter_for_humans: list
+      delivery_schedule: text
+      scheduled_for: text
+      started_at: text
+      finished_at: text
+      created_at: text
+      updated_at: text
+  get_campaign:
+    label: Get a campaign
+    description: "One campaign: its emails, who it goes to, when it is sent and how it went."
+    method: GET
+    path: "/campaigns/{{ input.campaign_id }}"
+    inputs:
+      - { name: campaign_id, label: "The campaign's ID", required: true }
+    result: value.data
+    output: *campaign
+  create_campaign:
+    label: Draft a campaign
+    description: "A draft email campaign to groups or segments, with its subject, sender and HTML; it is sent when scheduled."
+    write: true
+    method: POST
+    path: /campaigns
+    inputs:
+      - { name: name, label: "The campaign's name", required: true }
+      - { name: subject, label: Subject, required: true }
+      - { name: from_name, label: "Sender's name", required: true }
+      - { name: from, label: "Sender's email (verified in MailerLite)", required: true }
+      - { name: reply_to, label: "Reply-to email" }
+      - { name: content, label: "The email, as HTML (not on every plan)" }
+      - { name: groups, label: "Send to these groups (their IDs)", kind: list }
+      - { name: segments, label: "Or to these segments (their IDs)", kind: list }
+    send:
+      name: "{{ input.name }}"
+      type: regular
+      emails:
+        - subject: "{{ input.subject }}"
+          from_name: "{{ input.from_name }}"
+          from: "{{ input.from }}"
+          reply_to: "{{ input.reply_to }}"
+          content: "{{ input.content }}"
+      groups: "{{ input.groups }}"
+      segments: "{{ input.segments }}"
+    result: value.data
+    output: *campaign
+  schedule_campaign:
+    label: Send or schedule a campaign
+    description: "Sends a draft campaign now, or on a day and time (in the account's time zone unless given)."
+    write: true
+    method: POST
+    path: "/campaigns/{{ input.campaign_id }}/schedule"
+    inputs:
+      - { name: campaign_id, label: "The campaign's ID", required: true }
+      - name: delivery
+        label: "When: instant (the default), scheduled, timezone_based or smart_sending"
+      - { name: date, label: "The day (YYYY-MM-DD)" }
+      - { name: hours, label: "The hour (HH)" }
+      - { name: minutes, label: "The minute (MM)" }
+      - { name: timezone_id, label: "A time zone's ID", kind: number }
+    send:
+      delivery: "{{ has(input.delivery) && input.delivery != null ? input.delivery : 'instant' }}"
+      schedule:
+        date: "{{ input.date }}"
+        hours: "{{ input.hours }}"
+        minutes: "{{ input.minutes }}"
+        timezone_id: "{{ input.timezone_id }}"
+    result: value.data
+    output: *campaign
+  cancel_campaign:
+    label: Cancel a scheduled campaign
+    description: "Takes a scheduled campaign back to a draft, unsent."
+    write: true
+    method: POST
+    path: "/campaigns/{{ input.campaign_id }}/cancel"
+    inputs:
+      - { name: campaign_id, label: "The campaign's ID", required: true }
+    result: value.data
+    output: *campaign
+  list_forms:
+    label: List forms
+    description: "Sign-up forms of a kind (popup, embedded or promotion), with how many signed up through each."
+    method: GET
+    path: "/forms/{{ input.type }}"
+    inputs:
+      - { name: type, label: "popup, embedded or promotion", required: true }
+      - { name: name, label: "Only those whose name has this" }
+    query: { "filter[name]": "{{ input.name }}" }
+    items: value.data
+    next: value.links.next
+    output:
+      id: text
+      type: text
+      slug: text
+      name: text
+      active: boolean
+      conversions_count: number
+      opens_count: number
+      conversion_rate: record
+      last_registration_at: text
+      created_at: text
+  list_form_subscribers:
+    label: "List who signed up through a form"
+    description: "The subscribers who joined through a form (the active ones by default); every page."
+    method: GET
+    path: "/forms/{{ input.form_id }}/subscribers"
+    inputs:
+      - { name: form_id, label: "The form's ID", required: true }
+      - { name: status, label: "active (the default), unsubscribed, unconfirmed, bounced or junk" }
+    query: { "filter[status]": "{{ input.status }}", limit: "1000" }
+    items: value.data
+    next: value.links.next
+    output: *subscriber
+triggers:
+  new_subscriber:
+    label: A new subscriber
+    description: Each subscriber added to the account, as MailerLite sends it.
+    webhook:
+      signature: { header: signature, encoding: hex }
+      secret: webhook_secret
+      id: "'subscriber.created/' + value.id"
+      event: value
+      register:
+        - method: POST
+          path: /webhooks
+          send:
+            name: "OpenDuct workflow {{ input.workflow }}"
+            url: "{{ input.address }}"
+            events: [subscriber.created]
+            batchable: false
+            enabled: true
+      keep: { webhook_secret: value.data.secret, webhook_id: value.data.id }
+      unregister:
+        - { method: DELETE, path: "/webhooks/{{ input.registered.webhook_id }}" }
+  subscriber_unsubscribed:
+    label: A subscriber unsubscribed
+    description: Each subscriber who unsubscribes, as MailerLite sends it.
+    webhook:
+      signature: { header: signature, encoding: hex }
+      secret: webhook_secret
+      id: "'subscriber.unsubscribed/' + value.id + '/' + string(value.unsubscribed_at)"
+      event: value
+      register:
+        - method: POST
+          path: /webhooks
+          send:
+            name: "OpenDuct workflow {{ input.workflow }}"
+            url: "{{ input.address }}"
+            events: [subscriber.unsubscribed]
+            batchable: false
+            enabled: true
+      keep: { webhook_secret: value.data.secret, webhook_id: value.data.id }
+      unregister:
+        - { method: DELETE, path: "/webhooks/{{ input.registered.webhook_id }}" }
+  added_to_group:
+    label: A subscriber added to a group
+    description: "Each subscriber put in a group (or in the group named), as MailerLite sends it: the subscriber and the group."
+    inputs:
+      - { name: group_id, label: "Only this group (its ID)" }
+    webhook:
+      signature: { header: signature, encoding: hex }
+      secret: webhook_secret
+      id: "'subscriber.added_to_group/' + value.group.id + '/' + value.subscriber.id + '/' + string(value.subscriber.updated_at)"
+      only: "input.group_id == null || value.group.id == input.group_id"
+      event: value
+      register:
+        - method: POST
+          path: /webhooks
+          send:
+            name: "OpenDuct workflow {{ input.workflow }}"
+            url: "{{ input.address }}"
+            events: [subscriber.added_to_group]
+            batchable: false
+            enabled: true
+      keep: { webhook_secret: value.data.secret, webhook_id: value.data.id }
+      unregister:
+        - { method: DELETE, path: "/webhooks/{{ input.registered.webhook_id }}" }

@@ -1,0 +1,7 @@
+action: update_task
+credential: { token: todoist-test-token }
+input: { task_id: 6Xtest0000000002, due_date: "2026-12-01", priority: 3 }
+exchanges:
+  - sent: { method: POST, url: https://api.todoist.com/api/v1/tasks/6Xtest0000000002, body: { due_date: "2026-12-01", priority: 3 } }
+    answer: { body: { id: 6Xtest0000000002, content: Order shelf labels, project_id: 6Xproj0000000001, labels: [], priority: 1, checked: false, added_at: "2026-11-27T10:00:00.000000Z" } }
+result: { id: 6Xtest0000000002, content: Order shelf labels, project_id: 6Xproj0000000001, labels: [], priority: 1, checked: false, added_at: "2026-11-27T10:00:00.000000Z" }

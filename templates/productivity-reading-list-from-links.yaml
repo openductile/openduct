@@ -1,0 +1,56 @@
+name: A team reading list from shared links
+description: >-
+  Send a link to this workflow's address - from a bookmarklet, a phone shortcut or another tool, as {"url", "by",
+  "note"} - and Jina's Reader API reads the page for you: its title and what it is about go into the Reading list sheet
+  of your Google Sheets spreadsheet, and a line with the link is posted to your team's Slack channel. Each workflow
+  made from this template is given a token of its own, to add to its address. Needs: jina (a bearer credential with
+  your Jina API key), google_sheets, slack.
+category: Productivity
+trigger:
+  # Left empty here: each workflow made from the template is given a token of its own.
+  webhook: { token: "" }
+# What a test runs on: an event as this trigger gives it.
+sample:
+  url: https://blog.example.com/how-we-plan-a-quarter
+  by: Priya
+  note: Worth reading before Monday's planning.
+steps:
+  - where: value.url != null && value.url.startsWith('https://')
+  - name: page
+    http:
+      url: "https://r.jina.ai/{{ value.url }}"
+      credential: jina
+      headers:
+        Accept: application/json
+        # Only the page's main text, without its menus and footers.
+        X-Retain-Images: none
+      timeout: 60s
+      sample:
+        code: 200
+        data:
+          title: How we plan a quarter in one afternoon
+          description: A small team's way to agree on three goals, the work behind them and who owns each.
+          url: https://blog.example.com/how-we-plan-a-quarter
+          content: "Every quarter we block one afternoon. Each of us brings the three things we think matter most..."
+    retry: { attempts: 2, wait: 15s }
+  # The page's title (else its address), and its own description - else the start of its text.
+  - name: about
+    javascript: |
+      const page = (steps.page.body && steps.page.body.data) || {};
+      const text = String(page.content || "").replace(/\s+/g, " ").trim();
+      const gist = page.description || (text.length > 280 ? text.slice(0, 280) + "..." : text) || "(no text found)";
+      return { title: page.title || value.url, gist };
+  - name: row
+    google_sheets:
+      action: add_row
+      credential: google_sheets
+      spreadsheet_id: your-spreadsheet-id
+      sheet: Reading list
+      values: ["{{ steps.about.title }}", "{{ value.url }}", "{{ steps.about.gist }}", "{{ value.by }}", "{{ value.note }}"]
+    retry: { attempts: 3, wait: 10s }
+  - name: tell
+    slack:
+      credential: slack
+      channel: "#reading"
+      text: "<{{ value.url }}|{{ steps.about.title }}> - {{ steps.about.gist }}{{ value.by == null ? '' : ' (shared by ' + value.by + ')' }}"
+    retry: { attempts: 3, wait: 10s }

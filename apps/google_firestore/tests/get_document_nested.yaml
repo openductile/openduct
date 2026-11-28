@@ -1,0 +1,31 @@
+description: A document of a collection under a document, in another database
+action: get_document
+credential:
+  access_token: ya29.test
+input:
+  project_id: sample-shop
+  collection: orders/A-100/lines
+  document_id: '1'
+  database: shop-eu
+exchanges:
+- sent:
+    method: GET
+    url: https://firestore.googleapis.com/v1/projects/sample-shop/databases/shop-eu/documents/orders/A-100/lines/1
+    headers:
+      authorization: Bearer ya29.test
+  answer:
+    status: 200
+    body:
+      name: projects/sample-shop/databases/shop-eu/documents/orders/A-100/lines/1
+      fields:
+        sku:
+          stringValue: MUG-1
+      createTime: '2026-11-20T10:00:00.000000Z'
+      updateTime: '2026-11-20T10:00:00.000000Z'
+result:
+  name: projects/sample-shop/databases/shop-eu/documents/orders/A-100/lines/1
+  fields:
+    sku:
+      stringValue: MUG-1
+  createTime: '2026-11-20T10:00:00.000000Z'
+  updateTime: '2026-11-20T10:00:00.000000Z'

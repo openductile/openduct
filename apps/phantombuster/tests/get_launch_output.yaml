@@ -1,0 +1,11 @@
+description: A launch's console output
+action: get_launch_output
+credential: { api_key: pb_test_key_1 }
+input: { id: "4512345678901234" }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://api.phantombuster.com/api/v2/containers/fetch-output"
+      query: { id: "4512345678901234" }
+    answer: { status: 200, body: { output: "20 places found\nDone\n" } }
+result: { output: "20 places found\nDone\n" }

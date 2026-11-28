@@ -1,0 +1,318 @@
+# Copyright 2026 Ductile AI, Inc
+# SPDX-License-Identifier: Apache-2.0
+# Google Ads: written by hand from the Google Ads API's discovery document,
+# https://googleads.googleapis.com/$discovery/rest?version=v26 (revision 20261118, fetched 2026-11-27), and its
+# reference, https://developers.google.com/google-ads/api/rest/reference/rest (Google's text CC BY 4.0; ours here).
+app: google_ads
+name: Google Ads
+category: advertising
+description: Google Ads accounts - campaigns and their results, budgets, ad groups, ads and keywords, offline conversions and keyword ideas.
+docs: "https://developers.google.com/google-ads/api/rest/reference/rest"
+hosts: [googleads.googleapis.com]
+base_url: "https://googleads.googleapis.com/v26"
+sign_in:
+  - id: google_ads
+    label: Sign in with Google
+    oauth2:
+      authorize: https://accounts.google.com/o/oauth2/v2/auth
+      token: https://oauth2.googleapis.com/token
+      scopes: [https://www.googleapis.com/auth/adwords]
+      extra: { access_type: offline, prompt: consent }
+    headers: { Authorization: "Bearer {{ credential.access_token }}" }
+error: "type(value) == map && has(value.error) ? value.error.message : null"
+actions:
+  list_accessible_customers:
+    label: "List my Google Ads accounts"
+    description: "The accounts the signed-in person can reach directly, as customers/<id>."
+    method: GET
+    path: "/customers:listAccessibleCustomers"
+    inputs:
+      - { name: developer_token, label: "The install's Google Ads developer token", required: true }
+    headers: { developer-token: "{{ input.developer_token }}" }
+    output: { resourceNames: list }
+  search:
+    label: "Search with a query"
+    description: >-
+      Any report or list the Google Ads Query Language can ask for - SELECT fields FROM a resource WHERE ... - every
+      row of every page.
+    method: POST
+    path: "/customers/{{ input.customer_id.replace('-', '') }}/googleAds:search"
+    inputs:
+      - { name: customer_id, label: "The account's customer id, such as 123-456-7890", required: true }
+      - { name: query, label: "The query, such as SELECT campaign.name, metrics.clicks FROM campaign", required: true }
+      - { name: developer_token, label: "The install's Google Ads developer token", required: true }
+      - { name: login_customer_id, label: "The manager account's id, when signing in through one" }
+    headers:
+      developer-token: "{{ input.developer_token }}"
+      login-customer-id: "{{ has(input.login_customer_id) && input.login_customer_id != null ? input.login_customer_id.replace('-', '') : '' }}"
+    send: { query: "{{ input.query }}" }
+    page_in: body
+    items: "has(value.results) ? value.results : []"
+    next: "has(value.nextPageToken) && value.nextPageToken != '' ? {'pageToken': value.nextPageToken} : null"
+    output: { campaign: record, adGroup: record, adGroupAd: record, adGroupCriterion: record, campaignBudget: record, metrics: record, segments: record, customer: record }
+  list_campaigns:
+    label: "List campaigns"
+    description: "Every campaign of the account that is not removed: id, name, status, type, serving status and budget."
+    method: POST
+    path: "/customers/{{ input.customer_id.replace('-', '') }}/googleAds:search"
+    inputs:
+      - { name: customer_id, label: "The account's customer id, such as 123-456-7890", required: true }
+      - { name: developer_token, label: "The install's Google Ads developer token", required: true }
+      - { name: login_customer_id, label: "The manager account's id, when signing in through one" }
+    headers:
+      developer-token: "{{ input.developer_token }}"
+      login-customer-id: "{{ has(input.login_customer_id) && input.login_customer_id != null ? input.login_customer_id.replace('-', '') : '' }}"
+    send:
+      query: >-
+        SELECT campaign.id, campaign.name, campaign.status, campaign.serving_status,
+        campaign.advertising_channel_type, campaign.campaign_budget FROM campaign
+        WHERE campaign.status != 'REMOVED' ORDER BY campaign.id
+    page_in: body
+    items: "has(value.results) ? value.results.map(r, r.campaign) : []"
+    next: "has(value.nextPageToken) && value.nextPageToken != '' ? {'pageToken': value.nextPageToken} : null"
+    output: { resourceName: text, id: text, name: text, status: text, servingStatus: text, advertisingChannelType: text, campaignBudget: text }
+  campaign_performance:
+    label: "Campaign results"
+    description: >-
+      Each campaign's impressions, clicks, cost, conversions and conversion value, day by day, over a period - the last
+      7 days unless another is named. Cost is in millionths of the account's currency.
+    method: POST
+    path: "/customers/{{ input.customer_id.replace('-', '') }}/googleAds:search"
+    inputs:
+      - { name: customer_id, label: "The account's customer id, such as 123-456-7890", required: true }
+      - name: period
+        label: "TODAY, YESTERDAY, LAST_7_DAYS (the default), LAST_14_DAYS, LAST_30_DAYS, THIS_MONTH or LAST_MONTH"
+      - { name: developer_token, label: "The install's Google Ads developer token", required: true }
+      - { name: login_customer_id, label: "The manager account's id, when signing in through one" }
+    headers:
+      developer-token: "{{ input.developer_token }}"
+      login-customer-id: "{{ has(input.login_customer_id) && input.login_customer_id != null ? input.login_customer_id.replace('-', '') : '' }}"
+    send:
+      query: >-
+        SELECT campaign.id, campaign.name, segments.date, metrics.impressions, metrics.clicks, metrics.cost_micros,
+        metrics.conversions, metrics.conversions_value FROM campaign
+        WHERE segments.date DURING {{ has(input.period) && input.period != null ? input.period : 'LAST_7_DAYS' }}
+        ORDER BY segments.date
+    page_in: body
+    items: "has(value.results) ? value.results : []"
+    next: "has(value.nextPageToken) && value.nextPageToken != '' ? {'pageToken': value.nextPageToken} : null"
+    output: { campaign: record, segments: record, metrics: record }
+  set_campaign_status:
+    label: "Pause or start a campaign"
+    description: "Sets one campaign to PAUSED or ENABLED."
+    write: true
+    method: POST
+    path: "/customers/{{ input.customer_id.replace('-', '') }}/campaigns:mutate"
+    inputs:
+      - { name: customer_id, label: "The account's customer id, such as 123-456-7890", required: true }
+      - { name: campaign_id, label: "The campaign's id", required: true }
+      - { name: status, label: "PAUSED or ENABLED", required: true }
+      - { name: developer_token, label: "The install's Google Ads developer token", required: true }
+      - { name: login_customer_id, label: "The manager account's id, when signing in through one" }
+    headers:
+      developer-token: "{{ input.developer_token }}"
+      login-customer-id: "{{ has(input.login_customer_id) && input.login_customer_id != null ? input.login_customer_id.replace('-', '') : '' }}"
+    send:
+      operations:
+        - update:
+            resourceName: "customers/{{ input.customer_id.replace('-', '') }}/campaigns/{{ input.campaign_id }}"
+            status: "{{ input.status }}"
+          updateMask: status
+    output:
+      results: list
+      partialFailureError: record
+  change_campaigns:
+    label: "Change campaigns"
+    description: >-
+      Creates, changes or removes campaigns: each operation is {create: {...}}, {update: {...}, updateMask: ...} or
+      {remove: customers/<id>/campaigns/<id>}, as the Google Ads reference gives them.
+    write: true
+    method: POST
+    path: "/customers/{{ input.customer_id.replace('-', '') }}/campaigns:mutate"
+    inputs:
+      - { name: customer_id, label: "The account's customer id, such as 123-456-7890", required: true }
+      - { name: operations, label: "The operations, as a list", required: true, kind: list }
+      - { name: partial_failure, label: "Carry out the valid operations even if some fail", kind: boolean }
+      - { name: validate_only, label: "Only check them, change nothing", kind: boolean }
+      - { name: developer_token, label: "The install's Google Ads developer token", required: true }
+      - { name: login_customer_id, label: "The manager account's id, when signing in through one" }
+    headers:
+      developer-token: "{{ input.developer_token }}"
+      login-customer-id: "{{ has(input.login_customer_id) && input.login_customer_id != null ? input.login_customer_id.replace('-', '') : '' }}"
+    send:
+      operations: "{{ input.operations }}"
+      partialFailure: "{{ input.partial_failure }}"
+      validateOnly: "{{ input.validate_only }}"
+    output:
+      results: list
+      partialFailureError: record
+  change_campaign_budgets:
+    label: "Change campaign budgets"
+    description: "Creates, changes or removes campaign budgets (amountMicros: the daily amount in millionths)."
+    write: true
+    method: POST
+    path: "/customers/{{ input.customer_id.replace('-', '') }}/campaignBudgets:mutate"
+    inputs:
+      - { name: customer_id, label: "The account's customer id, such as 123-456-7890", required: true }
+      - { name: operations, label: "The operations, as a list", required: true, kind: list }
+      - { name: partial_failure, label: "Carry out the valid operations even if some fail", kind: boolean }
+      - { name: validate_only, label: "Only check them, change nothing", kind: boolean }
+      - { name: developer_token, label: "The install's Google Ads developer token", required: true }
+      - { name: login_customer_id, label: "The manager account's id, when signing in through one" }
+    headers:
+      developer-token: "{{ input.developer_token }}"
+      login-customer-id: "{{ has(input.login_customer_id) && input.login_customer_id != null ? input.login_customer_id.replace('-', '') : '' }}"
+    send:
+      operations: "{{ input.operations }}"
+      partialFailure: "{{ input.partial_failure }}"
+      validateOnly: "{{ input.validate_only }}"
+    output:
+      results: list
+      partialFailureError: record
+  change_ad_groups:
+    label: "Change ad groups"
+    description: "Creates, changes or removes ad groups of a campaign."
+    write: true
+    method: POST
+    path: "/customers/{{ input.customer_id.replace('-', '') }}/adGroups:mutate"
+    inputs:
+      - { name: customer_id, label: "The account's customer id, such as 123-456-7890", required: true }
+      - { name: operations, label: "The operations, as a list", required: true, kind: list }
+      - { name: partial_failure, label: "Carry out the valid operations even if some fail", kind: boolean }
+      - { name: validate_only, label: "Only check them, change nothing", kind: boolean }
+      - { name: developer_token, label: "The install's Google Ads developer token", required: true }
+      - { name: login_customer_id, label: "The manager account's id, when signing in through one" }
+    headers:
+      developer-token: "{{ input.developer_token }}"
+      login-customer-id: "{{ has(input.login_customer_id) && input.login_customer_id != null ? input.login_customer_id.replace('-', '') : '' }}"
+    send:
+      operations: "{{ input.operations }}"
+      partialFailure: "{{ input.partial_failure }}"
+      validateOnly: "{{ input.validate_only }}"
+    output:
+      results: list
+      partialFailureError: record
+  change_ads:
+    label: "Change ads"
+    description: "Creates, changes (pauses, enables) or removes the ads of ad groups."
+    write: true
+    method: POST
+    path: "/customers/{{ input.customer_id.replace('-', '') }}/adGroupAds:mutate"
+    inputs:
+      - { name: customer_id, label: "The account's customer id, such as 123-456-7890", required: true }
+      - { name: operations, label: "The operations, as a list", required: true, kind: list }
+      - { name: partial_failure, label: "Carry out the valid operations even if some fail", kind: boolean }
+      - { name: validate_only, label: "Only check them, change nothing", kind: boolean }
+      - { name: developer_token, label: "The install's Google Ads developer token", required: true }
+      - { name: login_customer_id, label: "The manager account's id, when signing in through one" }
+    headers:
+      developer-token: "{{ input.developer_token }}"
+      login-customer-id: "{{ has(input.login_customer_id) && input.login_customer_id != null ? input.login_customer_id.replace('-', '') : '' }}"
+    send:
+      operations: "{{ input.operations }}"
+      partialFailure: "{{ input.partial_failure }}"
+      validateOnly: "{{ input.validate_only }}"
+    output:
+      results: list
+      partialFailureError: record
+  change_keywords:
+    label: "Change keywords"
+    description: "Adds, changes or removes ad groups' keywords and other criteria (bids, match types, negatives)."
+    write: true
+    method: POST
+    path: "/customers/{{ input.customer_id.replace('-', '') }}/adGroupCriteria:mutate"
+    inputs:
+      - { name: customer_id, label: "The account's customer id, such as 123-456-7890", required: true }
+      - { name: operations, label: "The operations, as a list", required: true, kind: list }
+      - { name: partial_failure, label: "Carry out the valid operations even if some fail", kind: boolean }
+      - { name: validate_only, label: "Only check them, change nothing", kind: boolean }
+      - { name: developer_token, label: "The install's Google Ads developer token", required: true }
+      - { name: login_customer_id, label: "The manager account's id, when signing in through one" }
+    headers:
+      developer-token: "{{ input.developer_token }}"
+      login-customer-id: "{{ has(input.login_customer_id) && input.login_customer_id != null ? input.login_customer_id.replace('-', '') : '' }}"
+    send:
+      operations: "{{ input.operations }}"
+      partialFailure: "{{ input.partial_failure }}"
+      validateOnly: "{{ input.validate_only }}"
+    output:
+      results: list
+      partialFailureError: record
+  upload_click_conversions:
+    label: "Send offline conversions"
+    description: >-
+      Tells Google Ads about sales or sign-ups that happened after an ad click - from a CRM or a shop - by the click's
+      gclid (or a hashed email), the conversion action, when, and its value. Valid ones are kept even if some fail.
+    write: true
+    method: POST
+    path: "/customers/{{ input.customer_id.replace('-', '') }}:uploadClickConversions"
+    inputs:
+      - { name: customer_id, label: "The account's customer id, such as 123-456-7890", required: true }
+      - name: conversions
+        label: "The conversions, as [{gclid, conversionAction, conversionDateTime, conversionValue, currencyCode, orderId}]"
+        required: true
+        kind: list
+      - { name: validate_only, label: "Only check them, send nothing", kind: boolean }
+      - { name: developer_token, label: "The install's Google Ads developer token", required: true }
+      - { name: login_customer_id, label: "The manager account's id, when signing in through one" }
+    headers:
+      developer-token: "{{ input.developer_token }}"
+      login-customer-id: "{{ has(input.login_customer_id) && input.login_customer_id != null ? input.login_customer_id.replace('-', '') : '' }}"
+    send: { conversions: "{{ input.conversions }}", partialFailure: true, validateOnly: "{{ input.validate_only }}" }
+    output: { results: list, partialFailureError: record, jobId: text }
+  upload_conversion_adjustments:
+    label: "Adjust conversions"
+    description: >-
+      Retracts or restates conversions already sent - a refund, a changed order value - by order id or gclid and
+      time. Valid ones are kept even if some fail.
+    write: true
+    method: POST
+    path: "/customers/{{ input.customer_id.replace('-', '') }}:uploadConversionAdjustments"
+    inputs:
+      - { name: customer_id, label: "The account's customer id, such as 123-456-7890", required: true }
+      - name: adjustments
+        label: "The adjustments, as [{conversionAction, adjustmentType, adjustmentDateTime, orderId, restatementValue}]"
+        required: true
+        kind: list
+      - { name: developer_token, label: "The install's Google Ads developer token", required: true }
+      - { name: login_customer_id, label: "The manager account's id, when signing in through one" }
+    headers:
+      developer-token: "{{ input.developer_token }}"
+      login-customer-id: "{{ has(input.login_customer_id) && input.login_customer_id != null ? input.login_customer_id.replace('-', '') : '' }}"
+    send: { conversionAdjustments: "{{ input.adjustments }}", partialFailure: true }
+    output: { results: list, partialFailureError: record, jobId: text }
+  keyword_ideas:
+    label: "Keyword ideas"
+    description: >-
+      Keyword ideas from a few words or a web page, with their average monthly searches and competition - Google's
+      Keyword Planner.
+    method: POST
+    path: "/customers/{{ input.customer_id.replace('-', '') }}:generateKeywordIdeas"
+    inputs:
+      - { name: customer_id, label: "The account's customer id, such as 123-456-7890", required: true }
+      - { name: keywords, label: "Up to 20 words or phrases, such as [garden furniture]", kind: list }
+      - { name: url, label: "Or a page to take ideas from" }
+      - { name: language, label: "The language, such as languageConstants/1000 (English)" }
+      - { name: locations, label: "Places, such as [geoTargetConstants/2840] (United States)", kind: list }
+      - { name: developer_token, label: "The install's Google Ads developer token", required: true }
+      - { name: login_customer_id, label: "The manager account's id, when signing in through one" }
+    headers:
+      developer-token: "{{ input.developer_token }}"
+      login-customer-id: "{{ has(input.login_customer_id) && input.login_customer_id != null ? input.login_customer_id.replace('-', '') : '' }}"
+    send:
+      # Words alone, a page alone, or both: the seed the reference gives for each.
+      keywordSeed: "{{ has(input.url) && input.url != null ? null : {'keywords': input.keywords} }}"
+      urlSeed: >-
+        {{ has(input.url) && input.url != null && !(has(input.keywords) && input.keywords != null)
+           ? {'url': input.url} : null }}
+      keywordAndUrlSeed: >-
+        {{ has(input.url) && input.url != null && has(input.keywords) && input.keywords != null
+           ? {'url': input.url, 'keywords': input.keywords} : null }}
+      language: "{{ input.language }}"
+      geoTargetConstants: "{{ input.locations }}"
+      keywordPlanNetwork: GOOGLE_SEARCH
+    page_in: body
+    items: "has(value.results) ? value.results : []"
+    next: "has(value.nextPageToken) && value.nextPageToken != '' ? {'pageToken': value.nextPageToken} : null"
+    max_pages: 5
+    output: { text: text, keywordIdeaMetrics: record, closeVariants: list }

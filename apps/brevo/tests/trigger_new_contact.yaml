@@ -1,0 +1,8 @@
+description: A contact added since the last poll starts a run
+trigger: new_contact
+credential: { api_key: xkeysib-test-1 }
+seen: { cursor: null, items: [["42", ""]] }
+exchanges:
+  - sent: { method: GET, url: https://api.brevo.com/v3/contacts, query: { limit: "100", sort: desc } }
+    answer: { body: { contacts: [{ id: 43, email: kim@example.com, attributes: { FIRSTNAME: Kim }, listIds: [], emailBlacklisted: false, smsBlacklisted: false, createdAt: "2026-11-27T10:00:00.000+01:00", modifiedAt: "2026-11-27T10:00:00.000+01:00" }, { id: 42, email: ann@example.com, attributes: { FIRSTNAME: Ann, LASTNAME: Lee }, listIds: [3], emailBlacklisted: false, smsBlacklisted: false, createdAt: "2026-11-27T09:00:00.000+01:00", modifiedAt: "2026-11-27T09:00:00.000+01:00" }], count: 2 } }
+runs: [{ id: 43, email: kim@example.com, attributes: { FIRSTNAME: Kim }, listIds: [], emailBlacklisted: false, smsBlacklisted: false, createdAt: "2026-11-27T10:00:00.000+01:00", modifiedAt: "2026-11-27T10:00:00.000+01:00" }]

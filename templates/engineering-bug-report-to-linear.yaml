@@ -1,0 +1,93 @@
+name: A bug report becomes a Linear issue, with Slack and a reply
+description: >-
+  When your site's "report a problem" form or your support tool posts a bug report to this workflow (with its
+  token), a Linear issue is opened in your team with the report, the page and the browser, at a priority from the
+  reporter's severity; your Slack channel gets the issue's link (urgent ones to the on-call channel), and the reporter
+  gets a Gmail reply with the issue's number. The caller is answered with the issue. Needs: linear (an API key, sent
+  as the Authorization header), slack, gmail.
+category: Engineering
+trigger:
+  # Left empty here: each workflow made from the template is given a token of its own.
+  webhook: { token: "" }
+# What a test runs on: an event as this trigger gives it.
+sample:
+  email: maya.chen@example.com
+  subject: Checkout button does nothing on Safari
+  text: On the cart page, pressing Checkout does nothing. It works in Chrome. I tried twice with a cleared cache.
+  severity: high
+  page: https://shop.example.com/cart
+  browser: Safari 19 on macOS
+steps:
+  - where: has(value.subject) && value.subject.trim() != ''
+  - name: issue
+    http:
+      method: POST
+      url: https://api.linear.app/graphql
+      credential: linear
+      json:
+        query: >-
+          mutation Report($input: IssueCreateInput!) { issueCreate(input: $input) { success issue { id identifier
+          url } } }
+        variables:
+          input:
+            # Your team's id: Linear's team settings, or the API's teams query.
+            teamId: your-team-id
+            title: "{{ value.subject.trim() }}"
+            description: "{{ value.text }}\n\nPage: {{ value.page }}\nBrowser: {{ value.browser }}\nReported by: {{ value.email }}"
+            # Linear's priorities: 1 urgent, 2 high, 3 medium, 4 low.
+            priority: "{{ value.severity == 'urgent' ? 1 : value.severity == 'high' ? 2 : value.severity == 'low' ? 4 : 3 }}"
+      sample:
+        data:
+          issueCreate:
+            success: true
+            issue: { id: 9c1d2e3f-4a5b-4c6d-8e7f-0a1b2c3d4e5f, identifier: WEB-482, url: "https://linear.app/your-team/issue/WEB-482" }
+    retry: { attempts: 3, wait: 15s }
+  - name: made
+    set:
+      id: steps.issue.body.data.issueCreate.issue.identifier
+      url: steps.issue.body.data.issueCreate.issue.url
+  # Linear answers a refused request with 200 and its errors: the run fails, saying why, and is kept in CatchErr.
+  - name: refused
+    if:
+      when: steps.made.id == null
+      then:
+        - stop:
+            error: >-
+              Linear did not open the issue: {{ has(steps.issue.body.errors) ? steps.issue.body.errors[0].message :
+              'no issue in its answer' }}
+  - name: tell
+    switch:
+      cases:
+        - label: urgent
+          when: value.severity == 'urgent'
+          steps:
+            - slack:
+                action: send
+                credential: slack
+                channel: "#on-call"
+                text: "Urgent bug {{ steps.made.id }}: {{ value.subject }} - {{ steps.made.url }}"
+              retry: { attempts: 3, wait: 10s }
+      default:
+        - slack:
+            action: send
+            credential: slack
+            channel: "#bugs"
+            text: "New bug {{ steps.made.id }} ({{ value.severity }}): {{ value.subject }} - {{ steps.made.url }}"
+          retry: { attempts: 3, wait: 10s }
+  - name: thanks
+    if:
+      when: has(value.email) && value.email.contains('@')
+      then:
+        - gmail:
+            action: send_email
+            credential: gmail
+            to: "{{ value.email }}"
+            subject: "We are on it: {{ value.subject }} ({{ steps.made.id }})"
+            text: >-
+              Thank you for telling us. We have opened {{ steps.made.id }} for it and will write again when it is
+              fixed. If you see it again, reply to this e-mail with what you were doing.
+          retry: { attempts: 3, wait: 10s }
+  - name: reply
+    respond:
+      status: 201
+      body: { issue: "{{ steps.made.id }}", url: "{{ steps.made.url }}" }

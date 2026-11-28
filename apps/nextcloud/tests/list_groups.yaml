@@ -1,0 +1,10 @@
+description: The groups
+action: list_groups
+credential: { url: "https://cloud.example.com", username: admin, password: app-pass-2 }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://cloud.example.com/ocs/v2.php/cloud/groups"
+      query: { limit: "100" }
+    answer: { status: 200, body: { ocs: { meta: { status: ok, statuscode: 200 }, data: { groups: [admin, sales, staff] } } } }
+result: [admin, sales, staff]

@@ -1,0 +1,28 @@
+description: Triggered incidents of a service, every page (PagerDuty says when there are more)
+action: list_incidents
+credential: { api_key: pd_test_1 }
+input: { statuses: triggered, service_id: PSVC001 }
+exchanges:
+  - sent:
+      method: GET
+      url: https://api.pagerduty.com/incidents
+      query: { limit: "100", "statuses[]": triggered, "service_ids[]": PSVC001 }
+      headers: { authorization: Token token=pd_test_1, accept: application/vnd.pagerduty+json;version=2 }
+    answer:
+      body:
+        offset: 0
+        limit: 100
+        more: true
+        incidents: [{ id: PINC001, incident_number: 42, title: Checkout is down, status: triggered, urgency: high }]
+  - sent:
+      url: https://api.pagerduty.com/incidents
+      query: { limit: "100", "statuses[]": triggered, "service_ids[]": PSVC001, offset: "1" }
+    answer:
+      body:
+        offset: 1
+        limit: 100
+        more: false
+        incidents: [{ id: PINC002, incident_number: 43, title: Slow search, status: triggered, urgency: low }]
+result:
+  - { id: PINC001, incident_number: 42, title: Checkout is down, status: triggered, urgency: high }
+  - { id: PINC002, incident_number: 43, title: Slow search, status: triggered, urgency: low }

@@ -1,0 +1,11 @@
+description: "Remove saved profiles"
+action: delete_profiles
+credential: { token: test-token }
+exchanges:
+  - sent:
+      method: DELETE
+      url: "https://api.airtop.ai/api/v1/profiles"
+      query: {}
+      headers: { authorization: "Bearer test-token" }
+    answer: { status: 200 }
+result: { removed: true }

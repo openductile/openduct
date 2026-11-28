@@ -1,0 +1,10 @@
+description: "A bookmark moved to the Trash"
+action: delete_bookmark
+credential: { token: test-token }
+input: { bookmark_id: 1002 }
+exchanges:
+  - sent:
+      method: DELETE
+      url: https://api.raindrop.io/rest/v1/raindrop/1002
+    answer: { body: { result: true } }
+result: { removed: true }

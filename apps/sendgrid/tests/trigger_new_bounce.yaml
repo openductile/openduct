@@ -1,0 +1,12 @@
+description: A bounce since the last poll, with why
+trigger: new_bounce
+credential: { token: SG.test-key }
+seen: { cursor: 1699999000, items: [] }
+exchanges:
+  - sent:
+      method: GET
+      url: https://api.sendgrid.com/v3/suppression/bounces
+      query: { start_time: "1699999000", limit: "100" }
+    answer: { body: [{ created: 1699999700, email: cy@example.com, reason: "550 5.1.1 mailbox unavailable", status: "5.1.1" }] }
+runs: [{ created: 1699999700, email: cy@example.com, reason: "550 5.1.1 mailbox unavailable", status: "5.1.1" }]
+cursor: 1699999700

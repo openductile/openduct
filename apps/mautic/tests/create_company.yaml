@@ -1,0 +1,12 @@
+description: "A company added"
+action: create_company
+credential: {"site_url": "https://mautic.example.com", "username": "admin", "password": "pw-test"}
+input: {"name": "Northwind Example", "website": "https://northwind.example"}
+exchanges:
+  - sent:
+      method: POST
+      url: "https://mautic.example.com/api/companies/new"
+      headers: {"authorization": "Basic YWRtaW46cHctdGVzdA=="}
+      body: {"companyname": "Northwind Example", "companywebsite": "https://northwind.example"}
+    answer: {"status": 201, "body": {"company": {"id": 11, "fields": {"all": {"companyname": "Northwind Example", "companywebsite": "https://northwind.example"}}, "score": 0}}}
+result: {"id": 11, "fields": {"all": {"companyname": "Northwind Example", "companywebsite": "https://northwind.example"}}, "score": 0}

@@ -1,0 +1,16 @@
+description: A task deleted
+action: delete_task
+credential:
+  api_key: test-key
+input:
+  task_id: d2N*68bTBAM6Rd6txuWdH9Xj
+exchanges:
+- sent:
+    method: DELETE
+    url: https://onfleet.com/api/v2/tasks/d2N*68bTBAM6Rd6txuWdH9Xj
+    headers:
+      authorization: Basic dGVzdC1rZXk6
+  answer:
+    status: 200
+result:
+  deleted: true

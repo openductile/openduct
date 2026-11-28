@@ -1,0 +1,8 @@
+description: A lead removed
+action: delete_lead
+credential: { api_key: hunter-test-key }
+input: { lead_id: "103" }
+exchanges:
+  - sent: { method: DELETE, url: https://api.hunter.io/v2/leads/103 }
+    answer: { status: 204 }
+result: { deleted: true }

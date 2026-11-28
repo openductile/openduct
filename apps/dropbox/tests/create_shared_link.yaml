@@ -1,0 +1,10 @@
+description: A link anyone may view, when nothing else is asked
+action: create_shared_link
+credential: { access_token: sl.test-token }
+input: { path: /Clients/Example Co/Proposal.pdf }
+exchanges:
+  - sent:
+      url: https://api.dropboxapi.com/2/sharing/create_shared_link_with_settings
+      body: { path: /Clients/Example Co/Proposal.pdf, settings: { audience: { ".tag": public }, access: { ".tag": viewer } } }
+    answer: { body: { ".tag": file, url: "https://www.dropbox.com/scl/fi/abc123/Proposal.pdf?rlkey=xyz&dl=0", name: Proposal.pdf, path_lower: /clients/example co/proposal.pdf, id: "id:a4ayc_80_OEAAAAAAAAAZh" } }
+result: { ".tag": file, url: "https://www.dropbox.com/scl/fi/abc123/Proposal.pdf?rlkey=xyz&dl=0", name: Proposal.pdf, path_lower: /clients/example co/proposal.pdf, id: "id:a4ayc_80_OEAAAAAAAAAZh" }

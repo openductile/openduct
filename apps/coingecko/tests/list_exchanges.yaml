@@ -1,0 +1,7 @@
+description: Exchanges over two pages of 250 (the second shorter, the last)
+action: list_exchanges
+credential: { api_key: CG-test1 }
+exchanges:
+  - sent: { method: GET, url: https://api.coingecko.com/api/v3/exchanges, query: { per_page: "250" } }
+    answer: { body: [{ id: gdax, name: Coinbase Exchange, trust_score: 10 }, { id: kraken, name: Kraken, trust_score: 10 }] }
+result: [{ id: gdax, name: Coinbase Exchange, trust_score: 10 }, { id: kraken, name: Kraken, trust_score: 10 }]

@@ -1,0 +1,17 @@
+description: A new time entry Clockify sends, carrying the webhook token in its clockify-signature header
+trigger: event
+workflow: wf1
+credential: { api_key: test-key, "webhook_secret@wf1": tok.example.wf1 }
+input: { workspace_id: "64a687e29ae1f428e7ebe303", event: NEW_TIME_ENTRY }
+delivery:
+  headers: { clockify-signature: tok.example.wf1, clockify-webhook-event-type: NEW_TIME_ENTRY }
+  body: '{"id":"64c777ddd3fcab07cfbb210c","description":"Site survey","userId":"5a0ab5acb07987125438b60f","projectId":"25b687e29ae1f428e7ebe123","billable":true,"timeInterval":{"start":"2026-11-27T09:00:00Z","end":"2026-11-27T10:30:00Z","duration":"PT1H30M"},"workspaceId":"64a687e29ae1f428e7ebe303"}'
+  at: 1700000000
+runs:
+  - id: "64c777ddd3fcab07cfbb210c"
+    description: Site survey
+    userId: "5a0ab5acb07987125438b60f"
+    projectId: "25b687e29ae1f428e7ebe123"
+    billable: true
+    timeInterval: { start: "2026-11-27T09:00:00Z", end: "2026-11-27T10:30:00Z", duration: PT1H30M }
+    workspaceId: "64a687e29ae1f428e7ebe303"

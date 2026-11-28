@@ -1,0 +1,249 @@
+# Copyright 2026 Ductile AI, Inc
+# SPDX-License-Identifier: Apache-2.0
+# Cortex (StrangeBee): written by hand from its API guide, https://docs.strangebee.com/cortex/api/api-guide/ (read 2026-11-27).
+app: cortex
+name: Cortex
+category: security
+description: Analyse observables - addresses, domains, hashes, URLs - with the analyzers of your own Cortex server, and read their reports.
+docs: https://docs.strangebee.com/cortex/api/api-guide/
+base_url_field: base_url
+sign_in:
+  - id: cortex
+    label: An API key
+    fields:
+      - { name: base_url, label: "Your Cortex's address, such as https://cortex.example.com:9001" }
+      - { name: api_key, label: "The API key of a user with the analyze role", secret: true }
+    headers: { Authorization: "Bearer {{ credential.api_key }}" }
+error: "status >= 400 ? value.message : null"
+actions:
+  list_analyzers:
+    label: List analyzers
+    description: The analyzers enabled in your organization, each with the kinds of observable it takes.
+    method: GET
+    path: /api/analyzer
+    query: { range: all }
+    items: value
+    output:
+      id: text
+      name: text
+      analyzerDefinitionId: text
+      version: text
+      description: text
+      author: text
+      url: text
+      license: text
+      dataTypeList: list
+      baseConfig: text
+      jobCache: number
+      createdBy: text
+      updatedAt: number
+  list_analyzers_for_type:
+    label: List the analyzers for a kind of observable
+    description: The enabled analyzers that can run on one kind of observable, such as ip, domain, url, hash or mail.
+    method: GET
+    path: "/api/analyzer/type/{{ input.data_type }}"
+    inputs:
+      - { name: data_type, label: "The kind of observable: ip, domain, url, hash, mail, fqdn ...", required: true }
+    items: value
+    output:
+      id: text
+      name: text
+      analyzerDefinitionId: text
+      version: text
+      description: text
+      author: text
+      url: text
+      license: text
+      dataTypeList: list
+      baseConfig: text
+      jobCache: number
+      createdBy: text
+      updatedAt: number
+  get_analyzer:
+    label: Get an analyzer
+    description: One enabled analyzer, by its id.
+    method: GET
+    path: "/api/analyzer/{{ input.analyzer_id }}"
+    inputs:
+      - { name: analyzer_id, label: "The analyzer's id (List analyzers gives it)", required: true }
+    output:
+      id: text
+      name: text
+      analyzerDefinitionId: text
+      version: text
+      description: text
+      author: text
+      url: text
+      license: text
+      dataTypeList: list
+      baseConfig: text
+      jobCache: number
+      createdBy: text
+      updatedAt: number
+  run_analyzer:
+    label: Analyse an observable
+    description: Starts a job that runs one analyzer on an observable; the job's report follows when it is done.
+    write: true
+    method: POST
+    path: "/api/analyzer/{{ input.analyzer_id }}/run"
+    inputs:
+      - { name: analyzer_id, label: "The analyzer's id (List analyzers gives it)", required: true }
+      - { name: data, label: "The observable, such as 203.0.113.7 or bad.example", required: true }
+      - { name: data_type, label: "Its kind: ip, domain, url, hash, mail, fqdn ...", required: true }
+      - { name: tlp, label: "Its TLP: 0 white, 1 green, 2 amber, 3 red", kind: number }
+      - { name: message, label: "A note the analyzer can read" }
+      - { name: parameters, label: "Parameters for the analyzer (as JSON)", kind: record }
+      - { name: force, label: "Run again even if a recent report of the same is kept", kind: boolean }
+    query: { force: "{{ has(input.force) && input.force == true ? '1' : null }}" }
+    send:
+      data: "{{ input.data }}"
+      dataType: "{{ input.data_type }}"
+      tlp: "{{ input.tlp }}"
+      message: "{{ input.message }}"
+      parameters: "{{ input.parameters }}"
+    output:
+      id: text
+      analyzerId: text
+      analyzerName: text
+      analyzerDefinitionId: text
+      status: text
+      data: text
+      dataType: text
+      tlp: number
+      message: text
+      parameters: text
+      organization: text
+      startDate: number
+      endDate: number
+      createdAt: number
+      createdBy: text
+  list_jobs:
+    label: List jobs
+    description: Your organization's analysis jobs, the newest first, those of a status or kind of observable if given.
+    method: POST
+    path: /api/job/_search
+    inputs:
+      - { name: status, label: "Only jobs of this status: Waiting, InProgress, Success or Failure" }
+      - { name: data_type, label: "Only jobs on this kind of observable, such as ip" }
+      - { name: how_many, label: "How many, the newest first (100 by default)", kind: number }
+    query:
+      range: "{{ '0-' + string(has(input.how_many) && input.how_many != null ? int(input.how_many) : 100) }}"
+      sort: "-createdAt"
+    send:
+      # Cortex's query: each filter given, all of them to hold; none, and every job.
+      query: >-
+        {{ (has(input.status) && input.status != null ? [{'status': input.status}] : [])
+        + (has(input.data_type) && input.data_type != null ? [{'dataType': input.data_type}] : []) == [] ? {}
+        : {'_and': (has(input.status) && input.status != null ? [{'status': input.status}] : [])
+        + (has(input.data_type) && input.data_type != null ? [{'dataType': input.data_type}] : [])} }}
+    items: value
+    output:
+      id: text
+      analyzerId: text
+      analyzerName: text
+      analyzerDefinitionId: text
+      status: text
+      data: text
+      dataType: text
+      tlp: number
+      message: text
+      parameters: text
+      organization: text
+      startDate: number
+      endDate: number
+      createdAt: number
+      createdBy: text
+  get_job:
+    label: Get a job
+    description: One analysis job and its status, without its report.
+    method: GET
+    path: "/api/job/{{ input.job_id }}"
+    inputs:
+      - { name: job_id, label: "The job's id", required: true }
+    output:
+      id: text
+      analyzerId: text
+      analyzerName: text
+      analyzerDefinitionId: text
+      status: text
+      data: text
+      dataType: text
+      tlp: number
+      message: text
+      parameters: text
+      organization: text
+      startDate: number
+      endDate: number
+      createdAt: number
+      createdBy: text
+  get_job_report:
+    label: Get a job's report
+    description: A job and its report as it stands; while the job runs, the report is only its status.
+    method: GET
+    path: "/api/job/{{ input.job_id }}/report"
+    inputs:
+      - { name: job_id, label: "The job's id", required: true }
+    output:
+      id: text
+      analyzerName: text
+      status: text
+      data: text
+      dataType: text
+      tlp: number
+      startDate: number
+      endDate: number
+      report: record
+  wait_for_report:
+    label: Wait for a job's report
+    description: Waits for a job to finish, up to the time given, then gives the job and its report.
+    method: GET
+    path: "/api/job/{{ input.job_id }}/waitreport"
+    timeout: 300
+    inputs:
+      - { name: job_id, label: "The job's id (Analyse an observable gives it)", required: true }
+      - { name: wait, label: "How long to wait: 30second, 1minute (the default) ... at most 4minute" }
+    query: { atMost: "{{ has(input.wait) && input.wait != null ? input.wait : '1minute' }}" }
+    output:
+      id: text
+      analyzerName: text
+      status: text
+      data: text
+      dataType: text
+      tlp: number
+      startDate: number
+      endDate: number
+      report: record
+  get_job_artifacts:
+    label: Get what a job found
+    description: The observables a finished job extracted from its report, when the analyzer extracts them.
+    method: GET
+    path: "/api/job/{{ input.job_id }}/artifacts"
+    inputs:
+      - { name: job_id, label: "The job's id", required: true }
+    items: value
+    output: { id: text, dataType: text, data: text, tlp: number, createdAt: number, createdBy: text }
+  delete_job:
+    label: Delete a job
+    description: Marks a job deleted; Cortex keeps its data.
+    write: true
+    method: DELETE
+    path: "/api/job/{{ input.job_id }}"
+    inputs:
+      - { name: job_id, label: "The job's id", required: true }
+    result: "{'deleted': status < 300}"
+    output: { deleted: boolean }
+triggers:
+  job_finished:
+    label: A job finished
+    description: Each analysis job that ends with success (or, if chosen, in failure), among the newest 100, asked for every few minutes.
+    inputs:
+      - { name: status, label: "Jobs that ended so: Success (the default) or Failure" }
+    poll:
+      method: POST
+      path: /api/job/_search
+      query: { range: "0-100", sort: "-createdAt" }
+      send:
+        query: { status: "{{ has(input.status) && input.status != null ? input.status : 'Success' }}" }
+      items: value
+      id: item.id
+      every: 5m

@@ -1,0 +1,29 @@
+description: An issue resolved, as Sentry sends it to an internal integration, signed with its client secret (HMAC-SHA256 of the body, hex)
+trigger: issue_changed
+credential: { token: sntrys_test, webhook_secret: whsec-sentry-1 }
+input: { actions: "resolved,assigned" }
+delivery:
+  headers:
+    sentry-hook-resource: issue
+    sentry-hook-timestamp: "1764234000"
+    request-id: 0f3c2a8e-1b7d-4c55-9a61-3f1e2d4c5b6a
+    sentry-hook-signature: 30ebaa955e6653a9243155a2106428495d3d2d3c45319423a78e6b411d918a9c
+  body: '{"action":"resolved","installation":{"uuid":"7a485448-a9e2-4c85-8a3c-4f44175783c9"},"data":{"issue":{"id":"4500000001","shortId":"SHOP-WEB-3","title":"TypeError: cart is undefined","culprit":"checkout.js in pay","level":"error","status":"resolved","project":{"id":"11","name":"shop-web","slug":"shop-web","platform":"javascript"},"count":"12","userCount":4,"firstSeen":"2026-11-26T08:00:00.000000Z","lastSeen":"2026-11-27T09:00:00.000000Z","web_url":"https://acme.sentry.io/issues/4500000001/"}},"actor":{"type":"user","id":"7","name":"Ann Example"}}'
+  at: 1764234000
+runs:
+  - action: resolved
+    issue:
+      id: "4500000001"
+      shortId: SHOP-WEB-3
+      title: "TypeError: cart is undefined"
+      culprit: checkout.js in pay
+      level: error
+      status: resolved
+      project: { id: "11", name: shop-web, slug: shop-web, platform: javascript }
+      count: "12"
+      userCount: 4
+      firstSeen: "2026-11-26T08:00:00.000000Z"
+      lastSeen: "2026-11-27T09:00:00.000000Z"
+      web_url: "https://acme.sentry.io/issues/4500000001/"
+    actor: { type: user, id: "7", name: Ann Example }
+ids: [0f3c2a8e-1b7d-4c55-9a61-3f1e2d4c5b6a]

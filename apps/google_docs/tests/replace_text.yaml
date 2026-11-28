@@ -1,0 +1,10 @@
+description: Every place a placeholder is, filled in
+action: replace_text
+credential: { access_token: ya29.a0 }
+input: { document: 1AbCdEfGhIjKlMnOpQrStUvWxYz0123456789, find: "[customer]", replace_with: Ann Example, match_case: true }
+exchanges:
+  - sent:
+      url: https://docs.googleapis.com/v1/documents/1AbCdEfGhIjKlMnOpQrStUvWxYz0123456789:batchUpdate
+      body: { requests: [{ replaceAllText: { containsText: { text: "[customer]", matchCase: true }, replaceText: Ann Example } }] }
+    answer: { body: { documentId: 1AbCdEfGhIjKlMnOpQrStUvWxYz0123456789, replies: [{ replaceAllText: { occurrencesChanged: 3 } }] } }
+result: { id: 1AbCdEfGhIjKlMnOpQrStUvWxYz0123456789, replaced: 3 }

@@ -1,0 +1,72 @@
+name: Where you rank on Google for your keywords, every week
+description: >-
+  Every Monday at 7:00 (UTC), run Apify's Google Search scraper for the searches your customers make, find where your
+  site comes in the results for each - and who is first - and add a row for each search to the Rankings sheet of your
+  Google Sheets spreadsheet, so the weeks line up. Your team's Slack channel gets the week's places in a few lines,
+  with the ones that moved; set your site and your searches below (a run spends a little Apify credit, at most the
+  limit set). Needs: apify (an API token), google_sheets, slack.
+category: Marketing
+trigger:
+  schedule: { every: week, on: [monday], at: "07:00", timezone: UTC }
+# What a test runs on: an event as this trigger gives it.
+sample:
+  scheduled_at: '2026-11-30T07:00:00Z'
+steps:
+  - name: results
+    apify:
+      action: run_and_get_items
+      credential: apify
+      actor: apify/google-search-scraper
+      input:
+        # Your searches, one a line.
+        queries: "coffee roaster portland\nbuy fresh coffee beans online\nespresso beans subscription"
+        countryCode: us
+        resultsPerPage: 20
+        maxPagesPerQuery: 1
+      max_total_charge_usd: 2
+    retry: { attempts: 2, wait: 2m }
+  # Your place in each search (or none in the first 20), the first result, and the move since last week.
+  - name: places
+    javascript:
+      state: true
+      code: |
+        const mine = "my-coffee-shop.example";   // your site, without https:// or www.
+        const before = state.places || {};
+        const rows = [];
+        for (const page of steps.results || []) {
+          const term = page.searchQuery && page.searchQuery.term;
+          if (!term) continue;
+          const organic = page.organicResults || [];
+          const hit = organic.find((r) => String(r.url || "").includes(mine));
+          const place = hit ? hit.position : null;
+          const was = before[term] ?? null;
+          const move = place && was ? was - place : null;
+          rows.push({ term, place, was, move, first: organic[0] ? organic[0].url : "" });
+        }
+        state.places = Object.fromEntries(rows.map((r) => [r.term, r.place]));
+        const line = (r) => `${r.term}: ${r.place ? "#" + r.place : "not in the top 20"}` +
+          (r.move ? ` (${r.move > 0 ? "up " + r.move : "down " + -r.move})` : "");
+        return { rows, text: rows.map(line).join("\n") };
+  - where: size(steps.places.rows) > 0
+  - name: each
+    for_each:
+      items: steps.places.rows
+      steps:
+        - name: row
+          google_sheets:
+            action: add_row
+            credential: google_sheets
+            spreadsheet_id: your-spreadsheet-id
+            sheet: Rankings
+            values:
+              - "{{ string(timestamp(value.scheduled_at)).substring(0, 10) }}"
+              - "{{ item.term }}"
+              - "{{ item.place == null ? '' : item.place }}"
+              - "{{ item.first }}"
+          retry: { attempts: 3, wait: 10s }
+  - name: tell
+    slack:
+      credential: slack
+      channel: "#marketing"
+      text: "This week on Google:\n{{ steps.places.text }}"
+    retry: { attempts: 3, wait: 10s }

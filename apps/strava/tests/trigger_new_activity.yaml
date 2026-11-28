@@ -1,0 +1,12 @@
+description: Activities since the last poll, the newest asked for first, run oldest first
+trigger: new_activity
+credential: { access_token: st_test_1 }
+seen: { items: [["99000", ""]] }
+exchanges:
+  - sent: { method: GET, url: https://www.strava.com/api/v3/athlete/activities, query: { per_page: "50" } }
+    answer:
+      body:
+        - { id: 99002, name: Gym, sport_type: WeightTraining }
+        - { id: 99001, name: Morning Run, sport_type: Run }
+        - { id: 99000, name: Evening Ride, sport_type: Ride }
+ids: ["99001", "99002"]

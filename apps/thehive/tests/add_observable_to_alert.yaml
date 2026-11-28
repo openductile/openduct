@@ -1,0 +1,45 @@
+description: An observable added to an alert
+action: add_observable_to_alert
+credential:
+  url: https://thehive.example.com
+  api_key: test-key
+input:
+  alert_id: ~4096
+  data_type: ip
+  data: 192.0.2.44
+exchanges:
+- sent:
+    method: POST
+    url: https://thehive.example.com/api/v1/alert/~4096/observable
+    headers:
+      authorization: Bearer test-key
+    body:
+      dataType: ip
+      data: 192.0.2.44
+  answer:
+    status: 201
+    body:
+    - _id: ~20480
+      _type: Observable
+      _createdAt: 1795161600000
+      dataType: ip
+      data: 192.0.2.44
+      message: null
+      tags: &id001
+      - phishing
+      tlp: 2
+      pap: 2
+      ioc: false
+      sighted: false
+result:
+  _id: ~20480
+  _type: Observable
+  _createdAt: 1795161600000
+  dataType: ip
+  data: 192.0.2.44
+  message: null
+  tags: *id001
+  tlp: 2
+  pap: 2
+  ioc: false
+  sighted: false

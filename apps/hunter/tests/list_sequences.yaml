@@ -1,0 +1,11 @@
+description: The sequences that are started
+action: list_sequences
+credential: { api_key: hunter-test-key }
+input: { started: true }
+exchanges:
+  - sent: { method: GET, url: https://api.hunter.io/v2/sequences, query: { started: "true", limit: "100" } }
+    answer:
+      body:
+        data: { sequences: [{ id: 31, name: Follow up after the fair, recipients_count: 40, editable: false, started: true, archived: false, paused: false, owner: { id: 5, email: sales@example.com } }] }
+        meta: { limit: 100, offset: 0 }
+result: [{ id: 31, name: Follow up after the fair, recipients_count: 40, editable: false, started: true, archived: false, paused: false, owner: { id: 5, email: sales@example.com } }]

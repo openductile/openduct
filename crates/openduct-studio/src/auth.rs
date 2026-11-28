@@ -78,6 +78,18 @@ impl Keys {
         B64.decode(token)
             .is_ok_and(|t| hmac::verify(&self.session, format!("csrf|{session}").as_bytes(), &t).is_ok())
     }
+
+    /// A signature of `text`: a form's page token, which any node can check.
+    // forms-and-resume
+    pub(crate) fn sign(&self, text: &str) -> String {
+        B64.encode(hmac::sign(&self.session, format!("sign|{text}").as_bytes()).as_ref())
+    }
+
+    /// Whether `signature` is [`Keys::sign`]'s of `text`.
+    pub(crate) fn signed(&self, text: &str, signature: &str) -> bool {
+        B64.decode(signature)
+            .is_ok_and(|t| hmac::verify(&self.session, format!("sign|{text}").as_bytes(), &t).is_ok())
+    }
 }
 
 /// The 32-byte key kept as `name` in `dir` (made the first time, readable by this user only), or one for this run

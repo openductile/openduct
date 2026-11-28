@@ -1,0 +1,6 @@
+action: list_states
+credential: { subdomain: acme, token: zm_test_1 }
+exchanges:
+  - sent: { method: GET, url: https://acme.zammad.com/api/v1/ticket_states }
+    answer: { body: [{ id: 1, name: new, state_type_id: 1, active: true }, { id: 4, name: closed, state_type_id: 5, active: true }] }
+result: [{ id: 1, name: new, state_type_id: 1, active: true }, { id: 4, name: closed, state_type_id: 5, active: true }]

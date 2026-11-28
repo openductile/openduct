@@ -1,0 +1,12 @@
+description: A reply in a channel message's thread
+action: reply_in_thread
+sign_in: teams
+credential: { access_token: eyJ0.teams }
+input: { team_id: fbe2bf47-16c8-47cf-b4a5-4b9b187c508b, channel_id: "19:4a95f7d8db4c4e7fae857bcebe0623e6@thread.tacv2", message_id: "1616990032035", text: "Looking into it" }
+exchanges:
+  - sent:
+      method: POST
+      url: "https://graph.microsoft.com/v1.0/teams/fbe2bf47-16c8-47cf-b4a5-4b9b187c508b/channels/19:4a95f7d8db4c4e7fae857bcebe0623e6@thread.tacv2/messages/1616990032035/replies"
+      body: { body: { contentType: text, content: "Looking into it" } }
+    answer: { status: 201, body: { id: "1616990171266", replyToId: "1616990032035", createdDateTime: "2026-11-23T03:56:11.266Z", body: { contentType: text, content: "Looking into it" } } }
+result: { id: "1616990171266", replyToId: "1616990032035", createdDateTime: "2026-11-23T03:56:11.266Z", body: { contentType: text, content: "Looking into it" } }

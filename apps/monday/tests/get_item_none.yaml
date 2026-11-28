@@ -1,0 +1,12 @@
+description: An item that is not there gives nothing
+action: get_item
+credential:
+  token: monday-test-token
+input:
+  item_id: '1'
+exchanges:
+- answer:
+    body:
+      data:
+        items: []
+result: null

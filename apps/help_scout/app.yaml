@@ -1,0 +1,495 @@
+# Copyright 2026 Ductile AI, Inc
+# SPDX-License-Identifier: Apache-2.0
+# Help Scout: written by hand from Help Scout's Mailbox API 2.0 reference, https://developer.helpscout.com/mailbox-api/
+# (read 2026-11-27; Help Scout publishes no API description file).
+app: help_scout
+name: Help Scout
+category: support
+description: >-
+  Conversations and customers in Help Scout's shared inboxes: conversations opened, answered, noted, tagged, assigned
+  and closed; customers found, added and changed.
+docs: https://developer.helpscout.com/mailbox-api/
+hosts: [api.helpscout.net]
+base_url: https://api.helpscout.net
+sign_in:
+  - id: help_scout
+    label: Sign in with Help Scout
+    oauth2:
+      authorize: https://secure.helpscout.net/authentication/authorizeClientApplication
+      token: https://api.helpscout.net/v2/oauth2/token
+      scopes: []
+    headers: { Authorization: "Bearer {{ credential.access_token }}" }
+  - id: help_scout_app
+    label: "An app's id and secret (your own account)"
+    fields:
+      - { name: client_id, label: "The app's ID (Your Profile, My apps)" }
+      - { name: client_secret, label: "The app's secret", secret: true }
+    oauth2: { grant: client_credentials, token: https://api.helpscout.net/v2/oauth2/token }
+    headers: { Authorization: "Bearer {{ credential.access_token }}" }
+# Help Scout says what was wrong in message, and which field in _embedded.errors.
+error: >-
+  has(value._embedded) && has(value._embedded.errors) && size(value._embedded.errors) > 0
+  ? value.message + ': ' + value._embedded.errors[0].path + ' ' + value._embedded.errors[0].message
+  : value.message
+actions:
+  list_conversations:
+    label: List conversations
+    description: Conversations, the newest first unless sorted otherwise; active ones unless a status is given; every page.
+    method: GET
+    path: /v2/conversations
+    inputs:
+      - { name: mailbox, label: "Only those of this inbox (its id; several with commas)" }
+      - { name: status, label: "Status: active (the default), open, pending, closed, spam or all" }
+      - { name: tag, label: "Only those with this tag (several with commas)" }
+      - { name: assigned_to, label: "Only those assigned to this user (their id)" }
+      - { name: modified_since, label: "Only those changed since (such as 2026-11-01T00:00:00Z)" }
+      - { name: query, label: "A search, such as (email:\"ann@example.com\") or (subject:\"refund\")" }
+      - { name: sort_field, label: "Sort by: createdAt (the default), modifiedAt, number, status, subject, waitingSince..." }
+      - { name: sort_order, label: "desc (the default) or asc" }
+    query:
+      mailbox: "{{ input.mailbox }}"
+      status: "{{ input.status }}"
+      tag: "{{ input.tag }}"
+      assigned_to: "{{ input.assigned_to }}"
+      modifiedSince: "{{ input.modified_since }}"
+      query: "{{ input.query }}"
+      sortField: "{{ input.sort_field }}"
+      sortOrder: "{{ input.sort_order }}"
+    items: "has(value._embedded) ? value._embedded.conversations : []"
+    next: "has(value._links.next) ? value._links.next.href : null"
+    output:
+      id: number
+      number: number
+      threads: number
+      type: text
+      folderId: number
+      status: text
+      state: text
+      subject: text
+      preview: text
+      mailboxId: number
+      assignee: record
+      createdBy: record
+      createdAt: text
+      closedAt: text
+      userUpdatedAt: text
+      customerWaitingSince: record
+      source: record
+      tags: list
+      cc: list
+      bcc: list
+      primaryCustomer: record
+      customFields: list
+  get_conversation:
+    label: Look up a conversation
+    description: One conversation, with its threads (each message and note) if asked.
+    method: GET
+    path: "/v2/conversations/{{ input.conversation_id }}"
+    inputs:
+      - { name: conversation_id, label: "The conversation's id", required: true }
+      - { name: with_threads, label: "With its threads", kind: boolean }
+    query: { embed: "{{ input.with_threads == true ? 'threads' : '' }}" }
+    output:
+      id: number
+      number: number
+      threads: number
+      type: text
+      status: text
+      state: text
+      subject: text
+      preview: text
+      mailboxId: number
+      assignee: record
+      createdBy: record
+      createdAt: text
+      closedAt: text
+      userUpdatedAt: text
+      tags: list
+      primaryCustomer: record
+      customFields: list
+      _embedded: record
+  create_conversation:
+    label: Start a conversation
+    description: >-
+      A new conversation in an inbox with its first message: from the customer (as if they wrote in), a reply to them,
+      or a note. A customer not known by their email is added.
+    write: true
+    method: POST
+    path: /v2/conversations
+    inputs:
+      - { name: mailbox_id, label: "The inbox (its id)", required: true, kind: number }
+      - { name: subject, label: Subject, required: true }
+      - { name: customer_email, label: "The customer's email", required: true }
+      - { name: customer_first_name, label: "Their first name (for a new customer)" }
+      - { name: customer_last_name, label: "Their last name (for a new customer)" }
+      - { name: text, label: "The first message", required: true }
+      - { name: thread_type, label: "Who it is from: customer (the default), reply (you, to the customer) or note" }
+      - { name: type, label: "email (the default), phone or chat" }
+      - { name: status, label: "active (the default), pending or closed" }
+      - { name: tags, label: Tags, kind: list }
+      - { name: assign_to, label: "Assign to a user or team (their id)", kind: number }
+      - { name: auto_reply, label: "Send the inbox's auto reply", kind: boolean }
+    send:
+      subject: "{{ input.subject }}"
+      type: "{{ has(input.type) && input.type != null ? input.type : 'email' }}"
+      mailboxId: "{{ input.mailbox_id }}"
+      status: "{{ has(input.status) && input.status != null ? input.status : 'active' }}"
+      customer:
+        email: "{{ input.customer_email }}"
+        firstName: "{{ input.customer_first_name }}"
+        lastName: "{{ input.customer_last_name }}"
+      threads:
+        - type: "{{ has(input.thread_type) && input.thread_type != null ? input.thread_type : 'customer' }}"
+          customer: { email: "{{ input.customer_email }}" }
+          text: "{{ input.text }}"
+      tags: "{{ input.tags }}"
+      assignTo: "{{ input.assign_to }}"
+      autoReply: "{{ input.auto_reply }}"
+    # Help Scout answers with the new conversation's id in a header.
+    result: "{'id': headers['resource-id'], 'thread_ids': value.threadIds, 'web_url': headers['web-location']}"
+    output: { id: text, thread_ids: list, web_url: text }
+  reply_to_conversation:
+    label: Reply to a conversation
+    description: Sends a reply to the customer of a conversation (or keeps it as a draft), and sets its status if asked.
+    write: true
+    method: POST
+    path: "/v2/conversations/{{ input.conversation_id }}/reply"
+    inputs:
+      - { name: conversation_id, label: "The conversation's id", required: true }
+      - { name: customer_id, label: "The customer replied to (their id: the conversation's primaryCustomer.id)", required: true, kind: number }
+      - { name: text, label: The reply, required: true }
+      - { name: status, label: "Its status after: active, pending, closed... (a reply reopens it otherwise)" }
+      - { name: draft, label: "Keep it as a draft", kind: boolean }
+      - { name: cc, label: "Cc (email addresses)", kind: list }
+      - { name: bcc, label: "Bcc (email addresses)", kind: list }
+      - { name: user, label: "Sent as this user (their id); the signed-in one by default", kind: number }
+    send:
+      customer: { id: "{{ input.customer_id }}" }
+      text: "{{ input.text }}"
+      status: "{{ input.status }}"
+      draft: "{{ input.draft }}"
+      cc: "{{ input.cc }}"
+      bcc: "{{ input.bcc }}"
+      user: "{{ input.user }}"
+    result: "{'thread_id': headers['resource-id']}"
+    output: { thread_id: text }
+  add_note:
+    label: Add a note to a conversation
+    description: A note for the team on a conversation; the customer does not see it.
+    write: true
+    method: POST
+    path: "/v2/conversations/{{ input.conversation_id }}/notes"
+    inputs:
+      - { name: conversation_id, label: "The conversation's id", required: true }
+      - { name: text, label: The note, required: true }
+      - { name: status, label: "Its status after, if it should change: active, pending, closed..." }
+      - { name: user, label: "Written as this user (their id); the signed-in one by default", kind: number }
+    send: { text: "{{ input.text }}", status: "{{ input.status }}", user: "{{ input.user }}" }
+    result: "{'thread_id': headers['resource-id']}"
+    output: { thread_id: text }
+  set_conversation_status:
+    label: "Change a conversation's status"
+    description: Sets a conversation active, pending, closed or spam.
+    write: true
+    method: PATCH
+    path: "/v2/conversations/{{ input.conversation_id }}"
+    inputs:
+      - { name: conversation_id, label: "The conversation's id", required: true }
+      - { name: status, label: "active, pending, closed or spam", required: true }
+    send: { op: replace, path: /status, value: "{{ input.status }}" }
+    result: "{'changed': true}"
+    output: { changed: boolean }
+  assign_conversation:
+    label: Assign a conversation
+    description: Gives a conversation to a user or a team.
+    write: true
+    method: PATCH
+    path: "/v2/conversations/{{ input.conversation_id }}"
+    inputs:
+      - { name: conversation_id, label: "The conversation's id", required: true }
+      - { name: assign_to, label: "The user or team (their id)", required: true, kind: number }
+    send: { op: replace, path: /assignTo, value: "{{ input.assign_to }}" }
+    result: "{'changed': true}"
+    output: { changed: boolean }
+  move_conversation:
+    label: Move a conversation to another inbox
+    description: Moves a conversation to another inbox.
+    write: true
+    method: PATCH
+    path: "/v2/conversations/{{ input.conversation_id }}"
+    inputs:
+      - { name: conversation_id, label: "The conversation's id", required: true }
+      - { name: mailbox_id, label: "The inbox (its id)", required: true, kind: number }
+    send: { op: move, path: /mailboxId, value: "{{ input.mailbox_id }}" }
+    result: "{'changed': true}"
+    output: { changed: boolean }
+  set_tags:
+    label: "Set a conversation's tags"
+    description: "Gives a conversation exactly these tags: those not listed are taken off, new ones are made."
+    write: true
+    method: PUT
+    path: "/v2/conversations/{{ input.conversation_id }}/tags"
+    inputs:
+      - { name: conversation_id, label: "The conversation's id", required: true }
+      - { name: tags, label: "All its tags (an empty list takes them all off)", required: true, kind: list }
+    send: { tags: "{{ input.tags }}" }
+    result: "{'changed': true}"
+    output: { changed: boolean }
+  delete_conversation:
+    label: Delete a conversation
+    description: Removes a conversation.
+    write: true
+    method: DELETE
+    path: "/v2/conversations/{{ input.conversation_id }}"
+    inputs:
+      - { name: conversation_id, label: "The conversation's id", required: true }
+    result: "{'deleted': true}"
+    output: { deleted: boolean }
+  list_threads:
+    label: "List a conversation's threads"
+    description: "Each message, reply and note of a conversation, the newest first."
+    method: GET
+    path: "/v2/conversations/{{ input.conversation_id }}/threads"
+    inputs:
+      - { name: conversation_id, label: "The conversation's id", required: true }
+    items: "has(value._embedded) ? value._embedded.threads : []"
+    next: "has(value._links.next) ? value._links.next.href : null"
+    output:
+      id: number
+      type: text
+      status: text
+      state: text
+      body: text
+      source: record
+      customer: record
+      createdBy: record
+      assignedTo: record
+      to: list
+      cc: list
+      bcc: list
+      createdAt: text
+      openedAt: text
+  list_customers:
+    label: List customers
+    description: Customers, the newest first, by name, email, or when added or changed; every page.
+    method: GET
+    path: /v3/customers
+    inputs:
+      - { name: first_name, label: First name }
+      - { name: last_name, label: Last name }
+      - { name: email, label: Email }
+      - { name: created_since, label: "Only those added since (such as 2026-11-01T00:00:00Z)" }
+      - { name: modified_since, label: "Only those changed since (such as 2026-11-01T00:00:00Z)" }
+    query:
+      firstName: "{{ input.first_name }}"
+      lastName: "{{ input.last_name }}"
+      email: "{{ input.email }}"
+      createdSince: "{{ input.created_since }}"
+      modifiedSince: "{{ input.modified_since }}"
+    items: "has(value._embedded) ? value._embedded.customers : []"
+    next: "has(value._links.next) ? value._links.next.href : null"
+    output:
+      id: number
+      firstName: text
+      lastName: text
+      gender: text
+      jobTitle: text
+      location: text
+      organization: text
+      organizationId: number
+      photoUrl: text
+      age: text
+      conversationCount: number
+      createdAt: text
+      updatedAt: text
+      background: text
+      _embedded: record
+  search_customers:
+    label: Search customers
+    description: "Customers a search finds, such as email:(ann@example.com OR bob@example.com) or phone:\"+15555550123\"."
+    method: GET
+    path: /v3/customers/search
+    inputs:
+      - { name: query, label: "The search: field:value clauses joined by AND or OR (firstName, lastName, email, phone, background...)", required: true }
+    query: { query: "{{ input.query }}" }
+    items: "has(value._embedded) ? value._embedded.customers : []"
+    next: "has(value._links.next) ? value._links.next.href : null"
+    output:
+      id: number
+      firstName: text
+      lastName: text
+      gender: text
+      jobTitle: text
+      location: text
+      organization: text
+      organizationId: number
+      photoUrl: text
+      age: text
+      conversationCount: number
+      createdAt: text
+      updatedAt: text
+      background: text
+      _embedded: record
+  get_customer:
+    label: Look up a customer
+    description: "One customer, with their emails, phones, address and properties."
+    method: GET
+    path: "/v2/customers/{{ input.customer_id }}"
+    inputs:
+      - { name: customer_id, label: "The customer's id", required: true }
+    output:
+      id: number
+      firstName: text
+      lastName: text
+      gender: text
+      jobTitle: text
+      location: text
+      organization: text
+      organizationId: number
+      photoUrl: text
+      age: text
+      conversationCount: number
+      createdAt: text
+      updatedAt: text
+      background: text
+      _embedded: record
+  create_customer:
+    label: Add a customer
+    description: A new customer, with an email and phone if given.
+    write: true
+    method: POST
+    path: /v2/customers
+    inputs:
+      - { name: first_name, label: First name }
+      - { name: last_name, label: Last name }
+      - { name: email, label: Email }
+      - { name: phone, label: Phone }
+      - { name: job_title, label: Job title }
+      - { name: location, label: Location }
+      - { name: organization, label: "Company" }
+      - { name: background, label: "Notes about them (at most 200 characters)" }
+    send:
+      firstName: "{{ input.first_name }}"
+      lastName: "{{ input.last_name }}"
+      emails: "{{ [{'type': 'work', 'value': input.email}] }}"
+      phone: "{{ input.phone }}"
+      jobTitle: "{{ input.job_title }}"
+      location: "{{ input.location }}"
+      organization: "{{ input.organization }}"
+      background: "{{ input.background }}"
+    result: "{'id': headers['resource-id']}"
+    output: { id: text }
+  update_customer:
+    label: Change a customer
+    description: Changes the fields given of a customer, and adds an email if given; the rest stay.
+    write: true
+    method: PATCH
+    path: "/v2/customers/{{ input.customer_id }}"
+    inputs:
+      - { name: customer_id, label: "The customer's id", required: true }
+      - { name: first_name, label: First name }
+      - { name: last_name, label: Last name }
+      - { name: job_title, label: Job title }
+      - { name: location, label: Location }
+      - { name: organization, label: Company }
+      - { name: background, label: "Notes about them (at most 200 characters)" }
+      - { name: add_email, label: "An email to add" }
+    # A list of changes, one for each field given.
+    send: >-
+      {{ [
+        has(input.first_name) ? {'op': 'replace', 'path': '/firstName', 'value': input.first_name} : null,
+        has(input.last_name) ? {'op': 'replace', 'path': '/lastName', 'value': input.last_name} : null,
+        has(input.job_title) ? {'op': 'replace', 'path': '/jobTitle', 'value': input.job_title} : null,
+        has(input.location) ? {'op': 'replace', 'path': '/location', 'value': input.location} : null,
+        has(input.organization) ? {'op': 'replace', 'path': '/organization', 'value': input.organization} : null,
+        has(input.background) ? {'op': 'replace', 'path': '/background', 'value': input.background} : null,
+        has(input.add_email) ? {'op': 'add', 'path': '/emails', 'value': {'type': 'work', 'value': input.add_email} } : null
+      ].filter(c, c != null) }}
+    result: "{'changed': true}"
+    output: { changed: boolean }
+  list_mailboxes:
+    label: List inboxes
+    description: "The account's inboxes, with their ids and email addresses."
+    method: GET
+    path: /v2/mailboxes
+    items: "has(value._embedded) ? value._embedded.mailboxes : []"
+    next: "has(value._links.next) ? value._links.next.href : null"
+    output: { id: number, name: text, slug: text, email: text, createdAt: text, updatedAt: text }
+  list_users:
+    label: List users
+    description: "The account's users, or the one with an email, or those of an inbox."
+    method: GET
+    path: /v2/users
+    inputs:
+      - { name: email, label: "Only the user with this email" }
+      - { name: mailbox, label: "Only the users of this inbox (its id)" }
+    query: { email: "{{ input.email }}", mailbox: "{{ input.mailbox }}" }
+    items: "has(value._embedded) ? value._embedded.users : []"
+    next: "has(value._links.next) ? value._links.next.href : null"
+    output: { id: number, firstName: text, lastName: text, email: text, role: text, timezone: text, type: text, jobTitle: text, createdAt: text }
+triggers:
+  new_conversation:
+    label: A new conversation
+    description: Each conversation started, the newest asked for every few minutes.
+    inputs:
+      - { name: mailbox, label: "Only those of this inbox (its id)" }
+    poll:
+      action: list_conversations
+      input: { mailbox: "{{ input.mailbox }}", status: all, sort_field: createdAt, sort_order: desc }
+      newest_first: true
+      id: string(item.id)
+      every: 5m
+  conversation_event:
+    label: A conversation started, answered or changed
+    description: >-
+      Each event of the kinds chosen, as Help Scout sends it, signed. Turning the workflow on adds a webhook to Help
+      Scout, and turning it off deletes it.
+    inputs:
+      - name: events
+        label: >-
+          Which (with commas): convo.created (the default), convo.customer.reply.created, convo.agent.reply.created,
+          convo.note.created, convo.assigned, convo.status, convo.tags, convo.moved, convo.merged, convo.deleted
+      - { name: mailboxes, label: "Only conversations of these inboxes (their ids, with commas)" }
+    webhook:
+      signature: { header: x-helpscout-signature, algorithm: hmac_sha1, encoding: base64 }
+      secret: webhook_secret
+      event: "{'event': headers['x-helpscout-event'], 'conversation': value}"
+      register:
+        - method: POST
+          path: /v2/webhooks
+          send:
+            url: "{{ input.address }}"
+            events: "{{ (input.events == null ? 'convo.created' : input.events).split(',') }}"
+            mailboxIds: "{{ input.mailboxes == null ? null : input.mailboxes.split(',').map(m, int(m)) }}"
+            secret: "{{ input.secret }}"
+            payloadVersion: V3
+            label: "OpenDuct workflow {{ input.workflow }}"
+          # The new webhook's id comes in a header.
+          result: "{'id': headers['resource-id']}"
+      keep: { webhook_secret: input.secret, webhook_id: value.id }
+      unregister:
+        - { method: DELETE, path: "/v2/webhooks/{{ input.registered.webhook_id }}" }
+  customer_event:
+    label: A customer added or changed
+    description: >-
+      Each customer added, changed or deleted, as Help Scout sends it, signed. Turning the workflow on adds a webhook
+      to Help Scout, and turning it off deletes it.
+    inputs:
+      - { name: events, label: "Which (with commas): customer.created (the default), customer.updated, customer.deleted" }
+    webhook:
+      signature: { header: x-helpscout-signature, algorithm: hmac_sha1, encoding: base64 }
+      secret: webhook_secret
+      event: "{'event': headers['x-helpscout-event'], 'customer': value}"
+      register:
+        - method: POST
+          path: /v2/webhooks
+          send:
+            url: "{{ input.address }}"
+            events: "{{ (input.events == null ? 'customer.created' : input.events).split(',') }}"
+            secret: "{{ input.secret }}"
+            payloadVersion: V3
+            label: "OpenDuct workflow {{ input.workflow }}"
+          result: "{'id': headers['resource-id']}"
+      keep: { webhook_secret: input.secret, webhook_id: value.id }
+      unregister:
+        - { method: DELETE, path: "/v2/webhooks/{{ input.registered.webhook_id }}" }

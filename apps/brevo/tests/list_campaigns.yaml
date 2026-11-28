@@ -1,0 +1,7 @@
+action: list_campaigns
+credential: { api_key: xkeysib-test-1 }
+input: { status: draft }
+exchanges:
+  - sent: { method: GET, url: https://api.brevo.com/v3/emailCampaigns, query: { status: draft, limit: "100", excludeHtmlContent: "true" } }
+    answer: { body: { count: 1, campaigns: [{ id: 21, name: December news, subject: What is new in December, status: draft, type: classic, sender: { email: shop@example.com } }] } }
+result: [{ id: 21, name: December news, subject: What is new in December, status: draft, type: classic, scheduledAt: null, sentDate: null }]

@@ -1,0 +1,11 @@
+description: A message taken out of the room, with why
+action: remove_message
+credential: { homeserver: "https://matrix.example.org", token: syt_test_token }
+input: { room_id: "!abc123:example.org", event_id: "$ev1", reason: Posted in the wrong room, transaction_id: run-8a02 }
+exchanges:
+  - sent:
+      method: PUT
+      url: "https://matrix.example.org/_matrix/client/v3/rooms/!abc123:example.org/redact/$ev1/run-8a02"
+      body: { reason: Posted in the wrong room }
+    answer: { status: 200, body: { event_id: "$ev7" } }
+result: { event_id: "$ev7" }

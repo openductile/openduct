@@ -1,0 +1,8 @@
+description: The same, from a NocoDB of your own, at its own address
+action: list_records
+credential: { api_token: test-nocodb-token, base_url: "https://nocodb.example.com" }
+input: { base_id: pexample0001, table_id: mexample0001 }
+exchanges:
+  - sent: { method: GET, url: "https://nocodb.example.com/api/v3/data/pexample0001/mexample0001/records", query: { pageSize: "100" } }
+    answer: { body: { records: [{ id: 1, fields: { Name: Ann Example, Email: ann@example.com, Status: Open } }], next: null } }
+result: [{ id: 1, fields: { Name: Ann Example, Email: ann@example.com, Status: Open } }]

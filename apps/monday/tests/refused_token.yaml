@@ -1,0 +1,16 @@
+description: A token that is wrong
+action: get_item
+credential:
+  token: wrong
+input:
+  item_id: '9876543210'
+exchanges:
+- answer:
+    status: 401
+    body:
+      errors:
+      - message: Not Authenticated
+        extensions:
+          code: UNAUTHORIZED
+          status_code: 401
+error: 'monday.com answered 401: Not Authenticated'

@@ -1,0 +1,6 @@
+action: list_projects
+credential: { api_key: lin_api_test1 }
+exchanges:
+  - sent: { url: https://api.linear.app/graphql }
+    answer: { body: { data: { projects: { nodes: [{ id: pj-1, name: New checkout, status: { name: In Progress, type: started }, progress: 0.4, targetDate: "2026-12-15", url: "https://linear.app/example/project/new-checkout" }], pageInfo: { hasNextPage: false } } } } }
+result: [{ id: pj-1, name: New checkout, status: { name: In Progress, type: started }, progress: 0.4, targetDate: "2026-12-15", url: "https://linear.app/example/project/new-checkout" }]

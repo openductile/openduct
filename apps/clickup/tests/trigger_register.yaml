@@ -1,0 +1,30 @@
+description: Turning the workflow on asks ClickUp to send one list's new tasks to the address, and keeps the secret ClickUp signs with
+trigger: task_event
+register: true
+workflow: wf1
+address: https://studio.example/hooks/h1
+credential: { api_key: pk_1_TEST }
+input: { team_id: "108", list_id: "901" }
+exchanges:
+  - sent:
+      method: POST
+      url: https://api.clickup.com/api/v2/team/108/webhook
+      headers: { authorization: pk_1_TEST }
+      body: { endpoint: "https://studio.example/hooks/h1", events: [taskCreated], list_id: 901 }
+    answer:
+      status: 200
+      body:
+        id: 7fa3ec74-69a8-4530-a251-8a13730bd204
+        webhook:
+          id: 7fa3ec74-69a8-4530-a251-8a13730bd204
+          userid: 183
+          team_id: 108
+          endpoint: "https://studio.example/hooks/h1"
+          events: [taskCreated]
+          task_id: null
+          list_id: 901
+          folder_id: null
+          space_id: null
+          health: { status: active, fail_count: 0 }
+          secret: O94IM25S7PXBPYTMNXLLET230SRP0S89
+kept: { webhook_secret: O94IM25S7PXBPYTMNXLLET230SRP0S89, webhook_id: 7fa3ec74-69a8-4530-a251-8a13730bd204 }

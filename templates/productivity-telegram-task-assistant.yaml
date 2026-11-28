@@ -1,0 +1,73 @@
+name: A to-do list you keep by talking to a Telegram bot
+description: >-
+  Write to your own Telegram bot in plain words - "remind me to call the plumber on Friday", "what is on my list?",
+  "the invoices are done" - and an AI agent keeps your to-do list in the Tasks sheet of your Google Sheets spreadsheet:
+  it adds tasks with their due day, reads the list back, and marks tasks done, remembering the conversation. Telegram
+  is given the workflow's address when you turn it on, and only your own chat is answered (set its id below; the
+  sheet's first row: Task, Due, Status, Added). Needs: telegram (your bot's token), model (an AI credential),
+  google_sheets.
+category: Productivity
+trigger:
+  telegram: { when: message, credential: telegram }
+# What a test runs on: a message as this trigger gives it.
+sample:
+  message_id: 88
+  date: 1795770000
+  chat: { id: 123456789, type: private }
+  from: { id: 123456789, first_name: Mia }
+  text: Remind me to renew the van insurance by Friday
+steps:
+  # Your own chat's id: messages from anyone else are left alone.
+  - where: value.chat.id == 123456789 && value.text != null
+  - name: today
+    datetime: { timezone: Europe/London }
+  - name: assistant
+    agent:
+      credential: model
+      instructions: >-
+        You keep one person's to-do list in a spreadsheet. Rows: Task, Due (as 2026-11-30, or empty), Status (open or
+        done), Added. Row 1 is the header; tasks start on row 2. To add a task, add a row with Status open and today
+        as Added. To list tasks, read the sheet and give the open ones, the soonest due first. To mark one done, read
+        the sheet first to find its row number, then write done in column C of that row only. Answer in one or two
+        short sentences; never change a row you have not read.
+      input: "Today is {{ steps.today.weekday }} {{ steps.today.date }}. {{ value.text }}"
+      tools:
+        - name: add_task
+          description: Adds a row to the Tasks sheet; values are [task, due day or empty, open, today].
+          google_sheets:
+            action: add_row
+            credential: google_sheets
+            spreadsheet_id: your-spreadsheet-id
+            sheet: Tasks
+        - name: read_tasks
+          description: Every row of the Tasks sheet, the header first (row 1), each as [task, due, status, added].
+          google_sheets:
+            action: read_rows
+            credential: google_sheets
+            spreadsheet_id: your-spreadsheet-id
+            range: Tasks!A1:D500
+        - name: mark_done
+          description: Marks one task done, by its row number (2 or more, as read_tasks counts them).
+          parameters:
+            type: object
+            properties:
+              row: { type: integer, minimum: 2, maximum: 500, description: "The task's row number" }
+            required: [row]
+          google_sheets:
+            action: set_rows
+            credential: google_sheets
+            spreadsheet_id: your-spreadsheet-id
+            range: "Tasks!C{{ args.row }}"
+            rows: "{{ [['done']] }}"
+      allow: [add_task, read_tasks, mark_done]
+      memory:
+        key: "{{ value.chat.id }}"
+        window: 10
+        clear: "value.text == '/start'"
+      max_turns: 6
+      max_tool_calls: 6
+  - name: reply
+    telegram:
+      credential: telegram
+      chat_id: "{{ value.chat.id }}"
+      text: "{{ steps.assistant.text }}"

@@ -1,0 +1,17 @@
+description: A wrong code is refused in Vonage's words
+action: check_code
+credential:
+  api_key: abcd1234
+  api_secret: test-secret
+input:
+  request_id: c11236f4-00bf-4b89-84ba-88b25df97315
+  code: '000000'
+exchanges:
+- answer:
+    status: 400
+    body:
+      title: Invalid Code
+      type: https://www.developer.vonage.com/api-errors/verify#invalid-code
+      detail: The code you provided does not match the expected value.
+      instance: bf0ca0bf927b3b52e3cb03217e1a1ddf
+error: 'Vonage answered 400: Invalid Code: The code you provided does not match the expected value.'

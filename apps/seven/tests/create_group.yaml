@@ -1,0 +1,13 @@
+# Made by `openduct app from-openapi`: Create Group.
+description: "Create Group, made from the API description's schemas"
+action: create_group
+credential: { api_key: test-key }
+exchanges:
+  - sent:
+      method: POST
+      url: "https://gateway.seven.io/api/groups"
+      query: {}
+      headers: { x-api-key: test-key }
+      body: {}
+    answer: { status: 200, body: { id: 1, name: example, members_count: 1, has_more: true } }
+result: { id: 1, name: example, members_count: 1, has_more: true }

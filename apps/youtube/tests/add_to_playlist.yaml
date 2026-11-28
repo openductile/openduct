@@ -1,0 +1,11 @@
+action: add_to_playlist
+credential: { access_token: ya29.a0 }
+input: { playlist_id: PL1, video_id: v1 }
+exchanges:
+  - sent:
+      method: POST
+      url: https://www.googleapis.com/youtube/v3/playlistItems
+      query: { part: snippet }
+      body: { snippet: { playlistId: PL1, resourceId: { kind: "youtube#video", videoId: v1 } } }
+    answer: { body: { id: pi2, snippet: { playlistId: PL1, position: 0 } } }
+result: { id: pi2, snippet: { playlistId: PL1, position: 0 } }

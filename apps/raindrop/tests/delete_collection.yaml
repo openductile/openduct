@@ -1,0 +1,10 @@
+description: "A collection removed"
+action: delete_collection
+credential: { token: test-token }
+input: { collection_id: 78 }
+exchanges:
+  - sent:
+      method: DELETE
+      url: https://api.raindrop.io/rest/v1/collection/78
+    answer: { body: { result: true } }
+result: { removed: true }

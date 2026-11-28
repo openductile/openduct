@@ -1,0 +1,7 @@
+action: get_contact
+credential: { api_key: xkeysib-test-1 }
+input: { contact: "42" }
+exchanges:
+  - sent: { method: GET, url: https://api.brevo.com/v3/contacts/42 }
+    answer: { body: { id: 42, email: ann@example.com, attributes: { FIRSTNAME: Ann, LASTNAME: Lee }, listIds: [3], emailBlacklisted: false, smsBlacklisted: false, createdAt: "2026-11-27T09:00:00.000+01:00", modifiedAt: "2026-11-27T09:00:00.000+01:00" } }
+result: { id: 42, email: ann@example.com, attributes: { FIRSTNAME: Ann, LASTNAME: Lee }, listIds: [3], emailBlacklisted: false, smsBlacklisted: false, createdAt: "2026-11-27T09:00:00.000+01:00", modifiedAt: "2026-11-27T09:00:00.000+01:00" }

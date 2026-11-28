@@ -1,0 +1,42 @@
+# Made by `openduct app from-openapi`: Create Tag.
+description: "Create Tag, made from the API description's schemas"
+action: create_tag
+credential: { api_key: test-key }
+input: { name: example }
+exchanges:
+  - sent:
+      method: POST
+      url: "https://a.klaviyo.com/api/tags"
+      query: {}
+      headers: { authorization: test-key, revision: "2026-10-15" }
+      body: { data: { type: tag, attributes: { name: example } } }
+    answer:
+      status: 201
+      body:
+        data:
+          type: tag
+          id: abcd1234-ef56-gh78-ij90-abcdef123456
+          attributes: { name: example }
+          relationships:
+            tag-group: { data: {}, links: {} }
+            lists: { data: [null], links: {} }
+            segments: { data: [null], links: {} }
+            campaigns: { data: [null], links: {} }
+            flows: { data: [null], links: {} }
+          links: { self: "https://example.com/1" }
+        links: { self: "https://example.com/1" }
+        meta: { agent_hints: { next_steps: [example] } }
+result:
+  data:
+    type: tag
+    id: abcd1234-ef56-gh78-ij90-abcdef123456
+    attributes: { name: example }
+    relationships:
+      tag-group: { data: {}, links: {} }
+      lists: { data: [null], links: {} }
+      segments: { data: [null], links: {} }
+      campaigns: { data: [null], links: {} }
+      flows: { data: [null], links: {} }
+    links: { self: "https://example.com/1" }
+  links: { self: "https://example.com/1" }
+  meta: { agent_hints: { next_steps: [example] } }

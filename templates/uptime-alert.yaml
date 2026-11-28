@@ -2,7 +2,7 @@ name: Check a website and alert Slack
 description: >-
   Every five minutes, call an address (three tries); when it does not answer 200, post to your team's Slack channel
   and send the run to CatchErr, so every outage shows in the history.
-category: Monitoring
+category: Engineering
 trigger:
   schedule: { every: 5m }
 # What a test runs on: an event as this trigger gives it.

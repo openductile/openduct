@@ -1,0 +1,6 @@
+action: list_users
+credential: { api_key: lin_api_test1 }
+exchanges:
+  - sent: { url: https://api.linear.app/graphql }
+    answer: { body: { data: { users: { nodes: [{ id: u-1, name: Ann Lee, displayName: ann, email: ann@example.com, active: true, admin: false }], pageInfo: { hasNextPage: false } } } } }
+result: [{ id: u-1, name: Ann Lee, displayName: ann, email: ann@example.com, active: true, admin: false }]

@@ -1,0 +1,16 @@
+description: Someone joining, in Sales, asked for a new password at the first sign-in
+action: create_user
+credential: { access_token: ya29.test }
+input: { primary_email: dan@example.com, given_name: Dan, family_name: Cole, password: "Welcome-2026-x7", change_password_at_next_login: true, org_unit_path: /Sales }
+exchanges:
+  - sent:
+      method: POST
+      url: https://admin.googleapis.com/admin/directory/v1/users
+      body:
+        primaryEmail: dan@example.com
+        name: { givenName: Dan, familyName: Cole }
+        password: "Welcome-2026-x7"
+        changePasswordAtNextLogin: true
+        orgUnitPath: /Sales
+    answer: { body: { id: "100000000000000000004", primaryEmail: dan@example.com, name: { givenName: Dan, familyName: Cole }, orgUnitPath: /Sales, changePasswordAtNextLogin: true } }
+result: { id: "100000000000000000004", primaryEmail: dan@example.com, name: { givenName: Dan, familyName: Cole }, orgUnitPath: /Sales, changePasswordAtNextLogin: true }

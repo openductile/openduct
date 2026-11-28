@@ -1,0 +1,6 @@
+action: currently_playing
+credential: { access_token: BQ-test-token }
+exchanges:
+  - sent: { method: GET, url: https://api.spotify.com/v1/me/player/currently-playing, query: { additional_types: "track,episode" } }
+    answer: { body: { is_playing: true, progress_ms: 64000, currently_playing_type: track, item: { id: 0TestTrack000000000001, name: Example Song, uri: "spotify:track:0TestTrack000000000001", duration_ms: 201000, explicit: false, popularity: 41, artists: [{ id: 0TestArtist00000000001, name: Example Band }], album: { id: 0TestAlbum000000000001, name: Example Album } }, timestamp: 1795770720120 } }
+result: { is_playing: true, progress_ms: 64000, currently_playing_type: track, item: { id: 0TestTrack000000000001, name: Example Song, uri: "spotify:track:0TestTrack000000000001", duration_ms: 201000, explicit: false, popularity: 41, artists: [{ id: 0TestArtist00000000001, name: Example Band }], album: { id: 0TestAlbum000000000001, name: Example Album } }, timestamp: 1795770720120 }

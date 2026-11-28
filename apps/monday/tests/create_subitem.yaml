@@ -1,0 +1,28 @@
+description: A subitem under an item
+action: create_subitem
+credential:
+  token: monday-test-token
+input:
+  item_id: '9876543210'
+  name: Pack the box
+exchanges:
+- sent:
+    body:
+      query: 'mutation ($parent: ID!, $name: String!, $values: JSON, $labels: Boolean) { create_subitem(parent_item_id: $parent,
+        item_name: $name, column_values: $values, create_labels_if_missing: $labels) { id name board { id } } }'
+      variables:
+        parent: '9876543210'
+        name: Pack the box
+  answer:
+    body:
+      data:
+        create_subitem:
+          id: '9876543300'
+          name: Pack the box
+          board:
+            id: '1234567999'
+result:
+  id: '9876543300'
+  name: Pack the box
+  board:
+    id: '1234567999'

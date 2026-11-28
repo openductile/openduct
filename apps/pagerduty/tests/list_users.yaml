@@ -1,0 +1,7 @@
+action: list_users
+credential: { api_key: pd_test_1 }
+input: { query: ann }
+exchanges:
+  - sent: { method: GET, url: https://api.pagerduty.com/users, query: { limit: "100", query: ann } }
+    answer: { body: { offset: 0, limit: 100, more: false, users: [{ id: PUSER01, name: Ann Lee, email: ann@example.com, role: admin }] } }
+result: [{ id: PUSER01, name: Ann Lee, email: ann@example.com, role: admin }]

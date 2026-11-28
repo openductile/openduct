@@ -1,0 +1,127 @@
+# OpenDuct workflows through CI/CD on GitHub Actions: copy this file to .github/workflows/openduct.yml of the
+# repository that keeps your workflow files in workflows/ (as `openduct workflow pull workflows` writes them).
+#
+# - Every pull request: each workflow file checked, those with a sample run (nothing is sent), and - for a pull
+#   request from this repository, which may read its secrets - what a push to test would change.
+# - A merge to main: the folder pushed to the test workspace.
+# - A tag release-*, or a run by hand: the workflows promoted from test to production. Give the `production`
+#   environment required reviewers (Settings > Environments) and nothing reaches production unseen.
+#
+# Set up (repository Settings > Secrets and variables > Actions):
+#   variables OPENDUCT_STUDIO      the studio's address, as https://flows.example.com
+#             OPENDUCT_TEST_WORKSPACE, OPENDUCT_PRODUCTION_WORKSPACE   the two workspaces' names
+#   secrets   OPENDUCT_TEST_TOKEN        an editor's API token of the test workspace (studio Settings > API tokens)
+#             OPENDUCT_PRODUCTION_TOKEN  an editor's API token of the production workspace
+# Mark the two workspaces as test and production in the studio (Settings > Environment); production can then take
+# changes only by push or promotion.
+#
+# The program is the released one, its checksum checked. Instead of the download, a job can run in the released
+# container (`container: ghcr.io/openductile/openduct:<version>`), which has `openduct` on its path.
+
+name: OpenDuct workflows
+
+on:
+  pull_request:
+    paths: ["workflows/**"]
+  push:
+    branches: [main]
+    paths: ["workflows/**"]
+    tags: ["release-*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  # The release your studio runs: one with the CI/CD commands (pull, diff, push, promote: after v0.1.2).
+  OPENDUCT_VERSION: v0.1.3
+  OPENDUCT_TARGET: x86_64-unknown-linux-gnu
+
+jobs:
+  check:
+    name: Check and test the workflows
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Install OpenDuct
+        run: |
+          set -eu
+          base="https://github.com/openductile/openduct/releases/download/$OPENDUCT_VERSION"
+          pack="openduct-$OPENDUCT_VERSION-$OPENDUCT_TARGET.tar.gz"
+          curl -fsSLO "$base/$pack" && curl -fsSLO "$base/$pack.sha256"
+          sha256sum -c "$pack.sha256"
+          tar xzf "$pack"
+          echo "$PWD/openduct-$OPENDUCT_VERSION-$OPENDUCT_TARGET" >> "$GITHUB_PATH"
+      - name: Check every workflow
+        run: |
+          set -eu
+          for f in workflows/*.yaml workflows/*.yml workflows/*.json; do
+            [ -e "$f" ] || continue
+            openduct workflow check "$f"
+          done
+      - name: Run those with a sample (nothing is sent)
+        run: |
+          set -eu
+          for f in workflows/*.yaml workflows/*.yml; do
+            [ -e "$f" ] || continue
+            if grep -q '^sample:' "$f"; then openduct workflow test "$f" > /dev/null; fi
+          done
+      - name: What a push to test would change
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+        env:
+          OPENDUCT_STUDIO: ${{ vars.OPENDUCT_STUDIO }}
+          OPENDUCT_TOKEN: ${{ secrets.OPENDUCT_TEST_TOKEN }}
+        run: openduct workflow diff workflows
+
+  push-to-test:
+    name: Push to test
+    needs: check
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    environment: test
+    concurrency: openduct-test
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Install OpenDuct
+        run: |
+          set -eu
+          base="https://github.com/openductile/openduct/releases/download/$OPENDUCT_VERSION"
+          pack="openduct-$OPENDUCT_VERSION-$OPENDUCT_TARGET.tar.gz"
+          curl -fsSLO "$base/$pack" && curl -fsSLO "$base/$pack.sha256"
+          sha256sum -c "$pack.sha256"
+          tar xzf "$pack"
+          echo "$PWD/openduct-$OPENDUCT_VERSION-$OPENDUCT_TARGET" >> "$GITHUB_PATH"
+      - name: Push the folder
+        env:
+          OPENDUCT_STUDIO: ${{ vars.OPENDUCT_STUDIO }}
+          OPENDUCT_TOKEN: ${{ secrets.OPENDUCT_TEST_TOKEN }}
+        # Exit codes: 2 a file is wrong or the workspace lacks a credential (nothing changed), 4 saved in part.
+        run: openduct workflow push workflows --prune
+
+  promote-to-production:
+    name: Promote to production
+    needs: check
+    if: startsWith(github.ref, 'refs/tags/release-') || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    environment: production
+    concurrency: openduct-production
+    steps:
+      - name: Install OpenDuct
+        run: |
+          set -eu
+          base="https://github.com/openductile/openduct/releases/download/$OPENDUCT_VERSION"
+          pack="openduct-$OPENDUCT_VERSION-$OPENDUCT_TARGET.tar.gz"
+          curl -fsSLO "$base/$pack" && curl -fsSLO "$base/$pack.sha256"
+          sha256sum -c "$pack.sha256"
+          tar xzf "$pack"
+          echo "$PWD/openduct-$OPENDUCT_VERSION-$OPENDUCT_TARGET" >> "$GITHUB_PATH"
+      - name: Promote every workflow of test
+        env:
+          OPENDUCT_STUDIO: ${{ vars.OPENDUCT_STUDIO }}
+          OPENDUCT_TOKEN: ${{ secrets.OPENDUCT_PRODUCTION_TOKEN }}
+          FROM: ${{ vars.OPENDUCT_TEST_WORKSPACE }}
+          TO: ${{ vars.OPENDUCT_PRODUCTION_WORKSPACE }}
+        run: |
+          set -eu
+          openduct workflow promote --all --from "$FROM" --to "$TO" --dry-run
+          openduct workflow promote --all --from "$FROM" --to "$TO"

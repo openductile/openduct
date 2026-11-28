@@ -1,0 +1,11 @@
+description: A user put in a group
+action: add_user_to_group
+credential: { url: "https://cloud.example.com", username: admin, password: app-pass-2 }
+input: { userid: carol, groupid: sales }
+exchanges:
+  - sent:
+      method: POST
+      url: "https://cloud.example.com/ocs/v2.php/cloud/users/carol/groups"
+      body: { groupid: sales }
+    answer: { status: 200, body: { ocs: { meta: { status: ok, statuscode: 200, message: OK }, data: [] } } }
+result: { status: ok, statuscode: 200, message: OK }

@@ -1,0 +1,14 @@
+description: "A notification sent with a client's token, which names the application"
+action: send_message
+sign_in: gotify_client
+credential: { base_url: "https://gotify.example.com/", token: CzyoeNS.D4iJLVb }
+input: { message: Backup finished, app_id: 5, extras: { "client::display": { contentType: text/markdown } } }
+exchanges:
+  - sent:
+      method: POST
+      url: "https://gotify.example.com/message"
+      headers: { x-gotify-key: CzyoeNS.D4iJLVb }
+      body: { message: Backup finished, appid: 5, extras: { "client::display": { contentType: text/markdown } } }
+    answer:
+      body: { id: 26, appid: 5, message: Backup finished, priority: 2, date: "2026-11-27T11:00:00Z", extras: { "client::display": { contentType: text/markdown } } }
+result: { id: 26, appid: 5, message: Backup finished, priority: 2, date: "2026-11-27T11:00:00Z", extras: { "client::display": { contentType: text/markdown } } }

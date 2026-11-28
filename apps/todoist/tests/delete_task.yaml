@@ -1,0 +1,7 @@
+action: delete_task
+credential: { token: todoist-test-token }
+input: { task_id: 6Xtest0000000002 }
+exchanges:
+  - sent: { method: DELETE, url: https://api.todoist.com/api/v1/tasks/6Xtest0000000002 }
+    answer: { status: 204 }
+result: { deleted: true }

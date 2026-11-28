@@ -1,0 +1,358 @@
+# Copyright 2026 Ductile AI, Inc
+# SPDX-License-Identifier: Apache-2.0
+# monday.com: written by hand from monday.com's API reference (https://developer.monday.com/api-reference, API
+# version 2026-10, read 2026-11-27). The API is GraphQL: every action posts a query, with its values as variables.
+app: monday
+name: monday.com
+category: productivity
+description: Items, updates and boards in monday.com.
+docs: "https://developer.monday.com/api-reference"
+hosts: [api.monday.com]
+base_url: "https://api.monday.com"
+sign_in:
+  - id: monday
+    label: "A personal API token"
+    fields: [{ name: token, label: "The API token", secret: true }]
+    headers: { Authorization: "{{ credential.token }}", API-Version: "2026-10" }
+  - id: monday_oauth
+    label: "Sign in with monday.com"
+    oauth2:
+      authorize: "https://auth.monday.com/oauth2/authorize"
+      token: "https://auth.monday.com/oauth_ms/oauth/token"
+      scopes: ["boards:read", "boards:write", "updates:read", "updates:write", "users:read", "me:read"]
+    headers: { Authorization: "{{ credential.access_token }}", API-Version: "2026-10" }
+# monday.com answers most refusals with 200 and an errors list.
+error: "has(value.errors) && size(value.errors) > 0 ? value.errors.map(e, e.message).join('; ') : null"
+default_action: create_item
+actions:
+  create_item:
+    label: "Add an item"
+    description: "A new item (a row) on a board, in a group if given, with values for its columns."
+    write: true
+    method: POST
+    path: /v2
+    inputs:
+      - { name: board_id, label: "The board's id (in its address)", required: true }
+      - { name: name, label: "The item's name", required: true }
+      - { name: group_id, label: "The group it goes in (its id; the top group when empty)" }
+      - name: column_values
+        label: "Its columns' values, by column id, each as text (such as status: Done, date4: 2026-12-01)"
+        kind: record
+      - { name: create_labels, label: "Make status or dropdown labels that are not there yet", kind: boolean }
+    send:
+      query: "mutation ($board: ID!, $group: String, $name: String!, $values: JSON, $labels: Boolean) { create_item(board_id: $board, group_id: $group, item_name: $name, column_values: $values, create_labels_if_missing: $labels) { id name state created_at updated_at url creator_id group { id title } board { id name } column_values { id type text value } } }"
+      variables:
+        board: "{{ input.board_id }}"
+        group: "{{ input.group_id }}"
+        name: "{{ input.name }}"
+        # Its columns as the JSON text monday.com asks for.
+        values: &values >-
+          {{ '{' + input.column_values.map(k, '"' + k + '":"' + string(input.column_values[k]).replace('\\', '\\\\').replace('"', '\\"').replace('\n', '\\n') + '"').join(',') + '}' }}
+        labels: "{{ input.create_labels }}"
+    result: value.data.create_item
+    output: &item
+      id: text
+      name: text
+      state: text
+      created_at: text
+      updated_at: text
+      url: text
+      creator_id: text
+      group: record
+      board: record
+      column_values: list
+  get_item:
+    label: "Look up an item"
+    description: "An item with the text and value of each of its columns, its group and board."
+    method: POST
+    path: /v2
+    inputs: [{ name: item_id, label: "The item's id", required: true }]
+    send:
+      query: "query ($ids: [ID!]) { items(ids: $ids) { id name state created_at updated_at url creator_id group { id title } board { id name } column_values { id type text value } } }"
+      variables: { ids: ["{{ input.item_id }}"] }
+    result: "size(value.data.items) == 0 ? null : value.data.items[0]"
+    output: *item
+  update_item:
+    label: "Change an item's columns"
+    description: "Several columns of an item given new values at once; the others stay as they are."
+    write: true
+    method: POST
+    path: /v2
+    inputs:
+      - { name: board_id, label: "The board's id", required: true }
+      - { name: item_id, label: "The item's id", required: true }
+      - name: column_values
+        label: "The columns' new values, by column id, each as text (such as status: Done)"
+        kind: record
+        required: true
+      - { name: create_labels, label: "Make status or dropdown labels that are not there yet", kind: boolean }
+    send:
+      query: "mutation ($board: ID!, $item: ID, $values: JSON!, $labels: Boolean) { change_multiple_column_values(board_id: $board, item_id: $item, column_values: $values, create_labels_if_missing: $labels) { id } }"
+      variables:
+        board: "{{ input.board_id }}"
+        item: "{{ input.item_id }}"
+        values: *values
+        labels: "{{ input.create_labels }}"
+    result: value.data.change_multiple_column_values
+    output: { id: text }
+  set_column_value:
+    label: "Set one column"
+    description: "One column of an item set to a value given as text: a status's label, a date, a number, words."
+    write: true
+    method: POST
+    path: /v2
+    inputs:
+      - { name: board_id, label: "The board's id", required: true }
+      - { name: item_id, label: "The item's id", required: true }
+      - { name: column_id, label: "The column's id (such as status)", required: true }
+      - { name: value, label: "Its value, as text (empty to clear it)" }
+      - { name: create_labels, label: "Make a status or dropdown label that is not there yet", kind: boolean }
+    send:
+      query: "mutation ($board: ID!, $item: ID, $column: String!, $value: String, $labels: Boolean) { change_simple_column_value(board_id: $board, item_id: $item, column_id: $column, value: $value, create_labels_if_missing: $labels) { id } }"
+      variables:
+        board: "{{ input.board_id }}"
+        item: "{{ input.item_id }}"
+        column: "{{ input.column_id }}"
+        value: "{{ input.value }}"
+        labels: "{{ input.create_labels }}"
+    result: value.data.change_simple_column_value
+    output: { id: text }
+  move_to_group:
+    label: "Move an item to a group"
+    description: "An item, with its subitems, moved to another group of its board."
+    write: true
+    method: POST
+    path: /v2
+    inputs:
+      - { name: item_id, label: "The item's id", required: true }
+      - { name: group_id, label: "The group's id", required: true }
+    send:
+      query: "mutation ($item: ID, $group: String!) { move_item_to_group(item_id: $item, group_id: $group) { id name group { id title } } }"
+      variables: { item: "{{ input.item_id }}", group: "{{ input.group_id }}" }
+    result: value.data.move_item_to_group
+    output: { id: text, name: text, group: record }
+  archive_item:
+    label: "Archive an item"
+    description: "An item and its subitems archived (they can be brought back from the archive)."
+    write: true
+    method: POST
+    path: /v2
+    inputs: [{ name: item_id, label: "The item's id", required: true }]
+    send:
+      query: "mutation ($item: ID!) { archive_item(item_id: $item) { id } }"
+      variables: { item: "{{ input.item_id }}" }
+    result: value.data.archive_item
+    output: { id: text }
+  delete_item:
+    label: "Delete an item"
+    description: "An item and its subitems deleted."
+    write: true
+    method: POST
+    path: /v2
+    inputs: [{ name: item_id, label: "The item's id", required: true }]
+    send:
+      query: "mutation ($item: ID) { delete_item(item_id: $item) { id } }"
+      variables: { item: "{{ input.item_id }}" }
+    result: value.data.delete_item
+    output: { id: text }
+  duplicate_item:
+    label: "Copy an item"
+    description: "A copy of an item on its board, with its updates if asked."
+    write: true
+    method: POST
+    path: /v2
+    inputs:
+      - { name: board_id, label: "The board's id", required: true }
+      - { name: item_id, label: "The item's id", required: true }
+      - { name: with_updates, label: "With its updates", kind: boolean }
+    send:
+      query: "mutation ($board: ID!, $item: ID, $updates: Boolean) { duplicate_item(board_id: $board, item_id: $item, with_updates: $updates) { id name } }"
+      variables: { board: "{{ input.board_id }}", item: "{{ input.item_id }}", updates: "{{ input.with_updates }}" }
+    result: value.data.duplicate_item
+    output: { id: text, name: text }
+  create_subitem:
+    label: "Add a subitem"
+    description: "A new subitem under an item, with values for its columns."
+    write: true
+    method: POST
+    path: /v2
+    inputs:
+      - { name: item_id, label: "The item it goes under (its id)", required: true }
+      - { name: name, label: "The subitem's name", required: true }
+      - name: column_values
+        label: "Its columns' values, by column id, each as text"
+        kind: record
+      - { name: create_labels, label: "Make status or dropdown labels that are not there yet", kind: boolean }
+    send:
+      query: "mutation ($parent: ID!, $name: String!, $values: JSON, $labels: Boolean) { create_subitem(parent_item_id: $parent, item_name: $name, column_values: $values, create_labels_if_missing: $labels) { id name board { id } } }"
+      variables:
+        parent: "{{ input.item_id }}"
+        name: "{{ input.name }}"
+        values: *values
+        labels: "{{ input.create_labels }}"
+    result: value.data.create_subitem
+    output: { id: text, name: text, board: record }
+  add_update:
+    label: "Post an update on an item"
+    description: "An update (a comment) written on an item, as the signed-in person - or a reply to another update."
+    write: true
+    method: POST
+    path: /v2
+    inputs:
+      - { name: item_id, label: "The item's id", required: true }
+      - { name: text, label: "The update (HTML may be used)", required: true }
+      - { name: reply_to, label: "Or a reply to this update (its id)" }
+    send:
+      query: "mutation ($item: ID, $body: String!, $parent: ID) { create_update(item_id: $item, body: $body, parent_id: $parent) { id body text_body created_at creator_id item_id } }"
+      variables: { item: "{{ input.item_id }}", body: "{{ input.text }}", parent: "{{ input.reply_to }}" }
+    result: value.data.create_update
+    output: &update { id: text, body: text, text_body: text, created_at: text, creator_id: text, item_id: text }
+  list_updates:
+    label: "List an item's updates"
+    description: "The updates written on an item, the newest first (up to 100)."
+    method: POST
+    path: /v2
+    inputs: [{ name: item_id, label: "The item's id", required: true }]
+    send:
+      query: "query ($ids: [ID!]) { items(ids: $ids) { updates(limit: 100) { id body text_body created_at creator_id item_id creator { id name } } } }"
+      variables: { ids: ["{{ input.item_id }}"] }
+    items: "size(value.data.items) == 0 ? [] : value.data.items[0].updates"
+    output: { id: text, body: text, text_body: text, created_at: text, creator_id: text, item_id: text, creator: record }
+  list_items:
+    label: "List a board's items"
+    description: "Every item of a board with its columns, page after page."
+    method: POST
+    path: /v2
+    inputs: [{ name: board_id, label: "The board's id", required: true }]
+    send:
+      query: "query ($board: [ID!]) { boards(ids: $board) { items_page(limit: 100) { cursor items { id name state created_at updated_at url creator_id group { id title } board { id name } column_values { id type text value } } } } }"
+      variables: { board: ["{{ input.board_id }}"] }
+    items: &page_items "has(value.data.next_items_page) ? value.data.next_items_page.items : value.data.boards[0].items_page.items"
+    # The next page is asked with the cursor monday.com gave (it lasts 60 minutes).
+    next: &page_next >-
+      (has(value.data.next_items_page) ? value.data.next_items_page.cursor : value.data.boards[0].items_page.cursor) == null ? null :
+      {'query': 'query ($cursor: String!) { next_items_page(limit: 100, cursor: $cursor) { cursor items { id name state created_at updated_at url creator_id group { id title } board { id name } column_values { id type text value } } } }',
+       'variables': {'cursor': has(value.data.next_items_page) ? value.data.next_items_page.cursor : value.data.boards[0].items_page.cursor}}
+    page_in: body
+    output: *item
+  find_items:
+    label: "Find items by a column's value"
+    description: "The items of a board whose column holds one of the values given (a text, status, email, date, number or people column); up to 500."
+    method: POST
+    path: /v2
+    inputs:
+      - { name: board_id, label: "The board's id", required: true }
+      - { name: column_id, label: "The column's id (such as email or status)", required: true }
+      - { name: values, label: "The values to find, separated by commas", required: true }
+    send:
+      query: "query ($board: ID!, $columns: [ItemsPageByColumnValuesQuery!]) { items_page_by_column_values(board_id: $board, columns: $columns, limit: 500) { cursor items { id name state created_at updated_at url creator_id group { id title } board { id name } column_values { id type text value } } } }"
+      variables:
+        board: "{{ input.board_id }}"
+        columns: [{ column_id: "{{ input.column_id }}", column_values: "{{ input.values.split(',').map(v, v.trim()) }}" }]
+    items: value.data.items_page_by_column_values.items
+    output: *item
+  list_boards:
+    label: "List boards"
+    description: "The boards the signed-in person can see, the latest made first, with their ids; up to 100 a page."
+    method: POST
+    path: /v2
+    inputs:
+      - { name: workspace_id, label: "Only those of this workspace (its id)" }
+      - { name: page, label: "Which page of 100 (1 when empty)", kind: number }
+    send:
+      query: "query ($workspaces: [ID], $page: Int) { boards(workspace_ids: $workspaces, limit: 100, page: $page, order_by: created_at) { id name description state board_kind workspace_id url items_count updated_at } }"
+      variables: { workspaces: "{{ [input.workspace_id] }}", page: "{{ input.page }}" }
+    items: value.data.boards
+    output: &board { id: text, name: text, description: text, state: text, board_kind: text, workspace_id: text, url: text, items_count: number, updated_at: text }
+  get_board:
+    label: "Look up a board"
+    description: "A board with its groups and columns, and their ids, which the other actions ask for."
+    method: POST
+    path: /v2
+    inputs: [{ name: board_id, label: "The board's id", required: true }]
+    send:
+      query: "query ($ids: [ID!]) { boards(ids: $ids) { id name description state board_kind workspace_id url items_count updated_at groups { id title color } columns { id title type } } }"
+      variables: { ids: ["{{ input.board_id }}"] }
+    result: "size(value.data.boards) == 0 ? null : value.data.boards[0]"
+    output: { id: text, name: text, description: text, state: text, board_kind: text, workspace_id: text, url: text, items_count: number, updated_at: text, groups: list, columns: list }
+  create_board:
+    label: "Make a board"
+    description: "A new board, public or private, in a workspace if given."
+    write: true
+    method: POST
+    path: /v2
+    inputs:
+      - { name: name, label: "The board's name", required: true }
+      - { name: kind, label: "Who sees it: public, private or share", description: "public when empty" }
+      - { name: workspace_id, label: "The workspace it goes in (its id)" }
+      - { name: description, label: "Its description" }
+    send:
+      query: "mutation ($name: String!, $kind: BoardKind!, $workspace: ID, $description: String) { create_board(board_name: $name, board_kind: $kind, workspace_id: $workspace, description: $description) { id name description state board_kind workspace_id url items_count updated_at } }"
+      variables:
+        name: "{{ input.name }}"
+        kind: "{{ has(input.kind) && input.kind != null ? input.kind : 'public' }}"
+        workspace: "{{ input.workspace_id }}"
+        description: "{{ input.description }}"
+    result: value.data.create_board
+    output: *board
+  create_group:
+    label: "Add a group to a board"
+    description: "A new group of items on a board."
+    write: true
+    method: POST
+    path: /v2
+    inputs:
+      - { name: board_id, label: "The board's id", required: true }
+      - { name: name, label: "The group's name", required: true }
+      - { name: color, label: "Its color, as #rrggbb" }
+    send:
+      query: "mutation ($board: ID!, $name: String!, $color: String) { create_group(board_id: $board, group_name: $name, group_color: $color) { id title color } }"
+      variables: { board: "{{ input.board_id }}", name: "{{ input.name }}", color: "{{ input.color }}" }
+    result: value.data.create_group
+    output: { id: text, title: text, color: text }
+  list_users:
+    label: "List people"
+    description: "The people of the account with their ids and email addresses (for a people column)."
+    method: POST
+    path: /v2
+    inputs:
+      - { name: emails, label: "Only these email addresses, separated by commas" }
+    send:
+      query: "query ($emails: [String]) { users(emails: $emails, limit: 1000) { id name email enabled is_guest } }"
+      variables: { emails: "{{ input.emails.split(',').map(e, e.trim()) }}" }
+    items: value.data.users
+    output: { id: text, name: text, email: text, enabled: boolean, is_guest: boolean }
+triggers:
+  new_item:
+    label: "A new item on a board"
+    description: "Each item added to a board, asked for every few minutes."
+    inputs:
+      - { name: board_id, label: "The board's id", required: true }
+    poll:
+      method: POST
+      path: /v2
+      send:
+        query: "query ($board: [ID!]) { boards(ids: $board) { items_page(limit: 100) { cursor items { id name state created_at updated_at url creator_id group { id title } board { id name } column_values { id type text value } } } } }"
+        variables: { board: ["{{ input.board_id }}"] }
+      items: *page_items
+      next: *page_next
+      page_in: body
+      id: item.id
+      every: 5m
+  item_changed:
+    label: "An item added or changed on a board"
+    description: "Each item of a board that is added or changed (a column, its name, its group), asked for every few minutes."
+    inputs:
+      - { name: board_id, label: "The board's id", required: true }
+    poll:
+      method: POST
+      path: /v2
+      send:
+        query: "query ($board: [ID!]) { boards(ids: $board) { items_page(limit: 100) { cursor items { id name state created_at updated_at url creator_id group { id title } board { id name } column_values { id type text value } } } } }"
+        variables: { board: ["{{ input.board_id }}"] }
+      items: *page_items
+      next: *page_next
+      page_in: body
+      id: item.id
+      version: item.updated_at
+      every: 5m

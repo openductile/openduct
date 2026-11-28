@@ -43,7 +43,7 @@ openduct serve --data-dir /var/lib/openduct        # a durable broker on 127.0.0
   or a click, with steps for data, AI (any model, including one on your own machine), SQL, e-mail, code and HTTP,
   tried on sample input before they run. Each runs on the broker, so an event is never lost and events with the same
   key stay in order ([studio](docs/studio.md)).
-- **Apps.** 26 apps - Stripe, Shopify, QuickBooks, Xero, HubSpot, Google Sheets, Gmail, Microsoft 365, Slack and
+- **Apps.** 36 apps - Stripe, Shopify, QuickBooks, Xero, HubSpot, Google Sheets, Gmail, Microsoft 365, Slack and
   more - each a definition file rather than code, with a kit to build your own ([apps](docs/apps.md)).
 - **Open.** Apache License 2.0, with no usage caps and no licence keys.
 
@@ -79,11 +79,12 @@ it does not yet do everything Kafka does. Today it supports:
 - pipelines: read a topic, change each message with expressions, write another topic, with failed messages set
   aside and several copies sharing the work;
 - the studio: workflows, workspaces and their members, credentials sealed and never shown back, run history,
-  failed runs kept to run again, versions, templates and 26 apps;
+  failed runs kept to run again, versions, templates and 36 apps, 20 of which start workflows (a new email, row,
+  order or payment);
 - JavaScript and Python steps in workflows, built in and run in a sandbox
   ([JavaScript and Python steps](#javascript-and-python-steps)).
 
-**Not yet:** app triggers, AI agents and single sign-on. [docs/capabilities.md](docs/capabilities.md) lists what OpenDuct does
+**Not yet:** single sign-on. [docs/capabilities.md](docs/capabilities.md) lists what OpenDuct does
 and does not do yet, and [docs/protocol.md](docs/protocol.md) exactly what each Kafka API does.
 
 ## Quick start
@@ -234,8 +235,7 @@ And beside it:
 
 - [what OpenDuct does, and does not do yet](docs/capabilities.md);
 - [the schema registry](docs/registry.md): Confluent's REST API, built into the broker;
-- [OpenDuct beside Zapier, Make, n8n, Workato, MuleSoft, Kafka, Confluent, Redpanda, NATS, LangGraph and
-  Temporal](docs/comparison.md);
+- [OpenDuct beside the other workflow, integration and streaming tools](docs/comparison.md);
 - [what the broker is for](docs/use-cases.md): the edge, small machines, moving data, low trust, AI;
 - [test results](docs/regression.md): the broker's suites as last run, and what was measured.
 

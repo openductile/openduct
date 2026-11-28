@@ -1,0 +1,8 @@
+description: An article as HTML
+action: get_article_html
+credential: { contact: ops@example.com }
+input: { title: Solar_System }
+exchanges:
+  - sent: { method: GET, url: https://en.wikipedia.org/w/rest.php/v1/page/Solar_System/with_html }
+    answer: { body: { id: 26903, key: Solar_System, title: Solar System, html: "<p>The <b>Solar System</b> is the gravitationally bound system</p>" } }
+result: { id: 26903, key: Solar_System, title: Solar System, html: "<p>The <b>Solar System</b> is the gravitationally bound system</p>" }

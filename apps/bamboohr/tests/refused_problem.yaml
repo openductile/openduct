@@ -1,0 +1,17 @@
+description: A problem record is read for its detail
+action: list_timesheet_entries
+credential:
+  company_domain: acme
+  api_key: test-key
+input:
+  start: '2024-01-01'
+  end: '2024-01-07'
+exchanges:
+- answer:
+    status: 400
+    body:
+      type: https://documentation.bamboohr.com/docs/errors
+      title: Bad Request
+      status: 400
+      detail: The start date must be within the last 365 days.
+error: 'BambooHR answered 400: The start date must be within the last 365 days.'

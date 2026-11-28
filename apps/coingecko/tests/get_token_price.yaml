@@ -1,0 +1,10 @@
+action: get_token_price
+credential: { api_key: CG-test1 }
+input: { platform: ethereum, contract_addresses: "0x00000000000000000000000000000000000000aa", vs_currencies: usd }
+exchanges:
+  - sent:
+      method: GET
+      url: https://api.coingecko.com/api/v3/simple/token_price/ethereum
+      query: { contract_addresses: "0x00000000000000000000000000000000000000aa", vs_currencies: usd }
+    answer: { body: { "0x00000000000000000000000000000000000000aa": { usd: 1.0002 } } }
+result: { "0x00000000000000000000000000000000000000aa": { usd: 1.0002 } }

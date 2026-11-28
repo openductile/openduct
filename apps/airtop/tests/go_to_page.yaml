@@ -1,0 +1,23 @@
+description: "Go to a page"
+action: go_to_page
+credential: { token: test-token }
+input: { session_id: session_1, window_id: window_1, url: "https://example.com/1" }
+exchanges:
+  - sent:
+      method: POST
+      url: "https://api.airtop.ai/api/v1/sessions/session_1/windows/window_1"
+      query: {}
+      headers: { authorization: "Bearer test-token" }
+      body: { url: "https://example.com/1" }
+    answer:
+      status: 200
+      body:
+        data: { success: true }
+        errors: [{ code: example, details: {}, message: example, reason: example }]
+        meta: { requestId: request_1 }
+        warnings: [{ code: example, details: {}, message: example, reason: example }]
+result:
+  data: { success: true }
+  errors: [{ code: example, details: {}, message: example, reason: example }]
+  meta: { requestId: request_1 }
+  warnings: [{ code: example, details: {}, message: example, reason: example }]

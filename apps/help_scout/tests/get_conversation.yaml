@@ -1,0 +1,48 @@
+description: One conversation with its threads
+action: get_conversation
+credential: {access_token: hs-test-token}
+input: {conversation_id: '3443157477', with_threads: true}
+exchanges:
+- sent:
+    method: GET
+    url: https://api.helpscout.net/v2/conversations/3443157477
+    query: {embed: threads}
+    headers: {authorization: Bearer hs-test-token}
+  answer:
+    status: 200
+    body:
+      id: 3443157477
+      number: 1042
+      threads: 1
+      type: email
+      folderId: 11
+      status: active
+      state: published
+      subject: Where is my order?
+      preview: I ordered last week and
+      mailboxId: 85
+      createdBy: &id001 {id: 29418, type: customer, email: ann@example.com}
+      createdAt: '2026-11-27T10:00:00Z'
+      tags: &id002 []
+      primaryCustomer: &id003 {id: 29418, type: customer, first: Ann, last: Example, email: ann@example.com}
+      _embedded:
+        threads:
+        - {id: 5541, type: customer, body: I ordered last week and nothing came.}
+result:
+  id: 3443157477
+  number: 1042
+  threads: 1
+  type: email
+  folderId: 11
+  status: active
+  state: published
+  subject: Where is my order?
+  preview: I ordered last week and
+  mailboxId: 85
+  createdBy: *id001
+  createdAt: '2026-11-27T10:00:00Z'
+  tags: *id002
+  primaryCustomer: *id003
+  _embedded:
+    threads:
+    - {id: 5541, type: customer, body: I ordered last week and nothing came.}

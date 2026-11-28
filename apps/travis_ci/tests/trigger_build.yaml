@@ -1,0 +1,24 @@
+description: "A build of a branch asked for, the slug's slash sent as %2F"
+action: trigger_build
+credential: { token: test-token }
+input: { repo: shop-example/storefront, branch: main, message: "Release check" }
+exchanges:
+  - sent:
+      method: POST
+      url: "https://api.travis-ci.com/repo/shop-example%2Fstorefront/requests"
+      headers: { authorization: token test-token, travis-api-version: "3" }
+      body: { request: { branch: main, message: "Release check" } }
+    answer:
+      status: 202
+      body:
+        "@type": pending
+        remaining_requests: 49
+        repository: { "@type": repository, id: 891, name: storefront, slug: shop-example/storefront }
+        request: { repository: { id: 891, owner_name: shop-example, name: storefront }, user: { id: 267 }, id: 147, message: "Release check", branch: main, config: {} }
+        resource_type: request
+result:
+  "@type": pending
+  remaining_requests: 49
+  repository: { "@type": repository, id: 891, name: storefront, slug: shop-example/storefront }
+  request: { repository: { id: 891, owner_name: shop-example, name: storefront }, user: { id: 267 }, id: 147, message: "Release check", branch: main, config: {} }
+  resource_type: request

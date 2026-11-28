@@ -1,0 +1,32 @@
+description: A column value with quotes and a new line is written as JSON text monday.com reads
+action: create_item
+credential:
+  token: monday-test-token
+input:
+  board_id: '1234567890'
+  name: Note
+  column_values:
+    text0: 'Say "hi"
+
+      then go'
+  create_labels: true
+exchanges:
+- sent:
+    body:
+      query: 'mutation ($board: ID!, $group: String, $name: String!, $values: JSON, $labels: Boolean) { create_item(board_id:
+        $board, group_id: $group, item_name: $name, column_values: $values, create_labels_if_missing: $labels) { id name state
+        created_at updated_at url creator_id group { id title } board { id name } column_values { id type text value } } }'
+      variables:
+        board: '1234567890'
+        name: Note
+        values: '{"text0":"Say \"hi\"\nthen go"}'
+        labels: true
+  answer:
+    body:
+      data:
+        create_item:
+          id: '9876543299'
+          name: Note
+result:
+  id: '9876543299'
+  name: Note

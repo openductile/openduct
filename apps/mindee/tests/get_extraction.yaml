@@ -1,0 +1,25 @@
+action: get_extraction
+credential: { api_key: md_test_1 }
+input: { inference_id: 6c2f2a8e-0000-4000-8000-0000000000a1 }
+exchanges:
+  - sent: { method: GET, url: https://api-v2.mindee.net/v2/products/extraction/results/6c2f2a8e-0000-4000-8000-0000000000a1 }
+    answer:
+      body:
+        inference:
+          id: 6c2f2a8e-0000-4000-8000-0000000000a1
+          model: { id: 9a1d6f3e-0000-4000-8000-0000000000c1 }
+          file: { name: invoice-1001.pdf, alias: order-1001, page_count: 1, mime_type: application/pdf }
+          result:
+            fields:
+              supplier_name: { value: Example Supplies Ltd, confidence: Certain }
+              invoice_number: { value: INV-1001, confidence: High }
+              total_amount: { value: 120.5, confidence: Certain }
+result:
+  id: 6c2f2a8e-0000-4000-8000-0000000000a1
+  model: { id: 9a1d6f3e-0000-4000-8000-0000000000c1 }
+  file: { name: invoice-1001.pdf, alias: order-1001, page_count: 1, mime_type: application/pdf }
+  result:
+    fields:
+      supplier_name: { value: Example Supplies Ltd, confidence: Certain }
+      invoice_number: { value: INV-1001, confidence: High }
+      total_amount: { value: 120.5, confidence: Certain }

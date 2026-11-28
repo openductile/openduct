@@ -1,0 +1,219 @@
+# Copyright 2026 Ductile AI, Inc
+# SPDX-License-Identifier: Apache-2.0
+# Google Slides: written by hand from Google's Slides API reference and its discovery document
+# (https://slides.googleapis.com/$discovery/rest?version=v1, revision 20261118, read 2026-11-27).
+app: google_slides
+name: Google Slides
+category: files
+description: Presentations in Google Slides, made from a template and filled in, read, and their slides added, copied and moved.
+docs: "https://developers.google.com/workspace/slides/api/reference/rest"
+hosts: [slides.googleapis.com, www.googleapis.com]
+base_url: "https://slides.googleapis.com/v1"
+sign_in:
+  - id: google_slides
+    label: Sign in with Google
+    oauth2:
+      authorize: https://accounts.google.com/o/oauth2/v2/auth
+      token: https://oauth2.googleapis.com/token
+      scopes: [https://www.googleapis.com/auth/presentations, https://www.googleapis.com/auth/drive]
+      extra: { access_type: offline, prompt: consent }
+    headers:
+      Authorization: "Bearer {{ credential.access_token }}"
+error: value.error.message
+default_action: fill_placeholders
+actions:
+  copy_presentation:
+    label: "Copy a presentation"
+    description: "A copy of a presentation - such as a template to fill in - with a new name, in a folder if given (through Google Drive)."
+    write: true
+    method: POST
+    # Copying is Google Drive's: the request goes to Drive's address.
+    by:
+      google_slides:
+        url: "https://www.googleapis.com/drive/v3/files/{{ input.presentation.contains('/d/') ? regex.extract(input.presentation, r'/d/([A-Za-z0-9_-]+)') : input.presentation }}/copy"
+    inputs:
+      - { name: presentation, label: "The presentation: its address or its id", required: true }
+      - { name: name, label: "The copy's name", required: true }
+      - { name: folder_id, label: "The folder it goes in (its id; the original's when empty)" }
+    query: { supportsAllDrives: "true", fields: "id,name" }
+    send: { name: "{{ input.name }}", parents: "{{ [input.folder_id] }}" }
+    result: "{'id': value.id, 'name': value.name, 'url': 'https://docs.google.com/presentation/d/' + value.id + '/edit'}"
+    output: { id: text, name: text, url: text }
+  make_presentation:
+    label: "Make a presentation"
+    description: "A new, blank presentation in My Drive, with its title."
+    write: true
+    method: POST
+    path: /presentations
+    inputs:
+      - { name: title, label: "The presentation's title", required: true }
+    send: { title: "{{ input.title }}" }
+    result: "{'id': value.presentationId, 'title': value.title, 'url': 'https://docs.google.com/presentation/d/' + value.presentationId + '/edit', 'slides': value.slides.map(s, s.objectId)}"
+    output: { id: text, title: text, url: text, slides: list }
+  read_presentation:
+    label: "Read a presentation"
+    description: "Its title and each slide's id and text, in order (pictures, charts and tables are left out)."
+    method: GET
+    path: &doc "/presentations/{{ input.presentation.contains('/d/') ? regex.extract(input.presentation, r'/d/([A-Za-z0-9_-]+)') : input.presentation }}"
+    inputs:
+      - &presentation { name: presentation, label: "The presentation: its address or its id", required: true }
+    result: >-
+      {'id': value.presentationId, 'title': value.title,
+       'slides': has(value.slides) ? value.slides.map(s, {'id': s.objectId,
+         'text': has(s.pageElements) ? s.pageElements.filter(e, has(e.shape) && has(e.shape.text)).map(e,
+           e.shape.text.textElements.filter(t, has(t.textRun)).map(t, t.textRun.content).join('')).join('') : ''}) : []}
+    output: { id: text, title: text, slides: list }
+  get_slide:
+    label: "Read a slide"
+    description: "One slide as Google keeps it: its shapes, pictures, tables and their places."
+    method: GET
+    path: "/presentations/{{ input.presentation.contains('/d/') ? regex.extract(input.presentation, r'/d/([A-Za-z0-9_-]+)') : input.presentation }}/pages/{{ input.slide_id }}"
+    inputs:
+      - *presentation
+      - { name: slide_id, label: "The slide's id", required: true }
+    output: { objectId: text, pageType: text, pageElements: list, slideProperties: record, pageProperties: record }
+  slide_picture:
+    label: "Picture of a slide"
+    description: "An address of a PNG picture of one slide, for an email or a message. It works for 30 minutes, for anyone who has it."
+    method: GET
+    path: "/presentations/{{ input.presentation.contains('/d/') ? regex.extract(input.presentation, r'/d/([A-Za-z0-9_-]+)') : input.presentation }}/pages/{{ input.slide_id }}/thumbnail"
+    inputs:
+      - *presentation
+      - { name: slide_id, label: "The slide's id", required: true }
+      - { name: size, label: "Its size: SMALL (200 px wide), MEDIUM (800), LARGE (1600) or WIDTH2000_PX" }
+    query: { thumbnailProperties.thumbnailSize: "{{ input.size }}", thumbnailProperties.mimeType: PNG }
+    output: { width: number, height: number, contentUrl: text }
+  fill_placeholders:
+    label: "Fill in placeholders"
+    description: "Every placeholder of a presentation replaced with its value - such as {{name}} with Ann on every slide - in one go; gives how many places changed."
+    write: true
+    method: POST
+    path: &batch "/presentations/{{ input.presentation.contains('/d/') ? regex.extract(input.presentation, r'/d/([A-Za-z0-9_-]+)') : input.presentation }}:batchUpdate"
+    inputs:
+      - *presentation
+      - name: values
+        label: "Each placeholder and its value, as a record (such as {{name}}: Ann)"
+        required: true
+        kind: record
+    send:
+      requests: "{{ input.values.map(k, {'replaceAllText': {'containsText': {'text': k, 'matchCase': true}, 'replaceText': string(input.values[k]) } }) }}"
+    # Google leaves a count out when it is 0.
+    result: "{'id': value.presentationId, 'replaced': value.replies.map(r, has(r.replaceAllText) && has(r.replaceAllText.occurrencesChanged) ? r.replaceAllText.occurrencesChanged : 0).sum()}"
+    output: { id: text, replaced: number }
+  replace_text:
+    label: "Replace text"
+    description: "Every place a presentation says one thing, made to say another - on all slides, or only those given."
+    write: true
+    method: POST
+    path: *batch
+    inputs:
+      - *presentation
+      - { name: find, label: "The text to find", required: true }
+      - { name: replace_with, label: "What it becomes (nothing, to remove it)" }
+      - { name: match_case, label: "Only where its capitals are the same", kind: boolean }
+      - { name: slide_ids, label: "Only on these slides: their ids, separated by commas" }
+    send:
+      requests:
+        - replaceAllText:
+            containsText: { text: "{{ input.find }}", matchCase: "{{ input.match_case == true }}" }
+            replaceText: "{{ has(input.replace_with) && input.replace_with != null ? input.replace_with : '' }}"
+            pageObjectIds: "{{ input.slide_ids.split(',').map(s, s.trim()) }}"
+    result: "{'id': value.presentationId, 'replaced': has(value.replies[0].replaceAllText.occurrencesChanged) ? value.replies[0].replaceAllText.occurrencesChanged : 0}"
+    output: { id: text, replaced: number }
+  replace_with_picture:
+    label: "Put a picture in place of a shape"
+    description: "Every shape that says a given text (such as {{logo}}) replaced with a picture from an address, fitted to the shape."
+    write: true
+    method: POST
+    path: *batch
+    inputs:
+      - *presentation
+      - { name: find, label: "The text the shapes say, such as {{logo}}", required: true }
+      - { name: picture_url, label: "The picture's address (public, PNG, JPEG or GIF, under 50 MB)", required: true }
+      - { name: crop, label: "Fill the shape and crop the picture (rather than fit it inside)", kind: boolean }
+    send:
+      requests:
+        - replaceAllShapesWithImage:
+            containsText: { text: "{{ input.find }}", matchCase: true }
+            imageUrl: "{{ input.picture_url }}"
+            imageReplaceMethod: "{{ has(input.crop) && input.crop == true ? 'CENTER_CROP' : 'CENTER_INSIDE' }}"
+    result: "{'id': value.presentationId, 'replaced': has(value.replies[0].replaceAllShapesWithImage.occurrencesChanged) ? value.replies[0].replaceAllShapesWithImage.occurrencesChanged : 0}"
+    output: { id: text, replaced: number }
+  add_slide:
+    label: "Add a slide"
+    description: "A new slide with one of Google's layouts (TITLE_AND_BODY, BLANK, ...), at the end or at a place given."
+    write: true
+    method: POST
+    path: *batch
+    inputs:
+      - *presentation
+      - name: layout
+        label: "Its layout: BLANK, TITLE, TITLE_AND_BODY, TITLE_ONLY, SECTION_HEADER, ONE_COLUMN_TEXT, MAIN_POINT, BIG_NUMBER, ..."
+        description: "TITLE_AND_BODY when empty"
+      - { name: position, label: "Its place, from 0 for the first (the end when empty)", kind: number }
+    send:
+      requests:
+        - createSlide:
+            insertionIndex: "{{ input.position }}"
+            slideLayoutReference: { predefinedLayout: "{{ has(input.layout) && input.layout != null ? input.layout : 'TITLE_AND_BODY' }}" }
+    result: "{'id': value.presentationId, 'slide_id': value.replies[0].createSlide.objectId}"
+    output: { id: text, slide_id: text }
+  duplicate_slide:
+    label: "Copy a slide"
+    description: "A copy of a slide, put right after it."
+    write: true
+    method: POST
+    path: *batch
+    inputs:
+      - *presentation
+      - { name: slide_id, label: "The slide's id", required: true }
+    send:
+      requests: [{ duplicateObject: { objectId: "{{ input.slide_id }}" } }]
+    result: "{'id': value.presentationId, 'slide_id': value.replies[0].duplicateObject.objectId}"
+    output: { id: text, slide_id: text }
+  move_slides:
+    label: "Move slides"
+    description: "Slides moved together to a place, keeping their order."
+    write: true
+    method: POST
+    path: *batch
+    inputs:
+      - *presentation
+      - { name: slide_ids, label: "The slides' ids, separated by commas", required: true }
+      - { name: position, label: "Their new place, from 0 for the first", required: true, kind: number }
+    send:
+      requests:
+        - updateSlidesPosition:
+            slideObjectIds: "{{ input.slide_ids.split(',').map(s, s.trim()) }}"
+            insertionIndex: "{{ input.position }}"
+    result: "{'id': value.presentationId, 'moved': true}"
+    output: { id: text, moved: boolean }
+  delete_slide:
+    label: "Delete a slide"
+    description: "A slide removed (or any other part of a presentation, by its id)."
+    write: true
+    method: POST
+    path: *batch
+    inputs:
+      - *presentation
+      - { name: slide_id, label: "The slide's id", required: true }
+    send:
+      requests: [{ deleteObject: { objectId: "{{ input.slide_id }}" } }]
+    result: "{'id': value.presentationId, 'deleted': true}"
+    output: { id: text, deleted: boolean }
+  add_text:
+    label: "Write into a shape"
+    description: "Text written into a shape or text box of a slide, at the start of what it holds or at a place given."
+    write: true
+    method: POST
+    path: *batch
+    inputs:
+      - *presentation
+      - { name: shape_id, label: "The shape's id (from Read a slide)", required: true }
+      - { name: text, label: "The text (a new line starts a new paragraph)", required: true }
+      - { name: position, label: "Where in the shape's text, from 0 (the start when empty)", kind: number }
+    send:
+      requests:
+        - insertText: { objectId: "{{ input.shape_id }}", text: "{{ input.text }}", insertionIndex: "{{ input.position }}" }
+    result: "{'id': value.presentationId, 'written': true}"
+    output: { id: text, written: boolean }

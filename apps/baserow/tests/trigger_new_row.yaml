@@ -1,0 +1,17 @@
+description: Rows added since the poll before, newest first; listing stops at one seen
+trigger: new_row
+credential: { token: br-test-token }
+input: { table_id: 1203 }
+seen: { items: [["8", ""]] }
+exchanges:
+  - sent:
+      method: GET
+      url: https://api.baserow.io/api/database/rows/table/1203/
+      query: { user_field_names: "true", order_by: "-id", size: "200" }
+    answer:
+      body:
+        count: 3
+        next: null
+        previous: null
+        results: [{ id: 11, Name: Di }, { id: 10, Name: Cy }, { id: 8, Name: Bo Example }]
+runs: [{ id: 10, Name: Cy }, { id: 11, Name: Di }]

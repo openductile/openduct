@@ -1,0 +1,12 @@
+description: A new order Webflow sends, signed
+trigger: new_order
+workflow: wf2
+credential: { token: test-token, "webhook_secret@wf2": whsec_test_5f3a9c }
+input: { site_id: site_1 }
+delivery:
+  headers: { x-webflow-timestamp: "1764237600000", x-webflow-signature: "cbaa0fb8d741ba0e118629ac23f3e17b3e1d68cf825581eb6ee433ae64afa702" }
+  body: '{"triggerType":"ecomm_new_order","payload":{"orderId":"7a1b2c","status":"unfulfilled","customerInfo":{"fullName":"Bo Chen","email":"bo@example.com"},"purchasedItemsCount":2}}'
+  at: 1764237605
+runs:
+  - { orderId: "7a1b2c", status: unfulfilled, customerInfo: { fullName: Bo Chen, email: bo@example.com }, purchasedItemsCount: 2 }
+ids: ["7a1b2c"]

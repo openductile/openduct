@@ -1,0 +1,13 @@
+# Made by `openduct app from-openapi`: Run an automation.
+description: "Run an automation, made from the API description's schemas"
+action: run_automation
+credential: { token: test-token }
+input: { doc_id: doc_1, rule_id: rule_1 }
+exchanges:
+  - sent:
+      method: POST
+      url: "https://docs.superhuman.com/apis/v1/docs/doc_1/hooks/automation/rule_1"
+      query: {}
+      headers: { authorization: "Bearer test-token" }
+    answer: { status: 202, body: { requestId: abc-123-def-456 } }
+result: { requestId: abc-123-def-456 }

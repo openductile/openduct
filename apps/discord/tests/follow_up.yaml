@@ -1,0 +1,12 @@
+description: A follow-up only the person who asked sees (flag 64)
+action: follow_up
+sign_in: discord_bot
+credential: { bot_token: test-bot-token }
+input: { application_id: "1000000000000000001", token: dGVzdC1jb21tYW5kLXRva2Vu, text: "Prices change on Monday", private: true }
+exchanges:
+  - sent:
+      method: POST
+      url: https://discord.com/api/v10/webhooks/1000000000000000001/dGVzdC1jb21tYW5kLXRva2Vu
+      body: { content: "Prices change on Monday", flags: 64 }
+    answer: { body: { id: "950000000000000010", content: "Prices change on Monday", flags: 64 } }
+result: { id: "950000000000000010", content: "Prices change on Monday", flags: 64 }

@@ -1,0 +1,6 @@
+# Made by `openduct app from-openapi`: a refusal.
+description: "Intercom refuses list_content_import_sources: the step fails in its words"
+action: list_content_import_sources
+credential: { token: test-token }
+exchanges: [{ answer: { status: 404, body: { message: "Not found" } } }]
+error: "Intercom answered 404: Not found"

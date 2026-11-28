@@ -1,0 +1,11 @@
+description: Who unsubscribed since a time
+action: list_unsubscribes
+credential: { token: SG.test-key }
+input: { start_time: 1764000000 }
+exchanges:
+  - sent:
+      method: GET
+      url: https://api.sendgrid.com/v3/suppression/unsubscribes
+      query: { start_time: "1764000000", limit: "100" }
+    answer: { body: [{ created: 1764100000, email: ann@example.com }, { created: 1764200000, email: bo@example.com }] }
+result: [{ created: 1764100000, email: ann@example.com }, { created: 1764200000, email: bo@example.com }]

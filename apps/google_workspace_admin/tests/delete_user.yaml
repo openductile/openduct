@@ -1,0 +1,7 @@
+action: delete_user
+credential: { access_token: ya29.test }
+input: { user: bob@example.com }
+exchanges:
+  - sent: { method: DELETE, url: https://admin.googleapis.com/admin/directory/v1/users/bob@example.com }
+    answer: { status: 204 }
+result: { deleted: true }

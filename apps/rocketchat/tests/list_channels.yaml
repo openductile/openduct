@@ -1,0 +1,9 @@
+description: Channels over two pages (the answer says how many there are)
+action: list_channels
+credential: { workspace: acme, user_id: uAbC123, token: rc_test_1 }
+exchanges:
+  - sent: { method: GET, url: https://acme.rocket.chat/api/v1/channels.list, query: { count: "100" } }
+    answer: { body: { channels: [{ _id: GENERAL, name: general, t: c, usersCount: 12 }], count: 1, offset: 0, total: 2, success: true } }
+  - sent: { url: https://acme.rocket.chat/api/v1/channels.list, query: { count: "100", offset: "1" } }
+    answer: { body: { channels: [{ _id: rSales1, name: sales, t: c, usersCount: 4 }], count: 1, offset: 1, total: 2, success: true } }
+result: [{ _id: GENERAL, name: general, t: c, usersCount: 12 }, { _id: rSales1, name: sales, t: c, usersCount: 4 }]

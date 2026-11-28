@@ -1,0 +1,43 @@
+description: "Change a task: what it sends, and an answer shaped as Clockify's API description says"
+action: update_task
+credential: { api_key: test-key }
+input:
+  workspace_id: "64a687e29ae1f428e7ebe303"
+  project_id: "25b687e29ae1f428e7ebe123"
+  task_id: "57a687e29ae1f428e7ebe107"
+  name: Bugfixing
+exchanges:
+  - sent:
+      method: PUT
+      url: "https://api.clockify.me/api/v1/workspaces/64a687e29ae1f428e7ebe303/projects/25b687e29ae1f428e7ebe123/tasks/57a687e29ae1f428e7ebe107"
+      query: {}
+      headers: { x-api-key: test-key }
+      body: { name: Bugfixing }
+    answer:
+      status: 200
+      body:
+        assigneeId: assignee_1
+        assigneeIds: [example]
+        billable: true
+        budgetEstimate: 10000
+        costRate: { amount: 10500, currency: USD }
+        duration: PT1H30M
+        estimate: PT1H30M
+        hourlyRate: { amount: 10500, currency: USD }
+        id: "57a687e29ae1f428e7ebe107"
+        name: Bugfixing
+        projectId: "25b687e29ae1f428e7ebe123"
+        status: DONE
+result:
+  assigneeId: assignee_1
+  assigneeIds: [example]
+  billable: true
+  budgetEstimate: 10000
+  costRate: { amount: 10500, currency: USD }
+  duration: PT1H30M
+  estimate: PT1H30M
+  hourlyRate: { amount: 10500, currency: USD }
+  id: "57a687e29ae1f428e7ebe107"
+  name: Bugfixing
+  projectId: "25b687e29ae1f428e7ebe123"
+  status: DONE

@@ -1,0 +1,8 @@
+description: A task list renamed
+action: rename_task_list
+credential: { access_token: ya29.test }
+input: { list_id: WjFoQ2VqVW1aV3hR, title: Shop jobs 2026 }
+exchanges:
+  - sent: { method: PATCH, url: https://tasks.googleapis.com/tasks/v1/users/@me/lists/WjFoQ2VqVW1aV3hR, body: { title: Shop jobs 2026 } }
+    answer: { body: { kind: tasks#taskList, id: WjFoQ2VqVW1aV3hR, title: Shop jobs 2026, updated: "2026-11-27T10:05:00.000Z" } }
+result: { kind: tasks#taskList, id: WjFoQ2VqVW1aV3hR, title: Shop jobs 2026, updated: "2026-11-27T10:05:00.000Z" }

@@ -1,0 +1,59 @@
+name: Watch when the software you run stops getting updates
+description: >-
+  Every Monday morning, look up each product and version your services run - kept in the stack data table - on
+  endoflife.date's public API, write down when its support ends and how many days are left, and fail the run, so the
+  workspace's alerts tell you, when one is past its end or within 90 days of it. Make the table once, under Tables:
+  stack, with the text columns service, product (as endoflife.date names it: python, postgresql, nodejs) and cycle (as
+  3.12, 16, 22), and the columns eol (text) and days_left (number). No credential is needed.
+category: Engineering
+trigger:
+  schedule: { every: week, on: [monday], at: "07:00", timezone: UTC }
+# What a test runs on: an event as this trigger gives it.
+sample:
+  scheduled_at: '2026-11-30T07:00:00Z'
+steps:
+  - name: stack
+    table: { name: stack, action: get, limit: 500 }
+  - name: each
+    for_each:
+      items: steps.stack
+      steps:
+        - name: release
+          http:
+            url: "https://endoflife.date/api/{{ item.product }}/{{ item.cycle }}.json"
+            timeout: 20s
+            sample: { cycle: "3.9", releaseDate: "2020-10-05", eol: "2025-10-31", latest: "3.9.25" }
+          retry: { attempts: 3, wait: 20s }
+        # endoflife.date says false when no end is set yet, or the day it ends.
+        - name: days
+          javascript: |
+            const eol = steps.release.body && steps.release.body.eol;
+            if (typeof eol !== "string") return { eol: "not set", days_left: null };
+            const today = new Date(value.scheduled_at);
+            const end = new Date(eol + "T00:00:00Z");
+            const days_left = Math.floor((end - today) / 86400000);
+            return { eol, days_left };
+        - name: line
+          set:
+            soon: steps.days.days_left != null && steps.days.days_left <= 90
+            text: >-
+              item.service + ': ' + item.product + ' ' + item.cycle + ' ('
+              + (steps.days.days_left == null ? 'no end set' : steps.days.days_left < 0 ? 'ended ' + steps.days.eol
+              : string(steps.days.days_left) + ' days left') + ')'
+        - name: noted
+          table:
+            name: stack
+            action: update
+            where: { service: "{{ item.service }}", product: "{{ item.product }}", cycle: "{{ item.cycle }}" }
+            set:
+              eol: "{{ steps.days.eol }}"
+              days_left: "{{ steps.days.days_left }}"
+  - name: soon
+    set:
+      list: steps.each.filter(r, r.line.soon).map(r, r.line.text)
+  - name: alert
+    if:
+      when: size(steps.soon.list) > 0
+      then:
+        - stop:
+            error: "Support ends soon or has ended: {{ steps.soon.list.join('; ') }}"

@@ -1,0 +1,7 @@
+action: crop_document
+credential: { api_key: md_test_1 }
+input: { model_id: 6c8dae2f-0000-4000-8000-0000000000c4, url: "https://files.example.com/receipts.jpg" }
+exchanges:
+  - sent: { method: POST, url: https://api-v2.mindee.net/v2/products/crop/enqueue, body: { model_id: 6c8dae2f-0000-4000-8000-0000000000c4, url: "https://files.example.com/receipts.jpg" } }
+    answer: { status: 202, body: { job: { id: 5fbc7061-0000-4000-8000-0000000000b5, status: Processing } } }
+result: { id: 5fbc7061-0000-4000-8000-0000000000b5, status: Processing }

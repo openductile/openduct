@@ -1,0 +1,14 @@
+# Made by `openduct app from-openapi`: Change a page.
+description: "Change a page, made from the API description's schemas"
+action: update_page
+credential: { token: test-token }
+input: { doc_id: doc_1, page_id_or_name: example }
+exchanges:
+  - sent:
+      method: PUT
+      url: "https://docs.superhuman.com/apis/v1/docs/doc_1/pages/example"
+      query: {}
+      headers: { authorization: "Bearer test-token" }
+      body: {}
+    answer: { status: 202, body: { requestId: abc-123-def-456, id: canvas-tuVwxYz } }
+result: { requestId: abc-123-def-456, id: canvas-tuVwxYz }

@@ -1,0 +1,7 @@
+description: A table the instance does not have is refused, with what and why
+action: list_records
+credential: { instance: acme, username: integration.user, password: pw-test-1 }
+input: { table: incidnet }
+exchanges:
+  - answer: { status: 400, body: { error: { message: Invalid table, detail: Table incidnet does not exist }, status: failure } }
+error: "ServiceNow answered 400: Invalid table: Table incidnet does not exist"

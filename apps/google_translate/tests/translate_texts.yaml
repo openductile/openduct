@@ -1,0 +1,12 @@
+description: "Several texts translated at once, in order"
+action: translate_texts
+credential: {"api_key": "AIza-test"}
+input: {"texts": ["Open today", "Closed on Sunday"], "target": "es"}
+exchanges:
+  - sent:
+      method: POST
+      url: "https://translation.googleapis.com/language/translate/v2"
+      query: {"key": "AIza-test"}
+      body: {"q": ["Open today", "Closed on Sunday"], "target": "es", "format": "text"}
+    answer: {"status": 200, "body": {"data": {"translations": [{"translatedText": "Abierto hoy", "detectedSourceLanguage": "en"}, {"translatedText": "Cerrado el domingo", "detectedSourceLanguage": "en"}]}}}
+result: [{"text": "Abierto hoy", "detected_source_language": "en"}, {"text": "Cerrado el domingo", "detected_source_language": "en"}]

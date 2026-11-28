@@ -1,0 +1,37 @@
+description: A number looked up at the basic level, the default
+action: lookup_number
+credential:
+  api_key: abcd1234
+  api_secret: test-secret
+input:
+  number: '14155550100'
+exchanges:
+- sent:
+    method: GET
+    url: https://api.nexmo.com/ni/basic/json
+    query:
+      number: '14155550100'
+    headers:
+      authorization: Basic YWJjZDEyMzQ6dGVzdC1zZWNyZXQ=
+  answer:
+    status: 200
+    body:
+      status: 0
+      status_message: Success
+      request_id: aaaaaaaa-bbbb-cccc-dddd-0123456789ab
+      international_format_number: '14155550100'
+      national_format_number: (415) 555-0100
+      country_code: US
+      country_code_iso3: USA
+      country_name: United States of America
+      country_prefix: '1'
+result:
+  status: 0
+  status_message: Success
+  request_id: aaaaaaaa-bbbb-cccc-dddd-0123456789ab
+  international_format_number: '14155550100'
+  national_format_number: (415) 555-0100
+  country_code: US
+  country_code_iso3: USA
+  country_name: United States of America
+  country_prefix: '1'

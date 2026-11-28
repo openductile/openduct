@@ -1,0 +1,7 @@
+description: Search on a free plan - Asana answers 402
+action: search_tasks
+credential: { token: "2/1200000000000001/1209999999999999:0a1b2c3d4e5f" }
+input: { workspace: "1200000000000099", text: invoice }
+exchanges:
+  - answer: { status: 402, body: { errors: [{ message: "Search is only available to premium users." }] } }
+error: "Asana answered 402: Search is only available to premium users."

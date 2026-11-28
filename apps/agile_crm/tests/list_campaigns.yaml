@@ -1,0 +1,21 @@
+description: The account's campaigns
+action: list_campaigns
+credential: {domain: shopexample, email: dana@shop.example, api_key: agile-test-key}
+exchanges:
+- sent:
+    method: GET
+    url: https://shopexample.agilecrm.com/dev/api/workflows
+    headers: {authorization: Basic ZGFuYUBzaG9wLmV4YW1wbGU6YWdpbGUtdGVzdC1rZXk=, accept: application/json}
+    query: {page_size: '100'}
+  answer:
+    status: 200
+    body:
+    - &id001
+      id: '5727517264576512'
+      name: Welcome series
+      is_disabled: false
+      created_time: 1764237600
+      updated_time: 1764237600
+      unsubscribe: {}
+result:
+- *id001

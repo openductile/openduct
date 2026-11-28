@@ -1,0 +1,11 @@
+description: A word replaced on two slides only, its capitals kept
+action: replace_text
+credential: { access_token: ya29.test }
+input: { presentation: 1CoPyOfTheTemplate0123456789abcdefg, find: DRAFT, replace_with: FINAL, match_case: true, slide_ids: "p, g2" }
+exchanges:
+  - sent:
+      body:
+        requests:
+          - replaceAllText: { containsText: { text: DRAFT, matchCase: true }, replaceText: FINAL, pageObjectIds: [p, g2] }
+    answer: { body: { presentationId: 1CoPyOfTheTemplate0123456789abcdefg, replies: [{ replaceAllText: { occurrencesChanged: 2 } }] } }
+result: { id: 1CoPyOfTheTemplate0123456789abcdefg, replaced: 2 }

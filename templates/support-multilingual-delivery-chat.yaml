@@ -1,0 +1,73 @@
+name: Answer "where is my parcel?" in the customer's own language
+description: >-
+  Your site's chat widget sends each customer message to this workflow's address ({"conversation", "message",
+  "email"}). A model notes the language it is written in; an AI agent then looks the order up in your shop's API (only
+  that customer's), follows the parcel with Shippo's tracking API, and answers in the customer's language - remembering
+  the conversation so far. The answer goes back to the widget. Needs: model (an AI credential), shop (a bearer
+  credential for your shop's API), shippo (a header credential: Authorization and "ShippoToken" with your key).
+category: Support
+trigger:
+  # Left empty here: each workflow made from the template is given a token of its own.
+  webhook: { token: "" }
+# What a test runs on: an event as this trigger gives it.
+sample:
+  conversation: conv-7f3a91
+  email: lucia.romero@example.com
+  message: Hola, pedí unas botas la semana pasada (pedido A-3307) y todavía no han llegado. ¿Dónde están?
+steps:
+  - where: has(value.message) && has(value.conversation) && size(value.message) > 0
+  - name: language
+    ai:
+      credential: model
+      system: Say which language a message is written in. Answer with JSON only.
+      prompt: "{{ value.message }}"
+      schema:
+        type: object
+        properties:
+          language: { type: string, description: "The language's name in English, as Spanish" }
+        required: [language]
+      max_tokens: 50
+  - name: answer
+    agent:
+      credential: model
+      instructions: >-
+        You answer an online shop's customers about their deliveries, kindly and in at most four sentences. Always
+        answer in the customer's language. Look the order up before you say anything about it, and follow its parcel
+        when it has a tracking number; never guess a date. If the order cannot be found, ask for its number.
+      input: "The customer writes in {{ has(steps.language.json.language) ? steps.language.json.language : 'their own language' }}: {{ value.message }}"
+      tools:
+        - name: find_order
+          description: "One of this customer's orders by its number (as A-3307): its status, carrier and tracking number."
+          parameters:
+            type: object
+            properties:
+              order: { type: string, description: "The order's number, as A-3307" }
+            required: [order]
+          http:
+            # Your shop's API. The customer's own e-mail goes with it, so only their orders are found.
+            url: "https://shop.example.com/api/orders/{{ args.order }}"
+            credential: shop
+            query: { email: "{{ value.email }}" }
+        - name: track_parcel
+          description: Where a parcel is, by its carrier (as usps, ups, fedex, dhl_express) and tracking number.
+          parameters:
+            type: object
+            properties:
+              carrier: { type: string, description: "The carrier's code, as usps" }
+              tracking_number: { type: string }
+            required: [carrier, tracking_number]
+          http:
+            url: "https://api.goshippo.com/tracks/{{ args.carrier }}/{{ args.tracking_number }}"
+            credential: shippo
+      allow: [find_order, track_parcel]
+      memory:
+        key: "{{ value.conversation }}"
+        window: 10
+      max_turns: 6
+      max_tool_calls: 5
+  - name: reply
+    respond:
+      status: 200
+      body:
+        conversation: "{{ value.conversation }}"
+        answer: "{{ steps.answer.text }}"

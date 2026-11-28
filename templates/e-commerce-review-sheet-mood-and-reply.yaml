@@ -1,0 +1,47 @@
+name: Read each new product review, and draft the reply
+description: >-
+  When a review is added to your Reviews sheet (by hand, an export or a form), a model reads its mood, sums it up in
+  a line, and drafts a short public reply in your shop's voice - an apology and a next step for an unhappy one, a
+  thank-you for a happy one - written into the same row (columns F to H) for you to check and post. For shops that
+  want every review answered within a day. Needs: google_sheets, model.
+category: E-commerce
+trigger:
+  # The sheet's first row names the columns: date, product, stars, review, author, mood, gist, reply.
+  google_sheets: { when: new_row, credential: google_sheets, spreadsheet_id: your-spreadsheet-id, sheet: Reviews, every: 5m }
+# What a test runs on: a row as this trigger gives it.
+sample:
+  date: "2026-11-26"
+  product: Ceramic pour-over set
+  stars: "2"
+  review: The dripper is lovely but the carafe arrived with a chip on the rim. Packaging was thin for glass.
+  author: J. Moreau
+  row_number: 31
+steps:
+  - where: has(value.review) && value.review.trim() != ''
+  - name: mood
+    sentiment:
+      credential: model
+      text: "{{ value.stars }} stars. {{ value.review }}"
+  - name: words
+    ai:
+      credential: model
+      system: >-
+        You answer product reviews for a small homeware shop: warm, brief, never defensive, signed "- The team".
+        For an unhappy review, say sorry for the specific problem and offer a next step (reply to the order e-mail
+        for a replacement). For a happy one, thank them for something specific. Never promise refunds or dates.
+      prompt: "Product: {{ value.product }}. Stars: {{ value.stars }}. Mood: {{ steps.mood.label }}. Review: {{ value.review }}"
+      schema:
+        type: object
+        properties:
+          gist: { type: string, maxLength: 120, description: the review in one line }
+          reply: { type: string, maxLength: 500 }
+        required: [gist, reply]
+      max_tokens: 300
+  - name: save
+    google_sheets:
+      action: set_rows
+      credential: google_sheets
+      spreadsheet_id: your-spreadsheet-id
+      range: "Reviews!F{{ value.row_number }}:H{{ value.row_number }}"
+      rows: "{{ [[steps.mood.label, steps.words.json.gist, steps.words.json.reply]] }}"
+    retry: { attempts: 3, wait: 10s }

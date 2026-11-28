@@ -1,0 +1,95 @@
+name: Log what you spend by writing to a Telegram bot
+description: >-
+  Write to your Telegram bot the way you would jot it down - "18.40 lunch with a client", "taxi 32 eur" - and a model
+  reads the amount, the currency and a category; the expense goes into your Expenses sheet and the bot confirms it.
+  Write /month for this month's totals by category, worked out by a short script from the sheet. Only messages from
+  your own chat are taken: put its id in the first step. Needs: bot (telegram), model (ai), sheets (google_sheets).
+category: Finance
+trigger:
+  telegram: { when: message, credential: bot }
+# What a test runs on: a message as this trigger gives it.
+sample:
+  message_id: 77
+  date: 1795770000
+  chat: { id: 203398115, type: private }
+  from: { id: 203398115, first_name: Ren }
+  text: 18.40 lunch with a client
+steps:
+  # Your own chat's id (the bot can tell you: it is value.chat.id in a run): nobody else's messages are logged.
+  - where: value.chat.id == 203398115 && value.text != null && value.text != ''
+  - name: totals
+    if:
+      when: value.text.trim().lowerAscii() == '/month'
+      then:
+        - name: rows
+          google_sheets: { action: read_rows, credential: sheets, spreadsheet_id: your-spreadsheet-id, range: "Expenses!A1:E5000" }
+          retry: { attempts: 3, wait: 10s }
+        - name: month
+          javascript: |
+            // This month's rows (column A is the day, as 2026-11-27), added up by currency and category.
+            const month = new Date(value.date * 1000).toISOString().slice(0, 7);
+            const sums = {};
+            for (const [day, amount, currency, category] of (steps.rows || []).slice(1)) {
+              if (!String(day || "").startsWith(month)) continue;
+              const n = Number(String(amount).replace(",", "."));
+              if (!Number.isFinite(n)) continue;
+              const key = `${currency || "?"} ${category || "other"}`;
+              sums[key] = Math.round(((sums[key] || 0) + n) * 100) / 100;
+            }
+            const lines = Object.entries(sums)
+              .sort((a, b) => b[1] - a[1])
+              .map(([k, v]) => `${k.split(" ").slice(1).join(" ")}: ${v.toFixed(2)} ${k.split(" ")[0]}`);
+            return { text: lines.length ? `${month}\n${lines.join("\n")}` : `Nothing logged in ${month} yet.` };
+        - name: send_totals
+          telegram:
+            credential: bot
+            chat_id: "{{ value.chat.id }}"
+            text: "{{ steps.month.text }}"
+        - stop: {}
+  - name: read
+    ai:
+      credential: model
+      system: >-
+        You read a short note about money spent. Give the amount as a number, the currency as a three-letter code
+        (USD unless the note says another), a category, and a few words saying what it was. If the note is not about
+        money spent, say so with is_expense false.
+      prompt: "{{ value.text }}"
+      schema:
+        type: object
+        properties:
+          is_expense: { type: boolean }
+          amount: { type: number, minimum: 0 }
+          currency: { type: string, minLength: 3, maxLength: 3 }
+          category: { type: string, enum: [food, travel, transport, office, software, home, health, fun, other] }
+          note: { type: string }
+        required: [is_expense, amount, currency, category, note]
+      max_tokens: 120
+  - name: not_spending
+    if:
+      when: steps.read.json.is_expense == false
+      then:
+        - name: help
+          telegram:
+            credential: bot
+            chat_id: "{{ value.chat.id }}"
+            text: "Write what you spent, as: 18.40 lunch - or /month for this month's totals."
+        - stop: {}
+  - name: log
+    google_sheets:
+      action: add_row
+      credential: sheets
+      spreadsheet_id: your-spreadsheet-id
+      sheet: Expenses
+      values:
+        - "{{ string(timestamp(value.date)).substring(0, 10) }}"
+        - "{{ steps.read.json.amount }}"
+        - "{{ steps.read.json.currency }}"
+        - "{{ steps.read.json.category }}"
+        - "{{ steps.read.json.note }}"
+    retry: { attempts: 3, wait: 10s }
+  - name: confirm
+    telegram:
+      credential: bot
+      chat_id: "{{ value.chat.id }}"
+      text: "Logged {{ steps.read.json.amount }} {{ steps.read.json.currency }} - {{ steps.read.json.category }}: {{ steps.read.json.note }}"
+    retry: { attempts: 3, wait: 5s }

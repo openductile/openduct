@@ -1,0 +1,8 @@
+description: A four-hour download link
+action: get_temporary_link
+credential: { access_token: sl.test-token }
+input: { path: /Invoices/INV-1042.pdf }
+exchanges:
+  - sent: { url: https://api.dropboxapi.com/2/files/get_temporary_link, body: { path: /Invoices/INV-1042.pdf } }
+    answer: { body: { link: "https://ucabc123.dl.dropboxusercontent.example/cd/0/get/INV-1042.pdf", metadata: { ".tag": file, name: INV-1042.pdf, size: 48211, path_display: /Invoices/INV-1042.pdf } } }
+result: { link: "https://ucabc123.dl.dropboxusercontent.example/cd/0/get/INV-1042.pdf", name: INV-1042.pdf, size: 48211, path_display: /Invoices/INV-1042.pdf }

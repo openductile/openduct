@@ -1,0 +1,9 @@
+description: A value with quotes in it is escaped, so it is read as one value
+action: list_rows
+credential: { project_url: "https://abcdefgh.supabase.co", api_key: sb_secret_test1 }
+input: { table: notes, match: { title: 'Ann "the" Example' } }
+exchanges:
+  - sent:
+      query: { select: "*", and: '(title.eq."Ann \"the\" Example")', limit: "1000" }
+    answer: { body: [] }
+result: []

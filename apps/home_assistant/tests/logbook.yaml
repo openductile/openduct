@@ -1,0 +1,15 @@
+description: What happened to one entity since a start
+action: logbook
+credential: { url: "http://home.example:8123", token: ha-test-token }
+input: { start: "2026-11-26T00:00:00Z", entity_id: alarm_control_panel.home }
+exchanges:
+  - sent:
+      method: GET
+      url: "http://home.example:8123/api/logbook/2026-11-26T00:00:00Z"
+      query: { entity: alarm_control_panel.home }
+    answer:
+      status: 200
+      body:
+        - { context_user_id: null, domain: alarm_control_panel, entity_id: alarm_control_panel.home, message: changed to disarmed, name: Security, when: "2026-11-26T16:44:26+00:00" }
+result:
+  - { context_user_id: null, domain: alarm_control_panel, entity_id: alarm_control_panel.home, message: changed to disarmed, name: Security, when: "2026-11-26T16:44:26+00:00" }

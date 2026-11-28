@@ -8,7 +8,8 @@ import { Fragment, useEffect, useMemo, useState, type ReactNode } from "react";
 import { api, type LogLine, type WorkspaceRun } from "./api";
 import { RunView } from "./Editor";
 
-const STATUSES = ["all", "done", "failed", "skipped"] as const;
+// forms-and-resume: "waiting"
+const STATUSES = ["all", "done", "failed", "skipped", "waiting"] as const;
 
 /** Runs shown on a page. */
 const PAGE = 25;

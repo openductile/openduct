@@ -1,0 +1,9 @@
+description: A value that came empty asks for rows where it is empty, never every row
+action: update_rows
+credential: { project_url: "https://abcdefgh.supabase.co", api_key: sb_secret_test1 }
+input: { table: contacts, match: { id: null }, set: { status: closed } }
+exchanges:
+  - sent:
+      query: { and: "(id.is.null)" }
+    answer: { body: [] }
+result: []

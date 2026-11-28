@@ -1,0 +1,25 @@
+description: A guest invited by email
+action: invite_guest
+sign_in: microsoft_entra_admin
+credential: {access_token: eyJ0-admin}
+input: {email: dana@partner.example, redirect_url: 'https://myapps.microsoft.com', display_name: Dana Example, send_email: true}
+exchanges:
+- sent:
+    method: POST
+    url: https://graph.microsoft.com/v1.0/invitations
+    headers: {authorization: Bearer eyJ0-admin}
+    query: {}
+    body: {invitedUserEmailAddress: dana@partner.example, inviteRedirectUrl: 'https://myapps.microsoft.com', invitedUserDisplayName: Dana
+        Example, sendInvitationMessage: true}
+  answer:
+    status: 201
+    body: &id001
+      id: 9071bfde-35e0-47d2-a582-d244ab1b4af6
+      inviteRedeemUrl: https://login.microsoftonline.com/redeem?rd=https%3a%2f%2finvitations.microsoft.com%2fredeem
+      invitedUserDisplayName: Dana Example
+      invitedUserType: Guest
+      invitedUserEmailAddress: dana@partner.example
+      sendInvitationMessage: true
+      status: PendingAcceptance
+      invitedUser: {id: cbb896f9-8306-49d0-b56b-b8e39cd28825}
+result: *id001

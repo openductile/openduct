@@ -1,0 +1,74 @@
+# Made by `openduct app from-openapi`: List orders.
+description: "List orders, made from the API description's schemas"
+action: list_orders
+credential: { access_token: test-access-token }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://api.keap.com/crm/rest/v2/orders"
+      query: { page_size: "100" }
+      headers: { authorization: "Bearer test-access-token" }
+    answer:
+      status: 200
+      body:
+        orders:
+          - id: 123
+            title: example
+            status: DRAFT
+            total: { amount: 10000, currency_code: USD, formatted_amount: example }
+            contact: { id: id_1, email: "ann@example.com", given_name: example, family_name: example }
+            notes: example
+            terms: example
+            order_type: ONLINE
+            source_type: API
+            creation_time: "2024-05-21T14:30:00Z"
+            modification_time: "2024-05-21T14:30:00Z"
+            order_time: "2024-05-21T14:30:00Z"
+        next_page_token: token_2
+  - sent:
+      method: GET
+      url: "https://api.keap.com/crm/rest/v2/orders"
+      query: { page_size: "100", page_token: token_2 }
+      headers: { authorization: "Bearer test-access-token" }
+    answer:
+      status: 200
+      body:
+        orders:
+          - id: id_2
+            title: example
+            status: DRAFT
+            total: { amount: 10000, currency_code: USD, formatted_amount: example }
+            contact: { id: id_1, email: "ann@example.com", given_name: example, family_name: example }
+            notes: example
+            terms: example
+            order_type: ONLINE
+            source_type: API
+            creation_time: "2024-05-21T14:30:00Z"
+            modification_time: "2024-05-21T14:30:00Z"
+            order_time: "2024-05-21T14:30:00Z"
+        next_page_token: null
+result:
+  - id: 123
+    title: example
+    status: DRAFT
+    total: { amount: 10000, currency_code: USD, formatted_amount: example }
+    contact: { id: id_1, email: "ann@example.com", given_name: example, family_name: example }
+    notes: example
+    terms: example
+    order_type: ONLINE
+    source_type: API
+    creation_time: "2024-05-21T14:30:00Z"
+    modification_time: "2024-05-21T14:30:00Z"
+    order_time: "2024-05-21T14:30:00Z"
+  - id: id_2
+    title: example
+    status: DRAFT
+    total: { amount: 10000, currency_code: USD, formatted_amount: example }
+    contact: { id: id_1, email: "ann@example.com", given_name: example, family_name: example }
+    notes: example
+    terms: example
+    order_type: ONLINE
+    source_type: API
+    creation_time: "2024-05-21T14:30:00Z"
+    modification_time: "2024-05-21T14:30:00Z"
+    order_time: "2024-05-21T14:30:00Z"

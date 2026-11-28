@@ -18,7 +18,11 @@ const LANGUAGE: &str = "cel";
 /// The most pages a list action follows unless it says.
 const PAGES: u32 = 10;
 /// The most pages any list action may follow.
-const MOST_PAGES: u32 = 100;
+pub(super) const MOST_PAGES: u32 = 100;
+/// How long one request of an action may take unless it says, in seconds.
+const WAIT: u64 = 30;
+/// The longest any action's request may take, in seconds (a service that answers only when its work is done).
+const MOST_WAIT: u64 = 300;
 
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -43,6 +47,9 @@ struct AppFile {
     actions: BTreeMap<String, Json>,
     #[serde(default)]
     error: Option<String>,
+    // G3 app triggers
+    #[serde(default)]
+    triggers: BTreeMap<String, Json>,
 }
 
 #[derive(Deserialize)]
@@ -81,6 +88,8 @@ struct FieldFile {
 #[serde(deny_unknown_fields)]
 struct BasicFile {
     username: String,
+    /// Left out for a vendor that takes a key as the user name and no password.
+    #[serde(default)]
     password: String,
 }
 
@@ -119,6 +128,7 @@ struct ActionFile {
     description: String,
     #[serde(default)]
     write: bool,
+    #[serde(default)] // app generator: an action that calls an MCP tool names no method
     method: String,
     #[serde(default)]
     path: String,
@@ -143,9 +153,19 @@ struct ActionFile {
     #[serde(default)]
     page_in: Option<String>,
     #[serde(default)]
+    timeout: Option<u64>,
+    #[serde(default)]
     error: Option<String>,
     #[serde(default)]
     by: BTreeMap<String, Json>,
+    // app generator: what the step's result holds, and the tool of the app's MCP server it calls instead.
+    #[serde(default)]
+    output: Option<serde_json::Map<String, Json>>,
+    #[serde(default)]
+    mcp: Option<String>,
+    /// messaging: requests made after this one, each reading what the one before gave (`input.previous`).
+    #[serde(default)]
+    then: Vec<Json>,
 }
 
 #[derive(Deserialize)]
@@ -197,6 +217,8 @@ pub struct AppDef {
     pub default_action: Option<String>,
     pub actions: Vec<(String, Action)>,
     pub error: Option<Compiled>,
+    /// What starts a workflow from the app: polls and webhooks (see [`super::triggers`]). // G3 app triggers
+    pub triggers: Vec<(String, super::triggers::TriggerDef)>,
     /// Where it was read from, for messages.
     pub source: String,
 }
@@ -274,6 +296,8 @@ pub enum BodyKind {
     Json,
     Form,
     None,
+    /// messaging: the bytes of `send` as they are - text, or a run's file.
+    Raw,
 }
 
 /// Something the app can do: one request (or a list of them, page after page).
@@ -296,9 +320,19 @@ pub struct Action {
     pub max_pages: u32,
     /// Where a next page's values go: the query (most services), or the JSON body (Notion).
     pub page_in_body: bool,
+    /// How long one request may take: 30 seconds, or what the action says (a service that answers when its work is
+    /// done, such as Apify's run-and-wait).
+    pub timeout: std::time::Duration,
     pub error: Option<Compiled>,
     /// What differs for a credential of one sign-in or another.
     pub by: Vec<(String, Override)>,
+    /// What the step's result holds - for a list, each record - field by field, with its kind. // app generator
+    pub output: Vec<(String, String)>,
+    /// The tool of the app's MCP server the action calls, in place of a request. // app generator
+    pub mcp: Option<String>,
+    /// messaging: requests made after this one, in order, each reading the step's inputs and `input.previous` (what
+    /// the request before gave): an upload that takes three (Slack's). The last one's result is the step's.
+    pub then: Vec<Action>,
 }
 
 #[derive(Debug)]
@@ -321,7 +355,7 @@ pub struct Override {
     pub error: Option<Compiled>,
 }
 
-fn named(name: &str) -> bool {
+pub(super) fn named(name: &str) -> bool {
     !name.is_empty()
         && name.len() <= 40
         && name
@@ -346,7 +380,7 @@ fn templates(map: &BTreeMap<String, String>, at: &str) -> Result<Vec<(String, Te
         .collect()
 }
 
-fn tree(source: &Json, at: &str) -> Result<Tree, String> {
+pub(super) fn tree(source: &Json, at: &str) -> Result<Tree, String> {
     Ok(match source {
         Json::String(s) => Tree::Template(template(s, at)?),
         Json::Array(items) => Tree::List(
@@ -455,6 +489,8 @@ impl AppDef {
         if actions.is_empty() {
             return Err(at("actions: what the app can do"));
         }
+        let triggers = super::triggers::read(&file.triggers, &at, &sign_ins, &actions)?; // G3 app triggers
+        super::mcp_action::check_app(&sign_ins, &actions, &at)?; // app generator
         if let Some(d) = &file.default_action
             && !actions.iter().any(|(n, _)| n == d)
         {
@@ -474,6 +510,7 @@ impl AppDef {
             default_action: file.default_action,
             actions,
             error: expression(file.error.as_ref(), &at("error"))?,
+            triggers,
             source: source.to_owned(),
         })
     }
@@ -490,6 +527,16 @@ impl AppDef {
     /// Its sign-in for a credential of `kind`.
     pub fn sign_in(&self, kind: &str) -> Option<&SignIn> {
         self.sign_ins.iter().find(|s| s.id == kind)
+    }
+
+    /// The trigger called `name`, or its only one when there is no name. // G3 app triggers
+    pub fn trigger(&self, name: Option<&str>) -> Option<(&str, &super::triggers::TriggerDef)> {
+        match name {
+            Some(name) => self.triggers.iter().find(|(n, _)| n == name),
+            None if self.triggers.len() == 1 => self.triggers.first(),
+            None => None,
+        }
+        .map(|(n, t)| (n.as_str(), t))
     }
 }
 
@@ -707,19 +754,24 @@ fn sign_in(s: SignInFile, at: &str) -> Result<SignIn, String> {
     })
 }
 
-fn action(a: ActionFile, at: &str, sign_ins: &[String]) -> Result<Action, String> {
-    let method = a.method.to_ascii_uppercase();
-    if !matches!(method.as_str(), "GET" | "POST" | "PUT" | "PATCH" | "DELETE") {
-        return Err(format!("{at}.method: GET, POST, PUT, PATCH or DELETE"));
-    }
-    let body = match a.body.as_deref() {
-        None | Some("json") => BodyKind::Json,
-        Some("form") => BodyKind::Form,
-        Some("none") => BodyKind::None,
-        Some(other) => return Err(format!("{at}.body: json, form or none, not {other:?}")),
-    };
+/// An action's (or a trigger's) inputs as written, checked: their names and kinds, none twice.
+pub(super) fn inputs_of(files: &[Json], at: &str) -> Result<Vec<Input>, String> {
+    let files: Vec<InputFile> = files
+        .iter()
+        .enumerate()
+        .map(|(i, f)| parse(f, &format!("{at}.inputs[{i}]")))
+        .collect::<Result<_, _>>()?;
+    inputs_from(files, at)
+}
+
+/// An action written as JSON (a trigger's own request), read as the app's actions are. // G3 app triggers
+pub(super) fn action_of(json: &Json, at: &str, sign_ins: &[String]) -> Result<Action, String> {
+    action(parse(json, at)?, at, sign_ins)
+}
+
+fn inputs_from(files: Vec<InputFile>, at: &str) -> Result<Vec<Input>, String> {
     let mut inputs: Vec<Input> = Vec::new();
-    for i in a.inputs {
+    for i in files {
         if !named(&i.name) {
             return Err(format!(
                 "{at}.inputs: {:?} is lowercase letters, digits and '_'",
@@ -747,6 +799,28 @@ fn action(a: ActionFile, at: &str, sign_ins: &[String]) -> Result<Action, String
             kind,
         });
     }
+    Ok(inputs)
+}
+
+fn action(a: ActionFile, at: &str, sign_ins: &[String]) -> Result<Action, String> {
+    let method = super::mcp_action::method_of(a.mcp.as_deref(), &a.method, at)?; // app generator
+    if !matches!(method.as_str(), "GET" | "POST" | "PUT" | "PATCH" | "DELETE") {
+        return Err(format!("{at}.method: GET, POST, PUT, PATCH or DELETE"));
+    }
+    let body = match a.body.as_deref() {
+        None | Some("json") => BodyKind::Json,
+        Some("form") => BodyKind::Form,
+        Some("none") => BodyKind::None,
+        Some("raw") => BodyKind::Raw, // messaging
+        Some(other) => return Err(format!("{at}.body: json, form, raw or none, not {other:?}")),
+    };
+    let then = super::follow_ups::read(&a.then, at, &a.label, a.write, sign_ins)?; // messaging
+    if !then.is_empty() && a.items.is_some() {
+        return Err(format!(
+            "{at}.then: a list's pages are not followed by other requests"
+        ));
+    }
+    let inputs = inputs_from(a.inputs, at)?;
     let max_pages = a.max_pages.unwrap_or(PAGES);
     if max_pages == 0 || max_pages > MOST_PAGES {
         return Err(format!("{at}.max_pages: 1 to {MOST_PAGES}"));
@@ -758,6 +832,10 @@ fn action(a: ActionFile, at: &str, sign_ins: &[String]) -> Result<Action, String
     };
     if a.next.is_some() && a.items.is_none() {
         return Err(format!("{at}.next: pages need items, the records of each"));
+    }
+    let timeout = a.timeout.unwrap_or(WAIT);
+    if timeout == 0 || timeout > MOST_WAIT {
+        return Err(format!("{at}.timeout: 1 to {MOST_WAIT} seconds"));
     }
     let mut by = Vec::new();
     for (id, o) in &a.by {
@@ -810,7 +888,11 @@ fn action(a: ActionFile, at: &str, sign_ins: &[String]) -> Result<Action, String
         next: expression(a.next.as_ref(), &format!("{at}.next"))?,
         max_pages,
         page_in_body,
+        timeout: std::time::Duration::from_secs(timeout),
         error: expression(a.error.as_ref(), &format!("{at}.error"))?,
         by,
+        output: super::quality::output_of(a.output.as_ref(), at)?, // app generator
+        mcp: a.mcp,
+        then, // messaging
     })
 }

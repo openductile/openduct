@@ -1,0 +1,31 @@
+description: "The open tasks of a To Do list"
+action: list_tasks
+credential: { access_token: eyJ0 }
+input: { list_id: AAMkShop2, filter: "status ne 'completed'" }
+exchanges:
+  - sent:
+      method: GET
+      url: https://graph.microsoft.com/v1.0/me/todo/lists/AAMkShop2/tasks
+      query: { "$filter": "status ne 'completed'" }
+    answer:
+      body:
+        value:
+          - id: AlMKXwbQ1
+            title: Pack order 1042
+            status: notStarted
+            importance: high
+            isReminderOn: false
+            categories: []
+            body: { content: "", contentType: text }
+            createdDateTime: "2026-11-26T09:03:05.8339192Z"
+            lastModifiedDateTime: "2026-11-26T09:03:06.0827766Z"
+result:
+  - id: AlMKXwbQ1
+    title: Pack order 1042
+    status: notStarted
+    importance: high
+    isReminderOn: false
+    categories: []
+    body: { content: "", contentType: text }
+    createdDateTime: "2026-11-26T09:03:05.8339192Z"
+    lastModifiedDateTime: "2026-11-26T09:03:06.0827766Z"

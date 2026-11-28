@@ -1,0 +1,18 @@
+description: A text post as the signed-in member; the new post's id is in a header
+action: post
+credential: { access_token: AQX_test, person_id: 782bbtaQ }
+input: { text: "We open on Saturdays from December." }
+exchanges:
+  - sent:
+      method: POST
+      url: https://api.linkedin.com/rest/posts
+      headers: { authorization: Bearer AQX_test, linkedin-version: "202611", x-restli-protocol-version: 2.0.0 }
+      body:
+        author: urn:li:person:782bbtaQ
+        commentary: We open on Saturdays from December.
+        visibility: PUBLIC
+        distribution: { feedDistribution: MAIN_FEED, targetEntities: [], thirdPartyDistributionChannels: [] }
+        lifecycleState: PUBLISHED
+        isReshareDisabledByAuthor: false
+    answer: { status: 201, headers: { x-restli-id: "urn:li:share:6844785523593134080" }, body: "" }
+result: { id: "urn:li:share:6844785523593134080" }

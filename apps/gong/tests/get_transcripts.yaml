@@ -1,0 +1,28 @@
+description: One call's transcript
+action: get_transcripts
+credential: {access_key: ann, access_key_secret: test-password, api_url: 'https://us-12345.api.gong.io/'}
+input:
+  call_ids: ['7782342274025937895']
+exchanges:
+- sent:
+    method: POST
+    url: https://us-12345.api.gong.io/v2/calls/transcript
+    headers: {authorization: Basic YW5uOnRlc3QtcGFzc3dvcmQ=}
+    body:
+      filter:
+        callIds: ['7782342274025937895']
+  answer:
+    status: 200
+    body:
+      requestId: 4al018gzaztcr8nbukw
+      records: {totalRecords: 1, currentPageSize: 1, currentPageNumber: 0}
+      callTranscripts:
+      - &id001
+        callId: '7782342274025937895'
+        transcript:
+        - speakerId: '6432345678555530067'
+          topic: Pricing
+          sentences:
+          - {start: 460230, end: 462343, text: 'How much would ten seats cost?'}
+result:
+- *id001

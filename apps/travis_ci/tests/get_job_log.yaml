@@ -1,0 +1,11 @@
+description: "What a job printed"
+action: get_job_log
+credential: { token: test-token }
+input: { job_id: 86601347 }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://api.travis-ci.com/job/86601347/log"
+    answer:
+      body: { "@type": log, id: 52000001, content: "$ make test\nok - 42 tests\n", log_parts: [{ content: "$ make test\nok - 42 tests\n", final: true, number: 0 }] }
+result: { "@type": log, id: 52000001, content: "$ make test\nok - 42 tests\n", log_parts: [{ content: "$ make test\nok - 42 tests\n", final: true, number: 0 }] }

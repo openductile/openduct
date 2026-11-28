@@ -1,0 +1,61 @@
+description: "Add a time entry (or start a timer): what it sends, and an answer shaped as Clockify's API description says"
+action: create_time_entry
+credential: { api_key: test-key }
+input: { workspace_id: "64a687e29ae1f428e7ebe303" }
+exchanges:
+  - sent:
+      method: POST
+      url: "https://api.clockify.me/api/v1/workspaces/64a687e29ae1f428e7ebe303/time-entries"
+      query: {}
+      headers: { x-api-key: test-key }
+      body: {}
+    answer:
+      status: 201
+      body:
+        billable: true
+        customFieldValues:
+          - customFieldId: "5e4117fe8c625f38930d57b7"
+            name: TIN
+            timeEntryId: "64c777ddd3fcab07cfbb210c"
+            type: WORKSPACE
+            value: "20231211-12345"
+        description: example
+        id: "64c777ddd3fcab07cfbb210c"
+        isLocked: true
+        kioskId: "94c777ddd3fcab07cfbb210d"
+        projectId: "25b687e29ae1f428e7ebe123"
+        tagIds: [example]
+        taskId: "54m377ddd3fcab07cfbb432w"
+        timeInterval:
+          duration: "8000"
+          end: "2021-01-01T00:00:00Z"
+          start: "2020-01-01T00:00:00Z"
+          timeZone: example
+          zonedEnd: "2026-01-15T09:30:00Z"
+          zonedStart: "2026-01-15T09:30:00Z"
+        type: REGULAR
+        userId: "5a0ab5acb07987125438b60f"
+result:
+  billable: true
+  customFieldValues:
+    - customFieldId: "5e4117fe8c625f38930d57b7"
+      name: TIN
+      timeEntryId: "64c777ddd3fcab07cfbb210c"
+      type: WORKSPACE
+      value: "20231211-12345"
+  description: example
+  id: "64c777ddd3fcab07cfbb210c"
+  isLocked: true
+  kioskId: "94c777ddd3fcab07cfbb210d"
+  projectId: "25b687e29ae1f428e7ebe123"
+  tagIds: [example]
+  taskId: "54m377ddd3fcab07cfbb432w"
+  timeInterval:
+    duration: "8000"
+    end: "2021-01-01T00:00:00Z"
+    start: "2020-01-01T00:00:00Z"
+    timeZone: example
+    zonedEnd: "2026-01-15T09:30:00Z"
+    zonedStart: "2026-01-15T09:30:00Z"
+  type: REGULAR
+  userId: "5a0ab5acb07987125438b60f"

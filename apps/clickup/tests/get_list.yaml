@@ -1,0 +1,38 @@
+description: "Look up a list"
+action: get_list
+credential: { api_key: test-key }
+input: { list_id: 124 }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://api.clickup.com/api/v2/list/124"
+      query: {}
+      headers: { authorization: test-key }
+    answer:
+      status: 200
+      body:
+        id: id_1
+        name: example
+        orderindex: 1
+        content: example
+        status: { status: example, color: example, hide_label: true }
+        priority: { priority: example, color: example }
+        assignee: example
+        task_count: example
+        due_date: example
+        due_date_time: true
+        start_date: example
+        start_date_time: example
+result:
+  id: id_1
+  name: example
+  orderindex: 1
+  content: example
+  status: { status: example, color: example, hide_label: true }
+  priority: { priority: example, color: example }
+  assignee: example
+  task_count: example
+  due_date: example
+  due_date_time: true
+  start_date: example
+  start_date_time: example

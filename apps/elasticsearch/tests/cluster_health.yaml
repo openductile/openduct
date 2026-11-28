@@ -1,0 +1,14 @@
+description: The cluster's health, signed in with a user name and password
+action: cluster_health
+sign_in: elasticsearch_user
+credential: {url: 'https://search.example.com:9200', username: workflows, password: test-password}
+exchanges:
+- sent:
+    method: GET
+    url: https://search.example.com:9200/_cluster/health
+    headers: {authorization: Basic d29ya2Zsb3dzOnRlc3QtcGFzc3dvcmQ=}
+  answer:
+    status: 200
+    body: &id001 {cluster_name: shop-search, status: green, timed_out: false, number_of_nodes: 3, number_of_data_nodes: 3,
+      active_primary_shards: 12, active_shards: 24, relocating_shards: 0, initializing_shards: 0, unassigned_shards: 0, active_shards_percent_as_number: 100.0}
+result: *id001

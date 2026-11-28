@@ -1,0 +1,110 @@
+# Copyright 2026 Ductile AI, Inc
+# SPDX-License-Identifier: Apache-2.0
+app: wordpress
+name: WordPress
+category: content
+description: Posts and pages of a WordPress site, written, changed and found.
+docs: https://developer.wordpress.org/rest-api/reference/
+# The site's own address: WordPress runs on your own (or your host's) server.
+base_url_field: site_url
+sign_in:
+  - id: wordpress
+    label: A user name and an application password
+    fields:
+      - { name: site_url, label: "The site's address, such as https://blog.example.com" }
+      - { name: username, label: "The user name of the person posting" }
+      - { name: application_password, label: "An application password (Users, Profile, Application Passwords)", secret: true }
+    basic: { username: "{{ credential.username }}", password: "{{ credential.application_password }}" }
+error: "status >= 400 ? value.message : null"
+default_action: add_post
+actions:
+  add_post:
+    label: Write a post
+    description: A new post, published at once or kept as a draft. Its content may be HTML.
+    write: true
+    method: POST
+    path: /wp-json/wp/v2/posts
+    inputs:
+      - { name: title, label: Title, required: true }
+      - { name: content, label: "What it says (text or HTML)", required: true }
+      - { name: status, label: "publish, draft (the default), pending, private, or future (with a date)" }
+      - { name: excerpt, label: A short summary }
+      - { name: slug, label: "Its address on the site (from the title when empty)" }
+      - { name: date, label: "When it is published, in the site's time: 2026-12-01T09:00:00" }
+      - { name: categories, label: "Its categories: a list of their ids", kind: list }
+      - { name: tags, label: "Its tags: a list of their ids", kind: list }
+      - { name: featured_media, label: "Its picture: the id of an image in the media library", kind: number }
+    send:
+      title: "{{ input.title }}"
+      content: "{{ input.content }}"
+      status: "{{ has(input.status) && input.status != null ? input.status : 'draft' }}"
+      excerpt: "{{ input.excerpt }}"
+      slug: "{{ input.slug }}"
+      date: "{{ input.date }}"
+      categories: "{{ input.categories }}"
+      tags: "{{ input.tags }}"
+      featured_media: "{{ input.featured_media }}"
+  update_post:
+    label: Change a post
+    description: Only what is given changes.
+    write: true
+    method: POST
+    path: "/wp-json/wp/v2/posts/{{ input.post_id }}"
+    inputs:
+      - { name: post_id, label: "The post's id", required: true }
+      - { name: title, label: Title }
+      - { name: content, label: "What it says (text or HTML)" }
+      - { name: status, label: "publish, draft, pending or private" }
+      - { name: excerpt, label: A short summary }
+      - { name: categories, label: "Its categories: a list of their ids", kind: list }
+      - { name: tags, label: "Its tags: a list of their ids", kind: list }
+    send:
+      title: "{{ input.title }}"
+      content: "{{ input.content }}"
+      status: "{{ input.status }}"
+      excerpt: "{{ input.excerpt }}"
+      categories: "{{ input.categories }}"
+      tags: "{{ input.tags }}"
+  get_post:
+    label: Look up a post
+    method: GET
+    path: "/wp-json/wp/v2/posts/{{ input.post_id }}"
+    inputs:
+      - { name: post_id, label: "The post's id", required: true }
+  list_posts:
+    label: Find posts
+    description: Posts by a word they hold, their status or their date; every page, up to 1,000.
+    method: GET
+    path: /wp-json/wp/v2/posts
+    inputs:
+      - { name: search, label: "Posts that hold these words" }
+      - { name: status, label: "publish (the default), draft, pending, private or future" }
+      - { name: after, label: "Published since (2026-11-01T00:00:00)" }
+      - { name: categories, label: "In these categories: their ids, with commas" }
+    query:
+      search: "{{ input.search }}"
+      status: "{{ input.status }}"
+      after: "{{ input.after }}"
+      categories: "{{ input.categories }}"
+      per_page: "100"
+    items: value
+    # WordPress says how many pages there are in a header.
+    next: >-
+      'x-wp-totalpages' in headers && int(headers['x-wp-totalpages']) > (page == null ? 1 : int(page.page))
+      ? {'page': (page == null ? 1 : int(page.page)) + 1} : null
+  add_page:
+    label: Write a page
+    description: A new page of the site (About, Contact ...), published at once or kept as a draft.
+    write: true
+    method: POST
+    path: /wp-json/wp/v2/pages
+    inputs:
+      - { name: title, label: Title, required: true }
+      - { name: content, label: "What it says (text or HTML)", required: true }
+      - { name: status, label: "publish, draft (the default), pending or private" }
+      - { name: parent, label: "Under this page: its id", kind: number }
+    send:
+      title: "{{ input.title }}"
+      content: "{{ input.content }}"
+      status: "{{ has(input.status) && input.status != null ? input.status : 'draft' }}"
+      parent: "{{ input.parent }}"

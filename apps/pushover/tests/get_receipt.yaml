@@ -1,0 +1,11 @@
+description: "An emergency notification acknowledged"
+action: get_receipt
+credential: {"token": "aTestTokenAbcdefghijklmnopqrst", "user_key": "uTestUserKeyAbcdefghijklmnopq"}
+input: {"receipt": "rTestReceiptAbcdefghijklmnopq"}
+exchanges:
+  - sent:
+      method: GET
+      url: "https://api.pushover.net/1/receipts/rTestReceiptAbcdefghijklmnopq.json"
+      query: {"token": "aTestTokenAbcdefghijklmnopqrst"}
+    answer: {"status": 200, "body": {"status": 1, "acknowledged": 1, "acknowledged_at": 1764237700, "acknowledged_by": "uTestUserKeyAbcdefghijklmnopq", "acknowledged_by_device": "phone", "last_delivered_at": 1764237660, "expired": 0, "expires_at": 1764239400, "called_back": 0, "called_back_at": 0, "request": "r2"}}
+result: {"status": 1, "acknowledged": 1, "acknowledged_at": 1764237700, "acknowledged_by": "uTestUserKeyAbcdefghijklmnopq", "acknowledged_by_device": "phone", "last_delivered_at": 1764237660, "expired": 0, "expires_at": 1764239400, "called_back": 0, "called_back_at": 0, "request": "r2"}

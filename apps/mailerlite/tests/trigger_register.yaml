@@ -1,0 +1,38 @@
+description: Turning the workflow on adds a webhook for new subscribers, and keeps its secret
+trigger: new_subscriber
+register: true
+workflow: wf1
+address: https://studio.example/hooks/h1
+credential:
+  api_key: test-key
+exchanges:
+- sent:
+    method: POST
+    url: https://connect.mailerlite.com/api/webhooks
+    headers:
+      authorization: Bearer test-key
+      accept: application/json
+    body:
+      name: OpenDuct workflow wf1
+      url: https://studio.example/hooks/h1
+      events:
+      - subscriber.created
+      batchable: false
+      enabled: true
+  answer:
+    status: 200
+    body:
+      data:
+        id: '68074372004316503'
+        name: OpenDuct workflow wf1
+        url: https://studio.example/hooks/h1
+        events:
+        - subscriber.created
+        enabled: true
+        secret: ybmcD7PQ9R
+        created_at: '2026-11-27 10:00:00'
+        updated_at: '2026-11-27 10:00:00'
+        batchable: false
+kept:
+  webhook_secret: ybmcD7PQ9R
+  webhook_id: '68074372004316503'

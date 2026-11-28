@@ -1,0 +1,17 @@
+description: Turning the workflow off deletes the webhook it added
+trigger: new_subscriber
+unregister: true
+workflow: wf1
+credential:
+  api_key: test-key
+  webhook_secret@wf1: ybmcD7PQ9R
+  webhook_id@wf1: '68074372004316503'
+exchanges:
+- sent:
+    method: DELETE
+    url: https://connect.mailerlite.com/api/webhooks/68074372004316503
+  answer:
+    status: 204
+kept:
+  webhook_secret: ''
+  webhook_id: ''

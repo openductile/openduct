@@ -1,0 +1,10 @@
+description: Addresses unsubscribed since the newest one seen; the one seen at the same second is not run again
+trigger: new_unsubscribe
+credential: { token: SG.test-key }
+seen: { cursor: 1699999000, items: [["ann@example.com@1699999000", ""]] }
+exchanges:
+  - sent: { query: { start_time: "1699999000", limit: "100" } }
+    answer: { body: [{ created: 1699999000, email: ann@example.com }, { created: 1699999500, email: bo@example.com }] }
+runs: [{ created: 1699999500, email: bo@example.com }]
+ids: ["bo@example.com@1699999500"]
+cursor: 1699999500

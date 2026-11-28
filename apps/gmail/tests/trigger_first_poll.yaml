@@ -1,0 +1,6 @@
+description: The first poll notes the newest mail and reads none
+trigger: new_email
+credential: { access_token: ya29.test }
+exchanges:
+  - answer: { body: { messages: [{ id: m2, threadId: t2 }, { id: m1, threadId: t1 }], nextPageToken: p2 } }
+runs: []

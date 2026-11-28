@@ -1,0 +1,15 @@
+description: A recipient who replied since the poll before; the others do not start a run
+trigger: sequence_reply
+credential: { api_key: hunter-test-key }
+input: { sequence_id: "31" }
+seen: { items: [["ann.example@example.com", ""]] }
+exchanges:
+  - sent: { method: GET, url: https://api.hunter.io/v2/campaigns/31/recipients, query: { limit: "100" } }
+    answer:
+      body:
+        data:
+          recipients:
+            - { email: ann.example@example.com, sending_status: replied, lead_id: 101 }
+            - { email: bo@example.com, sending_status: replied, lead_id: 102 }
+            - { email: cy@example.com, sending_status: opened, lead_id: 103 }
+runs: [{ email: bo@example.com, sending_status: replied, lead_id: 102 }]

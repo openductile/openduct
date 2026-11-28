@@ -1,0 +1,9 @@
+description: A row changed since the poll before runs again; one as it was does not
+trigger: new_or_updated_row
+credential: { access_token: ya29.test }
+input: { spreadsheet_id: s1, sheet: Orders }
+exchanges:
+  - answer:
+      body:
+        values: [[Order, Total], [A-1, "12"], [A-2, "30"]]
+runs: []

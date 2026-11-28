@@ -1,0 +1,67 @@
+name: A competitor's new blog posts, summed up in Airtable
+description: >-
+  Every morning at 7:00, Berlin time, read the posts a competitor (or a site you learn from) published in the last
+  day through its WordPress REST API - public on most WordPress sites - have a model sum each one up and suggest the
+  angle your own team could take, and add each as a record to your Content ideas table in Airtable, with its link. Set
+  the site's address and your base below. Needs: model (an AI credential), airtable (a personal access token).
+category: Marketing
+trigger:
+  schedule: { every: day, at: "07:00", timezone: Europe/Berlin }
+# What a test runs on: an event as this trigger gives it.
+sample:
+  scheduled_at: '2026-11-27T06:00:00Z'
+steps:
+  - name: posts
+    http:
+      # The site to watch: any WordPress site with its REST API open (most are).
+      url: https://blog.example.com/wp-json/wp/v2/posts
+      query:
+        after: "{{ string(timestamp(value.scheduled_at) - duration('24h')) }}"
+        per_page: "20"
+        _fields: id,date,link,title,excerpt
+      timeout: 30s
+      sample:
+        - id: 812
+          date: "2026-11-26T14:05:00"
+          link: https://blog.example.com/2026/11/26/five-ways-to-cut-delivery-costs/
+          title: { rendered: Five ways to cut delivery costs this winter }
+          excerpt: { rendered: "<p>Fuel, routes and packaging: where small shops lose money on delivery, and what to change first.</p>" }
+    retry: { attempts: 3, wait: 1m }
+  - name: each
+    for_each:
+      items: "type(steps.posts.body) == list ? steps.posts.body : []"
+      steps:
+        - name: idea
+          ai:
+            credential: model
+            system: >-
+              You help a small business's marketing team learn from what others publish. Answer with JSON only.
+            prompt: >-
+              A post published by another business. Sum it up in two sentences, and suggest one angle our own blog
+              could take on the same subject - our own view, not a copy.
+
+              Title: {{ item.title.rendered }}
+
+              Excerpt: {{ regex.replace(item.excerpt.rendered, r'<[^>]+>', '') }}
+            schema:
+              type: object
+              properties:
+                summary: { type: string }
+                our_angle: { type: string }
+              required: [summary, our_angle]
+            max_tokens: 300
+        - name: record
+          airtable:
+            action: add_record
+            credential: airtable
+            # Your base's id (app..., in its address) and the table's name.
+            base_id: your-base-id
+            table: Content ideas
+            fields:
+              Title: "{{ regex.replace(item.title.rendered, r'<[^>]+>', '') }}"
+              Link: "{{ item.link }}"
+              Published: "{{ item.date.substring(0, 10) }}"
+              Summary: "{{ steps.idea.json.summary }}"
+              Our angle: "{{ steps.idea.json.our_angle }}"
+              Status: New
+          retry: { attempts: 3, wait: 10s }

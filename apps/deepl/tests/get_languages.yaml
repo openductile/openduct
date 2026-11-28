@@ -1,0 +1,16 @@
+description: The languages text can be translated from and into, asked for translate_text when no resource is given
+action: get_languages
+credential: { api_key: 0f6a2c1e-5b7d-4e2a-9c3f-1a2b3c4d5e6f }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://api.deepl.com/v3/languages"
+      query: { resource: translate_text }
+    answer:
+      status: 200
+      body:
+        - { lang: de, name: German, usable_as_source: true, usable_as_target: true, status: stable, features: {} }
+        - { lang: en-US, name: English (American), usable_as_source: false, usable_as_target: true, status: stable, features: {} }
+result:
+  - { lang: de, name: German, usable_as_source: true, usable_as_target: true, status: stable, features: {} }
+  - { lang: en-US, name: English (American), usable_as_source: false, usable_as_target: true, status: stable, features: {} }

@@ -1,0 +1,111 @@
+description: Alerts raised since the poll before, the newest asked for
+trigger: new_alert
+credential:
+  url: https://thehive.example.com
+  api_key: test-key
+seen:
+  items:
+  - - ~4032
+    - ''
+exchanges:
+- sent:
+    method: POST
+    url: https://thehive.example.com/api/v1/query
+    headers:
+      authorization: Bearer test-key
+    body:
+      query:
+      - _name: listAlert
+      - _name: sort
+        _fields:
+        - _createdAt: desc
+      - _name: page
+        from: 0
+        to: 100
+  answer:
+    status: 200
+    body:
+    - _id: ~4160
+      _type: Alert
+      _createdBy: soc-bot@example.com
+      _createdAt: 1795161600000
+      _updatedAt: 1795161600000
+      type: phishing
+      source: mail-gateway
+      sourceRef: MG-4160
+      externalLink: null
+      title: Invoice with a macro
+      description: A reported email asks for a password reset.
+      severity: 2
+      severityLabel: MEDIUM
+      date: 1795161600000
+      tags:
+      - phishing
+      tlp: 2
+      tlpLabel: AMBER
+      pap: 2
+      papLabel: AMBER
+      follow: true
+      customFields: []
+      observableCount: 1
+      status: New
+      stage: New
+      assignee: null
+      summary: null
+    - _id: ~4096
+      _type: Alert
+      _createdBy: soc-bot@example.com
+      _createdAt: 1795161600000
+      _updatedAt: 1795161600000
+      type: phishing
+      source: mail-gateway
+      sourceRef: MG-4096
+      externalLink: null
+      title: Password reset email reported
+      description: A reported email asks for a password reset.
+      severity: 2
+      severityLabel: MEDIUM
+      date: 1795161600000
+      tags:
+      - phishing
+      tlp: 2
+      tlpLabel: AMBER
+      pap: 2
+      papLabel: AMBER
+      follow: true
+      customFields: []
+      observableCount: 1
+      status: New
+      stage: New
+      assignee: null
+      summary: null
+    - _id: ~4032
+      _type: Alert
+      _createdBy: soc-bot@example.com
+      _createdAt: 1795161600000
+      _updatedAt: 1795161600000
+      type: phishing
+      source: mail-gateway
+      sourceRef: MG-4032
+      externalLink: null
+      title: Older alert
+      description: A reported email asks for a password reset.
+      severity: 2
+      severityLabel: MEDIUM
+      date: 1795161600000
+      tags:
+      - phishing
+      tlp: 2
+      tlpLabel: AMBER
+      pap: 2
+      papLabel: AMBER
+      follow: true
+      customFields: []
+      observableCount: 1
+      status: New
+      stage: New
+      assignee: null
+      summary: null
+ids:
+- ~4096
+- ~4160

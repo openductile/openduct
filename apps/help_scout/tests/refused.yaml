@@ -1,0 +1,15 @@
+description: A conversation refused, in Help Scout's words with the field at fault
+action: create_conversation
+credential: {access_token: hs-test-token}
+input: {mailbox_id: 85, subject: Hi, customer_email: ann@example.com, text: Hi, status: wrong}
+exchanges:
+- answer:
+    status: 400
+    body:
+      logRef: 64bb72b4-0a92-11e8-ba89-0ed5f89f718b
+      message: Bad request
+      _embedded:
+        errors:
+        - {path: status, message: 'Expected one of these: ''active'', ''spam'', ''open'', ''closed'', ''pending''', rejectedValue: wrong,
+          source: JSON}
+error: 'Help Scout answered 400: Bad request: status Expected one of these: ''active'', ''spam'', ''open'', ''closed'', ''pending'''

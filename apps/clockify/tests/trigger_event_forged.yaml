@@ -1,0 +1,10 @@
+description: A delivery carrying another token is refused, and runs nothing
+trigger: event
+workflow: wf1
+credential: { api_key: test-key, "webhook_secret@wf1": tok.example.wf1 }
+input: { workspace_id: "64a687e29ae1f428e7ebe303", event: NEW_TIME_ENTRY }
+delivery:
+  headers: { clockify-signature: tok.guessed }
+  body: '{"id":"64c777ddd3fcab07cfbb210e","description":"not from Clockify"}'
+  at: 1700000000
+refused: "401"

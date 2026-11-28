@@ -1,0 +1,14 @@
+description: An incident opened, as PagerDuty sends it, signed with the subscription's secret
+trigger: incident_changed
+workflow: wf1
+credential: { api_key: pd_test_1, "webhook_secret@wf1": pd_whsec_test_1 }
+delivery:
+  headers: { x-pagerduty-signature: "v1=d39a4467454ada3a89c68ef137867bba081929ee9d6611e5d773084aa0d2b579" }
+  body: '{"event":{"id":"01DEN3W2A8EXAMPLE","event_type":"incident.triggered","resource_type":"incident","occurred_at":"2026-11-27T10:00:00.000Z","agent":{"id":"PUSER01","type":"user_reference","summary":"Ann Lee"},"client":null,"data":{"id":"PINC001","type":"incident","number":42,"status":"triggered","title":"Checkout is down","service":{"id":"PSVC001","type":"service_reference","summary":"Shop"}}}}'
+  at: 1795773600
+runs:
+  - event_type: incident.triggered
+    occurred_at: "2026-11-27T10:00:00.000Z"
+    agent: { id: PUSER01, type: user_reference, summary: Ann Lee }
+    incident: { id: PINC001, type: incident, number: 42, status: triggered, title: Checkout is down, service: { id: PSVC001, type: service_reference, summary: Shop } }
+ids: ["01DEN3W2A8EXAMPLE"]

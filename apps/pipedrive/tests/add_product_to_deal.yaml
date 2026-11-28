@@ -1,0 +1,30 @@
+description: "Add a product to a deal"
+action: add_product_to_deal
+credential: { api_key: test-key }
+input: { id: 1, product_id: 1, item_price: 1, quantity: 1 }
+exchanges:
+  - sent:
+      method: POST
+      url: "https://api.pipedrive.com/api/v2/deals/1/products"
+      query: {}
+      headers: { x-api-token: test-key }
+      body: { product_id: 1, item_price: 1, quantity: 1 }
+    answer:
+      status: 201
+      body:
+        success: true
+        data:
+          id: 1
+          sum: 1
+          tax: 1
+          deal_id: 1
+          name: example
+          product_id: 1
+          product_variation_id: 1
+          order_nr: 1
+          add_time: example
+          update_time: example
+          comments: example
+          currency: example
+result: {id: 1, sum: 1, tax: 1, deal_id: 1, name: example, product_id: 1, product_variation_id: 1, order_nr: 1, add_time: example,
+  update_time: example, comments: example, currency: example}

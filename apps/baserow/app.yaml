@@ -1,0 +1,176 @@
+# Copyright 2026 Ductile AI, Inc
+# SPDX-License-Identifier: Apache-2.0
+# Baserow: made by `openduct app from-openapi` from Baserow's own API description
+# (https://api.baserow.io/api/schema.json, Baserow 2.4.3, fetched 2026-11-27, MIT licence), then finished by hand:
+# a table's rows are its own, so they are given and read as records by the fields' names.
+app: baserow
+name: Baserow
+category: database
+description: Rows of Baserow tables, read, added, changed and removed, one at a time or many at once.
+docs: "https://baserow.io/docs/apis/rest-api"
+hosts: [api.baserow.io]
+base_url: "https://api.baserow.io"
+base_url_field: address
+sign_in:
+  - id: baserow
+    label: "A database token"
+    fields:
+      - { name: token, label: "The database token", secret: true }
+      - { name: address, label: "Your own Baserow's address, such as https://baserow.example.com (Baserow's cloud when empty)", optional: true }
+      - { name: webhook_secret, label: "A webhook's token, for a webhook made in Baserow by hand", secret: true, optional: true }
+    headers: { Authorization: "Token {{ credential.token }}" }
+# A row may have a field named error or detail: only a refusal is read for Baserow's words.
+error: "status < 400 ? null : (has(value.detail) && type(value.detail) == string ? value.detail : (has(value.error) ? value.error : null))"
+default_action: create_row
+actions:
+  list_rows:
+    label: "List a table's rows"
+    description: "The rows of a table, by their fields' names, every page; only those holding some words, or of a view, if given."
+    method: GET
+    path: "/api/database/rows/table/{{ input.table_id }}/"
+    inputs:
+      - &table_id { name: table_id, label: "The table's id (in its address, or from List tables)", required: true, kind: number }
+      - { name: search, label: "Only rows holding these words" }
+      - { name: order_by, label: "In what order: fields' names separated by commas, a - before one for the largest first" }
+      - { name: view_id, label: "Only the rows of this view, filtered and sorted as it is (its id)", kind: number }
+      - { name: filters, label: "Only those a filter holds for: Baserow's filter, as JSON text" }
+      - { name: include, label: "Only these fields: their names, separated by commas" }
+    query:
+      user_field_names: "true"
+      search: "{{ input.search }}"
+      order_by: "{{ input.order_by }}"
+      view_id: "{{ input.view_id }}"
+      filters: "{{ input.filters }}"
+      include: "{{ input.include }}"
+      size: "200"
+    items: value.results
+    next: value.next
+    output: &row { id: number, order: text }
+  get_row:
+    label: "Look up a row"
+    description: "One row of a table, by its fields' names."
+    method: GET
+    path: "/api/database/rows/table/{{ input.table_id }}/{{ input.row_id }}/"
+    inputs:
+      - *table_id
+      - &row_id { name: row_id, label: "The row's id", required: true, kind: number }
+    query: { user_field_names: "true" }
+    output: *row
+  create_row:
+    label: "Add a row"
+    description: "A new row in a table, its fields given by their names; at the end, or before another row."
+    write: true
+    method: POST
+    path: "/api/database/rows/table/{{ input.table_id }}/"
+    inputs:
+      - *table_id
+      - &fields { name: fields, label: "Its fields' values, by their names, as a record (such as Name: Ann, Status: Open)", required: true, kind: record }
+      - { name: before, label: "Put it before this row (its id)", kind: number }
+    query: { user_field_names: "true", before: "{{ input.before }}" }
+    send: "{{ input.fields }}"
+    output: *row
+  update_row:
+    label: "Change a row"
+    description: "Some fields of a row given new values, by their names; the others stay as they are."
+    write: true
+    method: PATCH
+    path: "/api/database/rows/table/{{ input.table_id }}/{{ input.row_id }}/"
+    inputs:
+      - *table_id
+      - *row_id
+      - { name: fields, label: "The fields' new values, by their names, as a record", required: true, kind: record }
+    query: { user_field_names: "true" }
+    send: "{{ input.fields }}"
+    output: *row
+  delete_row:
+    label: "Delete a row"
+    description: "A row removed from a table (it stays in the trash for a while)."
+    write: true
+    method: DELETE
+    path: "/api/database/rows/table/{{ input.table_id }}/{{ input.row_id }}/"
+    inputs:
+      - *table_id
+      - *row_id
+    result: "{'deleted': true}"
+    output: { deleted: boolean }
+  create_rows:
+    label: "Add many rows"
+    description: "Up to 200 new rows at once, each a record of fields by their names."
+    write: true
+    method: POST
+    path: "/api/database/rows/table/{{ input.table_id }}/batch/"
+    inputs:
+      - *table_id
+      - { name: rows, label: "The rows: a list of records, such as [{Name: Ann}, {Name: Bo}]", required: true, kind: list }
+    query: { user_field_names: "true" }
+    send: { items: "{{ input.rows }}" }
+    items: value.items
+    output: *row
+  update_rows:
+    label: "Change many rows"
+    description: "Up to 200 rows changed at once, each a record of its id and the fields to change."
+    write: true
+    method: PATCH
+    path: "/api/database/rows/table/{{ input.table_id }}/batch/"
+    inputs:
+      - *table_id
+      - { name: rows, label: "The rows: a list of records with their ids, such as [{id: 4, Status: Done}]", required: true, kind: list }
+    query: { user_field_names: "true" }
+    send: { items: "{{ input.rows }}" }
+    items: value.items
+    output: *row
+  delete_rows:
+    label: "Delete many rows"
+    description: "Up to 200 rows removed at once, by their ids."
+    write: true
+    method: POST
+    path: "/api/database/rows/table/{{ input.table_id }}/batch-delete/"
+    inputs:
+      - *table_id
+      - { name: row_ids, label: "The rows' ids, separated by commas", required: true }
+    send: { items: "{{ input.row_ids.split(',').map(i, int(i.trim())) }}" }
+    result: "{'deleted': true}"
+    output: { deleted: boolean }
+  list_fields:
+    label: "List a table's fields"
+    description: "The fields (columns) of a table: their names, kinds and choices."
+    method: GET
+    path: "/api/database/fields/table/{{ input.table_id }}/"
+    inputs: [*table_id]
+    items: value
+    output: { id: number, name: text, type: text, primary: boolean, order: number, table_id: number, read_only: boolean, select_options: list }
+  list_tables:
+    label: "List tables"
+    description: "The tables the database token may reach, with their ids and databases."
+    method: GET
+    path: "/api/database/tables/all-tables/"
+    items: value
+    output: { id: number, name: text, order: number, database_id: number }
+triggers:
+  new_row:
+    label: "A new row"
+    description: "Each row added to a table, asked for every few minutes."
+    inputs:
+      - *table_id
+    poll:
+      method: GET
+      path: "/api/database/rows/table/{{ input.table_id }}/"
+      query: { user_field_names: "true", order_by: "-id", size: "200" }
+      items: value.results
+      next: value.next
+      newest_first: true
+      id: "string(item.id)"
+      every: 5m
+  rows_created:
+    label: "Rows added (as they are made)"
+    description: "Each row added to a table, sent by a webhook made in Baserow as it happens."
+    webhook:
+      signature: { header: x-openduct-token, algorithm: token }
+      secret: webhook_secret
+      id: value.event_id
+      only: "value.event_type == 'rows.created'"
+      events: "value.items.map(r, {'table_id': value.table_id, 'row': r})"
+      setup: >-
+        In Baserow, the table's ••• menu → Webhooks → Create webhook: method POST, the workflow's address as the URL,
+        user field names on, the event Rows created; add the header X-OpenDuct-Token with the credential's webhook
+        token as its value.

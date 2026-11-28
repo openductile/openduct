@@ -1,0 +1,7 @@
+action: list_users
+credential: { workspace: acme, user_id: uAdmin1, token: rc_admin }
+input: { username: ann }
+exchanges:
+  - sent: { method: GET, url: https://acme.rocket.chat/api/v1/users.list, query: { username: ann, count: "100" } }
+    answer: { body: { users: [{ _id: uAnn1, username: ann, name: Ann Lee, emails: [{ address: ann@example.com, verified: true }], active: true }], count: 1, offset: 0, total: 1, success: true } }
+result: [{ _id: uAnn1, username: ann, name: Ann Lee, emails: [{ address: ann@example.com, verified: true }], active: true }]

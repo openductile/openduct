@@ -1,0 +1,7 @@
+action: get_gear
+credential: { access_token: st_test_1 }
+input: { id: g5678 }
+exchanges:
+  - sent: { method: GET, url: https://www.strava.com/api/v3/gear/g5678 }
+    answer: { body: { id: g5678, name: Road shoes, primary: true, distance: 612000.0, brand_name: Example Shoes, model_name: Swift 3 } }
+result: { id: g5678, name: Road shoes, primary: true, distance: 612000.0, brand_name: Example Shoes, model_name: Swift 3 }

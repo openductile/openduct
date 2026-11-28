@@ -1,0 +1,22 @@
+description: Monitors that are down, over two pages (the next is the address UptimeRobot gives)
+action: list_monitors
+credential: { api_key: ur_test_1 }
+input: { status: DOWN }
+exchanges:
+  - sent:
+      method: GET
+      url: https://api.uptimerobot.com/v3/monitors
+      query: { status: DOWN, limit: "200" }
+      headers: { authorization: Bearer ur_test_1 }
+    answer:
+      body:
+        nextLink: "https://api.uptimerobot.com/v3/monitors?status=DOWN&limit=200&cursor=801"
+        data: [{ id: 801, friendlyName: Shop, url: "https://shop.example.com", type: HTTP, status: DOWN, interval: 300 }]
+  - sent: { url: "https://api.uptimerobot.com/v3/monitors?status=DOWN&limit=200&cursor=801" }
+    answer:
+      body:
+        nextLink: null
+        data: [{ id: 802, friendlyName: Blog, url: "https://blog.example.com", type: HTTP, status: DOWN, interval: 300 }]
+result:
+  - { id: 801, friendlyName: Shop, url: "https://shop.example.com", type: HTTP, status: DOWN, interval: 300 }
+  - { id: 802, friendlyName: Blog, url: "https://blog.example.com", type: HTTP, status: DOWN, interval: 300 }

@@ -1,0 +1,13 @@
+description: "Tag a contact"
+action: add_tags
+credential: { token: test-token }
+input: { contact_id: sx6wyHhbFdRXh302LLNR, tags: [example] }
+exchanges:
+  - sent:
+      method: POST
+      url: "https://services.leadconnectorhq.com/contacts/sx6wyHhbFdRXh302LLNR/tags"
+      query: {}
+      headers: { authorization: "Bearer test-token", version: "2021-07-28" }
+      body: { tags: [example] }
+    answer: { status: 201, body: { tags: [example] } }
+result: { tags: [example] }

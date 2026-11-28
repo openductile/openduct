@@ -1,0 +1,12 @@
+description: "Nobody found: Google leaves the results out"
+action: search_contacts
+credential: {"access_token": "ya29.test"}
+input: {"query": "zed"}
+exchanges:
+  - sent:
+      method: GET
+      url: "https://people.googleapis.com/v1/people:searchContacts"
+      query: {"query": "zed", "readMask": "names,emailAddresses,phoneNumbers,organizations,addresses,birthdays,biographies,urls,memberships,metadata", "pageSize": "30"}
+      headers: {"authorization": "Bearer ya29.test"}
+    answer: {"status": 200, "body": {}}
+result: []

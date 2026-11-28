@@ -1,0 +1,8 @@
+description: A new task list
+action: create_task_list
+credential: { access_token: ya29.test }
+input: { title: Shop jobs }
+exchanges:
+  - sent: { method: POST, url: https://tasks.googleapis.com/tasks/v1/users/@me/lists, body: { title: Shop jobs } }
+    answer: { body: { kind: tasks#taskList, id: WjFoQ2VqVW1aV3hR, title: Shop jobs, updated: "2026-11-27T10:00:00.000Z" } }
+result: { kind: tasks#taskList, id: WjFoQ2VqVW1aV3hR, title: Shop jobs, updated: "2026-11-27T10:00:00.000Z" }

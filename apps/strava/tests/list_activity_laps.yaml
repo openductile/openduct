@@ -1,0 +1,7 @@
+action: list_activity_laps
+credential: { access_token: st_test_1 }
+input: { id: "99001" }
+exchanges:
+  - sent: { method: GET, url: https://www.strava.com/api/v3/activities/99001/laps }
+    answer: { body: [{ id: 501, name: Lap 1, lap_index: 1, distance: 1000.0, elapsed_time: 322 }, { id: 502, name: Lap 2, lap_index: 2, distance: 1000.0, elapsed_time: 318 }] }
+result: [{ id: 501, name: Lap 1, lap_index: 1, distance: 1000.0, elapsed_time: 322 }, { id: 502, name: Lap 2, lap_index: 2, distance: 1000.0, elapsed_time: 318 }]

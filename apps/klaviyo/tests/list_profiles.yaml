@@ -1,0 +1,161 @@
+# Made by `openduct app from-openapi`: Get Profiles.
+description: "Get Profiles, made from the API description's schemas"
+action: list_profiles
+credential: { api_key: test-key }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://a.klaviyo.com/api/profiles"
+      query: { "page[size]": "100" }
+      headers: { authorization: test-key, revision: "2026-10-15" }
+    answer:
+      status: 200
+      body:
+        data:
+          - type: profile
+            attributes:
+              subscriptions:
+                email: { marketing: {}, open_tracking: {}, click_tracking: {} }
+                sms: { marketing: {}, transactional: {} }
+                mobile_push: { marketing: {} }
+                whatsapp: { marketing: {}, transactional: {}, conversational: {} }
+              predictive_analytics:
+                historic_clv: 93.87
+                predicted_clv: 27.24
+                total_clv: 121.11
+                historic_number_of_orders: 2
+                predicted_number_of_orders: 0.54
+                average_days_between_orders: 189
+                average_order_value: 46.94
+                churn_probability: 0.89
+                expected_date_of_next_order: "2026-01-15T09:30:00Z"
+                ranked_channel_affinity: [email]
+                discount_affinity: { predicted_rank: "Deal seeker", is_control: true }
+              hashed_email: e4b42fb3f813e47f4a184542114582bf163da3c3838eea8ced2a415940d9a41f
+              hashed_phone_number: af411f76144cfd1ee066118bf8f893b6f89652a547c34c4cebfc2baaf879a296
+            id: "01GDDKASAP8TKDDA2GRZDSVP4H"
+            relationships:
+              lists:
+                data: [{}]
+                links: { self: "https://example.com/1", related: "https://example.com/1" }
+              segments:
+                data: [{}]
+                links: { self: "https://example.com/1", related: "https://example.com/1" }
+              push-tokens:
+                data: [{}]
+                links: { self: "https://example.com/1", related: "https://example.com/1" }
+              conversations:
+                data: [{}]
+                links: { self: "https://example.com/1", related: "https://example.com/1" }
+            links: { self: "https://example.com/1" }
+        links:
+          self: "https://example.com/1"
+          prev: "https://example.com/1"
+          next: "https://a.klaviyo.com/api/profiles?page=2"
+        meta: { agent_hints: { next_steps: [example] } }
+        included: [{ type: conversation, id: id_1, attributes: {}, relationships: {}, links: {} }]
+  - sent: { url: "https://a.klaviyo.com/api/profiles?page=2" }
+    answer:
+      status: 200
+      body:
+        data:
+          - type: profile
+            attributes:
+              subscriptions:
+                email: { marketing: {}, open_tracking: {}, click_tracking: {} }
+                sms: { marketing: {}, transactional: {} }
+                mobile_push: { marketing: {} }
+                whatsapp: { marketing: {}, transactional: {}, conversational: {} }
+              predictive_analytics:
+                historic_clv: 93.87
+                predicted_clv: 27.24
+                total_clv: 121.11
+                historic_number_of_orders: 2
+                predicted_number_of_orders: 0.54
+                average_days_between_orders: 189
+                average_order_value: 46.94
+                churn_probability: 0.89
+                expected_date_of_next_order: "2026-01-15T09:30:00Z"
+                ranked_channel_affinity: [email]
+                discount_affinity: { predicted_rank: "Deal seeker", is_control: true }
+              hashed_email: e4b42fb3f813e47f4a184542114582bf163da3c3838eea8ced2a415940d9a41f
+              hashed_phone_number: af411f76144cfd1ee066118bf8f893b6f89652a547c34c4cebfc2baaf879a296
+            id: id_2
+            relationships:
+              lists:
+                data: [{}]
+                links: { self: "https://example.com/1", related: "https://example.com/1" }
+              segments:
+                data: [{}]
+                links: { self: "https://example.com/1", related: "https://example.com/1" }
+              push-tokens:
+                data: [{}]
+                links: { self: "https://example.com/1", related: "https://example.com/1" }
+              conversations:
+                data: [{}]
+                links: { self: "https://example.com/1", related: "https://example.com/1" }
+            links: { self: "https://example.com/1" }
+        links: { self: "https://example.com/1", prev: "https://example.com/1", next: null }
+        meta: { agent_hints: { next_steps: [example] } }
+        included: [{ type: conversation, id: id_1, attributes: {}, relationships: {}, links: {} }]
+result:
+  - type: profile
+    attributes:
+      subscriptions:
+        email: { marketing: {}, open_tracking: {}, click_tracking: {} }
+        sms: { marketing: {}, transactional: {} }
+        mobile_push: { marketing: {} }
+        whatsapp: { marketing: {}, transactional: {}, conversational: {} }
+      predictive_analytics:
+        historic_clv: 93.87
+        predicted_clv: 27.24
+        total_clv: 121.11
+        historic_number_of_orders: 2
+        predicted_number_of_orders: 0.54
+        average_days_between_orders: 189
+        average_order_value: 46.94
+        churn_probability: 0.89
+        expected_date_of_next_order: "2026-01-15T09:30:00Z"
+        ranked_channel_affinity: [email]
+        discount_affinity: { predicted_rank: "Deal seeker", is_control: true }
+      hashed_email: e4b42fb3f813e47f4a184542114582bf163da3c3838eea8ced2a415940d9a41f
+      hashed_phone_number: af411f76144cfd1ee066118bf8f893b6f89652a547c34c4cebfc2baaf879a296
+    id: "01GDDKASAP8TKDDA2GRZDSVP4H"
+    relationships:
+      lists: { data: [{}], links: { self: "https://example.com/1", related: "https://example.com/1" } }
+      segments: { data: [{}], links: { self: "https://example.com/1", related: "https://example.com/1" } }
+      push-tokens: { data: [{}], links: { self: "https://example.com/1", related: "https://example.com/1" } }
+      conversations:
+        data: [{}]
+        links: { self: "https://example.com/1", related: "https://example.com/1" }
+    links: { self: "https://example.com/1" }
+  - type: profile
+    attributes:
+      subscriptions:
+        email: { marketing: {}, open_tracking: {}, click_tracking: {} }
+        sms: { marketing: {}, transactional: {} }
+        mobile_push: { marketing: {} }
+        whatsapp: { marketing: {}, transactional: {}, conversational: {} }
+      predictive_analytics:
+        historic_clv: 93.87
+        predicted_clv: 27.24
+        total_clv: 121.11
+        historic_number_of_orders: 2
+        predicted_number_of_orders: 0.54
+        average_days_between_orders: 189
+        average_order_value: 46.94
+        churn_probability: 0.89
+        expected_date_of_next_order: "2026-01-15T09:30:00Z"
+        ranked_channel_affinity: [email]
+        discount_affinity: { predicted_rank: "Deal seeker", is_control: true }
+      hashed_email: e4b42fb3f813e47f4a184542114582bf163da3c3838eea8ced2a415940d9a41f
+      hashed_phone_number: af411f76144cfd1ee066118bf8f893b6f89652a547c34c4cebfc2baaf879a296
+    id: id_2
+    relationships:
+      lists: { data: [{}], links: { self: "https://example.com/1", related: "https://example.com/1" } }
+      segments: { data: [{}], links: { self: "https://example.com/1", related: "https://example.com/1" } }
+      push-tokens: { data: [{}], links: { self: "https://example.com/1", related: "https://example.com/1" } }
+      conversations:
+        data: [{}]
+        links: { self: "https://example.com/1", related: "https://example.com/1" }
+    links: { self: "https://example.com/1" }

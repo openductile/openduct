@@ -1,0 +1,12 @@
+description: A contact taken off a campaign
+action: remove_from_campaign
+credential: {domain: shopexample, email: dana@shop.example, api_key: agile-test-key}
+input: {campaign_id: '5727517264576512', contact_id: '5629585249009664'}
+exchanges:
+- sent:
+    method: DELETE
+    url: https://shopexample.agilecrm.com/dev/api/workflows/remove-active-subscriber/5727517264576512/5629585249009664
+    headers: {authorization: Basic ZGFuYUBzaG9wLmV4YW1wbGU6YWdpbGUtdGVzdC1rZXk=, accept: application/json}
+    query: {}
+  answer: {status: 204}
+result: {removed: true}

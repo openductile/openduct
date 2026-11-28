@@ -1,0 +1,11 @@
+description: "A domain and its DNS records"
+action: get_domain
+credential: {"api_key": "key-test", "domain": "mg.example.com"}
+input: {"name": "mg.example.com"}
+exchanges:
+  - sent:
+      method: GET
+      url: "https://api.mailgun.net/v4/domains/mg.example.com"
+      headers: {"authorization": "Basic YXBpOmtleS10ZXN0"}
+    answer: {"status": 200, "body": {"domain": {"id": "d1", "name": "mg.example.com", "state": "active", "type": "custom", "created_at": "Mon, 02 Nov 2026 15:04:05 UTC", "web_prefix": "email"}, "receiving_dns_records": [{"record_type": "MX", "valid": "valid", "value": "mxa.mailgun.org"}], "sending_dns_records": [{"record_type": "TXT", "name": "mg.example.com", "valid": "valid", "value": "v=spf1 include:mailgun.org ~all"}]}}
+result: {"domain": {"id": "d1", "name": "mg.example.com", "state": "active", "type": "custom", "created_at": "Mon, 02 Nov 2026 15:04:05 UTC", "web_prefix": "email"}, "receiving_dns_records": [{"record_type": "MX", "valid": "valid", "value": "mxa.mailgun.org"}], "sending_dns_records": [{"record_type": "TXT", "name": "mg.example.com", "valid": "valid", "value": "v=spf1 include:mailgun.org ~all"}]}

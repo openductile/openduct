@@ -1,0 +1,8 @@
+description: The same article in other languages
+action: get_languages
+credential: { contact: ops@example.com }
+input: { title: Solar_System }
+exchanges:
+  - sent: { method: GET, url: https://en.wikipedia.org/w/rest.php/v1/page/Solar_System/links/language }
+    answer: { body: [{ code: fr, name: français, key: Système_solaire, title: Système solaire }, { code: de, name: Deutsch, key: Sonnensystem, title: Sonnensystem }] }
+result: [{ code: fr, name: français, key: Système_solaire, title: Système solaire }, { code: de, name: Deutsch, key: Sonnensystem, title: Sonnensystem }]

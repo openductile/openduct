@@ -1,0 +1,7 @@
+action: comment_incident
+credential: { api_key: ur_test_1 }
+input: { id: inc_7f3a, content: The hosting provider restarted the server, publish_on_status_page: true }
+exchanges:
+  - sent: { method: POST, url: https://api.uptimerobot.com/v3/incidents/inc_7f3a/comments, body: { content: The hosting provider restarted the server, publishOnStatusPage: true } }
+    answer: { status: 201 }
+result: { added: true }

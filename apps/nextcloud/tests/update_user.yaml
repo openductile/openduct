@@ -1,0 +1,11 @@
+description: A user's quota changed
+action: update_user
+credential: { url: "https://cloud.example.com", username: admin, password: app-pass-2 }
+input: { userid: carol, key: quota, value: 10 GB }
+exchanges:
+  - sent:
+      method: PUT
+      url: "https://cloud.example.com/ocs/v2.php/cloud/users/carol"
+      body: { key: quota, value: 10 GB }
+    answer: { status: 200, body: { ocs: { meta: { status: ok, statuscode: 200, message: OK }, data: [] } } }
+result: { status: ok, statuscode: 200, message: OK }

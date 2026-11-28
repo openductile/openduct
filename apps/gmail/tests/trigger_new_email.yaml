@@ -1,0 +1,29 @@
+description: New mail since the last poll, each read in full and run oldest first; listing stops at mail seen before
+trigger: new_email
+credential: { access_token: ya29.test }
+input: { q: "in:inbox" }
+seen: { items: [["m1", ""]] }
+exchanges:
+  - sent:
+      method: GET
+      url: https://gmail.googleapis.com/gmail/v1/users/me/messages
+      query: { q: "in:inbox", maxResults: "100" }
+      headers: { authorization: Bearer ya29.test }
+    answer: { body: { messages: [{ id: m3, threadId: t3 }, { id: m2, threadId: t2 }, { id: m1, threadId: t1 }], nextPageToken: p2 } }
+  - sent: { method: GET, url: https://gmail.googleapis.com/gmail/v1/users/me/messages/m2, query: { format: full } }
+    answer:
+      body:
+        id: m2
+        threadId: t2
+        labelIds: [INBOX, UNREAD]
+        snippet: Your order has shipped
+        payload: { headers: [{ name: From, value: shop@example.com }, { name: To, value: ann@example.com }, { name: Subject, value: Shipped }, { name: Date, value: "Mon, 23 Nov 2026 10:00:00 +0000" }] }
+  - sent: { method: GET, url: https://gmail.googleapis.com/gmail/v1/users/me/messages/m3, query: { format: full } }
+    answer:
+      body:
+        id: m3
+        threadId: t3
+        labelIds: [INBOX]
+        snippet: Thanks
+        payload: { headers: [{ name: from, value: bob@example.com }, { name: subject, value: "Re: hello" }] }
+ids: [m2, m3]

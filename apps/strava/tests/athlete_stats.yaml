@@ -1,0 +1,7 @@
+action: athlete_stats
+credential: { access_token: st_test_1 }
+input: { id: "1234567" }
+exchanges:
+  - sent: { method: GET, url: https://www.strava.com/api/v3/athletes/1234567/stats }
+    answer: { body: { biggest_ride_distance: 102500.0, recent_run_totals: { count: 9, distance: 71200.0, moving_time: 23100, elevation_gain: 610.0 }, ytd_run_totals: { count: 140, distance: 1210000.0 } } }
+result: { biggest_ride_distance: 102500.0, recent_run_totals: { count: 9, distance: 71200.0, moving_time: 23100, elevation_gain: 610.0 }, ytd_run_totals: { count: 140, distance: 1210000.0 } }

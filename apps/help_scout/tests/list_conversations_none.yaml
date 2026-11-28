@@ -1,0 +1,17 @@
+description: 'No conversation found: an empty list'
+action: list_conversations
+credential: {access_token: hs-test-token}
+input: {query: '(email:"nobody@example.com")'}
+exchanges:
+- sent:
+    method: GET
+    url: https://api.helpscout.net/v2/conversations
+    query: {query: '(email:"nobody@example.com")'}
+    headers: {authorization: Bearer hs-test-token}
+  answer:
+    status: 200
+    body:
+      _links:
+        self: {href: 'https://api.helpscout.net/v2/conversations'}
+      page: {size: 25, totalElements: 0, totalPages: 0, number: 0}
+result: []

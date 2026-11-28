@@ -1,0 +1,39 @@
+# Made by `openduct app from-openapi`: Retrieve a single inbox by ID or email address.
+description: "Retrieve a single inbox by ID or email address, made from the API description's schemas"
+action: get_inbox
+credential: { token: test-token }
+input: { inbox_id: inbox_1 }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://api.resend.com/inboxes/inbox_1"
+      query: {}
+      headers: { authorization: "Bearer test-token" }
+    answer:
+      status: 200
+      body:
+        object: inbox
+        id: b3e2b2b6-3f0e-4c8e-9ad3-2f43a1e2c7f1
+        name: example
+        email_address: "ann@example.com"
+        domain_id: d91cd9bd-1176-453e-8fc1-35364d380206
+        receiving_address: example
+        from_name: example
+        unread: 3
+        drafts: 2
+        last_received: "2026-08-05T14:03:11.229Z"
+        created_at: "2026-08-01T09:12:44.512Z"
+        updated_at: "2026-08-03T10:20:05.118Z"
+result:
+  object: inbox
+  id: b3e2b2b6-3f0e-4c8e-9ad3-2f43a1e2c7f1
+  name: example
+  email_address: "ann@example.com"
+  domain_id: d91cd9bd-1176-453e-8fc1-35364d380206
+  receiving_address: example
+  from_name: example
+  unread: 3
+  drafts: 2
+  last_received: "2026-08-05T14:03:11.229Z"
+  created_at: "2026-08-01T09:12:44.512Z"
+  updated_at: "2026-08-03T10:20:05.118Z"

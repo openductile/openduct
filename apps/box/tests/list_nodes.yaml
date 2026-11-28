@@ -1,0 +1,55 @@
+# Made by `openduct app from-openapi`: List metadata taxonomy nodes.
+description: "List metadata taxonomy nodes, made from the API description's schemas"
+action: list_nodes
+credential: { access_token: test-access-token }
+input: { namespace: example, taxonomy_key: example }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://api.box.com/2.0/metadata_taxonomies/example/example/nodes"
+      query: { limit: "100" }
+      headers: { authorization: "Bearer test-access-token" }
+    answer:
+      status: 200
+      body:
+        limit: 1000
+        next_marker: token_2
+        prev_marker: JV9IRGZmieiBasejOG9yDCRNgd2ymoZIbjsxbJMjIs3kioVih
+        entries:
+          - id: "14d3d433-c77f-49c5-b146-9dea370f6e32"
+            displayName: France
+            level: 2
+            parentId: "99df4513-7102-4896-8228-94635ee9d330"
+            nodePath: [example]
+            ancestors: [{ id: "14d3d433-c77f-49c5-b146-9dea370f6e32", displayName: France, level: 2 }]
+  - sent:
+      method: GET
+      url: "https://api.box.com/2.0/metadata_taxonomies/example/example/nodes"
+      query: { limit: "100", marker: token_2 }
+      headers: { authorization: "Bearer test-access-token" }
+    answer:
+      status: 200
+      body:
+        limit: 1000
+        next_marker: null
+        prev_marker: JV9IRGZmieiBasejOG9yDCRNgd2ymoZIbjsxbJMjIs3kioVih
+        entries:
+          - id: id_2
+            displayName: France
+            level: 2
+            parentId: "99df4513-7102-4896-8228-94635ee9d330"
+            nodePath: [example]
+            ancestors: [{ id: "14d3d433-c77f-49c5-b146-9dea370f6e32", displayName: France, level: 2 }]
+result:
+  - id: "14d3d433-c77f-49c5-b146-9dea370f6e32"
+    displayName: France
+    level: 2
+    parentId: "99df4513-7102-4896-8228-94635ee9d330"
+    nodePath: [example]
+    ancestors: [{ id: "14d3d433-c77f-49c5-b146-9dea370f6e32", displayName: France, level: 2 }]
+  - id: id_2
+    displayName: France
+    level: 2
+    parentId: "99df4513-7102-4896-8228-94635ee9d330"
+    nodePath: [example]
+    ancestors: [{ id: "14d3d433-c77f-49c5-b146-9dea370f6e32", displayName: France, level: 2 }]

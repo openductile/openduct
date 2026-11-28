@@ -1,0 +1,17 @@
+description: Tasks changed since five minutes before the last poll; one changed again runs again
+trigger: task_changed
+credential: { token: "2/1200000000000001/1209999999999999:0a1b2c3d4e5f" }
+input: { project_id: "1201000000000001" }
+seen: { cursor: "2023-11-14T22:00:00Z", items: [["1204000000000001", "bc01dbf02fabd68c"]] }
+exchanges:
+  - sent:
+      method: GET
+      url: https://app.asana.com/api/1.0/tasks
+      query: { project: "1201000000000001", modified_since: "2023-11-14T21:55:00Z", opt_fields: "name,notes,completed,completed_at,due_on,due_at,start_on,assignee.name,projects.name,memberships.section.name,tags.name,parent.name,custom_fields.name,custom_fields.display_value,created_at,modified_at,permalink_url", limit: "100" }
+    answer:
+      body:
+        data:
+          - { gid: "1204000000000001", name: Send the March invoices, completed: false, modified_at: "2023-11-14T22:05:00.000Z" }
+        next_page: null
+runs: [{ gid: "1204000000000001", name: Send the March invoices, completed: false, modified_at: "2023-11-14T22:05:00.000Z" }]
+cursor: "2023-11-14T22:13:20Z"

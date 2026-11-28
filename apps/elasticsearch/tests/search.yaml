@@ -1,0 +1,49 @@
+description: 'A search with an aggregation: the whole answer'
+action: search
+credential: {url: 'https://search.example.com:9200', api_key: VnVhQ2ZHY0JDZGJrUW0tZTVhT3g6dWkybHAyYXhUTm1zeWFrdzl0dk5udw==}
+input:
+  index: orders
+  q: status:paid
+  size: 1
+  aggregations:
+    revenue:
+      sum: {field: total}
+exchanges:
+- sent:
+    method: POST
+    url: https://search.example.com:9200/orders/_search
+    query: {q: 'status:paid'}
+    headers: {authorization: ApiKey VnVhQ2ZHY0JDZGJrUW0tZTVhT3g6dWkybHAyYXhUTm1zeWFrdzl0dk5udw==}
+    body:
+      size: 1
+      aggregations:
+        revenue:
+          sum: {field: total}
+  answer:
+    status: 200
+    body:
+      took: 3
+      timed_out: false
+      _shards: {total: 1, successful: 1, skipped: 0, failed: 0}
+      hits:
+        total: {value: 2, relation: eq}
+        max_score: 1.0
+        hits:
+        - &id001
+          _index: orders
+          _id: o-1001
+          _score: 1.0
+          _source: {order: '1001', status: paid, total: 25, email: ann@example.com}
+      aggregations:
+        revenue: {value: 65.0}
+result:
+  took: 3
+  timed_out: false
+  _shards: {total: 1, successful: 1, skipped: 0, failed: 0}
+  hits:
+    total: {value: 2, relation: eq}
+    max_score: 1.0
+    hits:
+    - *id001
+  aggregations:
+    revenue: {value: 65.0}

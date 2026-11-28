@@ -1,0 +1,7 @@
+action: monitor_response_times
+credential: { api_key: ur_test_1 }
+input: { id: 801, region: eu }
+exchanges:
+  - sent: { method: GET, url: https://api.uptimerobot.com/v3/monitors/801/stats/response-time, query: { region: eu } }
+    answer: { body: { summary: { min: 120, max: 940, avg: 210 }, data_points: 288, from: "2026-11-26T10:00:00Z", to: "2026-11-27T10:00:00Z" } }
+result: { summary: { min: 120, max: 940, avg: 210 }, data_points: 288, from: "2026-11-26T10:00:00Z", to: "2026-11-27T10:00:00Z" }

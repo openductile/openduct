@@ -1,0 +1,23 @@
+description: Templates of both kinds, when none is named
+action: list_templates
+credential: { token: SG.test-key }
+exchanges:
+  - sent:
+      method: GET
+      url: https://api.sendgrid.com/v3/templates
+      query: { generations: "legacy,dynamic", page_size: "100" }
+    answer:
+      body:
+        result:
+          - id: d-0123456789abcdef0123456789abcdef
+            name: Order shipped
+            generation: dynamic
+            updated_at: "2026-11-02 10:00:00"
+            versions: [{ id: 5997fcf6-2b9f-484d-acd5-7e9a99f0dc1f, name: First, subject: "Your order {{order}} has shipped", active: 1 }]
+        _metadata: { self: "https://api.sendgrid.com/v3/templates?generations=legacy,dynamic&page_size=100", count: 1 }
+result:
+  - id: d-0123456789abcdef0123456789abcdef
+    name: Order shipped
+    generation: dynamic
+    updated_at: "2026-11-02 10:00:00"
+    versions: [{ id: 5997fcf6-2b9f-484d-acd5-7e9a99f0dc1f, name: First, subject: "Your order {{order}} has shipped", active: 1 }]

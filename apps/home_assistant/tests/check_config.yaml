@@ -1,0 +1,7 @@
+description: The configuration checked - valid
+action: check_config
+credential: { url: "http://home.example:8123", token: ha-test-token }
+exchanges:
+  - sent: { method: POST, url: "http://home.example:8123/api/config/core/check_config" }
+    answer: { status: 200, body: { errors: null, result: valid } }
+result: { errors: null, result: valid }

@@ -1,0 +1,11 @@
+description: "One contact, made plain"
+action: get_contact
+credential: {"site_url": "https://mautic.example.com", "username": "admin", "password": "pw-test"}
+input: {"contact_id": 47}
+exchanges:
+  - sent:
+      method: GET
+      url: "https://mautic.example.com/api/contacts/47"
+      headers: {"authorization": "Basic YWRtaW46cHctdGVzdA=="}
+    answer: {"status": 200, "body": {"contact": {"id": 47, "isPublished": true, "dateAdded": "2026-11-25T09:00:00+00:00", "dateModified": "2026-11-27T10:00:00+00:00", "points": 10, "tags": [{"tag": "customer"}], "fields": {"core": {"firstname": {"alias": "firstname", "value": "Ann"}}, "all": {"id": 47, "firstname": "Ann", "lastname": "Lee", "email": "ann@example.com", "company": "Northwind Example", "phone": null}}}}}
+result: {"id": 47, "email": "ann@example.com", "first_name": "Ann", "last_name": "Lee", "company": "Northwind Example", "phone": null, "points": 10, "tags": ["customer"], "date_added": "2026-11-25T09:00:00+00:00", "date_modified": "2026-11-27T10:00:00+00:00", "fields": {"id": 47, "firstname": "Ann", "lastname": "Lee", "email": "ann@example.com", "company": "Northwind Example", "phone": null}}

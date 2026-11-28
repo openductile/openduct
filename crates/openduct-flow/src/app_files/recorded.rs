@@ -49,17 +49,17 @@ struct Recorded {
     error: Option<String>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone)]
 #[serde(deny_unknown_fields)]
-struct Exchange {
+pub(super) struct Exchange {
     #[serde(default)]
-    sent: Sent,
-    answer: Answered,
+    pub(super) sent: Sent,
+    pub(super) answer: Answered,
 }
 
-#[derive(Deserialize, Default)]
+#[derive(Deserialize, Default, Clone)]
 #[serde(deny_unknown_fields)]
-struct Sent {
+pub(super) struct Sent {
     #[serde(default)]
     method: Option<String>,
     #[serde(default)]
@@ -72,15 +72,15 @@ struct Sent {
     body: Option<Json>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone)]
 #[serde(deny_unknown_fields)]
-struct Answered {
+pub(super) struct Answered {
     #[serde(default = "ok")]
-    status: u64,
+    pub(super) status: u64,
     #[serde(default)]
-    headers: BTreeMap<String, String>,
+    pub(super) headers: BTreeMap<String, String>,
     #[serde(default)]
-    body: Json,
+    pub(super) body: Json,
 }
 
 fn ok() -> u64 {
@@ -92,10 +92,17 @@ fn body_of(r: &HttpRequest) -> Json {
     match &r.body {
         None => Json::Null,
         Some((kind, bytes)) if kind.starts_with("application/x-www-form-urlencoded") => {
-            let pairs: serde_json::Map<String, Json> = url_pairs(bytes)
-                .into_iter()
-                .map(|(k, v)| (k, Json::String(v)))
-                .collect();
+            // A name given more than once (`events[]=a&events[]=b`) is a list of its values.
+            let mut pairs = serde_json::Map::new();
+            for (k, v) in url_pairs(bytes) {
+                match pairs.get_mut(&k) {
+                    Some(Json::Array(list)) => list.push(Json::String(v)),
+                    Some(first) => *first = Json::Array(vec![first.take(), Json::String(v)]),
+                    None => {
+                        pairs.insert(k, Json::String(v));
+                    }
+                }
+            }
             Json::Object(pairs)
         }
         Some((_, bytes)) => serde_json::from_slice(bytes)
@@ -116,7 +123,7 @@ fn url_pairs(bytes: &[u8]) -> Vec<(String, String)> {
 
 /// Whether two values are the same as a service reads them: numbers by their value (`100` is `100.0`), records
 /// whatever the order of their fields.
-fn same(a: &Json, b: &Json) -> bool {
+pub(super) fn same(a: &Json, b: &Json) -> bool {
     match (a, b) {
         (Json::Number(x), Json::Number(y)) => x.as_f64() == y.as_f64(),
         (Json::Array(x), Json::Array(y)) => x.len() == y.len() && x.iter().zip(y).all(|(p, q)| same(p, q)),
@@ -127,7 +134,7 @@ fn same(a: &Json, b: &Json) -> bool {
     }
 }
 
-fn compare(r: &HttpRequest, sent: &Sent, at: &str) -> Result<(), String> {
+pub(super) fn compare(r: &HttpRequest, sent: &Sent, at: &str) -> Result<(), String> {
     let differ = |what: &str, got: &dyn std::fmt::Display, want: &dyn std::fmt::Display| {
         Err(format!(
             "{at}.sent.{what}: it sent {got}, the recording has {want}"
@@ -173,6 +180,14 @@ fn compare(r: &HttpRequest, sent: &Sent, at: &str) -> Result<(), String> {
 /// refusal) as recorded. What differs is said, with where.
 pub fn check(app: &AppDef, text: &str, source: &str) -> Result<(), String> {
     let json = crate::yaml::to_json(text).map_err(|e| format!("{source}: {e}"))?;
+    // G3 app triggers: a recording of a trigger's poll, delivery or registration.
+    if json.get("trigger").is_some() {
+        return super::recorded_triggers::check(app, json, source);
+    }
+    // app generator: a recording of an action that calls a tool of the app's MCP server.
+    if json.get("call").is_some() {
+        return super::mcp_action::check_recorded(app, json, source);
+    }
     let t: Recorded = serde_json::from_value(json).map_err(|e| format!("{source}: {e}"))?;
     let (_, action) = app
         .action(Some(&t.action))
@@ -214,8 +229,20 @@ pub fn check(app: &AppDef, text: &str, source: &str) -> Result<(), String> {
     let mut page = Value::Null;
     let mut items: Vec<Value> = Vec::new();
     let mut result: Option<Value> = None;
+    // messaging: the request at hand - the action's own, then each that follows it - and what it reads.
+    let (first, mut step, mut inputs) = (action, 0usize, inputs);
+    let (original, mut answers) = (inputs.clone(), Vec::new());
     for (i, ex) in t.exchanges.iter().enumerate() {
         let at = format!("{source}: exchanges[{i}]");
+        if let Some(done) = result.take_if(|_| step < first.then.len()) {
+            answers.push(done);
+            inputs = super::follow_ups::with_previous(&original, &answers);
+            step += 1;
+        }
+        let action = step
+            .checked_sub(1)
+            .and_then(|s| first.then.get(s))
+            .unwrap_or(first);
         if result.is_some() {
             return Err(format!("{at}: the action had finished: there was no request {i}"));
         }
@@ -247,6 +274,13 @@ pub fn check(app: &AppDef, text: &str, source: &str) -> Result<(), String> {
             "{source}: the action asked for another page: the recording has no answer for it"
         ));
     };
+    // messaging: every request that follows the action's own is recorded too.
+    if step < first.then.len() && t.error.is_none() {
+        return Err(format!(
+            "{source}: the action makes {} more requests: the recording has no answer for them",
+            first.then.len() - step
+        ));
+    }
     if let Some(want) = &t.error {
         return Err(format!(
             "{source}: it succeeded; the recording says it is refused (\"{want}\")"

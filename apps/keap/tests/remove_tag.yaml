@@ -1,0 +1,13 @@
+# Made by `openduct app from-openapi`: Remove a tag from contacts.
+description: "Remove a tag from contacts, made from the API description's schemas"
+action: remove_tag
+credential: { access_token: test-access-token }
+input: { tag_id: tag_1, contact_ids: [example] }
+exchanges:
+  - sent:
+      method: POST
+      url: "https://api.keap.com/crm/rest/v2/tags/tag_1/contacts:removeTags"
+      query: {}
+      headers: { authorization: "Bearer test-access-token" }
+      body: { contact_ids: [example] }
+    answer: { status: 204 }

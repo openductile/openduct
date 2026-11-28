@@ -1,0 +1,78 @@
+name: A chat that makes social images, with a log
+description: >-
+  A chat page for your team: say the image you need in plain words ("a cosy winter flat lay of our green tote"), a
+  model turns it into a detailed prompt in your brand's style, Replicate's FLUX model draws it, and the chat answers
+  with the image's link. Every image is logged in a Google Sheet - who asked, the prompt, the link - so good ones can
+  be found again. The chat asks for a password. Needs: model, replicate (an API token, sent as a bearer token),
+  google_sheets.
+category: AI
+trigger:
+  chat:
+    texts:
+      title: Image studio
+      welcome: Say what image you need, and for which channel (square for posts, tall for stories).
+      placeholder: A cosy winter flat lay of our green tote...
+    # Set a password of your own: the page asks for it.
+    # password: a-password-of-your-own
+    history: 6
+    limits: { message: 1000, per_session: 10, per_address: 30 }
+    wait: 2m
+# What a test runs on: a message as this trigger gives it.
+sample:
+  message: A cosy winter flat lay of our green canvas tote with a scarf and a coffee cup, square, for Instagram
+  session: 3e7b9c1a5d2f4e6a8b0c1d2e3f4a5b6c
+  history: []
+  person: { name: Sofia }
+steps:
+  - name: prompt
+    ai:
+      credential: model
+      system: >-
+        You write prompts for an image model for a small shop's social media. Brand style: natural light, soft warm
+        colours, real textures, no text or logos in the image, no people's faces. Answer with the prompt and the
+        aspect ratio only.
+      messages: "{{ value.history }}"
+      prompt: "{{ value.message }}"
+      schema:
+        type: object
+        properties:
+          prompt: { type: string, maxLength: 900 }
+          aspect_ratio: { type: string, enum: ["1:1", "4:5", "9:16", "16:9"] }
+        required: [prompt, aspect_ratio]
+      max_tokens: 400
+  - name: draw
+    http:
+      method: POST
+      url: https://api.replicate.com/v1/models/black-forest-labs/flux-schnell/predictions
+      credential: replicate
+      # Replicate holds the answer until the image is ready (up to a minute).
+      headers: { prefer: wait=60 }
+      json:
+        input:
+          prompt: "{{ steps.prompt.json.prompt }}"
+          aspect_ratio: "{{ has(steps.prompt.json.aspect_ratio) && steps.prompt.json.aspect_ratio != null ? steps.prompt.json.aspect_ratio : '1:1' }}"
+          output_format: webp
+          num_outputs: 1
+      timeout: 90s
+      sample:
+        id: q7m2x9w4k1rgc0c1bd3s8z5vka
+        status: succeeded
+        output: ["https://replicate.delivery/xezq/example/out-0.webp"]
+    retry: { attempts: 2, wait: 10s }
+  - name: image
+    set:
+      url: "has(steps.draw.body.output) && size(steps.draw.body.output) > 0 ? steps.draw.body.output[0] : null"
+  - name: log
+    google_sheets:
+      action: add_row
+      credential: google_sheets
+      spreadsheet_id: your-spreadsheet-id
+      sheet: Images
+      values: "{{ [has(value.person.name) ? value.person.name : '', value.message, steps.prompt.json.prompt, steps.image.url] }}"
+    retry: { attempts: 3, wait: 10s }
+  - name: answer
+    respond:
+      body:
+        text: >-
+          {{ steps.image.url != null ? 'Here it is: ' + steps.image.url + ' - download it within the hour, the link
+          does not last.' : 'The image is not ready yet - try again in a minute.' }}

@@ -1,0 +1,8 @@
+description: A channel the bot may not post in - Discord's own message
+action: send_message
+sign_in: discord_bot
+credential: { bot_token: test-bot-token }
+input: { channel_id: "910000000000000009", text: Hi }
+exchanges:
+  - answer: { status: 403, body: { code: 50013, message: Missing Permissions } }
+error: "Discord answered 403: Missing Permissions"

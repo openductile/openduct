@@ -1,0 +1,128 @@
+# Copyright 2026 Ductile AI, Inc
+# SPDX-License-Identifier: Apache-2.0
+# Jina AI's Reader (r.jina.ai) and Search (s.jina.ai), written by hand from Jina's API reference (https://docs.jina.ai)
+# and the OpenAPI descriptions the two serve (https://r.jina.ai/openapi.json, https://s.jina.ai/openapi.json, Reader
+# 0.5.0+77cadef, fetched 2026-11-27; the Reader is jina-ai/reader, Apache-2.0). Its embedding, reranking and chat
+# models are the AI step's, not this app's.
+app: jina
+name: Jina AI
+category: data
+description: Read any web page or PDF as clean text, and search the web, with Jina AI's Reader.
+docs: "https://docs.jina.ai"
+hosts: [r.jina.ai, s.jina.ai]
+base_url: "https://r.jina.ai"
+sign_in:
+  - id: jina
+    label: "An API key"
+    fields:
+      - { name: api_key, label: "The API key (jina.ai, API dashboard; it starts jina_)", secret: true }
+    headers: { Authorization: "Bearer {{ credential.api_key }}", Accept: application/json }
+default_action: read_page
+actions:
+  read_page:
+    label: "Read a web page"
+    description: >-
+      Reads a web page (or a PDF at an address) and gives its text as Markdown, with its title, and its links and
+      images if asked.
+    method: POST
+    path: /
+    timeout: 120
+    inputs:
+      - { name: url, label: "The page's address", required: true }
+      - name: return_format
+        label: "As what: markdown (by default), html, text, screenshot or pageshot (an address of the image)"
+      - { name: target_selector, label: "Only the part of the page this CSS selector picks, such as article" }
+      - { name: remove_selector, label: "Leave out what this CSS selector picks, such as header, footer, nav" }
+      - { name: wait_for_selector, label: "Wait for this CSS selector to show before reading" }
+      - { name: with_links_summary, label: "List the page's links at the end", kind: boolean }
+      - { name: with_images_summary, label: "List the page's images at the end", kind: boolean }
+      - { name: with_generated_alt, label: "Describe images that have no caption", kind: boolean }
+      - { name: no_cache, label: "Read the page now, not a copy kept for a while", kind: boolean }
+      - { name: wait_seconds, label: "Wait at most this many seconds for the page to load (up to 180)", kind: number }
+      - { name: token_budget, label: "Refuse a page longer than this many tokens", kind: number }
+      - { name: engine, label: "How to load it: auto (by default), browser, curl or cf-browser-rendering" }
+      - { name: locale, label: "Load it in this language and region, such as en-US" }
+    send: { url: "{{ input.url }}" }
+    headers:
+      X-Return-Format: "{{ input.return_format }}"
+      X-Target-Selector: "{{ input.target_selector }}"
+      X-Remove-Selector: "{{ input.remove_selector }}"
+      X-Wait-For-Selector: "{{ input.wait_for_selector }}"
+      X-With-Links-Summary: "{{ input.with_links_summary }}"
+      X-With-Images-Summary: "{{ input.with_images_summary }}"
+      X-With-Generated-Alt: "{{ input.with_generated_alt }}"
+      X-No-Cache: "{{ input.no_cache }}"
+      X-Timeout: "{{ input.wait_seconds }}"
+      X-Token-Budget: "{{ input.token_budget }}"
+      X-Engine: "{{ input.engine }}"
+      X-Locale: "{{ input.locale }}"
+    result: value.data
+    output:
+      title: text
+      description: text
+      url: text
+      content: text
+      publishedTime: text
+      links: record
+      images: record
+      screenshotUrl: text
+      pageshotUrl: text
+      warning: text
+  search_web:
+    label: "Search the web"
+    description: >-
+      Searches the web and gives the best results, each with its title, address and description - and, unless asked
+      not to, each page read as text.
+    method: POST
+    path: /
+    timeout: 120
+    inputs:
+      - { name: q, label: "What to search for", required: true }
+      - { name: num, label: "At most this many results (up to 20)", kind: number }
+      - { name: page, label: "Which page of results (1 is the first)", kind: number }
+      - { name: site, label: "Only pages of this site, such as example.com" }
+      - { name: gl, label: "Results for this country, as a two-letter code such as us" }
+      - { name: hl, label: "Results in this language, as a code such as en" }
+      - { name: location, label: "As searched from this place, such as Austin, Texas" }
+      - { name: read_pages, label: "Read each result's page (true by default; false gives titles and descriptions only)", kind: boolean }
+      - { name: no_cache, label: "Read the pages now, not copies kept for a while", kind: boolean }
+    by:
+      jina: { url: "https://s.jina.ai/" }
+    send:
+      q: "{{ input.q }}"
+      num: "{{ input.num }}"
+      page: "{{ input.page }}"
+      gl: "{{ input.gl }}"
+      hl: "{{ input.hl }}"
+      location: "{{ input.location }}"
+    headers:
+      X-Site: "{{ input.site }}"
+      X-Respond-With: "{{ has(input.read_pages) && input.read_pages == false ? 'no-content' : '' }}"
+      X-No-Cache: "{{ input.no_cache }}"
+    result: value.data
+    output: { title: text, url: text, description: text, content: text, publishedTime: text }
+  search_news:
+    label: "Search the news"
+    description: "Searches news articles, each with its title, address, description and date."
+    method: POST
+    path: /
+    timeout: 120
+    inputs:
+      - { name: q, label: "What to search for", required: true }
+      - { name: num, label: "At most this many articles (up to 20)", kind: number }
+      - { name: site, label: "Only articles of this site, such as example.com" }
+      - { name: gl, label: "News of this country, as a two-letter code such as us" }
+      - { name: hl, label: "News in this language, as a code such as en" }
+    by:
+      jina: { url: "https://s.jina.ai/" }
+    send:
+      q: "{{ input.q }}"
+      type: news
+      num: "{{ input.num }}"
+      gl: "{{ input.gl }}"
+      hl: "{{ input.hl }}"
+    headers:
+      X-Site: "{{ input.site }}"
+      X-Respond-With: no-content
+    result: value.data
+    output: { title: text, url: text, description: text, publishedTime: text }

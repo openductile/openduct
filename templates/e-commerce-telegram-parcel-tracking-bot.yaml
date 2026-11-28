@@ -1,0 +1,79 @@
+name: A Telegram bot that tracks a parcel
+description: >-
+  Customers send your shop's Telegram bot their tracking number, in a sentence or on its own; the bot looks it up in
+  AfterShip, where your shipments are tracked, and answers where the parcel is, when it should arrive and its last
+  scan. A message without a tracking number is answered with how to find one. Needs: a Telegram bot (bot) and an
+  AfterShip API key, kept as a header credential named as-api-key (aftership).
+category: E-commerce
+trigger:
+  # Telegram sends each message as it comes; turning the workflow on gives Telegram its address.
+  telegram: { when: message, credential: bot }
+# What a test runs on: a message as this trigger gives it.
+sample:
+  message_id: 31
+  chat: { id: 123456789, type: private }
+  from: { id: 123456789, first_name: Ada }
+  date: 1795770000
+  text: "Hi! Where is my parcel? 1Z999AA10123456784."
+steps:
+  # Photos, stickers and the like have no text: nothing to look up.
+  - where: value.text != null
+  - name: asked
+    set:
+      # The first word of 8 to 34 letters and digits, with at least one digit in it.
+      number: >-
+        cel.bind(words, regex.replace(value.text.upperAscii(), '[^A-Z0-9]+', ' ').split(' ').filter(w, size(w) >= 8 && size(w) <= 34 && w.matches('[0-9]')),
+          size(words) > 0 ? words[0] : null)
+  - name: no_number
+    if:
+      when: steps.asked.number == null
+      then:
+        - name: how_to
+          telegram:
+            credential: bot
+            chat_id: "{{ value.chat.id }}"
+            text: "Send me the tracking number from your shipping e-mail (it looks like 1Z999AA10123456784) and I'll tell you where your parcel is."
+        - stop: {}
+  - name: tracking
+    http:
+      credential: aftership
+      url: https://api.aftership.com/tracking/2024-10/trackings
+      query: { tracking_numbers: "{{ steps.asked.number }}" }
+      sample:
+        meta: { code: 200 }
+        data:
+          trackings:
+            - tracking_number: 1Z999AA10123456784
+              slug: ups
+              tag: InTransit
+              subtag_message: On the way to the delivery depot
+              expected_delivery: "2026-11-30"
+              checkpoints:
+                - { checkpoint_time: "2026-11-27T06:12:00Z", location: "Memphis, TN", message: Departed facility }
+    retry: { attempts: 3, wait: 10s }
+  - name: found
+    set:
+      parcel: "size(steps.tracking.body.data.trackings) > 0 ? steps.tracking.body.data.trackings[0] : null"
+  - name: status
+    set:
+      words: >-
+        steps.found.parcel == null ? null :
+        cel.bind(tags, {'Pending': 'is waiting for its first scan', 'InfoReceived': 'has been handed to the carrier',
+          'InTransit': 'is on its way', 'OutForDelivery': 'is out for delivery today', 'AttemptFail': 'could not be delivered - the carrier will try again',
+          'Delivered': 'has been delivered', 'AvailableForPickup': 'is waiting for you at the pick-up point', 'Exception': 'has a problem - we are looking into it',
+          'Expired': 'has not been scanned for a long time - we are looking into it'},
+          steps.found.parcel.tag in tags ? tags[steps.found.parcel.tag] : 'is with the carrier')
+      last: >-
+        steps.found.parcel == null || size(steps.found.parcel.checkpoints) == 0 ? '' :
+        cel.bind(c, steps.found.parcel.checkpoints[size(steps.found.parcel.checkpoints) - 1],
+          'Last scan: ' + c.message + (c.location != null ? ' in ' + c.location : '') + ', ' + c.checkpoint_time.substring(0, 10) + '.')
+      arrives: "steps.found.parcel == null || steps.found.parcel.expected_delivery == null ? '' : 'It should arrive on ' + steps.found.parcel.expected_delivery.substring(0, 10) + '.'"
+  - name: reply
+    telegram:
+      credential: bot
+      chat_id: "{{ value.chat.id }}"
+      text: >-
+        {{ steps.found.parcel == null
+          ? 'I could not find ' + steps.asked.number + ' yet. If you ordered in the last day, try again tomorrow, or reply here and we will look.'
+          : 'Your parcel ' + steps.asked.number + ' ' + steps.status.words + '. ' + steps.status.arrives + ' ' + steps.status.last }}
+    retry: { attempts: 3, wait: 10s }

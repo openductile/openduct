@@ -1,0 +1,10 @@
+action: get_issue
+credential: { site: examplecorp, email: ann@example.com, api_token: ATATT_test }
+input: { issue: SUP-13, fields: "summary,status" }
+exchanges:
+  - sent:
+      method: GET
+      url: https://examplecorp.atlassian.net/rest/api/3/issue/SUP-13
+      query: { fields: "summary,status" }
+    answer: { body: { id: "10000", key: SUP-13, fields: { summary: Printer on floor 2 is jammed, status: { name: To Do } } } }
+result: { id: "10000", key: SUP-13, fields: { summary: Printer on floor 2 is jammed, status: { name: To Do } } }

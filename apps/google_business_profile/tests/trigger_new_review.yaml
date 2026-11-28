@@ -1,0 +1,15 @@
+description: A review written since the poll before runs; listing stops at the page with one seen
+trigger: new_review
+credential: { access_token: ya29.test }
+input: {"account_id": "1001", "location_id": "2002"}
+seen: { items: [["rv2", ""]] }
+exchanges:
+  - sent:
+      method: GET
+      url: https://mybusiness.googleapis.com/v4/accounts/1001/locations/2002/reviews
+      query: { orderBy: updateTime desc, pageSize: "50" }
+      headers: { authorization: Bearer ya29.test }
+    answer: { body: { reviews: [{"name": "accounts/1001/locations/2002/reviews/rv3", "reviewId": "rv3", "reviewer": {"displayName": "A Google user", "isAnonymous": true}, "starRating": "FIVE", "comment": "Friendly staff and quick service.", "createTime": "2026-11-27T08:00:00Z", "updateTime": "2026-11-27T08:00:00Z"}, {"name": "accounts/1001/locations/2002/reviews/rv2", "reviewId": "rv2", "reviewer": {"displayName": "Bo C.", "isAnonymous": false}, "starRating": "TWO", "comment": "Waited a long time.", "createTime": "2026-11-25T10:00:00Z", "updateTime": "2026-11-25T10:00:00Z", "reviewReply": {"comment": "Sorry about the wait - we have added staff on Saturdays.", "updateTime": "2026-11-25T12:00:00Z"}}], nextPageToken: p2 } }
+runs:
+  - {"name": "accounts/1001/locations/2002/reviews/rv3", "reviewId": "rv3", "reviewer": {"displayName": "A Google user", "isAnonymous": true}, "starRating": "FIVE", "comment": "Friendly staff and quick service.", "createTime": "2026-11-27T08:00:00Z", "updateTime": "2026-11-27T08:00:00Z"}
+ids: [rv3]

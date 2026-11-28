@@ -1,0 +1,12 @@
+action: list_oncalls
+credential: { api_key: pd_test_1 }
+input: { schedule_id: PSCH001, earliest: true }
+exchanges:
+  - sent: { method: GET, url: https://api.pagerduty.com/oncalls, query: { limit: "100", "schedule_ids[]": PSCH001, earliest: "true" } }
+    answer:
+      body:
+        offset: 0
+        limit: 100
+        more: false
+        oncalls: [{ user: { id: PUSER02, summary: Bob Ray }, schedule: { id: PSCH001, summary: Weekdays }, escalation_level: 1, start: "2026-11-27T09:00:00Z", end: "2026-11-28T09:00:00Z" }]
+result: [{ user: { id: PUSER02, summary: Bob Ray }, schedule: { id: PSCH001, summary: Weekdays }, escalation_level: 1, start: "2026-11-27T09:00:00Z", end: "2026-11-28T09:00:00Z" }]

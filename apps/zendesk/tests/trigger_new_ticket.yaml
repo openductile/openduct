@@ -1,0 +1,11 @@
+description: Tickets opened since the last poll, the newest asked for, run oldest first
+trigger: new_ticket
+credential: { subdomain: acme, email: agent@example.com, api_token: t1 }
+seen: { items: [["40", ""]] }
+exchanges:
+  - sent:
+      method: GET
+      url: https://acme.zendesk.com/api/v2/tickets.json
+      query: { sort_by: created_at, sort_order: desc, per_page: "100" }
+    answer: { body: { tickets: [{ id: 42, subject: Broken lid }, { id: 41, subject: Late order }, { id: 40, subject: Hello }], next_page: "https://acme.zendesk.com/api/v2/tickets.json?page=2" } }
+ids: ["41", "42"]

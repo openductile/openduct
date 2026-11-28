@@ -1,0 +1,92 @@
+name: Check your competitors' pricing pages
+description: >-
+  Press Run (or put it on a schedule): an AI agent reads your Competitors sheet (name, pricing page, what you noted
+  last time), reads each pricing page as clean text through Jina Reader, and notes every plan and price and what
+  changed. Each competitor gets a row in the Price checks sheet, and a model writes a five-line brief for your sales
+  team - what moved, and what to say about it - kept in the Briefs sheet. For sales and product teams who are always
+  asked "are we cheaper?". Needs: model, google_sheets, jina (an API key, sent as a bearer token).
+category: Sales
+trigger: manual
+# What a test runs on: what you give when you press Run.
+sample:
+  note: Monthly check
+steps:
+  - name: check
+    agent:
+      credential: model
+      instructions: >-
+        You keep a sales team's view of competitors' prices. Read the competitors sheet (its first row names the
+        columns). For each competitor, read its pricing page - only the addresses in the sheet - and note each plan
+        with its price and billing period, as the page says them. Compare with the sheet's notes from last time and
+        say plainly what changed, or "no change". Never guess a price the page does not show.
+      input: "{{ value.note }}: check every competitor in the sheet."
+      tools:
+        - name: competitors
+          description: The competitors sheet - name, pricing_url, last_notes - one row each after a header row.
+          google_sheets:
+            action: read_rows
+            credential: google_sheets
+            spreadsheet_id: your-spreadsheet-id
+            range: Competitors
+        - name: read_page
+          description: A web page's text, without menus or scripts, by its address (from the sheet).
+          parameters:
+            type: object
+            properties:
+              url: { type: string, description: "The page's address, starting https://" }
+            required: [url]
+          http:
+            url: "https://r.jina.ai/{{ args.url }}"
+            credential: jina
+            headers: { x-return-format: text }
+            timeout: 60s
+      allow: [competitors, read_page]
+      output:
+        schema:
+          type: object
+          properties:
+            competitors:
+              type: array
+              items:
+                type: object
+                properties:
+                  name: { type: string }
+                  plans: { type: string, description: "each plan as Name: price / period, separated by ; " }
+                  changes: { type: string }
+                required: [name, plans, changes]
+          required: [competitors]
+      max_turns: 12
+      max_tool_calls: 16
+      max_tokens: 2000
+  - name: day
+    datetime: { timezone: UTC, format: "%Y-%m-%d" }
+  - name: rows
+    for_each:
+      items: "has(steps.check.json.competitors) && steps.check.json.competitors != null ? steps.check.json.competitors : []"
+      steps:
+        - name: row
+          google_sheets:
+            action: add_row
+            credential: google_sheets
+            spreadsheet_id: your-spreadsheet-id
+            sheet: Price checks
+            values: "{{ [steps.day.formatted, item.name, item.plans, item.changes] }}"
+          retry: { attempts: 3, wait: 10s }
+  - name: brief
+    ai:
+      credential: model
+      system: >-
+        You brief a sales team in five short lines: what moved in competitors' prices, and one line on what to say to
+        a prospect about it. If nothing changed, say so in one line.
+      prompt: >-
+        {{ has(steps.check.json.competitors) && steps.check.json.competitors != null ? steps.check.json.competitors.map(c, c.name + ' - ' + c.plans +
+        ' - changes: ' + c.changes).join('\n') : 'no competitors were checked' }}
+      max_tokens: 400
+  - name: keep_brief
+    google_sheets:
+      action: add_row
+      credential: google_sheets
+      spreadsheet_id: your-spreadsheet-id
+      sheet: Briefs
+      values: "{{ [steps.day.formatted, steps.brief.text] }}"
+    retry: { attempts: 3, wait: 10s }

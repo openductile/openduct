@@ -1,0 +1,13 @@
+description: A light turned on - the states that changed come back
+action: turn_on
+credential: { url: "http://home.example:8123", token: ha-test-token }
+input: { entity_id: light.porch }
+exchanges:
+  - sent:
+      method: POST
+      url: "http://home.example:8123/api/services/homeassistant/turn_on"
+      body: { entity_id: light.porch }
+    answer:
+      status: 200
+      body: [{ entity_id: light.porch, state: "on", attributes: {}, last_changed: "2026-11-27T18:00:00+00:00" }]
+result: [{ entity_id: light.porch, state: "on", attributes: {}, last_changed: "2026-11-27T18:00:00+00:00" }]

@@ -1,0 +1,12 @@
+description: An issue opened since the last poll starts a run; listing stops at one seen before
+trigger: new_issue
+credential: { api_key: lin_api_test1 }
+input: { team: ENG }
+seen: { cursor: null, items: [["0b1e6a52-0000-4000-8000-000000000001", ""]] }
+exchanges:
+  - sent:
+      method: POST
+      url: https://api.linear.app/graphql
+      body: { query: "query($filter: IssueFilter, $after: String) { issues(first: 50, after: $after, orderBy: createdAt, filter: $filter) { nodes { id identifier title description priority priorityLabel url dueDate createdAt updatedAt state { id name type } assignee { id name } creator { id name } team { id key } project { id name } labels { nodes { id name } } } pageInfo { hasNextPage endCursor } } }", variables: { filter: { team: { key: { eq: ENG } } } } }
+    answer: { body: { data: { issues: { nodes: [{ id: 0b1e6a52-0000-4000-8000-000000000002, identifier: ENG-102, title: Typo on the pricing page, priority: 4, priorityLabel: Low, url: "https://linear.app/example/issue/ENG-102", updatedAt: "2026-11-27T10:00:00.000Z", team: { id: tm-1, key: ENG } }, { id: 0b1e6a52-0000-4000-8000-000000000001, identifier: ENG-101, title: Checkout button does nothing, priority: 2, priorityLabel: High, url: "https://linear.app/example/issue/ENG-101", state: { id: st-1, name: Todo, type: unstarted }, assignee: { id: u-1, name: Ann Lee }, team: { id: tm-1, key: ENG } }], pageInfo: { hasNextPage: true, endCursor: cur-1 } } } } }
+runs: [{ id: 0b1e6a52-0000-4000-8000-000000000002, identifier: ENG-102, title: Typo on the pricing page, priority: 4, priorityLabel: Low, url: "https://linear.app/example/issue/ENG-102", updatedAt: "2026-11-27T10:00:00.000Z", team: { id: tm-1, key: ENG } }]

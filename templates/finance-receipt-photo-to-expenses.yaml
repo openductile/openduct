@@ -1,0 +1,89 @@
+name: Snap a receipt, and it lands in the expenses sheet
+description: >-
+  Your team sends a photo or PDF of a receipt from a form on their phone. OCR.space reads the text on it, a model
+  picks out the merchant, the date, the total, the tax and a category, the receipt is filed in your S3 bucket by
+  month, and a row goes to your Expenses sheet in Google Sheets, with where the file is kept. Needs: an OCR.space API
+  key as a header credential named apikey (ocr_space), an AI credential (model), an s3 credential for the bucket
+  (receipts_bucket) and Google Sheets (sheets).
+category: Finance
+trigger:
+  form:
+    title: Send a receipt
+    description: A clear photo of the whole receipt, or its PDF.
+    fields:
+      - { name: email, label: Your work e-mail, type: email, required: true }
+      - { name: receipt, label: The receipt, type: file, accept: "image/*,.pdf", max_size: 2000000, required: true }
+      - { name: project, label: Which project, type: dropdown, options: [General, Client work, Travel, Events] }
+      - { name: note, label: "What was it for?", type: text, max_length: 200 }
+    thanks: Thank you - it is in the expenses sheet.
+# What a test runs on: an answer as the form gives it.
+sample:
+  email: sam@example.com
+  receipt: { name: lunch-receipt.jpg, type: image/jpeg, size: 18, base64: "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAA==" }
+  project: Client work
+  note: Lunch with the Northwind team
+steps:
+  - name: ocr
+    http:
+      method: POST
+      credential: ocr_space
+      url: https://api.ocr.space/parse/image
+      form:
+        base64Image: "data:{{ value.receipt.type }};base64,{{ value.receipt.base64 }}"
+        OCREngine: "2"
+        scale: "true"
+        isTable: "true"
+      timeout: 60s
+      sample:
+        OCRExitCode: 1
+        IsErroredOnProcessing: false
+        ParsedResults:
+          - ParsedText: "BLUE DOOR CAFE\n12 Main St, Springfield\n27/11/2026 12:41\n2 x Soup of the day 9.00\n1 x Club sandwich 12.50\nSubtotal 30.50\nTax 8% 2.44\nTOTAL USD 32.94\nVISA ****4242"
+    retry: { attempts: 3, wait: 20s }
+  - name: read_ok
+    if:
+      when: steps.ocr.body.IsErroredOnProcessing == true || size(steps.ocr.body.ParsedResults) == 0
+      then:
+        - stop: { error: "the receipt could not be read: {{ steps.ocr.body.ErrorMessage }}" }
+  - name: fields
+    extract:
+      credential: model
+      text: "{{ steps.ocr.body.ParsedResults.map(p, p.ParsedText).join('\\n') }}"
+      instructions: The text was read from a photo of a receipt, so it may have small reading mistakes.
+      fields:
+        - { name: merchant, type: string, description: "who was paid" }
+        - { name: date, type: date, description: "the day of the receipt" }
+        - { name: total, type: number, description: "the total paid, tax included" }
+        - { name: tax, type: number, description: "the tax on it, if the receipt says" }
+        - { name: currency, type: string, description: "the currency's three-letter code, as USD" }
+        - { name: category, type: string, description: "one of: meals, travel, lodging, office, software, other" }
+  - name: where_kept
+    set:
+      month: "steps.fields.json.date != null ? string(steps.fields.json.date).substring(0, 7) : 'undated'"
+  - name: file
+    convert: { format: base64, base64: value.receipt.base64, name: "{{ value.receipt.name }}" }
+  - name: archive
+    storage:
+      action: write
+      credential: receipts_bucket
+      path: "receipts/{{ steps.where_kept.month }}/{{ value.email.split('@')[0] }}-{{ value.receipt.name }}"
+      file: steps.file
+      overwrite: true
+  - name: row
+    google_sheets:
+      action: add_row
+      credential: sheets
+      spreadsheet_id: your-sheet-id
+      sheet: Expenses
+      values:
+        - "{{ steps.fields.json.date }}"
+        - "{{ steps.fields.json.merchant }}"
+        - "{{ steps.fields.json.total }}"
+        - "{{ steps.fields.json.currency }}"
+        - "{{ steps.fields.json.tax }}"
+        - "{{ steps.fields.json.category }}"
+        - "{{ value.email }}"
+        - "{{ value.project }}"
+        - "{{ value.note }}"
+        - "receipts/{{ steps.where_kept.month }}/{{ value.email.split('@')[0] }}-{{ value.receipt.name }}"
+    retry: { attempts: 3, wait: 30s }

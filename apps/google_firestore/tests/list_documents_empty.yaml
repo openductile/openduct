@@ -1,0 +1,21 @@
+description: An empty collection answers with no list
+action: list_documents
+credential:
+  access_token: ya29.test
+input:
+  project_id: sample-shop
+  collection: orders
+  order_by: total desc
+exchanges:
+- sent:
+    method: GET
+    url: https://firestore.googleapis.com/v1/projects/sample-shop/databases/(default)/documents/orders
+    query:
+      orderBy: total desc
+      pageSize: '300'
+    headers:
+      authorization: Bearer ya29.test
+  answer:
+    status: 200
+    body: {}
+result: []

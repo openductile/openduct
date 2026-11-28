@@ -70,3 +70,27 @@ actions:
     query: { per_page: "100" }
     items: value.tickets
     next: value.next_page
+triggers:
+  new_ticket:
+    label: A new ticket
+    description: Each ticket opened, the newest asked for every few minutes.
+    poll:
+      method: GET
+      path: /tickets.json
+      query: { sort_by: created_at, sort_order: desc, per_page: "100" }
+      items: value.tickets
+      next: value.next_page
+      newest_first: true
+      id: string(item.id)
+  updated_ticket:
+    label: A ticket changed
+    description: Each ticket opened or changed (a reply, a new status), the last changed asked for every few minutes.
+    poll:
+      method: GET
+      path: /tickets.json
+      query: { sort_by: updated_at, sort_order: desc, per_page: "100" }
+      items: value.tickets
+      next: value.next_page
+      newest_first: true
+      id: string(item.id)
+      version: item.updated_at

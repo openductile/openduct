@@ -1,0 +1,327 @@
+# Copyright 2026 Ductile AI, Inc
+# SPDX-License-Identifier: Apache-2.0
+app: brevo
+name: Brevo
+category: email
+description: Emails and text messages sent through Brevo, its contacts and lists kept, its campaigns sent, and deals and companies added to its CRM.
+docs: https://developers.brevo.com/reference
+hosts: [api.brevo.com]
+base_url: https://api.brevo.com/v3
+sign_in:
+  - id: brevo
+    label: An API key
+    fields:
+      - { name: api_key, label: "The API key (from Brevo's API keys page)", secret: true }
+    headers: { api-key: "{{ credential.api_key }}" }
+error: "has(value.message) && has(value.code) ? value.code + ': ' + value.message : null"
+default_action: send_email
+actions:
+  send_email:
+    label: Send an email
+    description: >-
+      An email to one person or several - written here, or one of your Brevo templates filled in with values - from
+      one of your Brevo senders; gives its message id.
+    write: true
+    method: POST
+    path: /smtp/email
+    inputs:
+      - { name: to, label: "To: email addresses, separated by commas", required: true }
+      - { name: subject, label: "The subject (from the template when empty)" }
+      - { name: html, label: "The message, as HTML" }
+      - { name: text, label: "Or as plain text" }
+      - { name: template_id, label: "Or a Brevo template (its number)", kind: number }
+      - { name: params, label: "The template's values (as JSON), such as {\"FIRSTNAME\": \"Ann\", \"ORDER\": \"A-1001\"}", kind: record }
+      - { name: sender_email, label: "From this sender's address (one set up in Brevo); the template's when empty" }
+      - { name: sender_name, label: "With this name" }
+      - { name: reply_to, label: "Replies to this address" }
+      - { name: cc, label: "Copy to, separated by commas" }
+      - { name: bcc, label: "Blind copy to, separated by commas" }
+      - { name: tags, label: "Tags, separated by commas, to find it in Brevo's logs" }
+      - { name: scheduled_at, label: "Send at this time instead (2026-12-01T09:00:00Z)" }
+    send:
+      to: "{{ input.to.split(',').map(e, {'email': e.trim()}) }}"
+      subject: "{{ input.subject }}"
+      htmlContent: "{{ input.html }}"
+      textContent: "{{ input.text }}"
+      templateId: "{{ input.template_id }}"
+      params: "{{ input.params }}"
+      sender: { email: "{{ input.sender_email }}", name: "{{ input.sender_name }}" }
+      replyTo: { email: "{{ input.reply_to }}" }
+      cc: "{{ input.cc.split(',').map(e, {'email': e.trim()}) }}"
+      bcc: "{{ input.bcc.split(',').map(e, {'email': e.trim()}) }}"
+      tags: "{{ input.tags.split(',').map(t, t.trim()) }}"
+      scheduledAt: "{{ input.scheduled_at }}"
+    output: { messageId: text, messageIds: list, batchId: text }
+  send_sms:
+    label: Send a text message
+    description: >-
+      A text message to a mobile number (with its country code), from a sender name of up to 11 letters; a long one
+      goes as several.
+    write: true
+    method: POST
+    path: /transactionalSMS/sms
+    inputs:
+      - { name: to, label: "The mobile number, with its country code: +15555550100", required: true }
+      - { name: text, label: "The message", required: true }
+      - { name: sender, label: "From: a name of up to 11 letters and digits, or a number", required: true }
+      - { name: marketing, label: "It is marketing (not a notice, such as an order's)", kind: boolean }
+      - { name: tag, label: "A tag, to find it in Brevo's logs" }
+    send:
+      recipient: "{{ input.to }}"
+      content: "{{ input.text }}"
+      sender: "{{ input.sender }}"
+      type: "{{ has(input.marketing) && input.marketing == true ? 'marketing' : 'transactional' }}"
+      tag: "{{ input.tag }}"
+    output: { reference: text, messageId: number, smsCount: number, usedCredits: number, remainingCredits: number }
+  create_contact:
+    label: Add a contact
+    description: >-
+      A contact with an email address (or a phone number), its attributes - FIRSTNAME, LASTNAME, SMS... - and the
+      lists it is on; with "change if there", a contact with that address is changed instead.
+    write: true
+    method: POST
+    path: /contacts
+    inputs:
+      - { name: email, label: "Their email address" }
+      - { name: attributes, label: "Their attributes, by Brevo's names in capitals (as JSON): {\"FIRSTNAME\": \"Ann\", \"SMS\": \"+15555550100\"}", kind: record }
+      - { name: list_ids, label: "Put them on these lists (their numbers, separated by commas)" }
+      - { name: update_if_there, label: "Change if there: a contact with this address is changed, not refused", kind: boolean }
+      - { name: ext_id, label: "Your own id for them" }
+    send:
+      email: "{{ input.email }}"
+      attributes: "{{ input.attributes }}"
+      listIds: "{{ input.list_ids.split(',').map(l, int(l.trim())) }}"
+      updateEnabled: "{{ input.update_if_there }}"
+      ext_id: "{{ input.ext_id }}"
+    result: "type(value) == map && has(value.id) ? {'id': value.id, 'created': true} : {'created': false}"
+    output: { id: number, created: boolean }
+  update_contact:
+    label: Change a contact
+    description: A contact's attributes changed, and lists it is put on or taken off; what is left empty stays.
+    write: true
+    method: PUT
+    path: "/contacts/{{ input.contact }}"
+    inputs:
+      - { name: contact, label: "The contact: their email address, or their id", required: true }
+      - { name: attributes, label: "The attributes to change (as JSON): {\"LASTNAME\": \"Lee\"}", kind: record }
+      - { name: list_ids, label: "Put them on these lists (their numbers, separated by commas)" }
+      - { name: remove_list_ids, label: "Take them off these lists (their numbers, separated by commas)" }
+      - { name: email_blocked, label: "No more emails to them", kind: boolean }
+    send:
+      attributes: "{{ input.attributes }}"
+      listIds: "{{ input.list_ids.split(',').map(l, int(l.trim())) }}"
+      unlinkListIds: "{{ input.remove_list_ids.split(',').map(l, int(l.trim())) }}"
+      emailBlacklisted: "{{ input.email_blocked }}"
+    result: "{'changed': true}"
+    output: { changed: boolean }
+  get_contact:
+    label: Get a contact
+    description: A contact's attributes, lists, when they were added and changed, and whether they take emails and texts.
+    method: GET
+    path: "/contacts/{{ input.contact }}"
+    inputs:
+      - { name: contact, label: "The contact: their email address, or their id", required: true }
+    output: { id: number, email: text, attributes: record, listIds: list, emailBlacklisted: boolean, smsBlacklisted: boolean, createdAt: text, modifiedAt: text }
+  delete_contact:
+    label: Delete a contact
+    description: A contact taken out of Brevo.
+    write: true
+    method: DELETE
+    path: "/contacts/{{ input.contact }}"
+    inputs:
+      - { name: contact, label: "The contact: their email address, or their id", required: true }
+    result: "{'deleted': true}"
+    output: { deleted: boolean }
+  list_contacts:
+    label: List contacts
+    description: Contacts newest first - all, those on some lists, or those added or changed since a time; every page, up to 10,000.
+    method: GET
+    path: /contacts
+    inputs:
+      - { name: list_ids, label: "On these lists (their numbers, separated by commas)" }
+      - { name: created_since, label: "Added since (2026-11-01T00:00:00Z)" }
+      - { name: modified_since, label: "Changed since (2026-11-01T00:00:00Z)" }
+    query:
+      listIds: "{{ input.list_ids.replace(' ', '') }}"
+      createdSince: "{{ input.created_since }}"
+      modifiedSince: "{{ input.modified_since }}"
+      limit: "1000"
+    items: value.contacts
+    next: "has(value.count) && (page == null ? 0 : int(page.offset)) + size(value.contacts) < value.count ? {'offset': string((page == null ? 0 : int(page.offset)) + 1000)} : null"
+    output: { id: number, email: text, attributes: record, listIds: list, emailBlacklisted: boolean, smsBlacklisted: boolean, createdAt: text, modifiedAt: text }
+  add_to_list:
+    label: Put contacts on a list
+    description: Contacts already in Brevo put on a list, by their email addresses (up to 150 at once).
+    write: true
+    method: POST
+    path: "/contacts/lists/{{ input.list_id }}/contacts/add"
+    inputs:
+      - { name: list_id, label: "The list (its number)", required: true }
+      - { name: emails, label: "Their email addresses, separated by commas", required: true }
+    send: { emails: "{{ input.emails.split(',').map(e, e.trim()) }}" }
+    result: value.contacts
+    output: { success: list, failure: list }
+  remove_from_list:
+    label: Take contacts off a list
+    description: Contacts taken off a list, by their email addresses (up to 150 at once); they stay in Brevo.
+    write: true
+    method: POST
+    path: "/contacts/lists/{{ input.list_id }}/contacts/remove"
+    inputs:
+      - { name: list_id, label: "The list (its number)", required: true }
+      - { name: emails, label: "Their email addresses, separated by commas", required: true }
+    send: { emails: "{{ input.emails.split(',').map(e, e.trim()) }}" }
+    result: value.contacts
+    output: { success: list, failure: list }
+  list_lists:
+    label: List contact lists
+    description: Each list's number, name, folder and how many contacts it holds; every page.
+    method: GET
+    path: /contacts/lists
+    query: { limit: "50" }
+    items: value.lists
+    next: "has(value.count) && (page == null ? 0 : int(page.offset)) + size(value.lists) < value.count ? {'offset': string((page == null ? 0 : int(page.offset)) + 50)} : null"
+    output: { id: number, name: text, folderId: number, uniqueSubscribers: number }
+  create_list:
+    label: Make a contact list
+    description: A new, empty list in a folder of lists; gives its number.
+    write: true
+    method: POST
+    path: /contacts/lists
+    inputs:
+      - { name: name, label: "Its name", required: true }
+      - { name: folder_id, label: "In this folder (its number; Brevo's first folder is 1)", required: true, kind: number }
+    send: { name: "{{ input.name }}", folderId: "{{ input.folder_id }}" }
+    output: { id: number }
+  list_templates:
+    label: List email templates
+    description: The account's email templates, each with its number (for Send an email), name, subject and sender; every page.
+    method: GET
+    path: /smtp/templates
+    inputs:
+      - { name: active_only, label: Only active ones, kind: boolean }
+    query: { templateStatus: "{{ input.active_only }}", limit: "1000" }
+    items: "has(value.templates) ? value.templates.map(t, {'id': t.id, 'name': t.name, 'subject': t.subject, 'isActive': t.isActive, 'sender': t.sender, 'tag': t.tag, 'modifiedAt': t.modifiedAt}) : []"
+    next: "has(value.count) && (page == null ? 0 : int(page.offset)) + 1000 < value.count ? {'offset': string((page == null ? 0 : int(page.offset)) + 1000)} : null"
+    output: { id: number, name: text, subject: text, isActive: boolean, sender: record, tag: text, modifiedAt: text }
+  list_campaigns:
+    label: List email campaigns
+    description: The account's email campaigns, newest first, each with its number, name, subject, status and when it was sent; every page.
+    method: GET
+    path: /emailCampaigns
+    inputs:
+      - { name: status, label: "Only those that are: draft, sent, queued, suspended, archive, inProcess" }
+    query: { status: "{{ input.status }}", limit: "100", excludeHtmlContent: "true" }
+    items: "has(value.campaigns) ? value.campaigns.map(c, {'id': c.id, 'name': c.name, 'subject': c.subject, 'status': c.status, 'type': c.type, 'scheduledAt': has(c.scheduledAt) ? c.scheduledAt : null, 'sentDate': has(c.sentDate) ? c.sentDate : null}) : []"
+    next: "has(value.count) && (page == null ? 0 : int(page.offset)) + 100 < value.count ? {'offset': string((page == null ? 0 : int(page.offset)) + 100)} : null"
+    output: { id: number, name: text, subject: text, status: text, type: text, scheduledAt: text, sentDate: text }
+  send_campaign:
+    label: Send an email campaign now
+    description: A campaign made in Brevo, with its recipients and content, sent at once.
+    write: true
+    method: POST
+    path: "/emailCampaigns/{{ input.campaign_id }}/sendNow"
+    body: none
+    inputs:
+      - { name: campaign_id, label: "The campaign (its number)", required: true }
+    result: "{'sent': true}"
+    output: { sent: boolean }
+  create_deal:
+    label: Add a deal
+    description: A deal in Brevo's CRM, with its attributes (amount, pipeline, stage, owner...) and the contacts and companies it is with.
+    write: true
+    method: POST
+    path: /crm/deals
+    inputs:
+      - { name: name, label: "Its name", required: true }
+      - { name: attributes, label: "Its attributes (as JSON): {\"amount\": 4800, \"deal_owner\": \"sam@example.com\"}", kind: record }
+      - { name: contact_ids, label: "With these contacts (their ids, separated by commas)" }
+      - { name: company_ids, label: "With these companies (their ids, separated by commas)" }
+    send:
+      name: "{{ input.name }}"
+      attributes: "{{ input.attributes }}"
+      linkedContactsIds: "{{ input.contact_ids.split(',').map(c, int(c.trim())) }}"
+      linkedCompaniesIds: "{{ input.company_ids.split(',').map(c, c.trim()) }}"
+    output: { id: text }
+  create_company:
+    label: Add a company
+    description: A company in Brevo's CRM, with its attributes (domain, industry, phone...) and the contacts and deals it is with.
+    write: true
+    method: POST
+    path: /companies
+    inputs:
+      - { name: name, label: "Its name", required: true }
+      - { name: attributes, label: "Its attributes (as JSON): {\"domain\": \"example.com\", \"industry\": \"Retail\"}", kind: record }
+      - { name: contact_ids, label: "With these contacts (their ids, separated by commas)" }
+      - { name: deal_ids, label: "With these deals (their ids, separated by commas)" }
+    send:
+      name: "{{ input.name }}"
+      attributes: "{{ input.attributes }}"
+      linkedContactsIds: "{{ input.contact_ids.split(',').map(c, int(c.trim())) }}"
+      linkedDealsIds: "{{ input.deal_ids.split(',').map(d, d.trim()) }}"
+    output: { id: text }
+triggers:
+  new_contact:
+    label: A new contact
+    description: Each contact added to Brevo - by a form, an import or another app - asked for every few minutes.
+    poll:
+      method: GET
+      path: /contacts
+      query: { limit: "100", sort: desc }
+      items: value.contacts
+      next: "has(value.count) && (page == null ? 0 : int(page.offset)) + size(value.contacts) < value.count ? {'offset': string((page == null ? 0 : int(page.offset)) + 100)} : null"
+      newest_first: true
+      id: string(item.id)
+      every: 5m
+  email_event:
+    label: An email delivered, opened, clicked or bounced
+    description: >-
+      Each event of the emails sent through Brevo (as Send an email sends them) as Brevo sends it: delivered, opened,
+      clicked, bounced, marked as spam, unsubscribed. Turning the workflow on subscribes its address, and turning it
+      off ends the subscription.
+    inputs:
+      - { name: events, label: "Which, separated by commas: delivered, opened, click, hardBounce, softBounce, spam, blocked, unsubscribed, request (sent)", description: "delivered, opened, click, hardBounce, softBounce, spam, unsubscribed when empty" }
+    webhook:
+      signature: { header: x-webhook-token, algorithm: token }
+      secret: webhook_secret
+      id: "('message-id' in value ? value['message-id'] : string(value.id)) + ':' + value.event + ':' + string(value.ts_event)"
+      register:
+        - method: POST
+          path: /webhooks
+          send:
+            url: "{{ input.address }}"
+            description: OpenDuct workflow
+            type: transactional
+            events: "{{ input.events == null ? ['delivered', 'opened', 'click', 'hardBounce', 'softBounce', 'spam', 'unsubscribed'] : input.events.split(',').map(e, e.trim()) }}"
+            headers: [{ key: x-webhook-token, value: "{{ input.secret }}" }]
+      keep:
+        webhook_secret: input.secret
+        webhook_id: string(value.id)
+      unregister:
+        - { method: DELETE, path: "/webhooks/{{ input.registered.webhook_id }}" }
+  contact_event:
+    label: A contact added to a list, changed or unsubscribed
+    description: >-
+      Each marketing event as Brevo sends it: a contact added to a list, changed or deleted, or a campaign email
+      opened, clicked, bounced or unsubscribed from. Turning the workflow on subscribes its address, and turning it off
+      ends the subscription.
+    inputs:
+      - { name: events, label: "Which, separated by commas: listAddition, contactUpdated, contactDeleted, unsubscribed, opened, click, hardBounce, softBounce, spam, delivered", description: "listAddition, contactUpdated, unsubscribed when empty" }
+    webhook:
+      signature: { header: x-webhook-token, algorithm: token }
+      secret: webhook_secret
+      id: "string(value.id) + ':' + value.event + ':' + ('email' in value ? value.email : '') + ':' + ('ts_event' in value ? string(value.ts_event) : '')"
+      register:
+        - method: POST
+          path: /webhooks
+          send:
+            url: "{{ input.address }}"
+            description: OpenDuct workflow
+            type: marketing
+            events: "{{ input.events == null ? ['listAddition', 'contactUpdated', 'unsubscribed'] : input.events.split(',').map(e, e.trim()) }}"
+            headers: [{ key: x-webhook-token, value: "{{ input.secret }}" }]
+      keep:
+        webhook_secret: input.secret
+        webhook_id: string(value.id)
+      unregister:
+        - { method: DELETE, path: "/webhooks/{{ input.registered.webhook_id }}" }

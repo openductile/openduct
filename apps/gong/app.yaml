@@ -1,0 +1,538 @@
+# Copyright 2026 Ductile AI, Inc
+# SPDX-License-Identifier: Apache-2.0
+# Gong: made by `openduct app from-openapi` from the OpenAPI documents on Gong's API reference pages, https://help.gong.io/apidocs/ (24 pages, fetched 2026-11-27; Gong's terms, no open licence; descriptions in our own words) (Gong API V2, OpenAPI 3.0).
+# Checked as made. Change what you like, then run `openduct app check` and `openduct app test` again.
+app: gong
+name: Gong
+category: crm
+description: "Calls Gong records, their details and transcripts, users and their activity, scorecards, library folders, meetings, and Engage flows."
+docs: "https://help.gong.io/apidocs/introduction"
+hosts: [api.gong.io, "*.api.gong.io"]
+# Each company has an address of its own (on its Gong API page); api.gong.io when none is given.
+base_url: "https://{{ has(credential.api_url) && credential.api_url != '' ? regex.replace(credential.api_url, r'^https://|/+$', '') : 'api.gong.io' }}"
+sign_in:
+  - id: gong
+    label: "An access key and its secret"
+    fields:
+      - { name: access_key, label: "The access key (Gong API page)" }
+      - { name: access_key_secret, label: "The access key's secret", secret: true }
+      - { name: api_url, label: "The API address the Gong API page shows, such as https://us-12345.api.gong.io", optional: true }
+    basic: { username: "{{ credential.access_key }}", password: "{{ credential.access_key_secret }}" }
+actions:
+  list_calls:
+    label: "List calls"
+    description: "Recorded calls that started in a time range: title, start, length, owner, direction and the system that recorded them; every page."
+    method: GET
+    path: "/v2/calls"
+    inputs:
+      - { name: from_date_time, label: "Started from (such as 2026-11-01T00:00:00Z)", required: true }
+      - { name: to_date_time, label: "Started before (such as 2026-11-08T00:00:00Z)", required: true }
+      - { name: workspace_id, label: "Only this workspace's (its id)" }
+    query:
+      fromDateTime: "{{ input.from_date_time }}"
+      toDateTime: "{{ input.to_date_time }}"
+      workspaceId: "{{ input.workspace_id }}"
+    items: value.calls
+    next: "value.records.cursor == null || value.records.cursor == '' ? null : {'cursor': value.records.cursor}"
+    output:
+      id: text
+      url: text
+      title: text
+      scheduled: text
+      started: text
+      duration: number
+      primaryUserId: text
+      direction: text
+      system: text
+      scope: text
+      media: text
+      language: text
+      workspaceId: text
+      sdrDisposition: text
+      clientUniqueId: text
+      customData: text
+      purpose: text
+      meetingUrl: text
+      isPrivate: boolean
+      calendarEventId: text
+  list_users:
+    label: "List users"
+    description: "The company's Gong users, active or not; every page."
+    method: GET
+    path: "/v2/users"
+    inputs: [{ name: include_avatars, label: "With avatars (users that stand for Gong itself)", kind: boolean }]
+    query: { includeAvatars: "{{ input.include_avatars }}" }
+    items: value.users
+    next: "value.records.cursor == null || value.records.cursor == '' ? null : {'cursor': value.records.cursor}"
+    output:
+      id: text
+      emailAddress: text
+      created: text
+      active: boolean
+      emailAliases: list
+      trustedEmailAddress: text
+      firstName: text
+      lastName: text
+      title: text
+      phoneNumber: text
+      extension: text
+      personalMeetingUrls: list
+      settings: record
+      managerId: text
+      meetingConsentPageUrl: text
+      conferencingProviders: list
+      spokenLanguages: list
+  list_flows:
+    label: "List flows"
+    description: "The Engage flows a user can see: the company's, their own and those shared with them; every page."
+    method: GET
+    path: "/v2/flows"
+    inputs:
+      - name: flow_owner_email
+        label: "The user whose flows to list (their email)"
+        required: true
+      - { name: workspace_id, label: "Only this workspace's (its id)" }
+      - { name: folder_id, label: "Only this folder's (its id)" }
+      - name: most_recently_assigned
+        label: "Only the 20 the user last added prospects to"
+        kind: boolean
+    query:
+      flowOwnerEmail: "{{ input.flow_owner_email }}"
+      workspaceId: "{{ input.workspace_id }}"
+      folderId: "{{ input.folder_id }}"
+      mostRecentlyAssigned: "{{ input.most_recently_assigned }}"
+    items: value.flows
+    next: "value.records.cursor == null || value.records.cursor == '' ? null : {'cursor': value.records.cursor}"
+    output:
+      id: text
+      name: text
+      folderId: text
+      folderName: text
+      visibility: text
+      creationDate: text
+      exclusive: boolean
+  list_scorecards:
+    label: "List scorecards"
+    description: "Every scorecard of the company and its questions."
+    method: GET
+    path: "/v2/settings/scorecards"
+    items: value.scorecards
+    output:
+      scorecardId: number
+      scorecardName: text
+      workspaceId: number
+      enabled: boolean
+      updaterUserId: number
+      created: text
+      updated: text
+      reviewMethod: text
+      questions: list
+  list_folder_calls:
+    label: "List the calls in a library folder"
+    description: "The calls kept in one library folder."
+    method: GET
+    path: "/v2/library/folder-content"
+    inputs: [{ name: folder_id, label: "The folder's id" }]
+    query: { folderId: "{{ input.folder_id }}" }
+    items: value.calls
+    output: { id: text, title: text, note: text, addedBy: text, created: text, url: text, snippet: record }
+  list_folders:
+    label: "List library folders"
+    description: "The public library folders of a workspace."
+    method: GET
+    path: "/v2/library/folders"
+    inputs:
+      - { name: workspace_id, label: "The workspace (its id)", required: true }
+    query: { workspaceId: "{{ input.workspace_id }}" }
+    items: value.folders
+    output: { id: text, name: text, parentFolderId: text, createdBy: text, updated: text }
+  add_call:
+    label: "Add a call"
+    description: "Adds a call recorded elsewhere (a phone system, say) to Gong; its recording follows with the media address or is uploaded later."
+    write: true
+    method: POST
+    path: "/v2/calls"
+    inputs:
+      - name: client_unique_id
+        label: "Its id in the system that recorded it (a phone system, say)"
+        required: true
+      - { name: title, label: Title }
+      - { name: purpose, label: Purpose }
+      - { name: scheduled_start, label: "Planned start (such as 2026-11-27T10:00:00Z)" }
+      - { name: scheduled_end, label: "Planned end" }
+      - { name: actual_start, label: "When it started (such as 2026-11-27T10:02:00Z)", required: true }
+      - { name: duration, label: "How long it lasted, in seconds", kind: number }
+      - { name: parties, label: "Who took part (as JSON): each with an emailAddress or phoneNumber, a name, and the userId of a Gong user", required: true, kind: list }
+      - { name: direction, label: "Inbound, Outbound, Conference or Unknown", required: true }
+      - name: disposition
+        label: "How it ended, such as No answer or Left voicemail"
+      - name: context
+        label: "Its CRM records, such as the account and opportunity (as JSON)"
+        kind: list
+      - { name: custom_data, label: "Any text to keep with it" }
+      - { name: speakers_timeline, label: "Who spoke when (as JSON)", kind: record }
+      - { name: meeting_url, label: "The web meeting's address" }
+      - name: call_provider_code
+        label: "The code of the system it was made in"
+      - { name: download_media_url, label: "The recording's address, for Gong to fetch" }
+      - { name: workspace_id, label: "The workspace to add it to (its id)" }
+      - { name: language_code, label: "Its language, for the transcript (such as en-US)" }
+      - { name: flow_context, label: "The Engage task it belongs to (as JSON)", kind: record }
+      - { name: primary_user, label: "Its owner (their Gong user id)", required: true }
+    send:
+      clientUniqueId: "{{ input.client_unique_id }}"
+      title: "{{ input.title }}"
+      purpose: "{{ input.purpose }}"
+      scheduledStart: "{{ input.scheduled_start }}"
+      scheduledEnd: "{{ input.scheduled_end }}"
+      actualStart: "{{ input.actual_start }}"
+      duration: "{{ input.duration }}"
+      parties: "{{ input.parties }}"
+      direction: "{{ input.direction }}"
+      disposition: "{{ input.disposition }}"
+      context: "{{ input.context }}"
+      customData: "{{ input.custom_data }}"
+      speakersTimeline: "{{ input.speakers_timeline }}"
+      meetingUrl: "{{ input.meeting_url }}"
+      callProviderCode: "{{ input.call_provider_code }}"
+      downloadMediaUrl: "{{ input.download_media_url }}"
+      workspaceId: "{{ input.workspace_id }}"
+      languageCode: "{{ input.language_code }}"
+      flowContext: "{{ input.flow_context }}"
+      primaryUser: "{{ input.primary_user }}"
+    output: { requestId: text, callId: text }
+  list_workspaces:
+    label: "List workspaces"
+    description: "The company's workspaces."
+    method: GET
+    path: "/v2/workspaces"
+    items: value.workspaces
+    output: { id: text, name: text, description: text }
+  list_answered_scorecards:
+    label: List answered scorecards
+    description: "Scorecards filled in for calls: of calls or reviews in a date range, of some users or scorecards if given; every page."
+    method: POST
+    path: /v2/stats/activity/scorecards
+    inputs:
+      - { name: call_from_date, label: "Calls from (such as 2026-11-01)" }
+      - { name: call_to_date, label: "Calls until, not included" }
+      - { name: review_from_date, label: "Or reviews from (such as 2026-11-01)" }
+      - { name: review_to_date, label: "Reviews until, not included" }
+      - { name: reviewed_user_ids, label: "Only reviews of these users (their Gong ids)", kind: list }
+      - { name: scorecard_ids, label: "Only these scorecards (their ids)", kind: list }
+    send:
+      filter:
+        callFromDate: "{{ input.call_from_date }}"
+        callToDate: "{{ input.call_to_date }}"
+        reviewFromDate: "{{ input.review_from_date }}"
+        reviewToDate: "{{ input.review_to_date }}"
+        reviewedUserIds: "{{ input.reviewed_user_ids }}"
+        scorecardIds: "{{ input.scorecard_ids }}"
+    items: value.answeredScorecards
+    next: "has(value.records.cursor) && value.records.cursor != null && value.records.cursor != '' ? {'cursor': value.records.cursor} : null"
+    page_in: body
+    output: { answeredScorecardId: number, scorecardId: number, scorecardName: text, callId: number, callStartTime: text, reviewedUserId: number, reviewerUserId: number, reviewTime: text, answers: list }
+  get_call:
+    label: "Look up a call"
+    description: "One call's basics: title, start, length, owner, direction and the system that recorded it."
+    method: GET
+    path: "/v2/calls/{{ input.id }}"
+    inputs: [{ name: id, label: "The call's Gong id", required: true }]
+    output: { requestId: text, call: record }
+  schedule_meeting:
+    label: "Schedule a meeting"
+    description: "A new Gong meeting for a user, with its invitees; Gong records it."
+    write: true
+    method: POST
+    path: "/v2/meetings"
+    inputs:
+      - name: start_time
+        label: "Starts (such as 2026-11-30T15:00:00Z)"
+        required: true
+      - name: end_time
+        label: "Ends (such as 2026-11-30T15:30:00Z)"
+        required: true
+      - { name: title, label: Title }
+      - name: invitees
+        label: "Who is invited, besides the organizer (as JSON): each an email and a displayName"
+        required: true
+        kind: list
+      - { name: external_id, label: "Its id in your own system" }
+      - { name: provider, label: "The web meeting provider, such as zoom" }
+      - name: organizer_email
+        label: "The organizer (a Gong user's email; their consent page is used)"
+        required: true
+    send:
+      startTime: "{{ input.start_time }}"
+      endTime: "{{ input.end_time }}"
+      title: "{{ input.title }}"
+      invitees: "{{ input.invitees }}"
+      externalId: "{{ input.external_id }}"
+      provider: "{{ input.provider }}"
+      organizerEmail: "{{ input.organizer_email }}"
+    output: { requestId: text, meetingId: text, meetingUrl: text, additionalInvitees: list }
+  list_flow_instances:
+    label: "List prospects' flow instances"
+    description: "The Engage flow instances of the prospects given (by CRM id), or the flow instances given."
+    write: true
+    method: POST
+    path: "/v2/flows/prospects"
+    inputs:
+      - { name: crm_prospects_ids, label: "The prospects (their CRM contact or lead ids)", kind: list }
+      - name: flow_instance_ids
+        label: "Or these flow instances (their ids, up to 200)"
+        kind: list
+    send:
+      crmProspectsIds: "{{ input.crm_prospects_ids }}"
+      flowInstanceIds: "{{ input.flow_instance_ids }}"
+    output: { requestId: text, prospectsAssigned: list }
+  get_user:
+    label: "Look up a user"
+    description: "One Gong user, active or not."
+    method: GET
+    path: "/v2/users/{{ input.id }}"
+    inputs: [{ name: id, label: "The user's Gong id", required: true }]
+    output: { requestId: text, user: record }
+  update_meeting:
+    label: "Change a meeting"
+    description: "Changes a Gong meeting's time, title or invitees."
+    write: true
+    method: PUT
+    path: "/v2/meetings/{{ input.meeting_id }}"
+    inputs:
+      - name: meeting_id
+        label: "The meeting's id"
+        required: true
+        kind: number
+      - name: start_time
+        label: "Starts (such as 2026-11-30T15:00:00Z)"
+        required: true
+      - name: end_time
+        label: "Ends (such as 2026-11-30T15:30:00Z)"
+        required: true
+      - { name: title, label: Title }
+      - name: invitees
+        label: "Who is invited, besides the organizer (as JSON): each an email and a displayName"
+        required: true
+        kind: list
+      - { name: external_id, label: "Its id in your own system" }
+      - { name: provider, label: "The web meeting provider, such as zoom" }
+      - name: organizer_email
+        label: "The organizer (their email)"
+        required: true
+    send:
+      startTime: "{{ input.start_time }}"
+      endTime: "{{ input.end_time }}"
+      title: "{{ input.title }}"
+      invitees: "{{ input.invitees }}"
+      externalId: "{{ input.external_id }}"
+      provider: "{{ input.provider }}"
+      organizerEmail: "{{ input.organizer_email }}"
+    output: { requestId: text, meetingId: text }
+  list_trackers:
+    label: "List trackers"
+    description: "The keyword and smart trackers, of a workspace if given."
+    method: GET
+    path: "/v2/settings/trackers"
+    inputs: [{ name: workspace_id, label: "Only this workspace's (its id)" }]
+    query: { workspaceId: "{{ input.workspace_id }}" }
+    output: { requestId: text, keywordTrackers: list, smartTrackers: list }
+  list_calls_with_details:
+    label: List calls with their details
+    description: >-
+      Calls that match, with who took part and, if asked, what was said about them (brief, outline, topics, trackers),
+      their CRM records and how people interacted; every page.
+    method: POST
+    path: /v2/calls/extensive
+    inputs:
+      - { name: from_date_time, label: "Started from (such as 2026-11-01T00:00:00Z)" }
+      - { name: to_date_time, label: "Started before (such as 2026-11-08T00:00:00Z)" }
+      - { name: call_ids, label: "Only these calls (their Gong ids)", kind: list }
+      - { name: primary_user_ids, label: "Only calls these users own (their Gong ids)", kind: list }
+      - { name: workspace_id, label: "Only this workspace's (its id)" }
+      - name: content_selector
+        label: "What to give besides each call's basics (as JSON), such as {\"exposedFields\": {\"parties\": true, \"content\": {\"brief\": true, \"topics\": true}}}"
+        kind: record
+    send:
+      filter:
+        fromDateTime: "{{ input.from_date_time }}"
+        toDateTime: "{{ input.to_date_time }}"
+        callIds: "{{ input.call_ids }}"
+        primaryUserIds: "{{ input.primary_user_ids }}"
+        workspaceId: "{{ input.workspace_id }}"
+      contentSelector: "{{ input.content_selector }}"
+    items: value.calls
+    next: "has(value.records.cursor) && value.records.cursor != null && value.records.cursor != '' ? {'cursor': value.records.cursor} : null"
+    page_in: body
+    output: { metaData: record, context: list, parties: list, content: record, interaction: record, collaboration: record, media: record }
+  get_transcripts:
+    label: "Get calls' transcripts"
+    description: "What was said in calls, by whom and when: the calls given, or those of a time range; every page."
+    method: POST
+    path: /v2/calls/transcript
+    inputs:
+      - { name: call_ids, label: "These calls (their Gong ids)", kind: list }
+      - { name: from_date_time, label: "Or those started from (such as 2026-11-01T00:00:00Z)" }
+      - { name: to_date_time, label: "And before (such as 2026-11-08T00:00:00Z)" }
+      - { name: workspace_id, label: "Only this workspace's (its id)" }
+    send:
+      filter:
+        callIds: "{{ input.call_ids }}"
+        fromDateTime: "{{ input.from_date_time }}"
+        toDateTime: "{{ input.to_date_time }}"
+        workspaceId: "{{ input.workspace_id }}"
+    items: value.callTranscripts
+    next: "has(value.records.cursor) && value.records.cursor != null && value.records.cursor != '' ? {'cursor': value.records.cursor} : null"
+    page_in: body
+    output: { callId: text, transcript: list }
+  get_interaction_stats:
+    label: "Get users' interaction stats"
+    description: "How each user talks on calls in a date range (talk ratio, longest monologue, questions asked and the like), from calls Gong analyses; every page."
+    method: POST
+    path: /v2/stats/interaction
+    inputs:
+      - { name: from_date, label: "From (such as 2026-11-01, in the company's time zone)", required: true }
+      - { name: to_date, label: "Until, not included (such as 2026-12-01)", required: true }
+      - { name: user_ids, label: "Only these users (their Gong ids); all by default", kind: list }
+    send: { filter: { fromDate: "{{ input.from_date }}", toDate: "{{ input.to_date }}", userIds: "{{ input.user_ids }}" } }
+    items: value.peopleInteractionStats
+    next: "has(value.records.cursor) && value.records.cursor != null && value.records.cursor != '' ? {'cursor': value.records.cursor} : null"
+    page_in: body
+    output: { userId: text, userEmailAddress: text, personInteractionStats: list }
+  get_daily_activity:
+    label: "Get users' daily activity"
+    description: "What each user did day by day in a date range: calls made and attended, calls shared and commented on, and the like; every page."
+    method: POST
+    path: /v2/stats/activity/day-by-day
+    inputs:
+      - { name: from_date, label: "From (such as 2026-11-01, in the company's time zone)", required: true }
+      - { name: to_date, label: "Until, not included (such as 2026-12-01)", required: true }
+      - { name: user_ids, label: "Only these users (their Gong ids); all by default", kind: list }
+    send: { filter: { fromDate: "{{ input.from_date }}", toDate: "{{ input.to_date }}", userIds: "{{ input.user_ids }}" } }
+    items: value.usersDetailedActivities
+    next: "has(value.records.cursor) && value.records.cursor != null && value.records.cursor != '' ? {'cursor': value.records.cursor} : null"
+    page_in: body
+    output: { userId: text, userEmailAddress: text, userDailyActivityStats: list }
+  get_activity_totals:
+    label: "Get users' activity totals"
+    description: "What each user did in a date range, added up: calls made and attended, calls shared and commented on, and the like; every page."
+    method: POST
+    path: /v2/stats/activity/aggregate
+    inputs:
+      - { name: from_date, label: "From (such as 2026-11-01, in the company's time zone)", required: true }
+      - { name: to_date, label: "Until, not included (such as 2026-12-01)", required: true }
+      - { name: user_ids, label: "Only these users (their Gong ids); all by default", kind: list }
+    send: { filter: { fromDate: "{{ input.from_date }}", toDate: "{{ input.to_date }}", userIds: "{{ input.user_ids }}" } }
+    items: value.usersAggregateActivityStats
+    next: "has(value.records.cursor) && value.records.cursor != null && value.records.cursor != '' ? {'cursor': value.records.cursor} : null"
+    page_in: body
+    output: { userId: text, userEmailAddress: text, userAggregateActivityStats: record }
+  find_users:
+    label: Find users
+    description: Gong users by their ids, or those added in a time range, active or not; every page.
+    method: POST
+    path: /v2/users/extensive
+    inputs:
+      - { name: user_ids, label: "These users (their Gong ids)", kind: list }
+      - { name: created_from, label: "Or those added from (such as 2026-01-01T00:00:00Z)" }
+      - { name: created_to, label: "And before" }
+    send:
+      filter:
+        userIds: "{{ input.user_ids }}"
+        createdFromDateTime: "{{ input.created_from }}"
+        createdToDateTime: "{{ input.created_to }}"
+    items: value.users
+    next: "has(value.records.cursor) && value.records.cursor != null && value.records.cursor != '' ? {'cursor': value.records.cursor} : null"
+    page_in: body
+    output: { id: text, emailAddress: text, created: text, active: boolean, emailAliases: list, firstName: text, lastName: text, title: text, phoneNumber: text, managerId: text, settings: record, spokenLanguages: list }
+  add_to_flow:
+    label: "Add prospects to a flow"
+    description: "Puts 1 to 100 prospects (by CRM id) in an Engage flow, owned by a user."
+    write: true
+    method: POST
+    path: "/v2/flows/prospects/assign"
+    inputs:
+      - name: crm_prospects_ids
+        label: "The prospects (their CRM contact or lead ids), 1 to 100"
+        required: true
+        kind: list
+      - { name: flow_id, label: "The flow (its id)", required: true }
+      - name: flow_instance_owner_email
+        label: "The user who owns them in the flow (their email)"
+        required: true
+      - name: overrides
+        label: "What to use in place of the flow's own steps' subjects and bodies, or its variables (as JSON)"
+        kind: record
+      - { name: flow_instance_description, label: "A description" }
+    send:
+      crmProspectsIds: "{{ input.crm_prospects_ids }}"
+      flowId: "{{ input.flow_id }}"
+      flowInstanceOwnerEmail: "{{ input.flow_instance_owner_email }}"
+      overrides: "{{ input.overrides }}"
+      flowInstanceDescription: "{{ input.flow_instance_description }}"
+    output: { requestId: text, prospectsAssigned: list, prospectsNotAssigned: list }
+  record_interaction:
+    label: "Record a digital interaction"
+    description: "Tells Gong that a person looked at or did something online (opened a document, visited a page), to show beside their deal."
+    write: true
+    method: POST
+    path: "/v2/digital-interaction"
+    inputs:
+      - name: event_id
+        label: "Your own id for the event (the same one is not counted twice)"
+        required: true
+      - { name: timestamp, label: "When it happened (such as 2026-11-27T10:00:00Z)", required: true }
+      - name: event_type
+        label: "What happened, such as Document viewed"
+        required: true
+      - name: source_system_name
+        label: "The system it came from"
+      - name: session_id
+        label: "A session id, to tie events together"
+      - { name: device, label: Device }
+      - { name: content, label: "What it was about (as JSON): such as the content's id, title and address", required: true, kind: record }
+      - { name: person, label: "Who did it (as JSON): such as their email and name", kind: record }
+      - { name: custom_fields, label: "More fields (as JSON)", kind: list }
+      - { name: tracking_id, label: "A tracking id for the person" }
+    send:
+      eventId: "{{ input.event_id }}"
+      timestamp: "{{ input.timestamp }}"
+      eventType: "{{ input.event_type }}"
+      sourceSystemName: "{{ input.source_system_name }}"
+      sessionId: "{{ input.session_id }}"
+      device: "{{ input.device }}"
+      content: "{{ input.content }}"
+      person: "{{ input.person }}"
+      customFields: "{{ input.custom_fields }}"
+      trackingId: "{{ input.tracking_id }}"
+    output: { requestId: text }
+  delete_meeting:
+    label: "Delete a meeting"
+    description: "Removes a Gong meeting."
+    write: true
+    method: DELETE
+    path: "/v2/meetings/{{ input.meeting_id }}"
+    inputs:
+      - name: meeting_id
+        label: "The meeting's id"
+        required: true
+        kind: number
+      - { name: organizer_email, label: "The organizer (their email)" }
+    send: { organizerEmail: "{{ input.organizer_email }}" }
+    output: { organizerEmail: text }
+triggers:
+  new_call:
+    label: A new call
+    description: >-
+      Each call recorded in the last day that Gong has finished with, asked for every few minutes (calls appear once
+      Gong has processed them).
+    inputs:
+      - { name: workspace_id, label: "Only this workspace's (its id)" }
+    poll:
+      action: list_calls
+      input:
+        from_date_time: "{{ string(timestamp(input.now) - duration('24h')) }}"
+        to_date_time: "{{ input.now }}"
+        workspace_id: "{{ input.workspace_id }}"
+      id: item.id
+      every: 15m

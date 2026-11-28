@@ -1,0 +1,44 @@
+description: "Change a project: what it sends, and an answer shaped as Clockify's API description says"
+action: update_project
+credential: { api_key: test-key }
+input: { workspace_id: "64a687e29ae1f428e7ebe303", project_id: "5b641568b07987035750505e" }
+exchanges:
+  - sent:
+      method: PUT
+      url: "https://api.clockify.me/api/v1/workspaces/64a687e29ae1f428e7ebe303/projects/5b641568b07987035750505e"
+      query: {}
+      headers: { x-api-key: test-key }
+      body: {}
+    answer:
+      status: 200
+      body:
+        archived: true
+        billable: true
+        budgetEstimate:
+          active: true
+          estimate: 600000
+          includeExpenses: true
+          resetOption: WEEKLY
+          type: AUTO
+        clientId: "9t641568b07987035750704"
+        clientName: example
+        color: example
+        costRate: { amount: 10500, currency: USD }
+        duration: "60000"
+        estimate: { estimate: PT1H30M, type: AUTO }
+        estimateReset: { dayOfMonth: 1, dayOfWeek: MONDAY, hour: 1, interval: WEEKLY, month: JANUARY }
+        hourlyRate: { amount: 10500, currency: USD }
+        id: "5b641568b07987035750505e"
+result:
+  archived: true
+  billable: true
+  budgetEstimate: { active: true, estimate: 600000, includeExpenses: true, resetOption: WEEKLY, type: AUTO }
+  clientId: "9t641568b07987035750704"
+  clientName: example
+  color: example
+  costRate: { amount: 10500, currency: USD }
+  duration: "60000"
+  estimate: { estimate: PT1H30M, type: AUTO }
+  estimateReset: { dayOfMonth: 1, dayOfWeek: MONDAY, hour: 1, interval: WEEKLY, month: JANUARY }
+  hourlyRate: { amount: 10500, currency: USD }
+  id: "5b641568b07987035750505e"

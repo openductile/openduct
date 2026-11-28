@@ -1,0 +1,33 @@
+# Made by `openduct app from-openapi`: Get metadata taxonomies for namespace.
+description: "Get metadata taxonomies for namespace, made from the API description's schemas"
+action: get_metadata_taxonomy
+credential: { access_token: test-access-token }
+input: { namespace: example }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://api.box.com/2.0/metadata_taxonomies/example"
+      query: {}
+      headers: { authorization: "Bearer test-access-token" }
+    answer:
+      status: 200
+      body:
+        limit: 1000
+        next_marker: JV9IRGZmieiBasejOG9yDCRNgd2ymoZIbjsxbJMjIs3kioVii
+        prev_marker: JV9IRGZmieiBasejOG9yDCRNgd2ymoZIbjsxbJMjIs3kioVih
+        entries:
+          - id: "822227e0-47a5-921b-88a8-494760b2e6d2"
+            key: geography
+            displayName: Geography
+            namespace: enterprise_123456
+            levels: [{}]
+result:
+  limit: 1000
+  next_marker: JV9IRGZmieiBasejOG9yDCRNgd2ymoZIbjsxbJMjIs3kioVii
+  prev_marker: JV9IRGZmieiBasejOG9yDCRNgd2ymoZIbjsxbJMjIs3kioVih
+  entries:
+    - id: "822227e0-47a5-921b-88a8-494760b2e6d2"
+      key: geography
+      displayName: Geography
+      namespace: enterprise_123456
+      levels: [{}]

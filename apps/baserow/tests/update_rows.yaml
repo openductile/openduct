@@ -1,0 +1,11 @@
+description: Two rows changed at once
+action: update_rows
+credential: { token: br-test-token }
+input: { table_id: 1203, rows: [{ id: 10, Paid: true }, { id: 11, Paid: true }] }
+exchanges:
+  - sent:
+      method: PATCH
+      url: https://api.baserow.io/api/database/rows/table/1203/batch/
+      body: { items: [{ id: 10, Paid: true }, { id: 11, Paid: true }] }
+    answer: { body: { items: [{ id: 10, order: "10.00000000000000000000", Name: Cy, Paid: true }, { id: 11, order: "11.00000000000000000000", Name: Di, Paid: true }] } }
+result: [{ id: 10, order: "10.00000000000000000000", Name: Cy, Paid: true }, { id: 11, order: "11.00000000000000000000", Name: Di, Paid: true }]

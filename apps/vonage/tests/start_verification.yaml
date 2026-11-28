@@ -1,0 +1,27 @@
+description: A code by text, the default
+action: start_verification
+credential:
+  api_key: abcd1234
+  api_secret: test-secret
+input:
+  brand: Sample Shop
+  to: '14155550100'
+  code_length: 6
+exchanges:
+- sent:
+    method: POST
+    url: https://api.nexmo.com/v2/verify
+    headers:
+      authorization: Basic YWJjZDEyMzQ6dGVzdC1zZWNyZXQ=
+    body:
+      brand: Sample Shop
+      workflow:
+      - channel: sms
+        to: '14155550100'
+      code_length: 6
+  answer:
+    status: 202
+    body:
+      request_id: c11236f4-00bf-4b89-84ba-88b25df97315
+result:
+  request_id: c11236f4-00bf-4b89-84ba-88b25df97315

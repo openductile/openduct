@@ -1,0 +1,8 @@
+description: A workflow run, done, with its outputs
+action: get_workflow_run
+credential: { api_key: bb_ak_v5_test }
+input: { run: run_Q3 }
+exchanges:
+  - sent: { method: GET, url: "https://api.bannerbear.com/v5/workflow_runs/run_Q3" }
+    answer: { status: 200, body: { uid: run_Q3, status: completed, workflow: wf_Z8, progress: 100, outputs: { image: "https://images.bannerbear.example/run_Q3.png" } } }
+result: { uid: run_Q3, status: completed, workflow: wf_Z8, progress: 100, outputs: { image: "https://images.bannerbear.example/run_Q3.png" } }

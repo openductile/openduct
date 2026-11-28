@@ -1,0 +1,56 @@
+name: Approve a refund
+description: >-
+  A customer asks for a refund on a form the studio serves; the team gets an e-mail with a one-time link to approve
+  or reject it, and the run waits for the answer - up to three days, through restarts. The customer hears either way;
+  no answer in time counts as a no.
+category: Support
+trigger:
+  form:
+    title: Ask for a refund
+    description: We answer within three days.
+    fields:
+      - { name: email, label: Your e-mail, type: email, required: true }
+      - { name: order, label: Order number, type: text, required: true, max_length: 40 }
+      - { name: amount, label: Amount, type: number, min: 0, required: true }
+      - { name: reason, label: "What went wrong?", type: long_text }
+    thanks: Thank you - we write to you within three days.
+# What a test runs on: an answer as the form gives it.
+sample:
+  email: ada@example.com
+  order: A-1042
+  amount: 40
+  reason: The tote came torn.
+steps:
+  - name: ask
+    email:
+      credential: mail
+      to: team@example.com
+      reply_to: "{{ value.email }}"
+      subject: "Refund of {{ value.amount }} on order {{ value.order }}?"
+      text: "{{ value.email }} asks for a refund of {{ value.amount }} on order {{ value.order }}: {{ value.reason }}\n\nApprove or reject it here (the link works once): {{ links.decide }}"
+  - name: decide
+    approval:
+      title: "Refund {{ value.amount }} on order {{ value.order }}?"
+      description: "{{ value.email }}: {{ value.reason }}"
+      comment: true
+      approve: Refund it
+      reject: Decline
+      timeout: 3d
+      on_timeout: continue
+  - name: answer
+    if:
+      when: "steps.decide.approved"
+      then:
+        - name: granted
+          email:
+            credential: mail
+            to: "{{ value.email }}"
+            subject: "Your refund on order {{ value.order }}"
+            text: "We are refunding {{ value.amount }} on order {{ value.order }}. {{ steps.decide.comment }}"
+      else:
+        - name: declined
+          email:
+            credential: mail
+            to: "{{ value.email }}"
+            subject: "Your refund on order {{ value.order }}"
+            text: "We cannot refund order {{ value.order }} this time. {{ steps.decide.comment }} Reply to this e-mail to tell us more."

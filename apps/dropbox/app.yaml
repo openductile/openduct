@@ -1,0 +1,285 @@
+# Copyright 2026 Ductile AI, Inc
+# SPDX-License-Identifier: Apache-2.0
+# Dropbox: written by hand from Dropbox's own API description
+# (https://github.com/dropbox/dropbox-api-spec/blob/4876d1a552f34e10a46e293aaf7e344c452af13d/openapi/openapi.yaml,
+# MIT licence), with `openduct app from-openapi` as a guide: Dropbox's lists go on at another address
+# (.../continue) with only the cursor, which the generator does not follow.
+app: dropbox
+name: Dropbox
+category: files
+description: Files and folders in Dropbox, found, moved, shared and fetched from the web, and file requests to collect them.
+docs: "https://www.dropbox.com/developers/documentation/http/documentation"
+hosts: [api.dropboxapi.com]
+base_url: "https://api.dropboxapi.com"
+sign_in:
+  - id: dropbox
+    label: "Sign in with Dropbox"
+    oauth2:
+      authorize: "https://www.dropbox.com/oauth2/authorize"
+      token: "https://api.dropboxapi.com/oauth2/token"
+      scopes:
+        - account_info.read
+        - files.metadata.read
+        - files.metadata.write
+        - files.content.read
+        - files.content.write
+        - sharing.read
+        - sharing.write
+        - file_requests.read
+        - file_requests.write
+      extra: { token_access_type: offline }
+    headers: { Authorization: "Bearer {{ credential.access_token }}" }
+error: "type(value) == map && has(value.error_summary) ? value.error_summary : null"
+default_action: list_folder
+actions:
+  list_folder:
+    label: "List a folder"
+    description: "The files and folders in a folder (and in its folders, if asked), every page."
+    method: POST
+    path: "{{ page == null ? '/2/files/list_folder' : '/2/files/list_folder/continue' }}"
+    inputs:
+      - &folder { name: path, label: "The folder, such as /Invoices/2026 (the top of Dropbox when empty)" }
+      - { name: recursive, label: "Its folders' contents too", kind: boolean }
+    # The first page is asked of the folder; the next ones of .../continue with Dropbox's cursor alone.
+    send: "{{ page == null ? {'path': has(input.path) && input.path != null ? input.path : '', 'recursive': has(input.recursive) && input.recursive == true, 'limit': 2000} : {'cursor': page.cursor} }}"
+    items: value.entries
+    next: &next "value.has_more ? {'cursor': value.cursor} : null"
+    page_in: body
+    output: &entry
+      ".tag": text
+      id: text
+      name: text
+      path_display: text
+      path_lower: text
+      size: number
+      rev: text
+      client_modified: text
+      server_modified: text
+      content_hash: text
+      is_downloadable: boolean
+      sharing_info: record
+  search:
+    label: "Find files"
+    description: "Files and folders whose name or content holds some words, in a folder if given; every page."
+    method: POST
+    path: "{{ page == null ? '/2/files/search_v2' : '/2/files/search/continue_v2' }}"
+    inputs:
+      - { name: query, label: "The words to look for", required: true }
+      - { name: path, label: "Only in this folder, such as /Clients" }
+      - { name: filename_only, label: "In names only (not in what files hold)", kind: boolean }
+      - { name: extensions, label: "Only files ending so: such as pdf,docx" }
+    send: >-
+      {{ page == null ? {'query': input.query, 'options': {'path': has(input.path) && input.path != null ? input.path : '',
+         'filename_only': has(input.filename_only) && input.filename_only == true, 'max_results': 1000,
+         'file_extensions': has(input.extensions) && input.extensions != null ? input.extensions.split(',').map(e, e.trim()) : null } } : {'cursor': page.cursor} }}
+    items: "value.matches.map(m, m.metadata.metadata)"
+    next: *next
+    page_in: body
+    output: *entry
+  get_metadata:
+    label: "Look up a file or folder"
+    description: "A file's or folder's name, size, revision and times, by its path or id."
+    method: POST
+    path: /2/files/get_metadata
+    inputs:
+      - &path { name: path, label: "The file or folder: its path (/Invoices/INV-1042.pdf) or its id (id:...)", required: true }
+    send: { path: "{{ input.path }}" }
+    output: *entry
+  create_folder:
+    label: "Make a folder"
+    description: "A new folder at a path; one named as another there is renamed, if asked."
+    write: true
+    method: POST
+    path: /2/files/create_folder_v2
+    inputs:
+      - { name: path, label: "The new folder's path, such as /Clients/Example Co", required: true }
+      - &autorename { name: autorename, label: "Rename it if the name is taken (rather than fail)", kind: boolean }
+    send: { path: "{{ input.path }}", autorename: "{{ input.autorename }}" }
+    result: value.metadata
+    output: *entry
+  delete:
+    label: "Delete a file or folder"
+    description: "A file, or a folder with all it holds, moved to Dropbox's deleted files (they can be brought back for a while)."
+    write: true
+    method: POST
+    path: /2/files/delete_v2
+    inputs: [*path]
+    send: { path: "{{ input.path }}" }
+    result: value.metadata
+    output: *entry
+  move:
+    label: "Move or rename a file or folder"
+    description: "A file or folder moved to another path (another name is a rename)."
+    write: true
+    method: POST
+    path: /2/files/move_v2
+    inputs:
+      - &from { name: from_path, label: "From: its path or id", required: true }
+      - &to { name: to_path, label: "To: the new path, such as /Archive/INV-1042.pdf", required: true }
+      - *autorename
+    send: { from_path: "{{ input.from_path }}", to_path: "{{ input.to_path }}", autorename: "{{ input.autorename }}" }
+    result: value.metadata
+    output: *entry
+  copy:
+    label: "Copy a file or folder"
+    description: "A copy of a file or folder at another path."
+    write: true
+    method: POST
+    path: /2/files/copy_v2
+    inputs: [*from, *to, *autorename]
+    send: { from_path: "{{ input.from_path }}", to_path: "{{ input.to_path }}", autorename: "{{ input.autorename }}" }
+    result: value.metadata
+    output: *entry
+  get_temporary_link:
+    label: "Get a download link"
+    description: "An address the file can be downloaded from for the next four hours, by anyone who has it."
+    method: POST
+    path: /2/files/get_temporary_link
+    inputs: [*path]
+    send: { path: "{{ input.path }}" }
+    result: "{'link': value.link, 'name': value.metadata.name, 'size': value.metadata.size, 'path_display': value.metadata.path_display}"
+    output: { link: text, name: text, size: number, path_display: text }
+  save_url:
+    label: "Save a file from the web"
+    description: "A file fetched by Dropbox from an address and saved at a path (Dropbox does it in a while: Check a saved file says when it is done)."
+    write: true
+    method: POST
+    path: /2/files/save_url
+    inputs:
+      - { name: path, label: "Where it goes, with its name: such as /Invoices/INV-1042.pdf", required: true }
+      - { name: url, label: "The file's address", required: true }
+    send: { path: "{{ input.path }}", url: "{{ input.url }}" }
+    output: { ".tag": text, async_job_id: text }
+  save_url_status:
+    label: "Check a saved file"
+    description: "Whether a file saved from the web is there yet: in_progress, complete (with the file) or failed."
+    method: POST
+    path: /2/files/save_url/check_job_status
+    inputs: [{ name: async_job_id, label: "The job's id (from Save a file from the web)", required: true }]
+    send: { async_job_id: "{{ input.async_job_id }}" }
+    output: { ".tag": text, id: text, name: text, path_display: text, size: number, failed: record }
+  list_revisions:
+    label: "List a file's versions"
+    description: "The earlier versions of a file, the newest first, each with its revision (up to 100)."
+    method: POST
+    path: /2/files/list_revisions
+    inputs: [*path]
+    send: { path: "{{ input.path }}", limit: 100 }
+    items: value.entries
+    output: *entry
+  restore:
+    label: "Bring back a file's version"
+    description: "A file made as it was at a revision (from List a file's versions)."
+    write: true
+    method: POST
+    path: /2/files/restore
+    inputs:
+      - { name: path, label: "The file's path", required: true }
+      - { name: rev, label: "The revision to bring back", required: true }
+    send: { path: "{{ input.path }}", rev: "{{ input.rev }}" }
+    output: *entry
+  create_shared_link:
+    label: "Share a file or folder by link"
+    description: "A link to a file or folder: for anyone, your team, or only those who have access already; to view or edit; ending at a time, if given."
+    write: true
+    method: POST
+    path: /2/sharing/create_shared_link_with_settings
+    inputs:
+      - *path
+      - { name: audience, label: "Who may open it: public (anyone), team, or no_one (only those with access)", description: "public when empty" }
+      - { name: access, label: "What they may do: viewer or editor", description: "viewer when empty" }
+      - { name: allow_download, label: "Allow downloading", kind: boolean }
+      - { name: expires, label: "Until (such as 2026-12-31T23:59:59Z; not on Basic accounts)" }
+    send:
+      path: "{{ input.path }}"
+      settings:
+        audience: { ".tag": "{{ has(input.audience) && input.audience != null ? input.audience : 'public' }}" }
+        access: { ".tag": "{{ has(input.access) && input.access != null ? input.access : 'viewer' }}" }
+        allow_download: "{{ input.allow_download }}"
+        expires: "{{ input.expires }}"
+    output: &link { ".tag": text, url: text, name: text, path_lower: text, id: text, expires: text, link_permissions: record }
+  list_shared_links:
+    label: "List a file's shared links"
+    description: "The links already made to share a file or folder (such as when sharing it again says it has one)."
+    method: POST
+    path: /2/sharing/list_shared_links
+    inputs: [*path]
+    send: "{{ page == null ? {'path': input.path, 'direct_only': true} : {'cursor': page.cursor} }}"
+    items: value.links
+    next: *next
+    page_in: body
+    output: *link
+  create_file_request:
+    label: "Ask for files"
+    description: "A file request: a link anyone can use to put files in one of your folders, until a deadline if given."
+    write: true
+    method: POST
+    path: /2/file_requests/create
+    inputs:
+      - { name: title, label: "What is asked for, such as Signed contract", required: true }
+      - { name: destination, label: "The folder the files go in, such as /Contracts/Example Co", required: true }
+      - { name: description, label: "A note shown to those sending files" }
+      - { name: deadline, label: "Until (such as 2026-12-31T17:00:00Z; on paid plans)" }
+    send:
+      title: "{{ input.title }}"
+      destination: "{{ input.destination }}"
+      description: "{{ input.description }}"
+      deadline: { deadline: "{{ input.deadline }}" }
+      open: true
+    output: &file_request { id: text, url: text, title: text, destination: text, created: text, deadline: record, is_open: boolean, file_count: number, description: text }
+  list_file_requests:
+    label: "List file requests"
+    description: "The file requests made, with their links and how many files each has received."
+    method: POST
+    path: "{{ page == null ? '/2/file_requests/list_v2' : '/2/file_requests/list/continue' }}"
+    send: "{{ page == null ? {'limit': 1000} : {'cursor': page.cursor} }}"
+    items: value.file_requests
+    next: *next
+    page_in: body
+    output: *file_request
+  get_account:
+    label: "Your account"
+    description: "The signed-in Dropbox account: its name, email and kind."
+    method: POST
+    path: /2/users/get_current_account
+    body: none
+    output: { account_id: text, name: record, email: text, email_verified: boolean, country: text, locale: text, account_type: record, team: record }
+  get_space_usage:
+    label: "Space used"
+    description: "How much space the account uses and has, in bytes."
+    method: POST
+    path: /2/users/get_space_usage
+    body: none
+    output: { used: number, allocation: record }
+triggers:
+  new_file:
+    label: "A new file in a folder"
+    description: "Each file put in a folder (or in its folders, if asked), asked for every few minutes."
+    inputs:
+      - *folder
+      - { name: recursive, label: "In its folders too", kind: boolean }
+    poll:
+      method: POST
+      path: "{{ page == null ? '/2/files/list_folder' : '/2/files/list_folder/continue' }}"
+      send: "{{ page == null ? {'path': input.path == null ? '' : input.path, 'recursive': input.recursive == true, 'limit': 2000} : {'cursor': page.cursor} }}"
+      items: "value.entries.filter(e, e['.tag'] == 'file')"
+      next: *next
+      page_in: body
+      id: item.id
+      every: 5m
+  changed_file:
+    label: "A file added or changed in a folder"
+    description: "Each file put in a folder or changed there (a new version), asked for every few minutes."
+    inputs:
+      - *folder
+      - { name: recursive, label: "In its folders too", kind: boolean }
+    poll:
+      method: POST
+      path: "{{ page == null ? '/2/files/list_folder' : '/2/files/list_folder/continue' }}"
+      send: "{{ page == null ? {'path': input.path == null ? '' : input.path, 'recursive': input.recursive == true, 'limit': 2000} : {'cursor': page.cursor} }}"
+      items: "value.entries.filter(e, e['.tag'] == 'file')"
+      next: *next
+      page_in: body
+      id: item.id
+      version: item.rev
+      every: 5m

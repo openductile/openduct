@@ -1,0 +1,137 @@
+# Copyright 2026 Ductile AI, Inc
+# SPDX-License-Identifier: Apache-2.0
+app: jira
+name: Jira
+category: development
+description: Issues in Jira Cloud, opened, found, commented on, changed and moved along.
+docs: https://developer.atlassian.com/cloud/jira/platform/rest/v3/intro/
+hosts: ["*.atlassian.net"]
+base_url: "https://{{ credential.site }}.atlassian.net/rest/api/3"
+sign_in:
+  - id: jira
+    label: An email and an API token
+    fields:
+      - { name: site, label: "The site's name, as in mycompany.atlassian.net" }
+      - { name: email, label: "The email you sign in to Atlassian with" }
+      - { name: api_token, label: "An API token (id.atlassian.com, Security, API tokens)", secret: true }
+    basic: { username: "{{ credential.email }}", password: "{{ credential.api_token }}" }
+# Jira says what was wrong as a list (errorMessages), or for each field (errors, then shown as they are).
+error: "status >= 400 && size(value.errorMessages) > 0 ? value.errorMessages.join('; ') : null"
+default_action: open_issue
+# A description or a comment is plain text, written as Jira's document format: one paragraph a line.
+actions:
+  open_issue:
+    label: Open an issue
+    write: true
+    method: POST
+    path: /issue
+    inputs:
+      - { name: project, label: "The project's key, such as SUP", required: true }
+      - { name: summary, label: "Summary: one line", required: true }
+      - { name: issue_type, label: "Its type: Task (the default), Bug, Story ..." }
+      - { name: description, label: "What it is about (plain text)" }
+      - { name: labels, label: "Labels: a list of words", kind: list }
+      - { name: priority, label: "Its priority, by name: Highest, High, Medium, Low, Lowest" }
+      - { name: assignee_id, label: "Who it is for: their account id" }
+    send:
+      fields:
+        project: { key: "{{ input.project }}" }
+        summary: "{{ input.summary }}"
+        issuetype: { name: "{{ has(input.issue_type) && input.issue_type != null ? input.issue_type : 'Task' }}" }
+        description: >-
+          {{ !has(input.description) || input.description == null ? null
+          : {'type': 'doc', 'version': 1, 'content': input.description.split('\n').map(p,
+          p == '' ? {'type': 'paragraph', 'content': []} : {'type': 'paragraph', 'content': [{'type': 'text', 'text': p}]})} }}
+        labels: "{{ input.labels }}"
+        priority: { name: "{{ input.priority }}" }
+        assignee: { id: "{{ input.assignee_id }}" }
+    # Its id, key (SUP-13) and address in the API.
+    result: value
+  get_issue:
+    label: Look up an issue
+    method: GET
+    path: "/issue/{{ input.issue }}"
+    inputs:
+      - { name: issue, label: "The issue's key, such as SUP-12", required: true }
+      - { name: fields, label: "Only these fields, with commas (summary,status,assignee)" }
+    query: { fields: "{{ input.fields }}" }
+  find_issues:
+    label: Find issues
+    description: The issues a JQL search finds, such as project = SUP AND status = "To Do"; every page, up to 1,000.
+    method: GET
+    path: /search/jql
+    inputs:
+      - { name: jql, label: "Which: a JQL search, such as project = SUP AND created >= -7d", required: true }
+      - { name: fields, label: "Their fields, with commas (summary, status, assignee, priority, type and dates when empty)" }
+    query:
+      jql: "{{ input.jql }}"
+      fields: "{{ has(input.fields) && input.fields != null ? input.fields : 'summary,status,assignee,priority,issuetype,created,updated' }}"
+      maxResults: "100"
+    items: value.issues
+    next: "has(value.nextPageToken) && value.nextPageToken != null ? {'nextPageToken': value.nextPageToken} : null"
+  update_issue:
+    label: Change an issue
+    description: Only the fields given change.
+    write: true
+    method: PUT
+    path: "/issue/{{ input.issue }}"
+    inputs:
+      - { name: issue, label: "The issue's key, such as SUP-12", required: true }
+      - { name: summary, label: "Summary: one line" }
+      - { name: description, label: "What it is about (plain text)" }
+      - { name: labels, label: "Labels: a list of words (they take the place of those it had)", kind: list }
+      - { name: priority, label: "Its priority, by name" }
+      - { name: assignee_id, label: "Who it is for: their account id" }
+    send:
+      fields:
+        summary: "{{ input.summary }}"
+        description: >-
+          {{ !has(input.description) || input.description == null ? null
+          : {'type': 'doc', 'version': 1, 'content': input.description.split('\n').map(p,
+          p == '' ? {'type': 'paragraph', 'content': []} : {'type': 'paragraph', 'content': [{'type': 'text', 'text': p}]})} }}
+        labels: "{{ input.labels }}"
+        priority: { name: "{{ input.priority }}" }
+        assignee: { id: "{{ input.assignee_id }}" }
+    # Jira answers 204, with nothing.
+    result: "{'changed': status == 204}"
+  comment_on_issue:
+    label: Comment on an issue
+    write: true
+    method: POST
+    path: "/issue/{{ input.issue }}/comment"
+    inputs:
+      - { name: issue, label: "The issue's key, such as SUP-12", required: true }
+      - { name: text, label: "The comment (plain text)", required: true }
+    send:
+      body: >-
+        {{ {'type': 'doc', 'version': 1, 'content': input.text.split('\n').map(p,
+        p == '' ? {'type': 'paragraph', 'content': []} : {'type': 'paragraph', 'content': [{'type': 'text', 'text': p}]})} }}
+    result: "{'id': value.id, 'created': value.created}"
+  list_comments:
+    label: List an issue's comments
+    method: GET
+    path: "/issue/{{ input.issue }}/comment"
+    inputs:
+      - { name: issue, label: "The issue's key, such as SUP-12", required: true }
+    query: { maxResults: "100" }
+    items: value.comments
+    next: "value.startAt + size(value.comments) >= value.total ? null : {'startAt': value.startAt + size(value.comments)}"
+  list_transitions:
+    label: List where an issue can move
+    description: The steps an issue can take now (To Do to In Progress ...), each with its id.
+    method: GET
+    path: "/issue/{{ input.issue }}/transitions"
+    inputs:
+      - { name: issue, label: "The issue's key, such as SUP-12", required: true }
+    items: value.transitions
+  move_issue:
+    label: Move an issue along
+    description: "Takes one of the steps List where an issue can move gives: its id."
+    write: true
+    method: POST
+    path: "/issue/{{ input.issue }}/transitions"
+    inputs:
+      - { name: issue, label: "The issue's key, such as SUP-12", required: true }
+      - { name: transition_id, label: "The step's id", required: true }
+    send: { transition: { id: "{{ input.transition_id }}" } }
+    result: "{'moved': status == 204}"

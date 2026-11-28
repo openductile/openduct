@@ -1,0 +1,387 @@
+# Copyright 2026 Ductile AI, Inc
+# SPDX-License-Identifier: Apache-2.0
+# Disqus: written by hand from Disqus's API 3.0 reference, https://disqus.com/api/docs/ (read 2026-11-27; Disqus
+# publishes no API description file).
+app: disqus
+name: Disqus
+category: social
+description: >-
+  Comments on your site through Disqus: comments listed, posted, approved, removed and marked as spam; discussion
+  threads made, read and closed; people blocked.
+docs: https://disqus.com/api/docs/
+hosts: [disqus.com]
+base_url: https://disqus.com/api/3.0
+sign_in:
+  - id: disqus
+    label: "An application's keys and your access token"
+    fields:
+      - { name: api_key, label: "The application's API key (its public key)" }
+      - { name: api_secret, label: "The application's API secret", secret: true }
+      - { name: access_token, label: "Your access token (on the application's page)", secret: true }
+    # Server-side requests carry the secret key, and the token of the application's owner.
+    query:
+      api_key: "{{ credential.api_key }}"
+      api_secret: "{{ credential.api_secret }}"
+      access_token: "{{ credential.access_token }}"
+# Disqus answers {code, response}: a code other than 0 is a refusal, and response then says why.
+error: "type(value) == map && has(value.code) && value.code != 0 && type(value.response) == string ? value.response : null"
+actions:
+  list_comments:
+    label: List comments
+    description: "The comments on a site (a forum, in Disqus's words), the newest first; approved ones unless asked; every page."
+    method: GET
+    path: /forums/listPosts.json
+    inputs:
+      - { name: forum, label: "The site's short name (its Disqus shortname)", required: true }
+      - { name: include, label: "Which: approved (the default), unapproved, spam, deleted, flagged or highlighted" }
+      - { name: since, label: "Only those since (such as 2026-11-01T00:00:00)" }
+      - { name: query, label: Words in the comment }
+      - { name: order, label: "desc (newest first, the default) or asc" }
+      - { name: with_thread, label: "With each comment's thread (its page and title)", kind: boolean }
+    query:
+      forum: "{{ input.forum }}"
+      include: "{{ input.include }}"
+      since: "{{ input.since }}"
+      query: "{{ input.query }}"
+      order: "{{ input.order }}"
+      related: "{{ input.with_thread == true ? 'thread' : '' }}"
+      limit: "100"
+    items: value.response
+    next: "value.cursor.hasNext ? {'cursor': value.cursor.next} : null"
+    output:
+      id: text
+      forum: text
+      thread: text
+      parent: number
+      author: record
+      message: text
+      raw_message: text
+      createdAt: text
+      isApproved: boolean
+      isSpam: boolean
+      isDeleted: boolean
+      isFlagged: boolean
+      isHighlighted: boolean
+      isEdited: boolean
+      likes: number
+      dislikes: number
+      points: number
+  list_thread_comments:
+    label: "List a thread's comments"
+    description: "The comments on one page's discussion, the newest first; every page."
+    method: GET
+    path: /threads/listPosts.json
+    inputs:
+      - { name: thread, label: "The thread's id", required: true }
+      - { name: include, label: "Which: approved (the default), unapproved, spam, deleted, flagged or highlighted" }
+      - { name: order, label: "desc (newest first, the default) or asc" }
+    query: { thread: "{{ input.thread }}", include: "{{ input.include }}", order: "{{ input.order }}", limit: "100" }
+    items: value.response
+    next: "value.cursor.hasNext ? {'cursor': value.cursor.next} : null"
+    output:
+      id: text
+      forum: text
+      thread: text
+      parent: number
+      author: record
+      message: text
+      raw_message: text
+      createdAt: text
+      isApproved: boolean
+      isSpam: boolean
+      isDeleted: boolean
+      isFlagged: boolean
+      isHighlighted: boolean
+      isEdited: boolean
+      likes: number
+      dislikes: number
+      points: number
+  get_comment:
+    label: Look up a comment
+    description: One comment, with its author.
+    method: GET
+    path: /posts/details.json
+    inputs:
+      - { name: post, label: "The comment's id", required: true }
+    query: { post: "{{ input.post }}" }
+    result: value.response
+    output:
+      id: text
+      forum: text
+      thread: text
+      parent: number
+      author: record
+      message: text
+      raw_message: text
+      createdAt: text
+      isApproved: boolean
+      isSpam: boolean
+      isDeleted: boolean
+      isFlagged: boolean
+      isHighlighted: boolean
+      isEdited: boolean
+      likes: number
+      dislikes: number
+      points: number
+  post_comment:
+    label: Post a comment
+    description: A new comment on a thread, or a reply to a comment, as the account that owns the application.
+    write: true
+    method: POST
+    path: /posts/create.json
+    body: form
+    inputs:
+      - { name: message, label: The comment, required: true }
+      - { name: thread, label: "The thread's id" }
+      - { name: parent, label: "Or the comment it replies to (its id)" }
+    send: { message: "{{ input.message }}", thread: "{{ input.thread }}", parent: "{{ input.parent }}" }
+    result: value.response
+    output:
+      id: text
+      forum: text
+      thread: text
+      parent: number
+      author: record
+      message: text
+      raw_message: text
+      createdAt: text
+      isApproved: boolean
+      isSpam: boolean
+      isDeleted: boolean
+      isFlagged: boolean
+      isHighlighted: boolean
+      isEdited: boolean
+      likes: number
+      dislikes: number
+      points: number
+  edit_comment:
+    label: Edit a comment
+    description: "Changes a comment's text (one written by the account, or on a site it moderates)."
+    write: true
+    method: POST
+    path: /posts/update.json
+    body: form
+    inputs:
+      - { name: post, label: "The comment's id", required: true }
+      - { name: message, label: The new text, required: true }
+    send: { post: "{{ input.post }}", message: "{{ input.message }}" }
+    result: value.response
+    output:
+      id: text
+      forum: text
+      thread: text
+      parent: number
+      author: record
+      message: text
+      raw_message: text
+      createdAt: text
+      isApproved: boolean
+      isSpam: boolean
+      isDeleted: boolean
+      isFlagged: boolean
+      isHighlighted: boolean
+      isEdited: boolean
+      likes: number
+      dislikes: number
+      points: number
+  approve_comment:
+    label: Approve a comment
+    description: "Approves a comment waiting for it, so it shows on the site."
+    write: true
+    method: POST
+    path: /posts/approve.json
+    body: form
+    inputs:
+      - { name: post, label: "The comment's id", required: true }
+    send: { post: "{{ input.post }}" }
+    result: value.response[0]
+    output: { id: text }
+  remove_comment:
+    label: Remove a comment
+    description: Deletes a comment.
+    write: true
+    method: POST
+    path: /posts/remove.json
+    body: form
+    inputs:
+      - { name: post, label: "The comment's id", required: true }
+    send: { post: "{{ input.post }}" }
+    result: value.response[0]
+    output: { id: text }
+  mark_spam:
+    label: Mark a comment as spam
+    description: Marks a comment as spam, which hides it.
+    write: true
+    method: POST
+    path: /posts/spam.json
+    body: form
+    inputs:
+      - { name: post, label: "The comment's id", required: true }
+    send: { post: "{{ input.post }}" }
+    result: value.response[0]
+    output: { id: text }
+  list_threads:
+    label: List threads
+    description: "The discussions of a site, one for each page with comments, the newest first; every page."
+    method: GET
+    path: /forums/listThreads.json
+    inputs:
+      - { name: forum, label: "The site's short name", required: true }
+      - { name: include, label: "Which: open, closed or killed (open and closed by default)" }
+      - { name: since, label: "Only those since (such as 2026-11-01T00:00:00)" }
+      - { name: order, label: "desc (newest first, the default) or asc" }
+    query: { forum: "{{ input.forum }}", include: "{{ input.include }}", since: "{{ input.since }}", order: "{{ input.order }}", limit: "100" }
+    items: value.response
+    next: "value.cursor.hasNext ? {'cursor': value.cursor.next} : null"
+    output:
+      id: text
+      forum: text
+      title: text
+      link: text
+      identifiers: list
+      author: text
+      createdAt: text
+      isClosed: boolean
+      isDeleted: boolean
+      posts: number
+      likes: number
+      dislikes: number
+      message: text
+  get_thread:
+    label: Look up a thread
+    description: "One page's discussion: its title, address and number of comments."
+    method: GET
+    path: /threads/details.json
+    inputs:
+      - { name: thread, label: "The thread's id", required: true }
+    query: { thread: "{{ input.thread }}" }
+    result: value.response
+    output:
+      id: text
+      forum: text
+      title: text
+      link: text
+      identifiers: list
+      author: text
+      createdAt: text
+      isClosed: boolean
+      isDeleted: boolean
+      posts: number
+      likes: number
+      dislikes: number
+      message: text
+  create_thread:
+    label: Start a thread
+    description: A discussion for a page of the site, before anyone comments on it.
+    write: true
+    method: POST
+    path: /threads/create.json
+    body: form
+    inputs:
+      - { name: forum, label: "The site's short name", required: true }
+      - { name: title, label: Title, required: true }
+      - { name: url, label: "The page's address" }
+      - { name: identifier, label: "Your own id for the page (as the embed code names it)" }
+      - { name: message, label: A first message }
+    send:
+      forum: "{{ input.forum }}"
+      title: "{{ input.title }}"
+      url: "{{ input.url }}"
+      identifier: "{{ input.identifier }}"
+      message: "{{ input.message }}"
+    result: value.response
+    output:
+      id: text
+      forum: text
+      title: text
+      link: text
+      identifiers: list
+      author: text
+      createdAt: text
+      isClosed: boolean
+      isDeleted: boolean
+      posts: number
+      likes: number
+      dislikes: number
+      message: text
+  close_thread:
+    label: Close a thread
+    description: Closes a discussion to new comments.
+    write: true
+    method: POST
+    path: /threads/close.json
+    body: form
+    inputs:
+      - { name: thread, label: "The thread's id", required: true }
+    send: { thread: "{{ input.thread }}" }
+    result: value.response[0]
+    output: { id: text }
+  get_forum:
+    label: Look up a site
+    description: "A site's settings in Disqus: its name, address, founder and options."
+    method: GET
+    path: /forums/details.json
+    inputs:
+      - { name: forum, label: "The site's short name", required: true }
+    query: { forum: "{{ input.forum }}" }
+    result: value.response
+    output: { id: text, name: text, founder: text, favicon: record }
+  get_user:
+    label: Look up a commenter
+    description: "A Disqus user's profile, by id or username."
+    method: GET
+    path: /users/details.json
+    inputs:
+      - { name: user, label: "Their id" }
+      - { name: username, label: "Or their username" }
+    query: { user: "{{ input.user }}", "user:username": "{{ input.username }}" }
+    result: value.response
+    output: { id: text, username: text, name: text, about: text, url: text, profileUrl: text, avatar: record, isAnonymous: boolean }
+  block:
+    label: Block a commenter, email, address or word
+    description: "Adds a user, an email, an IP address, a word or a domain to a site's blocklist, so their comments are held back."
+    write: true
+    method: POST
+    path: /blacklists/add.json
+    body: form
+    inputs:
+      - { name: forum, label: "The site's short name", required: true }
+      - { name: user, label: "A user (their id)" }
+      - { name: email, label: An email }
+      - { name: ip, label: "An IP address (or a range, such as 203.0.113.0/24)" }
+      - { name: word, label: A word }
+      - { name: domain, label: A domain }
+      - { name: notes, label: "A note (at most 50 characters)" }
+    send:
+      forum: "{{ input.forum }}"
+      user: "{{ input.user }}"
+      email: "{{ input.email }}"
+      ip: "{{ input.ip }}"
+      word: "{{ input.word }}"
+      domain: "{{ input.domain }}"
+      notes: "{{ input.notes }}"
+    result: "{'blocked': value.code == 0, 'entries': value.response}"
+    output: { blocked: boolean, entries: list }
+triggers:
+  new_comment:
+    label: A new comment
+    description: Each comment posted on the site and shown, the newest asked for every few minutes.
+    inputs:
+      - { name: forum, label: "The site's short name", required: true }
+    poll:
+      action: list_comments
+      input: { forum: "{{ input.forum }}" }
+      newest_first: true
+      id: item.id
+      every: 5m
+  comment_to_approve:
+    label: A comment waiting for approval
+    description: Each comment held back for a moderator to approve, the newest asked for every few minutes.
+    inputs:
+      - { name: forum, label: "The site's short name", required: true }
+    poll:
+      action: list_comments
+      input: { forum: "{{ input.forum }}", include: unapproved }
+      newest_first: true
+      id: item.id
+      every: 5m

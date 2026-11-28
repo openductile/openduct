@@ -1,0 +1,8 @@
+description: The link a file has already
+action: list_shared_links
+credential: { access_token: sl.test-token }
+input: { path: /Clients/Example Co/Proposal.pdf }
+exchanges:
+  - sent: { url: https://api.dropboxapi.com/2/sharing/list_shared_links, body: { path: /Clients/Example Co/Proposal.pdf, direct_only: true } }
+    answer: { body: { links: [{ ".tag": file, url: "https://www.dropbox.com/scl/fi/abc123/Proposal.pdf?rlkey=xyz&dl=0", name: Proposal.pdf }], has_more: false } }
+result: [{ ".tag": file, url: "https://www.dropbox.com/scl/fi/abc123/Proposal.pdf?rlkey=xyz&dl=0", name: Proposal.pdf }]

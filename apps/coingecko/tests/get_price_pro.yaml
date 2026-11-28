@@ -1,0 +1,13 @@
+description: With a paid plan's key, the same at the Pro API's own address
+action: get_price
+sign_in: coingecko_pro
+credential: { api_key: CG-pro-test1 }
+input: { symbols: btc, vs_currencies: usd }
+exchanges:
+  - sent:
+      method: GET
+      url: https://pro-api.coingecko.com/api/v3/simple/price
+      query: { symbols: btc, vs_currencies: usd }
+      headers: { x-cg-pro-api-key: CG-pro-test1 }
+    answer: { body: { btc: { usd: 76975 } } }
+result: { btc: { usd: 76975 } }

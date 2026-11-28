@@ -1,0 +1,7 @@
+action: snooze_incident
+credential: { api_key: pd_test_1 }
+input: { id: PINC001, from: ann@example.com, duration: 3600 }
+exchanges:
+  - sent: { method: POST, url: https://api.pagerduty.com/incidents/PINC001/snooze, body: { duration: 3600 } }
+    answer: { status: 201, body: { incident: { id: PINC001, status: acknowledged } } }
+result: { id: PINC001, status: acknowledged }

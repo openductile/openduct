@@ -1,0 +1,13 @@
+description: A story new to the front page since the last look starts a run
+trigger: front_page_story
+credential: {}
+seen: { items: [["46100001", ""]] }
+exchanges:
+  - answer:
+      body:
+        hits:
+          - { objectID: "46100020", title: "A new way to brew", url: "https://brew.example/", author: bob_example, points: 88, num_comments: 31 }
+          - { objectID: "46100001", title: "Show HN: A plant watering timer", author: ann_example, points: 130 }
+        nbPages: 1
+runs:
+  - { objectID: "46100020", title: "A new way to brew", url: "https://brew.example/", author: bob_example, points: 88, num_comments: 31 }

@@ -1,0 +1,17 @@
+description: "A repository's environment variables"
+action: list_env_vars
+credential: { token: test-token }
+input: { repo: shop-example/storefront }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://api.travis-ci.com/repo/shop-example%2Fstorefront/env_vars"
+    answer:
+      body:
+        "@type": env_vars
+        env_vars:
+          - { id: 3a1b2c3d-0000-4000-8000-000000000001, name: DEPLOY_TARGET, value: staging, public: true, branch: null }
+          - { id: 3a1b2c3d-0000-4000-8000-000000000002, name: API_SECRET, public: false, branch: main }
+result:
+  - { id: 3a1b2c3d-0000-4000-8000-000000000001, name: DEPLOY_TARGET, value: staging, public: true, branch: null }
+  - { id: 3a1b2c3d-0000-4000-8000-000000000002, name: API_SECRET, public: false, branch: main }

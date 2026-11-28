@@ -1,0 +1,8 @@
+action: me
+credential: { access_token: x_test1, user_id: "2244994945" }
+exchanges:
+  - sent:
+      method: GET
+      url: https://api.x.com/2/users/me
+    answer: { body: { data: { id: "2244994945", name: Example Shop, username: exampleshop } } }
+result: { id: "2244994945", name: Example Shop, username: exampleshop }

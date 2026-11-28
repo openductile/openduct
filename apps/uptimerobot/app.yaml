@@ -1,0 +1,334 @@
+# Copyright 2026 Ductile AI, Inc
+# SPDX-License-Identifier: Apache-2.0
+#
+# Written from UptimeRobot's own API v3 description (https://cdn.uptimerobot.com/api/openapi.yaml, fetched
+# 2026-11-27), after `openduct app from-openapi` showed the operations.
+app: uptimerobot
+name: UptimeRobot
+category: monitoring
+description: Watch websites, servers and APIs; their incidents, maintenance windows and status pages.
+docs: https://uptimerobot.com/api/v3/
+hosts: [api.uptimerobot.com]
+base_url: https://api.uptimerobot.com/v3
+sign_in:
+  - id: uptimerobot
+    label: An API key
+    fields:
+      - { name: api_key, label: "The main API key (Integrations & API, API, in UptimeRobot); a read-only key only reads", secret: true }
+    headers: { Authorization: "Bearer {{ credential.api_key }}" }
+actions:
+  list_monitors:
+    label: List monitors
+    description: Your monitors and their status (UP, DOWN, LOOKS_DOWN, PAUSED, STARTED), every page.
+    method: GET
+    path: /monitors
+    inputs:
+      - { name: status, label: "Only of these statuses (separated by commas: UP, DOWN, LOOKS_DOWN, PAUSED, STARTED)" }
+      - { name: name, label: "Only those whose name holds this" }
+      - { name: url, label: "Only those whose address holds this" }
+      - { name: tags, label: "Only with one of these tags (separated by commas)" }
+      - { name: group_id, label: "Only of this monitor group (its id)", kind: number }
+    query:
+      status: "{{ input.status }}"
+      name: "{{ input.name }}"
+      url: "{{ input.url }}"
+      tags: "{{ input.tags }}"
+      groupId: "{{ input.group_id }}"
+      limit: "200"
+    items: value.data
+    next: value.nextLink
+    output: &monitor
+      id: number
+      friendlyName: text
+      url: text
+      type: text
+      status: text
+      interval: number
+      currentStateDuration: number
+      lastIncidentId: text
+      lastIncident: record
+      tags: list
+      groupId: number
+      createDateTime: text
+  get_monitor:
+    label: Get a monitor
+    description: "One monitor: its address, type, status and how long it has been so."
+    method: GET
+    path: "/monitors/{{ input.id }}"
+    inputs:
+      - { name: id, label: "The monitor's id", required: true, kind: number }
+    output: *monitor
+  create_monitor:
+    label: Watch an address
+    description: >-
+      Adds a monitor: a web address (HTTP), a word on a page (KEYWORD), a server (PING, PORT) or a heartbeat that
+      your own job calls; checked every few minutes, its alert contacts told when it goes down.
+    write: true
+    method: POST
+    path: /monitors
+    inputs:
+      - { name: friendly_name, label: Name, required: true }
+      - { name: url, label: "The address (or host, for PING and PORT)" }
+      - { name: type, label: "HTTP (the default), KEYWORD, PING, PORT or HEARTBEAT" }
+      - { name: interval, label: "Every how many seconds (300 by default; shorter needs a paid plan)", kind: number }
+      - { name: timeout, label: "How long to wait, in seconds (30 by default)", kind: number }
+      - { name: keyword_value, label: "The word to look for (KEYWORD)" }
+      - { name: keyword_type, label: "ALERT_EXISTS or ALERT_NOT_EXISTS: alert when the word is there, or when it is not (KEYWORD)" }
+      - { name: keyword_case_type, label: "CaseSensitive or CaseInsensitive (KEYWORD)" }
+      - { name: port, label: "The port (PORT)", kind: number }
+      - { name: tags, label: "Tags (separated by commas)" }
+      - { name: alert_contact_id, label: "An alert contact to tell (its id, from List alert contacts)", kind: number }
+      - { name: group_id, label: "A monitor group (its id)", kind: number }
+    send:
+      friendlyName: "{{ input.friendly_name }}"
+      url: "{{ input.url }}"
+      type: "{{ has(input.type) && input.type != null ? input.type : 'HTTP' }}"
+      interval: "{{ has(input.interval) && input.interval != null ? input.interval : 300 }}"
+      timeout: "{{ has(input.timeout) && input.timeout != null ? input.timeout : ((has(input.type) && input.type != null ? input.type : 'HTTP') in ['HTTP', 'KEYWORD', 'PING', 'PORT'] ? 30 : null) }}"
+      keywordValue: "{{ input.keyword_value }}"
+      keywordType: "{{ input.keyword_type }}"
+      keywordCaseType: "{{ input.keyword_case_type }}"
+      port: "{{ input.port }}"
+      tagNames: "{{ input.tags.split(',').map(t, t.trim()) }}"
+      assignedAlertContacts: "{{ [{'alertContactId': input.alert_contact_id, 'threshold': 0, 'recurrence': 0}] }}"
+      groupId: "{{ input.group_id }}"
+    output: *monitor
+  update_monitor:
+    label: Change a monitor
+    description: Its name, address, how often it is checked, how long it waits, its tags.
+    write: true
+    method: PATCH
+    path: "/monitors/{{ input.id }}"
+    inputs:
+      - { name: id, label: "The monitor's id", required: true, kind: number }
+      - { name: friendly_name, label: Name }
+      - { name: url, label: The address }
+      - { name: interval, label: "Every how many seconds", kind: number }
+      - { name: timeout, label: "How long to wait, in seconds", kind: number }
+      - { name: tags, label: "Its tags (separated by commas), in place of those it has" }
+    send:
+      friendlyName: "{{ input.friendly_name }}"
+      url: "{{ input.url }}"
+      interval: "{{ input.interval }}"
+      timeout: "{{ input.timeout }}"
+      tagNames: "{{ input.tags.split(',').map(t, t.trim()) }}"
+    output: *monitor
+  delete_monitor:
+    label: Remove a monitor
+    description: Stops watching the address and removes its history.
+    write: true
+    method: DELETE
+    path: "/monitors/{{ input.id }}"
+    inputs:
+      - { name: id, label: "The monitor's id", required: true, kind: number }
+    result: "{'deleted': status < 300}"
+    output: { deleted: boolean }
+  pause_monitor:
+    label: Pause a monitor
+    description: Stops checking it (during works, say) until it is started again.
+    write: true
+    method: POST
+    path: "/monitors/{{ input.id }}/pause"
+    inputs:
+      - { name: id, label: "The monitor's id", required: true, kind: number }
+    output: *monitor
+  start_monitor:
+    label: Start a monitor
+    description: Starts checking a paused monitor again.
+    write: true
+    method: POST
+    path: "/monitors/{{ input.id }}/start"
+    inputs:
+      - { name: id, label: "The monitor's id", required: true, kind: number }
+    output: *monitor
+  monitor_uptime:
+    label: A monitor's uptime
+    description: How long it was up (%), how long down, how many incidents, between two times (the last 24 hours by default).
+    method: GET
+    path: "/monitors/{{ input.id }}/stats/uptime"
+    inputs:
+      - { name: id, label: "The monitor's id", required: true, kind: number }
+      - { name: from, label: "From (such as 2026-11-01T00:00:00Z)" }
+      - { name: to, label: "To" }
+    query: { from: "{{ input.from }}", to: "{{ input.to }}" }
+    output: { uptime: number, total_downtime_seconds: number, incident_count: number, mtbf: number, from: text, to: text }
+  monitor_response_times:
+    label: A monitor's response times
+    description: The shortest, longest and average response time between two times, and each check's if asked.
+    method: GET
+    path: "/monitors/{{ input.id }}/stats/response-time"
+    inputs:
+      - { name: id, label: "The monitor's id", required: true, kind: number }
+      - { name: from, label: "From (such as 2026-11-01T00:00:00Z)" }
+      - { name: to, label: "To" }
+      - { name: include_time_series, label: "With each check's time", kind: boolean }
+      - { name: region, label: "Only from this region: na, eu, as or oc" }
+    query: { from: "{{ input.from }}", to: "{{ input.to }}", includeTimeSeries: "{{ input.include_time_series }}", region: "{{ input.region }}" }
+    output: { summary: record, data_points: number, from: text, to: text, time_series: list }
+  list_incidents:
+    label: List incidents
+    description: Times monitors were down (or slow), the newest first, every page.
+    method: GET
+    path: /incidents
+    inputs:
+      - { name: monitor_id, label: "Only of this monitor (its id)", kind: number }
+      - { name: monitor_name, label: "Only of monitors whose name holds this" }
+      - { name: status, label: "open: only those still going on" }
+      - { name: started_after, label: "Started after (such as 2026-11-01T00:00:00Z)" }
+      - { name: started_before, label: "Started before" }
+      - { name: type, label: "Downtime, SlowResponse or VisualChange" }
+    query:
+      monitor_id: "{{ input.monitor_id }}"
+      monitor_name: "{{ input.monitor_name }}"
+      status: "{{ input.status }}"
+      started_after: "{{ input.started_after }}"
+      started_before: "{{ input.started_before }}"
+      type: "{{ input.type }}"
+      limit: "200"
+    items: value.data
+    next: value.nextLink
+    output: &incident { id: text, status: text, type: text, cause: number, reason: text, monitor: record, commentsCount: number, startedAt: text, resolvedAt: text, duration: number }
+  get_incident:
+    label: Get an incident
+    description: "One incident: its monitor, cause, when it started and ended."
+    method: GET
+    path: "/incidents/{{ input.id }}"
+    inputs:
+      - { name: id, label: "The incident's id", required: true }
+    output: *incident
+  comment_incident:
+    label: Comment on an incident
+    description: A note on the incident, shown on your status page too if asked.
+    write: true
+    method: POST
+    path: "/incidents/{{ input.id }}/comments"
+    inputs:
+      - { name: id, label: "The incident's id", required: true }
+      - { name: content, label: The comment, required: true }
+      - { name: publish_on_status_page, label: "Show it on the status page", kind: boolean }
+    send: { content: "{{ input.content }}", publishOnStatusPage: "{{ input.publish_on_status_page }}" }
+    result: "{'added': status < 300}"
+    output: { added: boolean }
+  list_maintenance_windows:
+    label: List maintenance windows
+    description: Times when monitors are not checked (and no alert is sent), every page.
+    method: GET
+    path: /maintenance-windows
+    query: { limit: "200" }
+    items: value.data
+    next: value.nextLink
+    output: &window { id: number, name: text, interval: text, date: text, time: text, duration: number, days: list, monitorIds: list, autoAddMonitors: boolean, status: text }
+  create_maintenance_window:
+    label: Plan a maintenance window
+    description: A time (once, or every day, week or month) when the monitors given are not checked.
+    write: true
+    method: POST
+    path: /maintenance-windows
+    inputs:
+      - { name: name, label: Name, required: true }
+      - { name: interval, label: "once, daily, weekly or monthly", required: true }
+      - { name: date, label: "From the day (YYYY-MM-DD)", required: true }
+      - { name: time, label: "At (HH:mm:ss)", required: true }
+      - { name: duration, label: "For how many minutes", required: true, kind: number }
+      - { name: days, label: "Which days, for weekly (1 Monday ... 7) or monthly (1 to 31, -1 the last), separated by commas" }
+      - { name: monitor_ids, label: "Its monitors (ids, separated by commas)" }
+      - { name: auto_add_monitors, label: "Every monitor, new ones too", kind: boolean }
+    send:
+      name: "{{ input.name }}"
+      interval: "{{ input.interval }}"
+      date: "{{ input.date }}"
+      time: "{{ input.time }}"
+      duration: "{{ input.duration }}"
+      days: "{{ input.days.split(',').map(d, int(d.trim())) }}"
+      monitorIds: "{{ input.monitor_ids.split(',').map(m, int(m.trim())) }}"
+      autoAddMonitors: "{{ input.auto_add_monitors }}"
+    output: *window
+  delete_maintenance_window:
+    label: Remove a maintenance window
+    description: "Removes a maintenance window; its monitors are checked at all times again."
+    write: true
+    method: DELETE
+    path: "/maintenance-windows/{{ input.id }}"
+    inputs:
+      - { name: id, label: "The maintenance window's id", required: true, kind: number }
+    result: "{'deleted': status < 300}"
+    output: { deleted: boolean }
+  list_status_pages:
+    label: List status pages
+    description: Your public status pages, every page.
+    method: GET
+    path: /psps
+    query: { limit: "200" }
+    items: value.data
+    next: value.nextLink
+    output: { id: number, friendlyName: text, urlKey: text, customDomain: text, status: text, monitorIds: list, monitorsCount: number }
+  post_announcement:
+    label: Post an announcement on a status page
+    description: An announcement (information, maintenance or an issue) your visitors see on the status page.
+    write: true
+    method: POST
+    path: "/psps/{{ input.status_page_id }}/announcements"
+    inputs:
+      - { name: status_page_id, label: "The status page's id", required: true, kind: number }
+      - { name: title, label: Title, required: true }
+      - { name: content, label: What to say, required: true }
+      - { name: type, label: "Info, Maintenance or Issue" }
+      - { name: status, label: "Published (shown now), Pending (from the start date), Offline (a draft)" }
+      - { name: start_date, label: "From (such as 2026-11-28T22:00:00Z)" }
+      - { name: end_date, label: "Until" }
+    send:
+      title: "{{ input.title }}"
+      content: "{{ input.content }}"
+      type: "{{ input.type }}"
+      status: "{{ input.status }}"
+      startDate: "{{ input.start_date }}"
+      endDate: "{{ input.end_date }}"
+    output: { id: number, title: text, content: text, type: text, status: text, startDate: text, endDate: text }
+  list_alert_contacts:
+    label: List alert contacts
+    description: Who and what is told when a monitor goes down (emails, phone numbers, integrations), with their ids.
+    method: GET
+    path: /user/alert-contacts
+    items: value
+    output: { id: number, friendlyName: text, type: text, value: text, status: text }
+  list_monitor_groups:
+    label: List monitor groups
+    description: "The groups monitors are sorted into, with their ids."
+    method: GET
+    path: /monitor-groups
+    query: { limit: "200" }
+    items: value.data
+    next: value.nextLink
+    output: { id: number, name: text, createdAt: text, updatedAt: text }
+  me:
+    label: My account
+    description: The account's email, name, plan, and how many monitors it has and may have.
+    method: GET
+    path: /user/me
+    output: { email: text, fullName: text, monitorsCount: number, monitorLimit: number }
+triggers:
+  monitor_down:
+    label: A monitor went down
+    description: Each time a monitor goes down (a new incident), asked for every few minutes.
+    inputs:
+      - { name: tags, label: "Only monitors with one of these tags (separated by commas)" }
+    poll:
+      method: GET
+      path: /monitors
+      query: { status: DOWN, tags: "{{ input.tags }}", limit: "200" }
+      items: value.data
+      next: value.nextLink
+      id: "string(item.id) + ':' + (has(item.lastIncidentId) && item.lastIncidentId != null ? item.lastIncidentId : '')"
+  monitor_status_changed:
+    label: A monitor's status changed
+    description: Each monitor that went down, came back up, was paused or started, asked for every few minutes.
+    inputs:
+      - { name: tags, label: "Only monitors with one of these tags (separated by commas)" }
+    poll:
+      method: GET
+      path: /monitors
+      query: { tags: "{{ input.tags }}", limit: "200" }
+      items: value.data
+      next: value.nextLink
+      id: string(item.id)
+      version: item.status

@@ -1,0 +1,10 @@
+description: With no period named, the last 7 days
+action: campaign_performance
+credential: { access_token: ya29.test }
+input: { customer_id: "1234567890", developer_token: devtok-test }
+exchanges:
+  - sent:
+      body:
+        query: "SELECT campaign.id, campaign.name, segments.date, metrics.impressions, metrics.clicks, metrics.cost_micros, metrics.conversions, metrics.conversions_value FROM campaign WHERE segments.date DURING LAST_7_DAYS ORDER BY segments.date"
+    answer: { status: 200, body: {} }
+result: []

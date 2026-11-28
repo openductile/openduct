@@ -1,0 +1,66 @@
+name: Webinar sign-ups to a sheet, with a nudge when nobody follows up
+description: >-
+  Your landing page sends each sign-up to this workflow's address ({"name", "email", "company", "job_title",
+  "webinar"}). Each one is added to the Sign-ups sheet of your Google Sheets spreadsheet, and the sales channel in
+  Slack hears at once about people who decide - owners, heads, directors. Two days later the run looks at the sheet
+  again: when such a sign-up's Contacted column is still empty, Slack gets a reminder (the sheet's first row: Name,
+  Email, Company, Job title, Webinar, Signed up, Contacted). Needs: google_sheets, slack.
+category: Sales
+trigger:
+  # Left empty here: each workflow made from the template is given a token of its own.
+  webhook: { token: "" }
+# What a test runs on: an event as this trigger gives it.
+sample:
+  name: Grace Okafor
+  email: grace@okafor-dental.example
+  company: Okafor Dental
+  job_title: Practice owner
+  webinar: Online booking for clinics
+steps:
+  - name: who
+    set:
+      email: "has(value.email) ? value.email.trim().lowerAscii() : ''"
+      decides: >-
+        has(value.job_title) && value.job_title.lowerAscii().matches(r'owner|founder|ceo|chief|head|director|vp|president|partner|manager')
+  - where: steps.who.email.matches(r'^[^@\s]+@[^@\s]+\.[^@\s]+$')
+  - name: now
+    datetime: {}
+  - name: row
+    google_sheets:
+      action: add_row
+      credential: google_sheets
+      spreadsheet_id: your-spreadsheet-id
+      sheet: Sign-ups
+      values: ["{{ value.name }}", "{{ steps.who.email }}", "{{ value.company }}", "{{ value.job_title }}", "{{ value.webinar }}", "{{ steps.now.date }}", ""]
+    retry: { attempts: 3, wait: 10s }
+  - where: steps.who.decides == true
+  - name: tell
+    slack:
+      credential: slack
+      channel: "#sales"
+      text: "{{ value.name }} ({{ value.job_title }}, {{ value.company }}) signed up for \"{{ value.webinar }}\" - {{ steps.who.email }}"
+    retry: { attempts: 3, wait: 10s }
+  # The run waits on the log for two days - through restarts - then looks again.
+  - name: later
+    wait: { for: 2d }
+  - name: sheet
+    google_sheets:
+      action: read_rows
+      credential: google_sheets
+      spreadsheet_id: your-spreadsheet-id
+      range: Sign-ups!A1:G5000
+  - name: contacted
+    javascript: |
+      // The sign-up's row, found by its e-mail; contacted when its Contacted column holds anything.
+      const rows = steps.sheet || [];
+      const head = (rows[0] || []).map((h) => String(h).trim().toLowerCase());
+      const [e, c] = [head.indexOf("email"), head.indexOf("contacted")];
+      if (e < 0 || c < 0) return { done: false, note: "the sheet needs Email and Contacted columns" };
+      const row = rows.slice(1).find((r) => String(r[e] || "").trim().toLowerCase() === steps.who.email);
+      return { done: Boolean(row && String(row[c] || "").trim()) };
+  - where: steps.contacted.done == false
+  - name: nudge
+    slack:
+      credential: slack
+      channel: "#sales"
+      text: "Nobody has contacted {{ value.name }} ({{ value.job_title }}, {{ value.company }}) since they signed up two days ago - {{ steps.who.email }}"

@@ -1,0 +1,7 @@
+description: A bot without files:write - refused at the first request, nothing more sent
+action: upload_file
+credential: { bot_token: xoxb-1 }
+input: { channel: C0123456, content: "x", filename: x.txt }
+exchanges:
+  - answer: { body: { ok: false, error: missing_scope } }
+error: "Slack refused it: missing_scope"
