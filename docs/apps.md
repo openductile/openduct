@@ -109,7 +109,8 @@ actions:
   counts, and what the builder can offer later steps.
 - **Waiting.** A request may take 30 seconds. An action of a service that answers only when its work is done says
   how long it may wait, in seconds, up to 300: `timeout: 300` (Apify's run-and-wait).
-- **Sign-ins.** Fields go on requests as `headers`, `query`, or `basic: {username, password}`. A webhook app's
+- **Sign-ins.** Fields go on requests as `headers`, `query`, or `basic: {username, password}` (the password
+  left out when a vendor takes none). A webhook app's
   credential is its address: `url_field: url`. OAuth 2.0: `oauth2: {authorize, token, scopes}` - each install
   registers with the vendor itself (see the app's README).
 - **Pages.** `next` gives the next page's query parameters (a record, taking the place of the action's own of the

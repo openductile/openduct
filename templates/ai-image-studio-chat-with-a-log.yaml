@@ -13,7 +13,7 @@ trigger:
       welcome: Say what image you need, and for which channel (square for posts, tall for stories).
       placeholder: A cosy winter flat lay of our green tote...
     # Set a password of your own: the page asks for it.
-    password: ""
+    # password: a-password-of-your-own
     history: 6
     limits: { message: 1000, per_session: 10, per_address: 30 }
     wait: 2m

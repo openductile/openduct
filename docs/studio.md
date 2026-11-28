@@ -197,7 +197,7 @@ trigger:
     texts: { title: Help desk, welcome: "Hi! Ask me about your order.", placeholder: Your question }
     theme: { accent: "#0f766e", background: "#ffffff", text: "#1f2933" }
     origins: ["https://www.example.com"]   # the sites that may show it and send it messages
-    password: ""                           # none; set one and the page asks for it
+    # password: a-password-of-your-own     # none unless set; with one, the page asks for it
     history: 10                            # earlier turns each run is given (0 to 50)
     limits: { message: 4000, per_session: 20, per_address: 60 }
     wait: 2m                               # how long the chat waits for an answer (1s to 5m)

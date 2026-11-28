@@ -13,7 +13,7 @@ trigger:
       welcome: "Hi! Ask me about leave, expenses, travel or any of our policies."
       placeholder: Your question
     # None yet: set one of your own before you share the address, and the page asks for it.
-    password: ""
+    # password: a-password-of-your-own
     history: 6
     limits: { message: 1000, per_session: 20, per_address: 60 }
 # What a test runs on: a message as this trigger gives it.

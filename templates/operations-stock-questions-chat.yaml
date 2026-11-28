@@ -13,7 +13,7 @@ trigger:
       welcome: Hi! Ask me what is in stock, or ask me to reorder something.
       placeholder: "How many green totes are left?"
     # Set a password before you share the page: the chat can add reorders.
-    password: ""
+    # password: a-password-of-your-own
     history: 10
     limits: { message: 1000, per_session: 20, per_address: 60 }
 # What a test runs on: a message as this trigger gives it.

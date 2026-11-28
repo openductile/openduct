@@ -88,6 +88,8 @@ struct FieldFile {
 #[serde(deny_unknown_fields)]
 struct BasicFile {
     username: String,
+    /// Left out for a vendor that takes a key as the user name and no password.
+    #[serde(default)]
     password: String,
 }
 

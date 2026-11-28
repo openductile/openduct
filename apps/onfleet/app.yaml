@@ -15,7 +15,7 @@ sign_in:
     fields:
       - { name: api_key, label: The API key, secret: true }
     # Onfleet takes the key as the user name of HTTP basic sign-in, with no password.
-    basic: { username: "{{ credential.api_key }}", password: "" }
+    basic: { username: "{{ credential.api_key }}" }
 # Onfleet's refusals: a code, and a message record with the message and its cause.
 error: >-
   status < 400 ? null
