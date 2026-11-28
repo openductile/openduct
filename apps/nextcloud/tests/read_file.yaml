@@ -1,0 +1,10 @@
+description: A CSV file's contents, as text
+action: read_file
+credential: { url: "https://cloud.example.com", username: ann, password: app-pass-1 }
+input: { path: Reports/2026-11.csv }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://cloud.example.com/remote.php/dav/files/ann/Reports/2026-11.csv"
+    answer: { status: 200, headers: { content-type: text/csv }, body: "day,orders\n2026-11-01,12\n" }
+result: "day,orders\n2026-11-01,12\n"

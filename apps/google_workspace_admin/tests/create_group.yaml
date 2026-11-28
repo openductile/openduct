@@ -1,0 +1,7 @@
+action: create_group
+credential: { access_token: ya29.test }
+input: { email: support@example.com, name: Support, description: Customer questions }
+exchanges:
+  - sent: { method: POST, url: https://admin.googleapis.com/admin/directory/v1/groups, body: { email: support@example.com, name: Support, description: Customer questions } }
+    answer: { body: { id: 03abc0002, email: support@example.com, name: Support, description: Customer questions, adminCreated: true } }
+result: { id: 03abc0002, email: support@example.com, name: Support, description: Customer questions, adminCreated: true }

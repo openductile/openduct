@@ -1,0 +1,43 @@
+# Made by `openduct app from-openapi`: Look up a call.
+description: "Look up a call, made from the API description's schemas"
+action: get_call
+credential: { access_key: ann, access_key_secret: test-password }
+input: { id: id_1 }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://api.gong.io/v2/calls/id_1"
+      query: {}
+      headers: { authorization: "Basic YW5uOnRlc3QtcGFzc3dvcmQ=" }
+    answer:
+      status: 200
+      body:
+        requestId: "4al018gzaztcr8nbukw"
+        call:
+          id: "7782342274025937895"
+          url: example
+          title: example
+          scheduled: "2018-02-17T10:30:00Z"
+          started: "2018-02-17T10:30:00Z"
+          duration: 460
+          primaryUserId: "234599484848423"
+          direction: Inbound
+          system: Outreach
+          scope: Internal
+          media: Video
+          language: eng
+result:
+  requestId: "4al018gzaztcr8nbukw"
+  call:
+    id: "7782342274025937895"
+    url: example
+    title: example
+    scheduled: "2018-02-17T10:30:00Z"
+    started: "2018-02-17T10:30:00Z"
+    duration: 460
+    primaryUserId: "234599484848423"
+    direction: Inbound
+    system: Outreach
+    scope: Internal
+    media: Video
+    language: eng

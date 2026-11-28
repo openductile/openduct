@@ -1,0 +1,16 @@
+# Made by `openduct app from-openapi`: List Groups.
+description: "List Groups, made from the API description's schemas"
+action: list_groups
+credential: { api_key: test-key }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://gateway.seven.io/api/groups"
+      query: {}
+      headers: { x-api-key: test-key }
+    answer:
+      status: 200
+      body:
+        data: [{ id: 1, name: example, members_count: 1, has_more: true }]
+        pagingMetadata: { offset: 1, count: 1, total: 1, limit: 1, has_more: true }
+result: [{ id: 1, name: example, members_count: 1, has_more: true }]

@@ -1,0 +1,6 @@
+action: open_issue
+credential: { site: examplecorp, email: ann@example.com, api_token: ATATT_test }
+input: { project: NOPE, summary: Hello }
+exchanges:
+  - answer: { status: 400, body: { errorMessages: [], errors: { project: "Specify a valid project ID or key" } } }
+error: "Specify a valid project ID or key"

@@ -1,0 +1,11 @@
+description: A PDF of a web page, in landscape
+action: create_pdf_from_url
+credential: { api_key: at_test_key_1 }
+input: { url: "https://www.example.com/menu", settings: { orientation: "2" } }
+exchanges:
+  - sent:
+      method: POST
+      url: "https://rest.apitemplate.io/v2/create-pdf-from-url"
+      body: { url: "https://www.example.com/menu", settings: { orientation: "2" } }
+    answer: { status: 200, body: { status: success, download_url: "https://files.example.com/menu.pdf", total_pages: 2, transaction_ref: t-url-1 } }
+result: { status: success, download_url: "https://files.example.com/menu.pdf", total_pages: 2, transaction_ref: t-url-1 }

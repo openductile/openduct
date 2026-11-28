@@ -1,0 +1,71 @@
+name: Spreadsheets sent by email, rows into one Google Sheet
+description: >-
+  For teams that get orders, stock counts or price lists from partners as CSV or Excel attachments: point your inbound
+  email service's webhook (the JSON Postmark's inbound webhook sends: From, Subject, Attachments with Name, ContentType
+  and Content in Base64) at this workflow's address, and every row of every CSV or XLSX attached is added to a Received
+  sheet - with the day, who sent it and the file it came from - so nobody copies them by hand. Other attachments are
+  passed over and named in the answer. Needs: a Google Sheets sign-in called sheets.
+category: Documents
+trigger:
+  # Left empty here: each workflow made from the template is given a token of its own, for the service to send.
+  webhook: { token: "" }
+# What a test runs on: an event as this trigger gives it (an attachment's bytes, in Base64, as the service sends them).
+sample:
+  From: orders@partner.example
+  Subject: Orders for next week
+  Date: "Fri, 27 Nov 2026 09:12:00 +0000"
+  Attachments:
+    - Name: orders-week-49.csv
+      ContentType: text/csv
+      ContentLength: 86
+      Content: b3JkZXIsc2t1LHF0eSxzaGlwX2J5ClBPLTEwMDEsVE9URS1HUk4sMTIsMjAyNi0xMi0wNApQTy0xMDAxLENBUC1CTEssMzAsMjAyNi0xMi0wNAo=
+    - Name: logo.png
+      ContentType: image/png
+      ContentLength: 68
+      Content: iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==
+steps:
+  - name: settings
+    set:
+      # Change this to your own spreadsheet.
+      spreadsheet: "'your-spreadsheet-id'"
+      sheets: >-
+        has(value.Attachments) ? value.Attachments.filter(a,
+          a.Name.lowerAscii().endsWith('.csv') || a.Name.lowerAscii().endsWith('.xlsx')) : []
+      others: >-
+        has(value.Attachments) ? value.Attachments.filter(a,
+          !(a.Name.lowerAscii().endsWith('.csv') || a.Name.lowerAscii().endsWith('.xlsx'))).map(a, a.Name) : []
+  - name: today
+    datetime: {}
+  - name: each_attachment
+    for_each:
+      items: steps.settings.sheets
+      steps:
+        - name: file
+          convert:
+            format: base64
+            base64: item.Content
+            name: "{{ item.Name }}"
+        - name: rows
+          extract_file: { file: steps.file }
+        - name: attachment
+          set: { name: item.Name }
+        - name: each_row
+          for_each:
+            items: steps.rows.rows
+            steps:
+              - name: add
+                google_sheets:
+                  credential: sheets
+                  action: add_row
+                  spreadsheet_id: "{{ steps.settings.spreadsheet }}"
+                  sheet: Received
+                  # The day, who sent it, the file, then the row's own cells in the file's order.
+                  values: "{{ [steps.today.date, value.From, steps.attachment.name] + steps.rows.columns.map(c, item[c] == null ? '' : string(item[c])) }}"
+                retry: { attempts: 3, wait: 10s }
+  - name: reply
+    respond:
+      status: 200
+      body:
+        added: "{{ steps.each_attachment.map(a, size(a.rows.rows)).sum() }}"
+        files: "{{ steps.settings.sheets.map(a, a.Name) }}"
+        passed_over: "{{ steps.settings.others }}"

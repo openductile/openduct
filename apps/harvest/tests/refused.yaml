@@ -1,0 +1,9 @@
+description: A project's budget refused, in Harvest's words
+action: update_project
+credential: {access_token: hv-test-token, account_id: '100200'}
+input: {project_id: '14307913', budget: 10}
+exchanges:
+- answer:
+    status: 422
+    body: {message: An “Hours per task” budget has no project-level amount. Set the budget on each task instead.}
+error: 'Harvest answered 422: An “Hours per task” budget has no project-level amount. Set the budget on each task instead.'

@@ -1,0 +1,8 @@
+description: A delivery with a signature that does not match is refused
+trigger: document_read
+credential: { api_key: md_test_1, webhook_secret: whsec_mindee_test_1 }
+delivery:
+  headers: { x-signature: "1111111111111111111111111111111111111111111111111111111111111111" }
+  body: '{"inference":{"id":"6c2f2a8e-0000-4000-8000-0000000000a1"}}'
+  at: 1795773600
+refused: signature

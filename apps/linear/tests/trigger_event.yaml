@@ -1,0 +1,17 @@
+description: An issue opened, as Linear sends it, signed with the subscription's secret
+trigger: event
+workflow: wf1
+credential: { api_key: lin_api_test1, "webhook_secret@wf1": lin_wh_test_secret }
+delivery:
+  headers: { linear-signature: 4b7385861b6ac70416d1a843d949a94bb7361b93e2ab767990804ca826802388, linear-delivery: 6f3c1d2e-0000-4000-8000-000000000001, linear-event: Issue }
+  body: '{"action":"create","type":"Issue","createdAt":"2026-11-27T10:00:00.000Z","actor":{"id":"u-1","type":"user","name":"Ann Lee"},"data":{"id":"0b1e6a52-0000-4000-8000-000000000003","identifier":"ENG-103","title":"Refund page times out","priority":1},"url":"https://linear.app/example/issue/ENG-103","organizationId":"org-test-1","webhookTimestamp":1795770000000,"webhookId":"wh-test-1"}'
+  at: 1795770001
+runs:
+  - action: create
+    type: Issue
+    createdAt: "2026-11-27T10:00:00.000Z"
+    actor: { id: u-1, type: user, name: Ann Lee }
+    data: { id: 0b1e6a52-0000-4000-8000-000000000003, identifier: ENG-103, title: Refund page times out, priority: 1 }
+    url: "https://linear.app/example/issue/ENG-103"
+    updatedFrom: null
+ids: [6f3c1d2e-0000-4000-8000-000000000001]

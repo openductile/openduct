@@ -1,0 +1,9 @@
+description: Telegram refuses to be asked while a webhook is set
+trigger: new_message
+credential: { bot_token: "123:abc" }
+seen: { cursor: 501 }
+exchanges:
+  - answer:
+      status: 409
+      body: { ok: false, error_code: 409, description: "Conflict: can't use getUpdates method while webhook is active" }
+refused: "Telegram answered 409: Conflict: can't use getUpdates"

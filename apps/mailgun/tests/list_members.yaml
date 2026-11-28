@@ -1,0 +1,16 @@
+description: "A list's subscribed members, page after page"
+action: list_members
+credential: {"api_key": "key-test", "domain": "mg.example.com"}
+input: {"list_address": "news@mg.example.com", "subscribed": true}
+exchanges:
+  - sent:
+      method: GET
+      url: "https://api.mailgun.net/v3/lists/news@mg.example.com/members/pages"
+      query: {"subscribed": "true", "limit": "100"}
+      headers: {"authorization": "Basic YXBpOmtleS10ZXN0"}
+    answer: {"status": 200, "body": {"items": [{"address": "ann@example.com", "name": "Ann Lee", "subscribed": true, "vars": {"plan": "pro"}}, {"address": "bo@example.com", "name": "Bo Chen", "subscribed": true, "vars": {}}], "paging": {"next": "https://api.mailgun.net/v3/lists/news@mg.example.com/members/pages?page=next&address=ann%40example.com&limit=100"}}}
+  - sent:
+      method: GET
+      url: "https://api.mailgun.net/v3/lists/news@mg.example.com/members/pages?page=next&address=ann%40example.com&limit=100"
+    answer: {"status": 200, "body": {"items": [], "paging": {"next": "https://api.mailgun.net/v3/lists/news@mg.example.com/members/pages?page=next&address=ann%40example.com&limit=100"}}}
+result: [{"address": "ann@example.com", "name": "Ann Lee", "subscribed": true, "vars": {"plan": "pro"}}, {"address": "bo@example.com", "name": "Bo Chen", "subscribed": true, "vars": {}}]

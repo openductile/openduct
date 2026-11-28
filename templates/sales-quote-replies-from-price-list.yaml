@@ -1,0 +1,98 @@
+name: Quote replies to price questions, sent once you approve
+description: >-
+  Run it by hand when the price questions pile up: an AI agent finds the unanswered quote requests of the last few
+  days in Gmail, prices each one from your Price list sheet in Google Sheets, and drafts a reply. You get every draft
+  in one e-mail with a link to approve them all or decline, with a comment; the run waits up to a day. Approved, each
+  reply is sent from Gmail. Needs: Gmail (gmail), Google Sheets (sheets) and an AI credential (model).
+category: Sales
+trigger: manual
+# What a test runs on: the input a run by hand is given.
+sample:
+  days: 3
+  owner: owner@example.com
+steps:
+  - name: drafts
+    agent:
+      credential: model
+      instructions: >-
+        You answer price questions for a small company that sells printed tote bags in bulk. Find quote requests with
+        find_emails (search "in:inbox newer_than:{{ value.days }}d -from:me (quote OR price OR pricing OR cost)"),
+        read each, and price it from the price list with price_list - never invent a price, a discount or a delivery
+        time; when the list does not cover what is asked, say we will confirm it within a day. Write each reply
+        warmly and briefly, with the quantities, the unit price, the total, and how to order. Leave out e-mails that
+        are not asking for a price. At most ten replies.
+      input: "Draft replies to the quote requests of the last {{ value.days }} days."
+      tools:
+        - name: find_emails
+          description: Finds e-mails by a Gmail search, giving each one's id.
+          gmail: { action: find_emails, credential: gmail }
+        - name: read_email
+          description: Reads one e-mail in full, by its id.
+          gmail: { action: read_email, credential: gmail }
+        - name: price_list
+          description: "The price list: a header row, then one row a product and quantity band (product, from quantity, unit price, delivery days)."
+          google_sheets: { action: read_rows, credential: sheets, spreadsheet_id: your-sheet-id, range: "Price list!A1:F500" }
+      allow: [find_emails, read_email, price_list]
+      max_turns: 20
+      max_tool_calls: 40
+      max_tokens: 4000
+      output:
+        schema:
+          type: object
+          properties:
+            replies:
+              type: array
+              maxItems: 10
+              items:
+                type: object
+                properties:
+                  to: { type: string, description: "The address to answer" }
+                  subject: { type: string }
+                  text: { type: string }
+                required: [to, subject, text]
+          required: [replies]
+  - name: list
+    set:
+      replies: "has(steps.drafts.json.replies) ? steps.drafts.json.replies : []"
+  # Nothing to answer: nothing to approve.
+  - name: any
+    if:
+      when: size(steps.list.replies) == 0
+      then:
+        - stop: {}
+  - name: review
+    gmail:
+      action: send_email
+      credential: gmail
+      to: "{{ value.owner }}"
+      subject: "{{ size(steps.list.replies) }} quote replies to approve"
+      text: >-
+        {{ steps.list.replies.map(r, 'To: ' + r.to + '\nSubject: ' + r.subject + '\n\n' + r.text).join('\n\n----------\n\n') }}
+
+        Approve or decline them all here (the link works once): {{ links.decide }}
+    retry: { attempts: 3, wait: 30s }
+  - name: decide
+    approval:
+      title: "Send {{ size(steps.list.replies) }} quote replies?"
+      description: The drafts are in the e-mail you were sent.
+      comment: true
+      approve: Send them
+      reject: Do not send
+      timeout: 1d
+      on_timeout: continue
+  - name: send_all
+    if:
+      when: steps.decide.approved && size(steps.list.replies) > 0
+      then:
+        - name: each
+          for_each:
+            items: steps.list.replies
+            steps:
+              - name: reply
+                gmail:
+                  action: send_email
+                  credential: gmail
+                  to: "{{ item.to }}"
+                  subject: "{{ item.subject.startsWith('Re:') ? item.subject : 'Re: ' + item.subject }}"
+                  text: "{{ item.text }}"
+                retry: { attempts: 3, wait: 30s }

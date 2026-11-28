@@ -1,0 +1,10 @@
+action: change_playlist
+credential: { access_token: BQ-test-token }
+input: { playlist: "spotify:playlist:0TestList000000000001", name: Winter shop music }
+exchanges:
+  - sent:
+      method: PUT
+      url: https://api.spotify.com/v1/playlists/0TestList000000000001
+      body: { name: Winter shop music }
+    answer: { status: 200 }
+result: { changed: true }

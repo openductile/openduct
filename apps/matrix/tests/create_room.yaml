@@ -1,0 +1,11 @@
+description: A private room for an order, with one person invited
+action: create_room
+credential: { homeserver: "https://matrix.example.org", token: syt_test_token }
+input: { name: Order A-1042, topic: Delivery questions, invite: ["@ann:example.org"], preset: private_chat }
+exchanges:
+  - sent:
+      method: POST
+      url: "https://matrix.example.org/_matrix/client/v3/createRoom"
+      body: { name: Order A-1042, topic: Delivery questions, invite: ["@ann:example.org"], preset: private_chat }
+    answer: { status: 200, body: { room_id: "!new456:example.org" } }
+result: { room_id: "!new456:example.org" }

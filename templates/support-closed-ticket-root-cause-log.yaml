@@ -1,0 +1,56 @@
+name: Log why each support ticket happened, when it closes
+description: >-
+  When your help desk closes a ticket, it posts the ticket's conversation to this workflow (with its token): a model
+  sums up the problem and its fix in one line each, sorts the cause - product bug, unclear docs, shipping, billing,
+  account access, how-to question - and the ticket goes into your Root causes sheet with how many hours it was open.
+  At the month's end, the sheet shows what to fix first. For support leads who want fewer tickets, not just faster
+  ones. Needs: model, google_sheets.
+category: Support
+trigger:
+  # Left empty here: each workflow made from the template is given a token of its own.
+  webhook: { token: "" }
+# What a test runs on: an event as this trigger gives it.
+sample:
+  id: "48213"
+  subject: Can't log in after changing my e-mail
+  opened_at: "2026-11-25T09:12:00Z"
+  closed_at: "2026-11-25T15:40:00Z"
+  messages:
+    - { from: customer, text: "I changed my e-mail in settings and now the login link never arrives." }
+    - { from: agent, text: "The change waits for a confirmation from the new address. I have sent it again - please check spam." }
+    - { from: customer, text: "Found it in spam, confirmed, I'm in. Thanks!" }
+steps:
+  - where: type(value.messages) == list && size(value.messages) > 0
+  - name: conversation
+    set:
+      text: "value.messages.map(m, m.from + ': ' + m.text).join('\\n')"
+      hours: "round(double(int(timestamp(value.closed_at)) - int(timestamp(value.opened_at))) / 3600, 1)"
+  - name: gist
+    extract:
+      credential: model
+      text: "Subject: {{ value.subject }}\n{{ steps.conversation.text }}"
+      fields:
+        - { name: problem, required: true, description: "the customer's problem, in one plain sentence" }
+        - { name: fix, required: true, description: "what solved it, in one plain sentence" }
+        - { name: avoidable, type: boolean, description: "whether a clearer product or page would have avoided the ticket" }
+  - name: cause
+    classify:
+      credential: model
+      text: "{{ steps.gist.json.problem }} Fixed by: {{ steps.gist.json.fix }}"
+      categories:
+        - { name: product bug, description: Something in the product did not work as it should }
+        - { name: unclear docs or screens, description: The product worked but the customer could not tell how }
+        - { name: shipping, description: "Deliveries, tracking, damaged or missing parcels" }
+        - { name: billing, description: "Charges, refunds, invoices, plans" }
+        - { name: account access, description: "Signing in, passwords, e-mail changes, locked accounts" }
+        - { name: how-to question, description: "A question about using the product, answered" }
+  - name: row
+    google_sheets:
+      action: add_row
+      credential: google_sheets
+      spreadsheet_id: your-spreadsheet-id
+      sheet: Root causes
+      values: >-
+        {{ [value.id, value.closed_at.substring(0, 10), value.subject, steps.cause.category, steps.gist.json.problem,
+            steps.gist.json.fix, steps.gist.json.avoidable == true ? 'yes' : 'no', steps.conversation.hours] }}
+    retry: { attempts: 3, wait: 10s }

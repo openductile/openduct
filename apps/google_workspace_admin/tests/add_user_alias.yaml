@@ -1,0 +1,7 @@
+action: add_user_alias
+credential: { access_token: ya29.test }
+input: { user: ann@example.com, alias: sales@example.com }
+exchanges:
+  - sent: { method: POST, url: https://admin.googleapis.com/admin/directory/v1/users/ann@example.com/aliases, body: { alias: sales@example.com } }
+    answer: { body: { kind: admin#directory#alias, id: "100000000000000000001", primaryEmail: ann@example.com, alias: sales@example.com } }
+result: { kind: admin#directory#alias, id: "100000000000000000001", primaryEmail: ann@example.com, alias: sales@example.com }

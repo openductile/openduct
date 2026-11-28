@@ -1,0 +1,8 @@
+description: A channel's latest messages by its name; a page of fewer than 100 is the last
+action: channel_history
+credential: { workspace: acme, user_id: uAbC123, token: rc_test_1 }
+input: { room_name: sales }
+exchanges:
+  - sent: { method: GET, url: https://acme.rocket.chat/api/v1/channels.history, query: { roomName: sales, count: "100" } }
+    answer: { body: { messages: [{ _id: mSg002, msg: Second }, { _id: mSg001, msg: First }], success: true } }
+result: [{ _id: mSg002, msg: Second }, { _id: mSg001, msg: First }]

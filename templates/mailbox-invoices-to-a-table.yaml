@@ -1,0 +1,34 @@
+name: Invoices from a mailbox, kept in a table
+description: >-
+  Every five minutes, looks in a mailbox's inbox - any mailbox, over IMAP - for new mail from a supplier's billing
+  address, reads each one with its attached CSV invoice as a file, keeps the invoice's rows in the invoices data table
+  with who sent it, and files the email in Archive. Make the table once, under Tables: invoices, with the text
+  columns number, total, due and sender.
+category: Finance
+trigger:
+  mailbox: { credential: billing-mail, folder: INBOX, from: billing@example.com, every: 5m }
+# What a test runs on: a new message as this trigger gives it.
+sample:
+  uid: 1001
+  uidvalidity: 1
+  folder: INBOX
+  subject: Invoice A-1001
+  from: { name: Ann Example, address: billing@example.com }
+  to: [{ name: Accounts, address: accounts@example.com }]
+  date: "2026-11-23T09:00:00Z"
+  seen: false
+  text: "Please find invoice A-1001 attached."
+  attachments: [{ name: invoice-A-1001.csv, type: text/csv, size: 43 }]
+steps:
+  - name: email
+    mailbox: { action: read, credential: billing-mail, uid: "{{ value.uid }}" }
+  - where: size(steps.email.attachments) > 0
+  - name: invoice
+    extract_file: { file: "steps.email.attachments[0]", format: csv }
+  - name: keep
+    table:
+      name: invoices
+      action: insert
+      rows: "steps.invoice.rows.map(r, {'number': r.number, 'total': r.total, 'due': r.due, 'sender': value.from.address})"
+  - name: filed
+    mailbox: { action: move, credential: billing-mail, uid: "{{ value.uid }}", to_folder: Archive }

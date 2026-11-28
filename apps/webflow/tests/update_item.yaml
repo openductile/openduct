@@ -1,0 +1,32 @@
+# Made by `openduct app from-openapi`: Update Collection Item.
+description: "Update Collection Item, made from the API description's schemas"
+action: update_item
+credential: { token: test-token }
+input: { collection_id: collection_1, item_id: item_1 }
+exchanges:
+  - sent:
+      method: PATCH
+      url: "https://api.webflow.com/v2/collections/collection_1/items/item_1"
+      query: {}
+      headers: { authorization: "Bearer test-token" }
+      body: {}
+    answer:
+      status: 200
+      body:
+        id: "580e64008c9a982ac9b8b754"
+        cmsLocaleId: "653ad57de882f528b32e810e"
+        lastPublished: "2023-03-17T18:47:35.560Z"
+        lastUpdated: "2023-03-17T18:47:35.560Z"
+        createdOn: "2023-03-17T18:47:35.560Z"
+        isArchived: true
+        isDraft: true
+        fieldData: { name: example, slug: example }
+result:
+  id: "580e64008c9a982ac9b8b754"
+  cmsLocaleId: "653ad57de882f528b32e810e"
+  lastPublished: "2023-03-17T18:47:35.560Z"
+  lastUpdated: "2023-03-17T18:47:35.560Z"
+  createdOn: "2023-03-17T18:47:35.560Z"
+  isArchived: true
+  isDraft: true
+  fieldData: { name: example, slug: example }

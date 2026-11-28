@@ -1,0 +1,9 @@
+description: The credits left
+action: get_credits
+credential: { api_key: dc_test_key_1 }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://api.dropcontact.com/v1/account/credits"
+    answer: { status: 200, body: { credits: 1250 } }
+result: { credits: 1250 }

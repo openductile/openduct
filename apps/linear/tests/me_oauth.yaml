@@ -1,0 +1,8 @@
+description: A sign-in at Linear sends its token as a bearer token
+action: me
+sign_in: linear_oauth
+credential: { access_token: lin_oauth_test1 }
+exchanges:
+  - sent: { method: POST, url: https://api.linear.app/graphql, headers: { authorization: Bearer lin_oauth_test1 } }
+    answer: { body: { data: { viewer: { id: u-1, name: Ann Lee } } } }
+result: { id: u-1, name: Ann Lee }

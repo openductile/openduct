@@ -1,0 +1,7 @@
+action: get_user
+credential: { api_key: pd_test_1 }
+input: { id: PUSER02 }
+exchanges:
+  - sent: { method: GET, url: https://api.pagerduty.com/users/PUSER02 }
+    answer: { body: { user: { id: PUSER02, name: Bob Ray, email: bob@example.com, role: user } } }
+result: { id: PUSER02, name: Bob Ray, email: bob@example.com, role: user }

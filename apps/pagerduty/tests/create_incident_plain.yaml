@@ -1,0 +1,11 @@
+description: With only what it needs, the records not given are left out
+action: create_incident
+credential: { api_key: pd_test_1 }
+input: { from: ann@example.com, title: Slow search, service_id: PSVC001 }
+exchanges:
+  - sent:
+      method: POST
+      url: https://api.pagerduty.com/incidents
+      body: { incident: { type: incident, title: Slow search, service: { id: PSVC001, type: service_reference } } }
+    answer: { status: 201, body: { incident: { id: PINC004, incident_number: 45, title: Slow search, status: triggered } } }
+result: { id: PINC004, incident_number: 45, title: Slow search, status: triggered }

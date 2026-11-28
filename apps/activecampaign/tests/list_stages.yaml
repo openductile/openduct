@@ -1,0 +1,29 @@
+description: The stages of one pipeline
+action: list_stages
+credential:
+  account: shopexample
+  api_key: test-key
+input:
+  pipeline_id: '1'
+exchanges:
+- sent:
+    method: GET
+    url: https://shopexample.api-us1.com/api/3/dealStages
+    query:
+      filters[d_groupid]: '1'
+    headers:
+      api-token: test-key
+  answer:
+    status: 200
+    body:
+      dealStages:
+      - &id001
+        id: '2'
+        title: Quote sent
+        group: '1'
+        order: '2'
+        color: 32B0FC
+      meta:
+        total: '1'
+result:
+- *id001

@@ -1,0 +1,104 @@
+name: A Monday brief on each key account, for its owner
+description: >-
+  For account managers and founders who sell to a few big customers: every Monday at 8:00, for each account in an
+  Accounts sheet (company, web domain, the owner's email, and its Greenhouse job board if it has one), an AI agent looks
+  at what changed - the news, the jobs it is hiring for, what its own site says now - and emails the account's owner (or
+  your sales lead, when the row names none) a short brief: what happened, what it may mean for you, and one thing to do
+  this week. Needs: a Google Sheets sign-in called sheets, an AI credential called model, a NewsAPI key as a header
+  credential called newsapi (X-Api-Key), an Apify credential called apify, and a Gmail sign-in called gmail.
+category: Sales
+trigger:
+  schedule: { every: week, on: [monday], at: "08:00", timezone: America/New_York }
+# What a test runs on: an event as this trigger gives it.
+sample:
+  scheduled_at: "2026-11-30T13:00:00Z"
+steps:
+  - name: settings
+    set:
+      # Change this to your own spreadsheet; columns A to D: company, domain, owner's email, Greenhouse board.
+      spreadsheet: "'your-spreadsheet-id'"
+      # Who gets the brief of an account with no owner's email in column C.
+      no_owner: "'sales-lead@example.com'"
+      since: string(timestamp(value.scheduled_at) - duration('168h')).substring(0, 10)
+  - name: accounts
+    google_sheets:
+      credential: sheets
+      action: read_rows
+      spreadsheet_id: "{{ steps.settings.spreadsheet }}"
+      range: Accounts!A2:D
+    retry: { attempts: 3, wait: 10s }
+  - name: each_account
+    for_each:
+      items: steps.accounts.filter(r, size(r) > 0 && string(r[0]).trim() != '')
+      steps:
+        - name: account
+          set:
+            company: string(item[0]).trim()
+            domain: "size(item) > 1 ? string(item[1]).trim() : ''"
+            owner: "size(item) > 2 && string(item[2]).contains('@') ? string(item[2]).trim() : steps.settings.no_owner"
+            board: "size(item) > 3 ? string(item[3]).trim() : ''"
+        - name: analyst
+          agent:
+            credential: model
+            instructions: >-
+              You prepare an account manager for the week. Look at the company's news since {{ steps.settings.since }},
+              its open jobs (if it has a job board) and its own site. Then write: what happened (at most three
+              points), what it may mean for us as their supplier, and one thing to do this week. Plain words, no
+              hype; if nothing changed, say so in one line. Name a link for each point.
+            input: >-
+              Company: {{ steps.account.company }}; site: {{ steps.account.domain == '' ? 'unknown' : 'https://' + steps.account.domain }};
+              job board: {{ steps.account.board == '' ? 'none' : steps.account.board }}
+            tools:
+              - name: recent_news
+                description: News articles about the company since last week, newest first.
+                parameters:
+                  type: object
+                  properties:
+                    words: { type: string, description: "What to search for: the company's name in quotes" }
+                  required: [words]
+                http:
+                  method: GET
+                  url: https://newsapi.org/v2/everything
+                  credential: newsapi
+                  query: { q: "{{ args.words }}", from: "{{ steps.settings.since }}", sortBy: publishedAt, language: en, pageSize: "10" }
+              - name: open_jobs
+                description: The jobs the company is hiring for, from its Greenhouse job board (only if it has one).
+                parameters:
+                  type: object
+                  properties:
+                    board: { type: string, description: "The job board's name, as given" }
+                  required: [board]
+                http:
+                  method: GET
+                  url: "https://boards-api.greenhouse.io/v1/boards/{{ args.board }}/jobs"
+              - name: read_site
+                description: The text of up to three pages of the company's own site, starting from an address.
+                parameters:
+                  type: object
+                  properties:
+                    url: { type: string, description: "The page to start from, as https://example.com" }
+                  required: [url]
+                apify:
+                  credential: apify
+                  action: run_and_get_items
+                  actor: apify/website-content-crawler
+                  input: { startUrls: [{ url: "{{ args.url }}" }], maxCrawlPages: 3, crawlerType: cheerio }
+                  limit: 3
+                  # Each look spends Apify credit: at most this much.
+                  max_total_charge_usd: 0.25
+            allow: [recent_news, open_jobs, read_site]
+            max_turns: 8
+            max_tool_calls: 6
+          on_error: continue
+        - name: send
+          if:
+            when: has(steps.analyst.text) && steps.analyst.text != ''
+            then:
+              - name: brief
+                gmail:
+                  credential: gmail
+                  action: send_email
+                  to: "{{ steps.account.owner }}"
+                  subject: "This week at {{ steps.account.company }}"
+                  text: "{{ steps.analyst.text }}"
+                retry: { attempts: 3, wait: 30s }

@@ -1,0 +1,1263 @@
+# Copyright 2026 Ductile AI, Inc
+# SPDX-License-Identifier: Apache-2.0
+# Sentry: made by `openduct app from-openapi` from https://github.com/getsentry/sentry-api-schema/blob/d8e95f7f3c95/openapi-derefed.json (the description says Apache 2.0; the repository is FSL-1.1-Apache-2.0) (API Reference v0, OpenAPI 3.0).
+# Checked as made. Change what you like, then run `openduct app check` and `openduct app test` again.
+app: sentry
+name: Sentry
+category: development
+description: "Errors and issues Sentry catches in your software: issues found, resolved and assigned, releases and deploys recorded."
+docs: "https://docs.sentry.io/api/"
+hosts: [sentry.io, "*.sentry.io"]
+# Sentry keeps an organization's data in a region, us or de, each with its own address.
+base_url: "https://{{ has(credential.region) && credential.region != '' ? credential.region : 'us' }}.sentry.io/api/0"
+sign_in:
+  - id: sentry
+    label: "An auth token"
+    fields:
+      - { name: token, label: "The auth token: a personal token, an organization token or an internal integration's", secret: true }
+      - { name: region, label: "Where the organization's data is kept: us (the default) or de", optional: true }
+      - { name: webhook_secret, label: "The internal integration's client secret, for its webhooks", secret: true, optional: true }
+    headers: { Authorization: "Bearer {{ credential.token }}" }
+actions:
+  list_organizations:
+    label: "List organizations"
+    description: "The organizations the token can reach."
+    method: GET
+    path: "/organizations/"
+    inputs:
+      - name: owner
+        label: "Specify true to restrict results to organizations in which you are an owner"
+        kind: boolean
+      - { name: query, label: "A search" }
+      - { name: sort_by, label: "The field to sort results by, in descending order" }
+      - { name: per_page, label: "How many on each page (at most 100)", kind: number }
+    query:
+      owner: "{{ input.owner }}"
+      query: "{{ input.query }}"
+      sortBy: "{{ input.sort_by }}"
+      per_page: "{{ input.per_page }}"
+    items: value
+    next: "has(headers.link) && headers.link.contains('rel=\"next\"; results=\"true\"') ? links.next : null"
+    output:
+      features: list
+      extraOptions: record
+      access: list
+      onboardingTasks: list
+      id: text
+      slug: text
+      status: record
+      name: text
+      dateCreated: text
+      isEarlyAdopter: boolean
+      require2FA: boolean
+      avatar: record
+      links: record
+      hasAuthProvider: boolean
+      allowMemberInvite: boolean
+      allowMemberProjectCreation: boolean
+      allowSuperuserAccess: boolean
+  list_issues:
+    label: "List issues"
+    description: "An organization's issues: unresolved ones unless a search says otherwise, every page."
+    method: GET
+    path: "/organizations/{{ input.organization_id_or_slug }}/issues/"
+    inputs:
+      - name: organization_id_or_slug
+        label: "The organization's slug (in its address) or id"
+        required: true
+      - name: stats_period
+        label: "How far back: a number and d, h, m, s or w, such as 24h or 14d (in place of start and end)"
+      - name: stats_period_start
+        label: "How long ago the query period starts, in the same format as statsPeriod"
+      - name: stats_period_end
+        label: "How long ago the query period ends, in the same format as statsPeriod"
+      - { name: start, label: "From (ISO 8601, such as 2026-11-01T00:00:00Z)" }
+      - { name: end, label: "Until (ISO 8601)" }
+      - { name: group_stats_period, label: "The timeline on which stats for the groups should be presented" }
+      - name: short_id_lookup
+        label: "1 to find short ids (such as BACKEND-1A) in the search"
+      - { name: query, label: "A search, as in Sentry (is:unresolved unless given)" }
+      - { name: sort, label: "Sort by: date (last seen), new (first seen), freq, user, trends, inbox or recommended" }
+      - { name: limit, label: "How many on each page (at most 100)", kind: number }
+    query:
+      statsPeriod: "{{ input.stats_period }}"
+      statsPeriodStart: "{{ input.stats_period_start }}"
+      statsPeriodEnd: "{{ input.stats_period_end }}"
+      start: "{{ input.start }}"
+      end: "{{ input.end }}"
+      groupStatsPeriod: "{{ input.group_stats_period }}"
+      shortIdLookup: "{{ input.short_id_lookup }}"
+      query: "{{ input.query }}"
+      sort: "{{ input.sort }}"
+      limit: "{{ input.limit }}"
+    items: value
+    next: "has(headers.link) && headers.link.contains('rel=\"next\"; results=\"true\"') ? links.next : null"
+    output:
+      id: text
+      shareId: text
+      shortId: text
+      title: text
+      culprit: text
+      permalink: text
+      logger: text
+      level: text
+      status: text
+      statusDetails: record
+      substatus: text
+      isPublic: boolean
+      platform: text
+      priority: text
+      priorityLockedAt: text
+      seerFixabilityScore: number
+      seerAutofixLastTriggered: text
+      seerExplorerAutofixLastTriggered: text
+      project: record
+      type: text
+      issueType: text
+      issueCategory: text
+      metadata: record
+      numComments: number
+      assignedTo: record
+      isBookmarked: boolean
+      isSubscribed: boolean
+      subscriptionDetails: record
+      hasSeen: boolean
+      annotations: list
+      isUnhandled: boolean
+      count: text
+      userCount: number
+      firstSeen: text
+      lastSeen: text
+      derivedData: record
+      stats: record
+      lifetime: record
+      filtered: record
+      sessionCount: number
+      inbox: record
+      owners: list
+      integrationIssues: list
+      sentryAppIssues: list
+      latestEventHasAttachments: boolean
+      matchingEventId: text
+      matchingEventEnvironment: text
+  list_members:
+    label: "List members"
+    description: "The people in an organization."
+    method: GET
+    path: "/organizations/{{ input.organization_id_or_slug }}/members/"
+    inputs:
+      - name: organization_id_or_slug
+        label: "The organization's slug (in its address) or id"
+        required: true
+      - { name: query, label: "Limit results to members matching the given query" }
+    query: { query: "{{ input.query }}" }
+    items: value
+    next: "has(headers.link) && headers.link.contains('rel=\"next\"; results=\"true\"') ? links.next : null"
+    output:
+      externalUsers: list
+      id: text
+      email: text
+      name: text
+      user: record
+      orgRole: text
+      pending: boolean
+      expired: boolean
+      flags: record
+      dateCreated: text
+      inviteStatus: text
+      inviterName: text
+  list_monitors:
+    label: "List cron monitors"
+    description: "An organization's cron monitors, with their environments."
+    method: GET
+    path: "/organizations/{{ input.organization_id_or_slug }}/monitors/"
+    inputs:
+      - name: organization_id_or_slug
+        label: "The organization's slug (in its address) or id"
+        required: true
+      - { name: owner, label: "The owner of the monitor, in the format user:id or team:id" }
+    query: { owner: "{{ input.owner }}" }
+    items: value
+    next: "has(headers.link) && headers.link.contains('rel=\"next\"; results=\"true\"') ? links.next : null"
+    output:
+      id: text
+      name: text
+      slug: text
+      status: text
+      isMuted: boolean
+      isUpserting: boolean
+      config: record
+      dateCreated: text
+      project: record
+      environments: list
+      owner: record
+  list_projects:
+    label: "List projects"
+    description: "An organization's projects."
+    method: GET
+    path: "/organizations/{{ input.organization_id_or_slug }}/projects/"
+    inputs:
+      - name: organization_id_or_slug
+        label: "The organization's slug (in its address) or id"
+        required: true
+      - { name: per_page, label: "How many on each page (at most 100)", kind: number }
+      - { name: query, label: "Filter projects by name or slug" }
+    query: { per_page: "{{ input.per_page }}", query: "{{ input.query }}" }
+    items: value
+    next: "has(headers.link) && headers.link.contains('rel=\"next\"; results=\"true\"') ? links.next : null"
+    output:
+      latestDeploys: record
+      options: record
+      stats: list
+      transactionStats: list
+      sessionStats: record
+      id: text
+      slug: text
+      name: text
+      platform: text
+      dateCreated: text
+      isBookmarked: boolean
+      isMember: boolean
+      features: list
+      firstEvent: text
+      firstTransactionEvent: boolean
+      access: list
+      hasAccess: boolean
+      hasFeedbacks: boolean
+      hasFlags: boolean
+      hasMinifiedStackTrace: boolean
+      hasMonitors: boolean
+      hasNewFeedbacks: boolean
+      hasProfiles: boolean
+      hasReplays: boolean
+      hasSessions: boolean
+      hasInsightsHttp: boolean
+      hasInsightsDb: boolean
+      hasInsightsAssets: boolean
+      hasInsightsAppStart: boolean
+      hasInsightsScreenLoad: boolean
+      hasInsightsVitals: boolean
+      hasInsightsCaches: boolean
+      hasInsightsQueues: boolean
+      hasInsightsAgentMonitoring: boolean
+      hasInsightsMCP: boolean
+      hasLogs: boolean
+      hasTraceMetrics: boolean
+      team: record
+      teams: list
+      platforms: list
+      hasUserReports: boolean
+      environments: list
+      latestRelease: record
+  list_releases:
+    label: "List releases"
+    description: "An organization's releases, the newest first."
+    method: GET
+    path: "/organizations/{{ input.organization_id_or_slug }}/releases/"
+    inputs:
+      - name: organization_id_or_slug
+        label: "The organization's slug (in its address) or id"
+        required: true
+      - { name: query, label: "Case-insensitive substring match against the release version" }
+      - { name: per_page, label: "How many on each page (at most 100)", kind: number }
+    query: { query: "{{ input.query }}", per_page: "{{ input.per_page }}" }
+    items: value
+    next: "has(headers.link) && headers.link.contains('rel=\"next\"; results=\"true\"') ? links.next : null"
+    output:
+      ref: text
+      url: text
+      dateReleased: text
+      dateCreated: text
+      dateStarted: text
+      owner: record
+      lastCommit: record
+      lastDeploy: record
+      firstEvent: text
+      lastEvent: text
+      currentProjectMeta: record
+      userAgent: text
+      adoptionStages: record
+      id: number
+      version: text
+      newGroups: number
+      status: text
+      shortVersion: text
+      versionInfo: record
+      data: record
+      commitCount: number
+      deployCount: number
+      authors: list
+      projects: list
+  list_teams:
+    label: "List teams"
+    description: "An organization's teams."
+    method: GET
+    path: "/organizations/{{ input.organization_id_or_slug }}/teams/"
+    inputs:
+      - name: organization_id_or_slug
+        label: "The organization's slug (in its address) or id"
+        required: true
+      - { name: detailed, label: "Specify \"0\" to return team details that do not include projects" }
+      - { name: per_page, label: "How many on each page (at most 100)", kind: number }
+      - { name: query, label: "Filter teams by name or slug" }
+    query:
+      detailed: "{{ input.detailed }}"
+      per_page: "{{ input.per_page }}"
+      query: "{{ input.query }}"
+    items: value
+    next: "has(headers.link) && headers.link.contains('rel=\"next\"; results=\"true\"') ? links.next : null"
+    output:
+      id: text
+      slug: text
+      name: text
+      dateCreated: text
+      isMember: boolean
+      teamRole: text
+      flags: record
+      access: list
+      hasAccess: boolean
+      isPending: boolean
+      memberCount: number
+      avatar: record
+      externalTeams: list
+      organization: record
+      projects: list
+  list_project_events:
+    label: "List a project's error events"
+    description: "The error events of one project."
+    method: GET
+    path: "/projects/{{ input.organization_id_or_slug }}/{{ input.project_id_or_slug }}/events/"
+    inputs:
+      - name: organization_id_or_slug
+        label: "The organization's slug (in its address) or id"
+        required: true
+      - name: project_id_or_slug
+        label: "The project's slug or id"
+        required: true
+      - name: stats_period
+        label: "How far back: a number and d, h, m, s or w, such as 24h or 14d (in place of start and end)"
+      - name: stats_period_start
+        label: "How long ago the query period starts, in the same format as statsPeriod"
+      - name: stats_period_end
+        label: "How long ago the query period ends, in the same format as statsPeriod"
+      - { name: start, label: "From (ISO 8601, such as 2026-11-01T00:00:00Z)" }
+      - { name: end, label: "Until (ISO 8601)" }
+      - name: full
+        label: "The whole event, with its stack trace"
+        kind: boolean
+      - { name: sample, label: "Return events in pseudo-random order", kind: boolean }
+    query:
+      statsPeriod: "{{ input.stats_period }}"
+      statsPeriodStart: "{{ input.stats_period_start }}"
+      statsPeriodEnd: "{{ input.stats_period_end }}"
+      start: "{{ input.start }}"
+      end: "{{ input.end }}"
+      full: "{{ input.full }}"
+      sample: "{{ input.sample }}"
+    items: value
+    next: "has(headers.link) && headers.link.contains('rel=\"next\"; results=\"true\"') ? links.next : null"
+    output:
+      id: text
+      event.type: text
+      groupID: text
+      eventID: text
+      projectID: text
+      message: text
+      title: text
+      location: text
+      culprit: text
+      user: record
+      tags: list
+      platform: text
+      dateCreated: text
+      crashFile: text
+      metadata: record
+  list_keys:
+    label: "List a project's client keys"
+    description: "A project's client keys (DSNs), which apps send their errors with."
+    method: GET
+    path: "/projects/{{ input.organization_id_or_slug }}/{{ input.project_id_or_slug }}/keys/"
+    inputs:
+      - name: organization_id_or_slug
+        label: "The organization's slug (in its address) or id"
+        required: true
+      - name: project_id_or_slug
+        label: "The project's slug or id"
+        required: true
+      - { name: status, label: "Filter client keys by active or inactive" }
+    query: { status: "{{ input.status }}" }
+    items: value
+    next: "has(headers.link) && headers.link.contains('rel=\"next\"; results=\"true\"') ? links.next : null"
+    output:
+      id: text
+      name: text
+      label: text
+      public: text
+      secret: text
+      projectId: number
+      isActive: boolean
+      rateLimit: record
+      dsn: record
+      browserSdkVersion: text
+      browserSdk: record
+      dateCreated: text
+      dynamicSdkLoaderOptions: record
+      useCase: text
+  list_issue_events:
+    label: "List an issue's events"
+    description: "Each time an issue happened."
+    method: GET
+    path: "/organizations/{{ input.organization_id_or_slug }}/issues/{{ input.issue_id }}/events/"
+    inputs:
+      - name: organization_id_or_slug
+        label: "The organization's slug (in its address) or id"
+        required: true
+      - { name: issue_id, label: "The issue's id", required: true }
+      - { name: start, label: "From (ISO 8601, such as 2026-11-01T00:00:00Z)" }
+      - { name: end, label: "Until (ISO 8601)" }
+      - name: stats_period
+        label: "How far back: a number and d, h, m, s or w, such as 24h or 14d (in place of start and end)"
+      - name: stats_period_start
+        label: "How long ago the query period starts, in the same format as statsPeriod"
+      - name: stats_period_end
+        label: "How long ago the query period ends, in the same format as statsPeriod"
+      - name: full
+        label: "The whole event, with its stack trace"
+        kind: boolean
+      - { name: sample, label: "Return events in pseudo-random order", kind: boolean }
+      - { name: query, label: "An optional search query for filtering events" }
+      - { name: per_page, label: "How many on each page (at most 100)", kind: number }
+    query:
+      start: "{{ input.start }}"
+      end: "{{ input.end }}"
+      statsPeriod: "{{ input.stats_period }}"
+      statsPeriodStart: "{{ input.stats_period_start }}"
+      statsPeriodEnd: "{{ input.stats_period_end }}"
+      full: "{{ input.full }}"
+      sample: "{{ input.sample }}"
+      query: "{{ input.query }}"
+      per_page: "{{ input.per_page }}"
+    items: value
+    next: "has(headers.link) && headers.link.contains('rel=\"next\"; results=\"true\"') ? links.next : null"
+    output:
+      id: text
+      event.type: text
+      groupID: text
+      eventID: text
+      projectID: text
+      message: text
+      title: text
+      location: text
+      culprit: text
+      user: record
+      tags: list
+      platform: text
+      dateCreated: text
+      crashFile: text
+      metadata: record
+  get_organization:
+    label: "Look up an organization"
+    description: "An organization's details: its teams, projects and the access the token has."
+    method: GET
+    path: "/organizations/{{ input.organization_id_or_slug }}/"
+    inputs:
+      - name: organization_id_or_slug
+        label: "The organization's slug (in its address) or id"
+        required: true
+      - name: detailed
+        label: "0 to leave out its projects and teams"
+    query: { detailed: "{{ input.detailed }}" }
+    output:
+      features: list
+      extraOptions: record
+      access: list
+      onboardingTasks: list
+      id: text
+      slug: text
+      status: record
+      name: text
+      dateCreated: text
+      isEarlyAdopter: boolean
+      require2FA: boolean
+      avatar: record
+      links: record
+      hasAuthProvider: boolean
+      allowMemberInvite: boolean
+      allowMemberProjectCreation: boolean
+      allowSuperuserAccess: boolean
+  create_release:
+    label: "Create a release"
+    description: "A new release of one or more projects, with its commits if given."
+    write: true
+    method: POST
+    path: "/organizations/{{ input.organization_id_or_slug }}/releases/"
+    inputs:
+      - name: organization_id_or_slug
+        label: "The organization's slug (in its address) or id"
+        required: true
+      - { name: version, label: "A version identifier for this release", required: true }
+      - name: projects
+        label: "A list of project slugs that are involved in this release"
+        required: true
+        kind: list
+      - { name: ref, label: "An optional commit reference" }
+      - { name: url, label: "A URL that points to the release" }
+      - { name: date_released, label: "An optional date that indicates when the release went live" }
+      - { name: commits, label: "An optional list of commit data to be associated", kind: list }
+      - { name: status, label: "The status of the release" }
+      - { name: owner, label: "The username of the user to set as the release owner" }
+      - { name: head_commits, label: "(Deprecated) Use refs instead", kind: list }
+      - name: refs
+        label: "An optional list of commit references, one per repository, used to associate…"
+        kind: list
+        description: "An optional list of commit references, one per repository, used to associate commits with the release."
+    send:
+      version: "{{ input.version }}"
+      projects: "{{ input.projects }}"
+      ref: "{{ input.ref }}"
+      url: "{{ input.url }}"
+      dateReleased: "{{ input.date_released }}"
+      commits: "{{ input.commits }}"
+      status: "{{ input.status }}"
+      owner: "{{ input.owner }}"
+      headCommits: "{{ input.head_commits }}"
+      refs: "{{ input.refs }}"
+    output:
+      ref: text
+      url: text
+      dateReleased: text
+      dateCreated: text
+      dateStarted: text
+      owner: record
+      lastCommit: record
+      lastDeploy: record
+      firstEvent: text
+      lastEvent: text
+      currentProjectMeta: record
+      userAgent: text
+      adoptionStages: record
+      id: number
+      version: text
+      newGroups: number
+      status: text
+      shortVersion: text
+      versionInfo: record
+      data: record
+      commitCount: number
+      deployCount: number
+      authors: list
+      projects: list
+  get_eventid:
+    label: "Find an event by its id"
+    description: "The project, issue and details of the event with this id."
+    method: GET
+    path: "/organizations/{{ input.organization_id_or_slug }}/eventids/{{ input.event_id }}/"
+    inputs:
+      - name: organization_id_or_slug
+        label: "The organization's slug (in its address) or id"
+        required: true
+      - { name: event_id, label: "The event ID to look up", required: true }
+    output: { organizationSlug: text, projectSlug: text, groupId: text, eventId: text, event: record }
+  get_release:
+    label: "Look up a release"
+    description: "One release's details, with its health data if asked."
+    method: GET
+    path: "/organizations/{{ input.organization_id_or_slug }}/releases/{{ input.version }}/"
+    inputs:
+      - name: organization_id_or_slug
+        label: "The organization's slug (in its address) or id"
+        required: true
+      - { name: version, label: "The version identifier of the release", required: true }
+      - { name: project, label: "The project ID or slug to filter by", kind: number }
+      - { name: health, label: "Whether or not to include health data with the release", kind: boolean }
+      - name: adoption_stages
+        label: "Whether or not to include adoption stages with the release"
+        kind: boolean
+      - name: summary_stats_period
+        label: "The period of time used to query summary stats for the release"
+      - { name: health_stats_period, label: "The period of time used to query health stats for the release" }
+      - { name: sort, label: "The field used to sort results by" }
+      - { name: status, label: "Release statuses that you can filter by" }
+      - { name: query, label: "A search" }
+    query:
+      project: "{{ input.project }}"
+      health: "{{ input.health }}"
+      adoptionStages: "{{ input.adoption_stages }}"
+      summaryStatsPeriod: "{{ input.summary_stats_period }}"
+      healthStatsPeriod: "{{ input.health_stats_period }}"
+      sort: "{{ input.sort }}"
+      status: "{{ input.status }}"
+      query: "{{ input.query }}"
+    output:
+      ref: text
+      url: text
+      dateReleased: text
+      dateCreated: text
+      dateStarted: text
+      owner: record
+      lastCommit: record
+      lastDeploy: record
+      firstEvent: text
+      lastEvent: text
+      currentProjectMeta: record
+      userAgent: text
+      adoptionStages: record
+      id: number
+      version: text
+      newGroups: number
+      status: text
+      shortVersion: text
+      versionInfo: record
+      data: record
+      commitCount: number
+      deployCount: number
+      authors: list
+      projects: list
+  create_deploy:
+    label: "Record a deploy"
+    description: "A deploy of a release to an environment, such as production."
+    write: true
+    method: POST
+    path: "/organizations/{{ input.organization_id_or_slug }}/releases/{{ input.version }}/deploys/"
+    inputs:
+      - name: organization_id_or_slug
+        label: "The organization's slug (in its address) or id"
+        required: true
+      - { name: version, label: "The version identifier of the release", required: true }
+      - { name: environment, label: "The environment you're deploying to", required: true }
+      - { name: name, label: "The optional name of the deploy" }
+      - { name: url, label: "The optional URL that points to the deploy" }
+      - { name: date_started, label: "An optional date that indicates when the deploy started" }
+      - { name: date_finished, label: "An optional date that indicates when the deploy ended" }
+      - { name: projects, label: "The optional list of project slugs to create a deploy within", kind: list }
+    send:
+      environment: "{{ input.environment }}"
+      name: "{{ input.name }}"
+      url: "{{ input.url }}"
+      dateStarted: "{{ input.date_started }}"
+      dateFinished: "{{ input.date_finished }}"
+      projects: "{{ input.projects }}"
+    output: { id: text, environment: text, dateStarted: text, dateFinished: text, name: text, url: text }
+  get_shortid:
+    label: "Find an issue by its short id"
+    description: "The issue with this short id (such as BACKEND-1A), and its project."
+    method: GET
+    path: "/organizations/{{ input.organization_id_or_slug }}/shortids/{{ input.issue_id }}/"
+    inputs:
+      - name: organization_id_or_slug
+        label: "The organization's slug (in its address) or id"
+        required: true
+      - { name: issue_id, label: "The short ID of the issue to resolve", required: true }
+    output: { organizationSlug: text, projectSlug: text, groupId: text, group: record, shortId: text }
+  get_project:
+    label: "Look up a project"
+    description: "One project's details."
+    method: GET
+    path: "/projects/{{ input.organization_id_or_slug }}/{{ input.project_id_or_slug }}/"
+    inputs:
+      - name: organization_id_or_slug
+        label: "The organization's slug (in its address) or id"
+        required: true
+      - name: project_id_or_slug
+        label: "The project's slug or id"
+        required: true
+    output:
+      stats: list
+      transactionStats: list
+      sessionStats: record
+      id: text
+      slug: text
+      name: text
+      platform: text
+      dateCreated: text
+      isBookmarked: boolean
+      isMember: boolean
+      features: list
+      firstEvent: text
+      firstTransactionEvent: boolean
+      access: list
+      hasAccess: boolean
+      hasFeedbacks: boolean
+      hasFlags: boolean
+      hasMinifiedStackTrace: boolean
+      hasMonitors: boolean
+      hasNewFeedbacks: boolean
+      hasProfiles: boolean
+      hasReplays: boolean
+      hasSessions: boolean
+      hasInsightsHttp: boolean
+      hasInsightsDb: boolean
+      hasInsightsAssets: boolean
+      hasInsightsAppStart: boolean
+      hasInsightsScreenLoad: boolean
+      hasInsightsVitals: boolean
+      hasInsightsCaches: boolean
+      hasInsightsQueues: boolean
+      hasInsightsAgentMonitoring: boolean
+      hasInsightsMCP: boolean
+      hasLogs: boolean
+      hasTraceMetrics: boolean
+      isInternal: boolean
+      isPublic: boolean
+      avatar: record
+      color: text
+      status: text
+      team: record
+      teams: list
+      latestRelease: record
+      options: record
+      digestsMinDelay: number
+      digestsMaxDelay: number
+      subjectPrefix: text
+      allowedDomains: list
+      resolveAge: number
+      dataScrubber: boolean
+      dataScrubberDefaults: boolean
+      safeFields: list
+      storeCrashReports: number
+      sensitiveFields: list
+      subjectTemplate: text
+      securityToken: text
+      securityTokenHeader: text
+      verifySSL: boolean
+      scrubIPAddresses: boolean
+      scrapeJavaScript: boolean
+  list_user_feedback:
+    label: "List user feedback"
+    description: "What users of a project wrote when an error happened."
+    method: GET
+    path: "/projects/{{ input.organization_id_or_slug }}/{{ input.project_id_or_slug }}/user-feedback/"
+    inputs:
+      - name: organization_id_or_slug
+        label: "The organization's slug (in its address) or id"
+        required: true
+      - name: project_id_or_slug
+        label: "The project's slug or id"
+        required: true
+    items: value
+    next: "has(headers.link) && headers.link.contains('rel=\"next\"; results=\"true\"') ? links.next : null"
+    output:
+      id: text
+      eventID: text
+      name: text
+      email: text
+      comments: text
+      dateCreated: text
+      user: record
+      event: record
+      issue: record
+  create_team_project:
+    label: "Create a project"
+    description: "A new project, belonging to a team."
+    write: true
+    method: POST
+    path: "/teams/{{ input.organization_id_or_slug }}/{{ input.team_id_or_slug }}/projects/"
+    inputs:
+      - name: organization_id_or_slug
+        label: "The organization's slug (in its address) or id"
+        required: true
+      - { name: team_id_or_slug, label: "The ID or slug of the team the resource belongs to", required: true }
+      - { name: name, label: "The name for the project", required: true }
+      - { name: slug, label: "Uniquely identifies a project and is used for the interface" }
+      - { name: platform, label: "The platform for the project" }
+      - name: default_rules
+        label: "Alert on every new issue (the default)"
+        kind: boolean
+    send:
+      name: "{{ input.name }}"
+      slug: "{{ input.slug }}"
+      platform: "{{ input.platform }}"
+      default_rules: "{{ input.default_rules }}"
+    output:
+      latestDeploys: record
+      options: record
+      stats: list
+      transactionStats: list
+      sessionStats: record
+      id: text
+      slug: text
+      name: text
+      platform: text
+      dateCreated: text
+      isBookmarked: boolean
+      isMember: boolean
+      features: list
+      firstEvent: text
+      firstTransactionEvent: boolean
+      access: list
+      hasAccess: boolean
+      hasFeedbacks: boolean
+      hasFlags: boolean
+      hasMinifiedStackTrace: boolean
+      hasMonitors: boolean
+      hasNewFeedbacks: boolean
+      hasProfiles: boolean
+      hasReplays: boolean
+      hasSessions: boolean
+      hasInsightsHttp: boolean
+      hasInsightsDb: boolean
+      hasInsightsAssets: boolean
+      hasInsightsAppStart: boolean
+      hasInsightsScreenLoad: boolean
+      hasInsightsVitals: boolean
+      hasInsightsCaches: boolean
+      hasInsightsQueues: boolean
+      hasInsightsAgentMonitoring: boolean
+      hasInsightsMCP: boolean
+      hasLogs: boolean
+      hasTraceMetrics: boolean
+      team: record
+      teams: list
+      platforms: list
+      hasUserReports: boolean
+      environments: list
+      latestRelease: record
+  get_issue:
+    label: "Look up an issue"
+    description: "One issue's details: its status, counts, first and last seen, and who it is assigned to."
+    method: GET
+    path: "/organizations/{{ input.organization_id_or_slug }}/issues/{{ input.issue_id }}/"
+    inputs:
+      - name: organization_id_or_slug
+        label: "The organization's slug (in its address) or id"
+        required: true
+      - { name: issue_id, label: "The issue's id", required: true }
+    output:
+      isUnhandled: boolean
+      count: text
+      userCount: number
+      firstSeen: text
+      lastSeen: text
+      derivedData: record
+      id: text
+      shareId: text
+      shortId: text
+      title: text
+      culprit: text
+      permalink: text
+      logger: text
+      level: text
+      status: text
+      statusDetails: record
+      substatus: text
+      isPublic: boolean
+      platform: text
+      priority: text
+      priorityLockedAt: text
+      seerFixabilityScore: number
+      seerAutofixLastTriggered: text
+      seerExplorerAutofixLastTriggered: text
+      project: record
+      type: text
+      issueType: text
+      issueCategory: text
+      metadata: record
+      numComments: number
+      assignedTo: record
+      isBookmarked: boolean
+      isSubscribed: boolean
+      subscriptionDetails: record
+      hasSeen: boolean
+      annotations: list
+      firstRelease: record
+      lastRelease: record
+      tags: list
+      stats: record
+      inbox: record
+      owners: list
+      forecast: record
+      integrationIssues: list
+      sentryAppIssues: list
+      latestEventHasAttachments: boolean
+      activity: list
+      seenBy: list
+      userReportCount: number
+      participants: list
+  update_issues:
+    label: "Change issues"
+    description: "Resolves, ignores, assigns or otherwise changes up to 1,000 issues at once, those a search finds."
+    write: true
+    method: PUT
+    path: "/organizations/{{ input.organization_id_or_slug }}/issues/"
+    inputs:
+      - name: organization_id_or_slug
+        label: "The organization's slug (in its address) or id"
+        required: true
+      - name: stats_period
+        label: "How far back: a number and d, h, m, s or w, such as 24h or 14d (in place of start and end)"
+      - { name: start, label: "From (ISO 8601, such as 2026-11-01T00:00:00Z)" }
+      - { name: end, label: "Until (ISO 8601)" }
+      - { name: query, label: "A search, as in Sentry: the issues it finds are changed" }
+      - { name: sort, label: "Sort by: date, new, freq, user, trends, inbox or recommended" }
+      - { name: inbox, label: "If true, marks the issue as reviewed by the requestor", kind: boolean }
+      - { name: status, label: "New status: resolved, unresolved, ignored, resolvedInNextRelease or muted" }
+      - { name: status_details, label: "Additional details about the resolution", kind: record }
+      - { name: substatus, label: "The new substatus of the issue" }
+      - { name: has_seen, label: "If true, marks the issue as seen by the requestor", kind: boolean }
+      - { name: is_bookmarked, label: "If true, bookmarks the issue for the requestor", kind: boolean }
+      - { name: is_public, label: "If true, publishes the issue", kind: boolean }
+      - { name: is_subscribed, label: "If true, subscribes the requestor to the issue", kind: boolean }
+      - { name: merge, label: "If true, merges the issues together", kind: boolean }
+      - { name: discard, label: "If true, discards the issues instead of updating them", kind: boolean }
+      - { name: assigned_to, label: "Assign to: a user's name or email, user:<id> or team:<id>" }
+      - { name: priority, label: "Priority: low, medium or high" }
+      - { name: ignore_duration, label: "Ignore the issue for this many minutes", kind: number }
+      - { name: ignore_count, label: "Ignore the issue until it is seen this many more times", kind: number }
+      - { name: ignore_window, label: "Window in minutes over which ignoreCount is measured", kind: number }
+      - name: ignore_user_count
+        label: "Ignore the issue until it affects this many more users"
+        kind: number
+      - name: ignore_user_window
+        label: "Window in minutes over which ignoreUserCount is measured"
+        kind: number
+      - { name: snooze_duration, label: "Snooze the issue for this many minutes", kind: number }
+    query:
+      statsPeriod: "{{ input.stats_period }}"
+      start: "{{ input.start }}"
+      end: "{{ input.end }}"
+      query: "{{ input.query }}"
+      sort: "{{ input.sort }}"
+    send:
+      inbox: "{{ input.inbox }}"
+      status: "{{ input.status }}"
+      statusDetails: "{{ input.status_details }}"
+      substatus: "{{ input.substatus }}"
+      hasSeen: "{{ input.has_seen }}"
+      isBookmarked: "{{ input.is_bookmarked }}"
+      isPublic: "{{ input.is_public }}"
+      isSubscribed: "{{ input.is_subscribed }}"
+      merge: "{{ input.merge }}"
+      discard: "{{ input.discard }}"
+      assignedTo: "{{ input.assigned_to }}"
+      priority: "{{ input.priority }}"
+      ignoreDuration: "{{ input.ignore_duration }}"
+      ignoreCount: "{{ input.ignore_count }}"
+      ignoreWindow: "{{ input.ignore_window }}"
+      ignoreUserCount: "{{ input.ignore_user_count }}"
+      ignoreUserWindow: "{{ input.ignore_user_window }}"
+      snoozeDuration: "{{ input.snooze_duration }}"
+    output:
+      assignedTo: record
+      discard: boolean
+      hasSeen: boolean
+      inbox: boolean
+      isBookmarked: boolean
+      isPublic: boolean
+      isSubscribed: boolean
+      merge: record
+      priority: text
+      shareId: text
+      status: text
+      statusDetails: record
+      subscriptionDetails: record
+      substatus: text
+  get_event:
+    label: "Look up a project's event"
+    description: "One event of a project, in full."
+    method: GET
+    path: "/projects/{{ input.organization_id_or_slug }}/{{ input.project_id_or_slug }}/events/{{ input.event_id }}/"
+    inputs:
+      - name: organization_id_or_slug
+        label: "The organization's slug (in its address) or id"
+        required: true
+      - name: project_id_or_slug
+        label: "The project's slug or id"
+        required: true
+      - { name: event_id, label: "The ID of the event", required: true }
+      - { name: start, label: "From (ISO 8601, such as 2026-11-01T00:00:00Z)" }
+      - { name: end, label: "Until (ISO 8601)" }
+      - name: stats_period
+        label: "How far back: a number and d, h, m, s or w, such as 24h or 14d (in place of start and end)"
+      - name: stats_period_start
+        label: "How long ago the query period starts, in the same format as statsPeriod"
+      - name: stats_period_end
+        label: "How long ago the query period ends, in the same format as statsPeriod"
+    query:
+      start: "{{ input.start }}"
+      end: "{{ input.end }}"
+      statsPeriod: "{{ input.stats_period }}"
+      statsPeriodStart: "{{ input.stats_period_start }}"
+      statsPeriodEnd: "{{ input.stats_period_end }}"
+    output:
+      id: text
+      groupID: text
+      eventID: text
+      projectID: text
+      message: text
+      title: text
+      location: text
+      platform: text
+      dateReceived: text
+      size: number
+      entries: list
+      dist: text
+      packages: record
+      type: text
+      metadata: record
+      occurrence: record
+      _meta: record
+      user: record
+      tags: list
+      contexts: record
+      sdk: record
+      context: record
+      errors: list
+      crashFile: text
+      culprit: text
+      dateCreated: text
+      fingerprints: list
+      groupingConfig: record
+      startTimestamp: number
+      endTimestamp: number
+      measurements: record
+      breakdowns: record
+      release: record
+      userReport: record
+      sdkUpdates: list
+      resolvedWith: list
+      nextEventID: text
+      previousEventID: text
+  get_issue_event:
+    label: "Look up an issue's event"
+    description: "One event of an issue: by its id, or the latest, oldest or recommended one."
+    method: GET
+    path: "/organizations/{{ input.organization_id_or_slug }}/issues/{{ input.issue_id }}/events/{{ input.event_id }}/"
+    inputs:
+      - name: organization_id_or_slug
+        label: "The organization's slug (in its address) or id"
+        required: true
+      - { name: issue_id, label: "The issue's id", required: true }
+      - name: event_id
+        label: "The ID of the event to retrieve, or 'latest', 'oldest', or 'recommended'"
+        required: true
+      - { name: start, label: "From (ISO 8601, such as 2026-11-01T00:00:00Z)" }
+      - { name: end, label: "Until (ISO 8601)" }
+      - name: stats_period
+        label: "How far back: a number and d, h, m, s or w, such as 24h or 14d (in place of start and end)"
+      - name: stats_period_start
+        label: "How long ago the query period starts, in the same format as statsPeriod"
+      - name: stats_period_end
+        label: "How long ago the query period ends, in the same format as statsPeriod"
+      - name: llm_format
+        label: "Add the event written out as text"
+        description: "If set, adds a formatted field to the response with the event rendered as the requested format for LLM consumption."
+    query:
+      start: "{{ input.start }}"
+      end: "{{ input.end }}"
+      statsPeriod: "{{ input.stats_period }}"
+      statsPeriodStart: "{{ input.stats_period_start }}"
+      statsPeriodEnd: "{{ input.stats_period_end }}"
+      llmFormat: "{{ input.llm_format }}"
+    output:
+      id: text
+      groupID: text
+      eventID: text
+      projectID: text
+      message: text
+      title: text
+      location: text
+      platform: text
+      dateReceived: text
+      size: number
+      entries: list
+      dist: text
+      packages: record
+      type: text
+      metadata: record
+      occurrence: record
+      _meta: record
+      user: record
+      tags: list
+      contexts: record
+      sdk: record
+      context: record
+      errors: list
+      crashFile: text
+      culprit: text
+      dateCreated: text
+      fingerprints: list
+      groupingConfig: record
+      startTimestamp: number
+      endTimestamp: number
+      measurements: record
+      breakdowns: record
+      release: record
+      userReport: record
+      sdkUpdates: list
+      resolvedWith: list
+      nextEventID: text
+      previousEventID: text
+      formatted: record
+  update_release:
+    label: "Change a release"
+    description: "Changes a release: when it went out, its commits, its address or its status."
+    write: true
+    method: PUT
+    path: "/organizations/{{ input.organization_id_or_slug }}/releases/{{ input.version }}/"
+    inputs:
+      - name: organization_id_or_slug
+        label: "The organization's slug (in its address) or id"
+        required: true
+      - { name: version, label: "The version identifier of the release", required: true }
+      - { name: ref, label: "An optional commit reference" }
+      - { name: url, label: "A URL that points to the release" }
+      - { name: date_released, label: "An optional date that indicates when the release went live" }
+      - { name: commits, label: "An optional list of commit data to be associated", kind: list }
+      - { name: status, label: "The status of the release" }
+      - { name: head_commits, label: "Deprecated, use commits", kind: list }
+      - name: refs
+        label: "An optional way to indicate the start and end commits for each repository…"
+        kind: list
+        description: "An optional way to indicate the start and end commits for each repository included in a release."
+    send:
+      ref: "{{ input.ref }}"
+      url: "{{ input.url }}"
+      dateReleased: "{{ input.date_released }}"
+      commits: "{{ input.commits }}"
+      status: "{{ input.status }}"
+      headCommits: "{{ input.head_commits }}"
+      refs: "{{ input.refs }}"
+    output:
+      ref: text
+      url: text
+      dateReleased: text
+      dateCreated: text
+      dateStarted: text
+      owner: record
+      lastCommit: record
+      lastDeploy: record
+      firstEvent: text
+      lastEvent: text
+      currentProjectMeta: record
+      userAgent: text
+      adoptionStages: record
+      id: number
+      version: text
+      newGroups: number
+      status: text
+      shortVersion: text
+      versionInfo: record
+      data: record
+      commitCount: number
+      deployCount: number
+      authors: list
+      projects: list
+  update_issue:
+    label: "Change an issue"
+    description: "Resolves, ignores, assigns, bookmarks or otherwise changes one issue."
+    write: true
+    method: PUT
+    path: "/organizations/{{ input.organization_id_or_slug }}/issues/{{ input.issue_id }}/"
+    inputs:
+      - name: organization_id_or_slug
+        label: "The organization's slug (in its address) or id"
+        required: true
+      - { name: issue_id, label: "The issue's id", required: true }
+      - { name: inbox, label: "If true, marks the issue as reviewed by the requestor", kind: boolean }
+      - { name: status, label: "New status: resolved, unresolved, ignored, resolvedInNextRelease or muted" }
+      - { name: status_details, label: "Additional details about the resolution", kind: record }
+      - { name: substatus, label: "The new substatus of the issue" }
+      - { name: has_seen, label: "If true, marks the issue as seen by the requestor", kind: boolean }
+      - { name: is_bookmarked, label: "If true, bookmarks the issue for the requestor", kind: boolean }
+      - { name: is_public, label: "If true, publishes the issue", kind: boolean }
+      - { name: is_subscribed, label: "If true, subscribes the requestor to the issue", kind: boolean }
+      - { name: merge, label: "If true, merges the issues together", kind: boolean }
+      - { name: discard, label: "If true, discards the issues instead of updating them", kind: boolean }
+      - { name: assigned_to, label: "Assign to: a user's name or email, user:<id> or team:<id>" }
+      - { name: priority, label: "Priority: low, medium or high" }
+      - { name: ignore_duration, label: "Ignore the issue for this many minutes", kind: number }
+      - { name: ignore_count, label: "Ignore the issue until it is seen this many more times", kind: number }
+      - { name: ignore_window, label: "Window in minutes over which ignoreCount is measured", kind: number }
+      - name: ignore_user_count
+        label: "Ignore the issue until it affects this many more users"
+        kind: number
+      - name: ignore_user_window
+        label: "Window in minutes over which ignoreUserCount is measured"
+        kind: number
+      - { name: snooze_duration, label: "Snooze the issue for this many minutes", kind: number }
+    send:
+      inbox: "{{ input.inbox }}"
+      status: "{{ input.status }}"
+      statusDetails: "{{ input.status_details }}"
+      substatus: "{{ input.substatus }}"
+      hasSeen: "{{ input.has_seen }}"
+      isBookmarked: "{{ input.is_bookmarked }}"
+      isPublic: "{{ input.is_public }}"
+      isSubscribed: "{{ input.is_subscribed }}"
+      merge: "{{ input.merge }}"
+      discard: "{{ input.discard }}"
+      assignedTo: "{{ input.assigned_to }}"
+      priority: "{{ input.priority }}"
+      ignoreDuration: "{{ input.ignore_duration }}"
+      ignoreCount: "{{ input.ignore_count }}"
+      ignoreWindow: "{{ input.ignore_window }}"
+      ignoreUserCount: "{{ input.ignore_user_count }}"
+      ignoreUserWindow: "{{ input.ignore_user_window }}"
+      snoozeDuration: "{{ input.snooze_duration }}"
+    output:
+      isUnhandled: boolean
+      count: text
+      userCount: number
+      firstSeen: text
+      lastSeen: text
+      derivedData: record
+      id: text
+      shareId: text
+      shortId: text
+      title: text
+      culprit: text
+      permalink: text
+      logger: text
+      level: text
+      status: text
+      statusDetails: record
+      substatus: text
+      isPublic: boolean
+      platform: text
+      priority: text
+      priorityLockedAt: text
+      seerFixabilityScore: number
+      seerAutofixLastTriggered: text
+      seerExplorerAutofixLastTriggered: text
+      project: record
+      type: text
+      issueType: text
+      issueCategory: text
+      metadata: record
+      numComments: number
+      assignedTo: record
+      isBookmarked: boolean
+      isSubscribed: boolean
+      subscriptionDetails: record
+      hasSeen: boolean
+      annotations: list
+triggers:
+  new_issue:
+    label: A new issue
+    description: Each issue Sentry finds for the first time in an organization, the newest asked for every few minutes.
+    inputs:
+      - { name: organization_id_or_slug, label: "The organization's slug (in its address) or id", required: true }
+      - { name: query, label: "Only issues this search finds (is:unresolved unless given)" }
+    poll:
+      action: list_issues
+      input: { organization_id_or_slug: "{{ input.organization_id_or_slug }}", query: "{{ input.query }}", sort: new }
+      newest_first: true
+      id: item.id
+      every: 5m
+  issue_changed:
+    label: An issue created, resolved, assigned, archived or unresolved
+    description: >-
+      Each change to an issue, as Sentry sends it to an internal integration's webhook, signed with the
+      integration's client secret.
+    inputs:
+      - { name: actions, label: "Only these (with commas): created, resolved, assigned, archived, unresolved; all by default" }
+    webhook:
+      signature: { header: sentry-hook-signature, encoding: hex }
+      secret: webhook_secret
+      id: "headers['request-id']"
+      only: "headers['sentry-hook-resource'] == 'issue' && (input.actions == null || value.action in input.actions.split(','))"
+      event: "{'action': value.action, 'issue': value.data.issue, 'actor': value.actor}"
+      setup: >-
+        In Sentry, Settings → Developer Settings: add an internal integration with this address as its webhook URL,
+        read access to issues and events, and the issue webhooks chosen. Put its Client Secret in this credential's
+        webhook secret.

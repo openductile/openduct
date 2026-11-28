@@ -20,9 +20,17 @@
 
 #![forbid(unsafe_code)]
 
+// developer CI/CD: the command line against a running studio.
+#[cfg(feature = "studio")]
+mod studio_client;
+#[cfg(feature = "studio")]
+mod workflow_remote;
+
 mod admin;
 #[cfg(feature = "studio")]
 mod app_cmd;
+#[cfg(feature = "studio")]
+mod app_gen; // app generator
 #[cfg(feature = "studio")]
 mod app_try;
 mod cluster;
@@ -138,8 +146,23 @@ fn main() -> ExitCode {
     match outcome {
         Ok(()) => ExitCode::SUCCESS,
         Err(message) => {
-            eprintln!("openduct: {message}");
-            ExitCode::FAILURE
+            // developer CI/CD: a command may end with a code of its own and nothing more to say.
+            if !message.is_empty() {
+                eprintln!("openduct: {message}");
+            }
+            ExitCode::from(failure_code())
         }
+    }
+}
+
+/// The exit code of a command that failed: 1, or a workflow command's own (developer CI/CD).
+fn failure_code() -> u8 {
+    #[cfg(feature = "studio")]
+    {
+        workflow_remote::exit_code()
+    }
+    #[cfg(not(feature = "studio"))]
+    {
+        1
     }
 }

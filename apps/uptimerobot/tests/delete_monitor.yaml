@@ -1,0 +1,7 @@
+action: delete_monitor
+credential: { api_key: ur_test_1 }
+input: { id: 801 }
+exchanges:
+  - sent: { method: DELETE, url: https://api.uptimerobot.com/v3/monitors/801 }
+    answer: { status: 200, body: {} }
+result: { deleted: true }

@@ -1,0 +1,15 @@
+# Made by `openduct app from-openapi`: Remove an existing contact by ID or email.
+description: "Remove an existing contact by ID or email, made from the API description's schemas"
+action: delete_contact
+credential: { token: test-token }
+input: { id: id_1 }
+exchanges:
+  - sent:
+      method: DELETE
+      url: "https://api.resend.com/contacts/id_1"
+      query: {}
+      headers: { authorization: "Bearer test-token" }
+    answer:
+      status: 200
+      body: { object: contact, id: "520784e2-887d-4c25-b53c-4ad46ad38100", deleted: true }
+result: { object: contact, id: "520784e2-887d-4c25-b53c-4ad46ad38100", deleted: true }

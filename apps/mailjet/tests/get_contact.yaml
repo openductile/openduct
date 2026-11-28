@@ -1,0 +1,34 @@
+description: One contact
+action: get_contact
+credential:
+  api_key: test-key
+  secret_key: test-secret
+input:
+  contact_id: '1001'
+exchanges:
+- sent:
+    method: GET
+    url: https://api.mailjet.com/v3/REST/contact/1001
+    headers:
+      authorization: Basic dGVzdC1rZXk6dGVzdC1zZWNyZXQ=
+  answer:
+    status: 200
+    body:
+      Count: 1
+      Data:
+      - &id001
+        ID: 1001
+        Email: pat@example.com
+        Name: Pat Sample
+        CreatedAt: '2026-11-01T10:00:00Z'
+        LastActivityAt: '2026-11-20T08:15:00Z'
+        LastUpdateAt: '2026-11-01T10:00:00Z'
+        DeliveredCount: 4
+        IsExcludedFromCampaigns: false
+        IsOptInPending: false
+        IsSpamComplaining: false
+        UnsubscribedAt: ''
+        UnsubscribedBy: ''
+        ExclusionFromCampaignsUpdatedAt: ''
+      Total: 1
+result: *id001

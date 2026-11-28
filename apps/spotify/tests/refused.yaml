@@ -1,0 +1,7 @@
+description: Playing without Premium is refused in Spotify's words
+action: play
+credential: { access_token: BQ-test-token }
+input: { uris: "spotify:track:0TestTrack000000000001" }
+exchanges:
+  - answer: { status: 403, body: { error: { status: 403, message: "Player command failed: Premium required", reason: PREMIUM_REQUIRED } } }
+error: "Spotify answered 403: Player command failed: Premium required"

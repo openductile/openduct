@@ -1,0 +1,18 @@
+description: A reply to the customer, closing the conversation
+action: reply_to_conversation
+credential: {access_token: hs-test-token}
+input: {conversation_id: '3443157477', customer_id: 29418, text: It ships today., status: closed}
+exchanges:
+- sent:
+    method: POST
+    url: https://api.helpscout.net/v2/conversations/3443157477/reply
+    query: {}
+    headers: {authorization: Bearer hs-test-token}
+    body:
+      customer: {id: 29418}
+      text: It ships today.
+      status: closed
+  answer:
+    status: 201
+    headers: {Resource-ID: '5542'}
+result: {thread_id: '5542'}

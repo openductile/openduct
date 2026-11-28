@@ -1,0 +1,7 @@
+description: A render longer than the synchronous address allows - 408, in Bannerbear's words
+action: create_image_and_wait
+credential: { api_key: bb_ak_v5_test }
+input: { template: tpl_A1b2, objects: [{ name: title, text: Thank you for your order }, { name: photo, image_url: "https://shop.example.com/p/mug.jpg" }] }
+exchanges:
+  - answer: { status: 408, body: { message: Synchronous render timed out } }
+error: "Bannerbear answered 408: Synchronous render timed out"

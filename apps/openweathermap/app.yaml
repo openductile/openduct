@@ -1,0 +1,183 @@
+# Copyright 2026 Ductile AI, Inc
+# SPDX-License-Identifier: Apache-2.0
+app: openweathermap
+name: OpenWeatherMap
+category: data
+description: The weather now, forecasts, air quality and national weather alerts for any place, and places found by name or postcode.
+docs: https://openweathermap.org/api
+hosts: [api.openweathermap.org]
+base_url: https://api.openweathermap.org
+sign_in:
+  - id: openweathermap
+    label: An API key
+    fields:
+      - { name: api_key, label: "The API key (OpenWeather account → API keys)", secret: true }
+    query: { appid: "{{ credential.api_key }}" }
+error: value.message
+default_action: current_weather
+actions:
+  find_place:
+    label: Find a place by name
+    description: >-
+      Up to 5 places with a name, such as London (or London,GB, or Austin,TX,US), each with its latitude and longitude
+      for the weather actions.
+    method: GET
+    path: /geo/1.0/direct
+    inputs:
+      - { name: place, label: "The town or city, then (for the US) its state and its country, with commas: Austin,TX,US", required: true }
+      - { name: limit, label: "At most this many (up to 5)", kind: number }
+    query: { q: "{{ input.place }}", limit: "{{ has(input.limit) && input.limit != null ? string(int(input.limit)) : '5' }}" }
+    items: value
+    output: { name: text, lat: number, lon: number, country: text, state: text, local_names: record }
+  find_place_by_zip:
+    label: Find a place by postcode
+    description: The middle of a postcode's (or ZIP code's) area, its name and its latitude and longitude.
+    method: GET
+    path: /geo/1.0/zip
+    inputs:
+      - { name: zip, label: "The postcode and its country, with a comma: 90210,US or E14,GB", required: true }
+    query: { zip: "{{ input.zip.replace(' ', '') }}" }
+    output: { zip: text, name: text, lat: number, lon: number, country: text }
+  place_at:
+    label: Name the place at a point
+    description: The names of the places nearest a latitude and longitude.
+    method: GET
+    path: /geo/1.0/reverse
+    inputs:
+      - { name: lat, label: Latitude, required: true, kind: number }
+      - { name: lon, label: Longitude, required: true, kind: number }
+      - { name: limit, label: "At most this many (5 when empty)", kind: number }
+    query:
+      lat: "{{ input.lat }}"
+      lon: "{{ input.lon }}"
+      limit: "{{ has(input.limit) && input.limit != null ? string(int(input.limit)) : '5' }}"
+    items: value
+    output: { name: text, lat: number, lon: number, country: text, state: text, local_names: record }
+  current_weather:
+    label: The weather now
+    description: >-
+      The weather at a latitude and longitude now: temperature, how it feels, humidity, wind, rain or snow in the
+      last hour, clouds, sunrise and sunset, and words for it (light rain).
+    method: GET
+    path: /data/2.5/weather
+    inputs:
+      - { name: lat, label: Latitude, required: true, kind: number }
+      - { name: lon, label: Longitude, required: true, kind: number }
+      - { name: units, label: "metric (°C, m/s), imperial (°F, mph) or standard (kelvin); metric when empty" }
+      - { name: lang, label: "In this language (two letters, such as fr); English when empty" }
+    query:
+      lat: "{{ input.lat }}"
+      lon: "{{ input.lon }}"
+      units: "{{ has(input.units) && input.units != null ? input.units : 'metric' }}"
+      lang: "{{ input.lang }}"
+    output: { name: text, dt: number, weather: list, main: record, wind: record, rain: record, snow: record, clouds: record, visibility: number, sys: record, timezone: number, coord: record }
+  forecast:
+    label: Forecast for 5 days
+    description: The weather every 3 hours over the next 5 days (40 times), or the first of them.
+    method: GET
+    path: /data/2.5/forecast
+    inputs:
+      - { name: lat, label: Latitude, required: true, kind: number }
+      - { name: lon, label: Longitude, required: true, kind: number }
+      - { name: count, label: "Only the first this many times (40 when empty)", kind: number }
+      - { name: units, label: "metric, imperial or standard; metric when empty" }
+      - { name: lang, label: "In this language (two letters)" }
+    query:
+      lat: "{{ input.lat }}"
+      lon: "{{ input.lon }}"
+      cnt: "{{ string(int(input.count)) }}"
+      units: "{{ has(input.units) && input.units != null ? input.units : 'metric' }}"
+      lang: "{{ input.lang }}"
+    items: value.list
+    output: { dt: number, dt_txt: text, main: record, weather: list, clouds: record, wind: record, visibility: number, pop: number, rain: record, snow: record }
+  air_quality:
+    label: Air quality now
+    description: >-
+      The air at a latitude and longitude now: its quality index, from 1 (good) to 5 (very poor), and each
+      pollutant (carbon monoxide, ozone, fine particles...) in μg/m³.
+    method: GET
+    path: /data/2.5/air_pollution
+    inputs:
+      - { name: lat, label: Latitude, required: true, kind: number }
+      - { name: lon, label: Longitude, required: true, kind: number }
+    query: { lat: "{{ input.lat }}", lon: "{{ input.lon }}" }
+    result: "{'aqi': value.list[0].main.aqi, 'dt': value.list[0].dt, 'components': value.list[0].components}"
+    output: { aqi: number, dt: number, components: record }
+  air_quality_forecast:
+    label: Air quality forecast
+    description: The air quality index and pollutants hour by hour over the next 4 days.
+    method: GET
+    path: /data/2.5/air_pollution/forecast
+    inputs:
+      - { name: lat, label: Latitude, required: true, kind: number }
+      - { name: lon, label: Longitude, required: true, kind: number }
+    query: { lat: "{{ input.lat }}", lon: "{{ input.lon }}" }
+    items: "value.list.map(h, {'dt': h.dt, 'aqi': h.main.aqi, 'components': h.components})"
+    output: { dt: number, aqi: number, components: record }
+  daily_forecast:
+    label: Forecast day by day (One Call)
+    description: >-
+      The next 10 days, a day each: the lowest and highest temperature, rain or snow and how likely, wind, UV, sunrise
+      and sunset. Needs OpenWeather's One Call API subscription.
+    method: GET
+    path: /data/4.0/onecall/timeline/1day
+    inputs:
+      - { name: lat, label: Latitude, required: true, kind: number }
+      - { name: lon, label: Longitude, required: true, kind: number }
+      - { name: units, label: "metric, imperial or standard; metric when empty" }
+      - { name: lang, label: "In this language (two letters)" }
+    query:
+      lat: "{{ input.lat }}"
+      lon: "{{ input.lon }}"
+      units: "{{ has(input.units) && input.units != null ? input.units : 'metric' }}"
+      lang: "{{ input.lang }}"
+    items: value.data
+    output: { dt: number, temp: record, feels_like: record, weather: list, pop: number, rain: number, snow: number, humidity: number, wind_speed: number, wind_gust: number, uvi: number, sunrise: number, sunset: number }
+  hourly_forecast:
+    label: Forecast hour by hour (One Call)
+    description: >-
+      The next 48 hours, an hour each: temperature, how it feels, rain or snow and how likely, wind and clouds. Needs
+      OpenWeather's One Call API subscription.
+    method: GET
+    path: /data/4.0/onecall/timeline/1h
+    inputs:
+      - { name: lat, label: Latitude, required: true, kind: number }
+      - { name: lon, label: Longitude, required: true, kind: number }
+      - { name: units, label: "metric, imperial or standard; metric when empty" }
+      - { name: lang, label: "In this language (two letters)" }
+    query:
+      lat: "{{ input.lat }}"
+      lon: "{{ input.lon }}"
+      units: "{{ has(input.units) && input.units != null ? input.units : 'metric' }}"
+      lang: "{{ input.lang }}"
+    items: value.data
+    next: "has(value.next) && value.next != null && value.next != '' ? value.next : null"
+    max_pages: 3
+    output: { dt: number, temp: number, feels_like: number, weather: list, pop: number, rain: record, snow: record, humidity: number, wind_speed: number, clouds: number }
+  get_alert:
+    label: Get a weather alert (One Call)
+    description: >-
+      A national weather service's alert in full - who issued it, from when to when, what it says - by its id. Needs
+      OpenWeather's One Call API subscription.
+    method: GET
+    path: "/data/4.0/onecall/alert/{{ input.alert_id }}"
+    inputs:
+      - { name: alert_id, label: "The alert's id", required: true }
+    output: { id: text, sender_name: text, event: text, start: number, end: number, description: list, tags: list }
+triggers:
+  new_alert:
+    label: A weather alert for a place (One Call)
+    description: >-
+      Each new alert a national weather service issues for a latitude and longitude - storms, heat, floods - asked for
+      every 30 minutes and read in full. Needs OpenWeather's One Call API subscription.
+    inputs:
+      - { name: lat, label: Latitude, required: true, kind: number }
+      - { name: lon, label: Longitude, required: true, kind: number }
+    poll:
+      method: GET
+      path: /data/4.0/onecall/current
+      query: { lat: "{{ input.lat }}", lon: "{{ input.lon }}" }
+      items: "has(value.data[0].alerts) ? value.data[0].alerts : []"
+      id: item
+      each: { action: get_alert, input: { alert_id: "{{ item }}" } }
+      every: 30m

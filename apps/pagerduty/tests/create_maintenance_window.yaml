@@ -1,0 +1,12 @@
+action: create_maintenance_window
+credential: { api_key: pd_test_1 }
+input: { from: ann@example.com, start_time: "2026-11-28T22:00:00Z", end_time: "2026-11-28T23:00:00Z", service_ids: PSVC001, description: Database upgrade }
+exchanges:
+  - sent:
+      method: POST
+      url: https://api.pagerduty.com/maintenance_windows
+      headers: { from: ann@example.com }
+      body:
+        maintenance_window: { type: maintenance_window, start_time: "2026-11-28T22:00:00Z", end_time: "2026-11-28T23:00:00Z", description: Database upgrade, services: [{ id: PSVC001, type: service_reference }] }
+    answer: { status: 201, body: { maintenance_window: { id: PMW0001, start_time: "2026-11-28T22:00:00Z", end_time: "2026-11-28T23:00:00Z", description: Database upgrade } } }
+result: { id: PMW0001, start_time: "2026-11-28T22:00:00Z", end_time: "2026-11-28T23:00:00Z", description: Database upgrade }

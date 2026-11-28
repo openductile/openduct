@@ -1,0 +1,13 @@
+description: "A To Do list made"
+action: add_task_list
+credential: { access_token: eyJ0 }
+input: { name: Shop orders }
+exchanges:
+  - sent:
+      method: POST
+      url: https://graph.microsoft.com/v1.0/me/todo/lists
+      body: { displayName: Shop orders }
+    answer:
+      status: 201
+      body: { "@odata.type": "#microsoft.graph.todoTaskList", id: AAMkShop2, displayName: Shop orders, isOwner: true, isShared: false, wellknownListName: none }
+result: { "@odata.type": "#microsoft.graph.todoTaskList", id: AAMkShop2, displayName: Shop orders, isOwner: true, isShared: false, wellknownListName: none }

@@ -1,0 +1,6 @@
+description: "A token that has been taken back"
+action: list_boards
+credential: { api_key: testkey0123456789, token: ATTAtesttoken0123 }
+exchanges:
+  - answer: { status: 401, body: invalid token }
+error: "Trello answered 401: invalid token"

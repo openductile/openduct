@@ -1,0 +1,51 @@
+name: A morning brief of your mail and tasks in Slack
+description: >-
+  Each weekday at 8:00, an AI agent reads yesterday's unread mail in Gmail and today's tasks in Todoist, and posts you
+  one short brief in Slack: the few e-mails that need an answer today and why, what can wait, and your tasks in the
+  order worth doing them. For busy owners and managers who start the day in Slack. Needs: model, gmail, todoist (an
+  API token, sent as a bearer token), slack.
+category: Productivity
+trigger:
+  # Your own time zone: 8:00 there, summer and winter.
+  schedule: { every: weekday, at: "08:00", timezone: America/New_York }
+# What a test runs on: an event as this trigger gives it.
+sample:
+  scheduled_at: "2026-11-30T13:00:00Z"
+steps:
+  - name: brief
+    agent:
+      credential: model
+      instructions: >-
+        You prepare a busy person's morning. Find their unread mail from the last day and read the ones that look
+        like they need an answer (at most eight); then read today's tasks. Write a brief of at most 12 lines in three
+        parts: "Answer today" (sender, what they want, in a few words), "Can wait" (one line in all), and "Tasks"
+        in the order worth doing them, overdue ones first. No greeting. Never quote a whole e-mail.
+      input: "Brief for {{ string(timestamp(value.scheduled_at)).substring(0, 10) }}."
+      tools:
+        - name: unread_mail
+          description: Unread e-mails in the inbox from the last day (their ids).
+          gmail:
+            action: find_emails
+            credential: gmail
+            q: "in:inbox is:unread newer_than:1d -category:promotions -category:social"
+        - name: read_mail
+          description: One e-mail in full, by its id (from unread_mail).
+          gmail: { action: read_email, credential: gmail }
+        - name: todays_tasks
+          description: Today's and overdue tasks, with their priority and due date.
+          http:
+            url: https://api.todoist.com/rest/v2/tasks
+            credential: todoist
+            query: { filter: "today | overdue" }
+      allow: [unread_mail, read_mail, todays_tasks]
+      max_turns: 8
+      max_tool_calls: 12
+      max_tokens: 700
+  - name: post
+    slack:
+      action: send
+      credential: slack
+      # Your own direct-message channel's id, or a private channel's name.
+      channel: "#my-day"
+      text: "{{ steps.brief.text }}"
+    retry: { attempts: 3, wait: 15s }

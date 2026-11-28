@@ -1,0 +1,22 @@
+description: An alert taken in hand
+action: update_alert
+credential:
+  url: https://thehive.example.com
+  api_key: test-key
+input:
+  alert_id: ~4096
+  status: InProgress
+  assignee: analyst@example.com
+exchanges:
+- sent:
+    method: PATCH
+    url: https://thehive.example.com/api/v1/alert/~4096
+    headers:
+      authorization: Bearer test-key
+    body:
+      status: InProgress
+      assignee: analyst@example.com
+  answer:
+    status: 204
+result:
+  updated: true

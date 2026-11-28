@@ -1,0 +1,76 @@
+name: Log the day's meetings as time in Clockify
+description: >-
+  Each weekday at 18:00, reads the day's meetings from your Google Calendar and logs each one you took part in as a
+  time entry in Clockify - billable when someone outside your company was invited - so meeting time stops going
+  missing from timesheets. All-day events, meetings you declined and events with nobody else are left out, and a
+  meeting is never logged twice. For consultants, agencies and anyone who bills by the hour. Needs: google_calendar,
+  clockify (an API key, sent as X-Api-Key).
+category: Productivity
+trigger:
+  # Your own time zone: 18:00 there, summer and winter.
+  schedule: { every: weekday, at: "18:00", timezone: Europe/London }
+# What a test runs on: an event as this trigger gives it.
+sample:
+  scheduled_at: "2026-11-30T18:00:00Z"
+steps:
+  - name: events
+    google_calendar:
+      action: list_events
+      credential: google_calendar
+      calendar_id: primary
+      # From midnight to now, on the schedule's clock.
+      from: "{{ string(timestamp(value.scheduled_at) - duration('18h')) }}"
+      to: "{{ value.scheduled_at }}"
+    retry: { attempts: 3, wait: 30s }
+  - name: seen
+    state: { get: logged }
+  # The meetings worth logging, as Clockify's time entries.
+  - name: meetings
+    javascript: |
+      const OUR_DOMAIN = "example.com";          // your company's e-mail domain
+      const before = (steps.seen && steps.seen.logged) || [];
+      const logged = new Set(before);
+      const entries = [];
+      for (const e of Array.isArray(steps.events) ? steps.events : []) {
+        if (!e.start || !e.start.dateTime || !e.end || !e.end.dateTime) continue;   // all-day
+        const people = e.attendees || [];
+        const me = people.find(p => p.self);
+        if (me && me.responseStatus === "declined") continue;
+        if (people.filter(p => !p.self && !p.resource).length === 0) continue;    // nobody else
+        if (logged.has(e.id)) continue;
+        const start = new Date(e.start.dateTime), end = new Date(e.end.dateTime);
+        const minutes = Math.round((end - start) / 60000);
+        if (minutes < 5 || minutes > 600) continue;
+        const outside = people.some(p => p.email && !p.email.toLowerCase().endsWith("@" + OUR_DOMAIN));
+        entries.push({
+          id: e.id,
+          start: start.toISOString().replace(/\.\d{3}Z$/, "Z"),
+          end: end.toISOString().replace(/\.\d{3}Z$/, "Z"),
+          description: `Meeting: ${e.summary || "(no title)"}`,
+          billable: outside,
+          minutes,
+        });
+      }
+      // What to remember once they are logged: the last 500 meetings' ids.
+      const keep = before.concat(entries.map(e => e.id)).slice(-500);
+      return { entries, keep, minutes: entries.reduce((s, e) => s + e.minutes, 0) };
+  - name: log
+    for_each:
+      items: steps.meetings.entries
+      steps:
+        - name: entry
+          http:
+            method: POST
+            # Your workspace's id: Clockify's workspace settings show it.
+            url: https://api.clockify.me/api/v1/workspaces/your-workspace-id/time-entries
+            credential: clockify
+            json:
+              start: "{{ item.start }}"
+              end: "{{ item.end }}"
+              description: "{{ item.description }}"
+              billable: "{{ item.billable }}"
+            sample: { id: 6567a1b2c3d4e5f6a7b8c9d0, description: "Meeting: Weekly check-in" }
+          retry: { attempts: 3, wait: 15s }
+  # Kept only once every entry is logged, so a second run the same day logs nothing twice.
+  - name: remember
+    state: { set: { logged: "{{ steps.meetings.keep }}" } }

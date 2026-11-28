@@ -1,0 +1,13 @@
+description: A message posted signed in, to a space named without its prefix
+action: send
+sign_in: google_chat
+credential: { access_token: ya29.chat }
+input: { text: Order A-1 shipped, space: AAAAb3KQ }
+exchanges:
+  - sent:
+      method: POST
+      url: https://chat.googleapis.com/v1/spaces/AAAAb3KQ/messages
+      headers: { authorization: Bearer ya29.chat }
+      body: { text: Order A-1 shipped }
+    answer: { body: { name: spaces/AAAAb3KQ/messages/m1, text: Order A-1 shipped } }
+result: { sent: true, answer: { name: spaces/AAAAb3KQ/messages/m1, text: Order A-1 shipped } }

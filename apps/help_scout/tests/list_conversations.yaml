@@ -1,0 +1,60 @@
+description: Closed conversations of an inbox, the next page from the link Help Scout gives
+action: list_conversations
+credential: {access_token: hs-test-token}
+input: {mailbox: '85', status: closed}
+exchanges:
+- sent:
+    method: GET
+    url: https://api.helpscout.net/v2/conversations
+    query: {mailbox: '85', status: closed}
+    headers: {authorization: Bearer hs-test-token}
+  answer:
+    status: 200
+    body:
+      _embedded:
+        conversations:
+        - &id004
+          id: 3443157477
+          number: 1042
+          threads: 1
+          type: email
+          folderId: 11
+          status: active
+          state: published
+          subject: Where is my order?
+          preview: I ordered last week and
+          mailboxId: 85
+          createdBy: &id001 {id: 29418, type: customer, email: ann@example.com}
+          createdAt: '2026-11-27T10:00:00Z'
+          tags: &id002 []
+          primaryCustomer: &id003 {id: 29418, type: customer, first: Ann, last: Example, email: ann@example.com}
+      _links:
+        self: {href: 'https://api.helpscout.net/v2/x'}
+        next: {href: 'https://api.helpscout.net/v2/conversations?mailbox=85&status=closed&page=2'}
+- sent:
+    url: https://api.helpscout.net/v2/conversations?mailbox=85&status=closed&page=2
+    query: {}
+  answer:
+    body:
+      _embedded:
+        conversations:
+        - &id005
+          id: 3443157478
+          number: 1043
+          threads: 1
+          type: email
+          folderId: 11
+          status: active
+          state: published
+          subject: Refund, please
+          preview: I ordered last week and
+          mailboxId: 85
+          createdBy: *id001
+          createdAt: '2026-11-27T10:30:00Z'
+          tags: *id002
+          primaryCustomer: *id003
+      _links:
+        self: {href: 'https://api.helpscout.net/v2/x'}
+result:
+- *id004
+- *id005

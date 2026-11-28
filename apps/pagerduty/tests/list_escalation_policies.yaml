@@ -1,0 +1,6 @@
+action: list_escalation_policies
+credential: { api_key: pd_test_1 }
+exchanges:
+  - sent: { method: GET, url: https://api.pagerduty.com/escalation_policies, query: { limit: "100" } }
+    answer: { body: { offset: 0, limit: 100, more: false, escalation_policies: [{ id: PESC001, name: Shop on-call, num_loops: 2 }] } }
+result: [{ id: PESC001, name: Shop on-call, num_loops: 2 }]

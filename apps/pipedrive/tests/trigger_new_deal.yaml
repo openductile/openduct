@@ -1,0 +1,12 @@
+description: Deals made since the last poll, the newest asked for first; listing stops at one seen before
+trigger: new_deal
+credential: { api_key: test-pipedrive-token }
+seen: { items: [["42", ""]] }
+exchanges:
+  - sent:
+      method: GET
+      url: https://api.pipedrive.com/api/v2/deals
+      query: { sort_by: add_time, sort_direction: desc, limit: "100" }
+    answer: { body: { success: true, data: [{ id: 43, title: Example Co - desks, value: 2000, currency: USD, status: open, add_time: "2026-11-27T10:05:00Z", update_time: "2026-11-27T10:05:00Z" }, { id: 42, title: Example Co - 10 chairs, value: 900, currency: USD, status: won, add_time: "2026-11-26T09:00:00Z", update_time: "2026-11-27T11:00:00Z" }], additional_data: { next_cursor: c2 } } }
+runs: [{ id: 43, title: Example Co - desks, value: 2000, currency: USD, status: open, add_time: "2026-11-27T10:05:00Z", update_time: "2026-11-27T10:05:00Z" }]
+ids: ["43"]

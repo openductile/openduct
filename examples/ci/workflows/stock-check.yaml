@@ -1,0 +1,23 @@
+name: Stock check
+description: >-
+  Every hour, the warehouse's stock levels: items below their reorder point are sent on to the buyers' workflow.
+trigger:
+  schedule: { every: 1h }
+sample:
+  scheduled_at: '2026-11-27T09:00:00Z'
+steps:
+  - name: stock
+    http:
+      url: https://warehouse.example.com/api/stock
+      credential: warehouse
+  - name: low
+    set:
+      # A test run sends nothing, so its answer has no body: no items, then.
+      items: "has(steps.stock.body) && has(steps.stock.body.items) ? steps.stock.body.items.filter(i, i.on_hand < i.reorder_at) : []"
+  - if:
+      when: size(steps.low.items) > 0
+      then:
+        # Another workflow of the workspace, by its name: a push finds the id it has there.
+        - run_workflow:
+            workflow: Order alerts
+            input: "{'id': 'restock', 'total': size(steps.low.items), 'customer': 'warehouse'}"

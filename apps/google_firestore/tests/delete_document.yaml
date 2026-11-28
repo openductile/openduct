@@ -1,0 +1,19 @@
+description: A document deleted
+action: delete_document
+credential:
+  access_token: ya29.test
+input:
+  project_id: sample-shop
+  collection: orders
+  document_id: A-100
+exchanges:
+- sent:
+    method: DELETE
+    url: https://firestore.googleapis.com/v1/projects/sample-shop/databases/(default)/documents/orders/A-100
+    headers:
+      authorization: Bearer ya29.test
+  answer:
+    status: 200
+    body: {}
+result:
+  deleted: true

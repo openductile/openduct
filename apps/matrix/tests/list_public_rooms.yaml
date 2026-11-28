@@ -1,0 +1,11 @@
+description: One page of a homeserver's public rooms
+action: list_public_rooms
+credential: { homeserver: "https://matrix.example.org", token: syt_test_token }
+input: { limit: 1 }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://matrix.example.org/_matrix/client/v3/publicRooms"
+      query: { limit: "1" }
+    answer: { status: 200, body: { chunk: [{ room_id: "!abc123:example.org", name: Support, num_joined_members: 12, world_readable: true, guest_can_join: false }], next_batch: p1, total_room_count_estimate: 3 } }
+result: { chunk: [{ room_id: "!abc123:example.org", name: Support, num_joined_members: 12, world_readable: true, guest_can_join: false }], next_batch: p1, total_room_count_estimate: 3 }

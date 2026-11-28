@@ -1,0 +1,13 @@
+description: "An environment variable added, private unless said"
+action: add_env_var
+credential: { token: test-token }
+input: { repo: shop-example/storefront, name: DEPLOY_TARGET, value: staging }
+exchanges:
+  - sent:
+      method: POST
+      url: "https://api.travis-ci.com/repo/shop-example%2Fstorefront/env_vars"
+      body: { env_var.name: DEPLOY_TARGET, env_var.value: staging, env_var.public: false }
+    answer:
+      status: 201
+      body: { "@type": env_var, id: 3a1b2c3d-0000-4000-8000-000000000003, name: DEPLOY_TARGET, public: false, branch: null }
+result: { "@type": env_var, id: 3a1b2c3d-0000-4000-8000-000000000003, name: DEPLOY_TARGET, public: false, branch: null }

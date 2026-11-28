@@ -1,0 +1,12 @@
+description: "A note on a contact"
+action: add_note
+credential: {"site_url": "https://mautic.example.com", "username": "admin", "password": "pw-test"}
+input: {"contact_id": 47, "text": "Called about the renewal", "type": "call"}
+exchanges:
+  - sent:
+      method: POST
+      url: "https://mautic.example.com/api/notes/new"
+      headers: {"authorization": "Basic YWRtaW46cHctdGVzdA=="}
+      body: {"lead": 47, "text": "Called about the renewal", "type": "call"}
+    answer: {"status": 200, "body": {"note": {"id": 9, "text": "Called about the renewal", "type": "call", "dateTime": "2026-11-27T10:00:00+00:00", "lead": {"id": 47}}}}
+result: {"id": 9, "text": "Called about the renewal", "type": "call", "dateTime": "2026-11-27T10:00:00+00:00", "lead": {"id": 47}}

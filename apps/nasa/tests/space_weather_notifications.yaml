@@ -1,0 +1,11 @@
+description: Geomagnetic storm notices of a quiet week - none
+action: space_weather_notifications
+credential: { api_key: nasa-test-key }
+input: { start_date: "2026-11-20", end_date: "2026-11-27", type: GST }
+exchanges:
+  - sent:
+      method: GET
+      url: https://api.nasa.gov/DONKI/notifications
+      query: { api_key: nasa-test-key, startDate: "2026-11-20", endDate: "2026-11-27", type: GST }
+    answer: { status: 200, body: [] }
+result: []

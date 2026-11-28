@@ -1,0 +1,11 @@
+description: "A notification to the credential's user, with a title and a link"
+action: send_notification
+credential: {"token": "aTestTokenAbcdefghijklmnopqrst", "user_key": "uTestUserKeyAbcdefghijklmnopq"}
+input: {"message": "Order 1042 was paid.", "title": "New order", "url": "https://shop.example.com/orders/1042", "url_title": "Open the order"}
+exchanges:
+  - sent:
+      method: POST
+      url: "https://api.pushover.net/1/messages.json"
+      body: {"token": "aTestTokenAbcdefghijklmnopqrst", "user": "uTestUserKeyAbcdefghijklmnopq", "message": "Order 1042 was paid.", "title": "New order", "url": "https://shop.example.com/orders/1042", "url_title": "Open the order"}
+    answer: {"status": 200, "body": {"status": 1, "request": "647d2300-702c-4b38-8b2f-d56326ae460b"}}
+result: {"status": 1, "request": "647d2300-702c-4b38-8b2f-d56326ae460b"}

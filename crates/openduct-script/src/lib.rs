@@ -19,7 +19,7 @@
 //!
 //! A script is given `value` (what came in), `steps` (the earlier steps' results), `trigger`, and in a loop `item`
 //! and `index`. JavaScript `return`s its answer; Python sets `result`. `console.log` and `print` are kept as the
-//! step's logs.
+//! step's logs. A script given `state` (its workflow's values) hands back what it leaves there, beside its answer.
 
 use std::time::Duration;
 
@@ -90,7 +90,12 @@ pub struct Script {
 pub struct Answer {
     pub result: Json,
     pub logs: Vec<String>,
+    /// What it left in `state`, when it was given one: the workflow's state, kept by the step. // data tables
+    pub state: Option<Json>,
 }
+
+/// The name a script is given its workflow's state by, and leaves it in. // data tables
+pub const STATE: &str = "state";
 
 /// Why a script gave no answer, with what it logged before.
 #[derive(Debug, Clone, PartialEq, Eq)]

@@ -2,7 +2,17 @@ action: list_tickets
 credential: { subdomain: acme, email: help@acme.example, api_token: tok1 }
 exchanges:
   - sent: { url: https://acme.zendesk.com/api/v2/tickets.json, query: { per_page: "100" } }
-    answer: { body: { tickets: [{ id: 1 }], next_page: "https://acme.zendesk.com/api/v2/tickets.json?page=2&per_page=100" } }
+    answer:
+      body:
+        tickets:
+          - { id: 1, subject: Cannot sign in, status: open, priority: urgent, description: "Our whole team cannot sign in since this morning." }
+        next_page: "https://acme.zendesk.com/api/v2/tickets.json?page=2&per_page=100"
   - sent: { url: "https://acme.zendesk.com/api/v2/tickets.json?page=2&per_page=100", query: {} }
-    answer: { body: { tickets: [{ id: 2 }], next_page: null } }
-result: [{ id: 1 }, { id: 2 }]
+    answer:
+      body:
+        tickets:
+          - { id: 2, subject: New invoice address, status: pending, priority: normal, description: "Please send our invoices to the new address." }
+        next_page: null
+result:
+  - { id: 1, subject: Cannot sign in, status: open, priority: urgent, description: "Our whole team cannot sign in since this morning." }
+  - { id: 2, subject: New invoice address, status: pending, priority: normal, description: "Please send our invoices to the new address." }

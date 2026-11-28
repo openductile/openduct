@@ -1,0 +1,7 @@
+action: create_organization
+credential: { subdomain: acme, token: zm_admin }
+input: { name: Example Supplies, domain: example.com, domain_assignment: true, shared: true }
+exchanges:
+  - sent: { method: POST, url: https://acme.zammad.com/api/v1/organizations, body: { name: Example Supplies, domain: example.com, domain_assignment: true, shared: true } }
+    answer: { status: 201, body: { id: 3, name: Example Supplies, domain: example.com, domain_assignment: true, shared: true, active: true } }
+result: { id: 3, name: Example Supplies, domain: example.com, domain_assignment: true, shared: true, active: true }

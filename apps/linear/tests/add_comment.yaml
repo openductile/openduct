@@ -1,0 +1,9 @@
+action: add_comment
+credential: { api_key: lin_api_test1 }
+input: { issue: ENG-101, body: Fixed in today's release. }
+exchanges:
+  - sent:
+      url: https://api.linear.app/graphql
+      body: { query: "mutation($input: CommentCreateInput!) { commentCreate(input: $input) { success comment { id body url createdAt } } }", variables: { input: { issueId: ENG-101, body: Fixed in today's release. } } }
+    answer: { body: { data: { commentCreate: { success: true, comment: { id: cm-1, body: Fixed in today's release., url: "https://linear.app/example/issue/ENG-101#comment-cm1", createdAt: "2026-11-27T11:00:00.000Z" } } } } }
+result: { id: cm-1, body: Fixed in today's release., url: "https://linear.app/example/issue/ENG-101#comment-cm1", createdAt: "2026-11-27T11:00:00.000Z" }

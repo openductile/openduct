@@ -1,0 +1,15 @@
+description: A person and their company in one
+action: enrich_contact
+credential: { api_key: hunter-test-key }
+input: { email: ann.example@example.com }
+exchanges:
+  - sent: { method: GET, url: https://api.hunter.io/v2/combined/find, query: { email: ann.example@example.com } }
+    answer:
+      body:
+        data:
+          person: { name: { fullName: Ann Example }, email: ann.example@example.com }
+          company: { name: Example Inc, domain: example.com }
+        meta: { email: ann.example@example.com }
+result:
+  person: { name: { fullName: Ann Example }, email: ann.example@example.com }
+  company: { name: Example Inc, domain: example.com }

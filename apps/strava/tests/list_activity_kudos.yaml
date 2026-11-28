@@ -1,0 +1,7 @@
+action: list_activity_kudos
+credential: { access_token: st_test_1 }
+input: { id: "99001" }
+exchanges:
+  - sent: { method: GET, url: https://www.strava.com/api/v3/activities/99001/kudos, query: { per_page: "200" } }
+    answer: { body: [{ firstname: Bob, lastname: R. }, { firstname: Cara, lastname: M. }] }
+result: [{ firstname: Bob, lastname: R. }, { firstname: Cara, lastname: M. }]

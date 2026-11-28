@@ -1,0 +1,10 @@
+description: A key MailerLite does not know
+action: list_groups
+credential:
+  api_key: test-key
+exchanges:
+- answer:
+    status: 401
+    body:
+      message: Unauthenticated.
+error: 'MailerLite answered 401: Unauthenticated.'

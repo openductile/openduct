@@ -1,0 +1,11 @@
+description: Tickets over two pages of 100 (a shorter page is the last), at a hosted Zammad's address
+action: list_tickets
+credential: { subdomain: acme, token: zm_test_1 }
+exchanges:
+  - sent:
+      method: GET
+      url: https://acme.zammad.com/api/v1/tickets
+      query: { per_page: "100" }
+      headers: { authorization: Token token=zm_test_1 }
+    answer: { body: [{ id: 41, number: "31041", title: Where is my order?, state_id: 2, priority_id: 2, group_id: 1 }] }
+result: [{ id: 41, number: "31041", title: Where is my order?, state_id: 2, priority_id: 2, group_id: 1 }]

@@ -1,0 +1,20 @@
+description: Messages posted since the last poll start runs, oldest first; the conversation's own notices do not
+trigger: new_talk_message
+credential: { url: "https://cloud.example.com", username: ann, password: app-pass-1 }
+input: { token: a1b2c3d4 }
+seen: { items: [["499", ""]] }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://cloud.example.com/ocs/v2.php/apps/spreed/api/v1/chat/a1b2c3d4"
+      query: { lookIntoFuture: "0", limit: "100", setReadMarker: "0", markNotificationsAsRead: "0" }
+    answer:
+      body:
+        ocs:
+          meta: { status: ok, statuscode: 200 }
+          data:
+            - { id: 502, message: "Can someone check order 1001?", actorId: bob, systemMessage: "" }
+            - { id: 501, message: "{actor} joined the conversation", actorId: carol, systemMessage: user_added }
+            - { id: 500, message: "Morning all", actorId: ann, systemMessage: "" }
+            - { id: 499, message: "Good night", actorId: ann, systemMessage: "" }
+ids: ["500", "502"]

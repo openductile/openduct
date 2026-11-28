@@ -1,0 +1,12 @@
+description: A Page post with a link, on Graph API v25.0
+action: post_to_page
+credential: { access_token: EAAB_test }
+input: { page_id: "1029384756", message: Our winter hours are up., link: "https://example.com/hours" }
+exchanges:
+  - sent:
+      method: POST
+      url: https://graph.facebook.com/v25.0/1029384756/feed
+      headers: { authorization: Bearer EAAB_test }
+      body: { message: Our winter hours are up., link: "https://example.com/hours" }
+    answer: { body: { id: 1029384756_555 } }
+result: { id: 1029384756_555 }

@@ -1,0 +1,17 @@
+description: "A build's jobs"
+action: list_build_jobs
+credential: { token: test-token }
+input: { build_id: 86601346 }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://api.travis-ci.com/build/86601346/jobs"
+    answer:
+      body:
+        "@type": jobs
+        jobs:
+          - { id: 86601347, number: "212.1", state: passed, allow_failure: false, queue: builds.gce }
+          - { id: 86601348, number: "212.2", state: failed, allow_failure: true, queue: builds.gce }
+result:
+  - { id: 86601347, number: "212.1", state: passed, allow_failure: false, queue: builds.gce }
+  - { id: 86601348, number: "212.2", state: failed, allow_failure: true, queue: builds.gce }

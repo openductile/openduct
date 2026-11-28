@@ -1,0 +1,96 @@
+name: A launch post for Mastodon and Discord, approved first
+description: >-
+  Someone on the team describes what is new on a form; a model writes a post under Mastodon's 500 characters in the
+  tone chosen, and your marketing lead gets it by e-mail with a link to approve it, with a comment if they like (two
+  days at most). Only an approved post goes out - to your Mastodon account through its API, and to your community's
+  Discord channel - and the person who asked gets the link. Needs: model (ai), mail (smtp), mastodon (bearer: an access
+  token of your account, with write:statuses), community (discord).
+category: Marketing
+trigger:
+  form:
+    title: Announce something new
+    fields:
+      - { name: email, label: Your e-mail, type: email, required: true }
+      - { name: product, label: The product or feature, type: text, required: true, max_length: 120 }
+      - { name: news, label: "What is new, and why it matters", type: long_text, required: true, max_length: 3000 }
+      - { name: link, label: A link to read more, type: text, max_length: 300 }
+      - { name: tone, label: Tone, type: dropdown, options: [Friendly, Plain, Playful], required: true }
+    thanks: Thank you - the draft is with the marketing lead.
+# What a test runs on: an answer as the form gives it.
+sample:
+  email: dev.lead@example.com
+  product: Offline mode
+  news: The mobile app now works without a connection - orders taken offline sync on their own when the phone is back online.
+  link: https://www.example.com/blog/offline-mode
+  tone: Friendly
+steps:
+  - name: draft
+    ai:
+      credential: model
+      system: >-
+        You write one social media post announcing a product update. At most 420 characters before the link, no
+        hashtags beyond two, at most one emoji, nothing the update does not say.
+      prompt: "Tone: {{ value.tone }}. Product: {{ value.product }}. What is new: {{ value.news }}"
+      schema:
+        type: object
+        properties:
+          post: { type: string, maxLength: 440 }
+        required: [post]
+      max_tokens: 250
+  - name: full
+    set:
+      text: >-
+        (has(steps.draft.json.post) && steps.draft.json.post != null ? steps.draft.json.post : '')
+        + (value.link != null && value.link != '' ? '\n\n' + value.link : '')
+  - name: ask
+    email:
+      credential: mail
+      to: marketing-lead@example.com
+      reply_to: "{{ value.email }}"
+      subject: "Approve a post: {{ value.product }}"
+      text: "{{ value.email }} asks to announce {{ value.product }}. The post ({{ size(steps.full.text) }} characters):\n\n{{ steps.full.text }}\n\nApprove or reject it here (the link works once): {{ links.decide }}"
+  - name: decide
+    approval:
+      title: "Post about {{ value.product }}?"
+      description: "{{ steps.full.text }}"
+      comment: true
+      approve: Post it
+      reject: "Don't post"
+      timeout: 2d
+      on_timeout: continue
+  - name: publish
+    if:
+      # Never a post without the model's words, nor one past Mastodon's 500 characters.
+      when: >-
+        steps.decide.approved == true && has(steps.draft.json.post) && steps.draft.json.post != null
+        && steps.draft.json.post != '' && size(steps.full.text) <= 500
+      then:
+        - name: toot
+          http:
+            method: POST
+            # Your Mastodon server's address.
+            url: https://mastodon.social/api/v1/statuses
+            credential: mastodon
+            # The same run never posts twice, even when the call is tried again.
+            headers: { Idempotency-Key: "{{ sha256(value.email + value.product + value.news) }}" }
+            json: { status: "{{ steps.full.text }}", visibility: public, language: en }
+            sample: { id: "113570000000000001", url: "https://mastodon.social/@yourshop/113570000000000001" }
+          retry: { attempts: 3, wait: 10s }
+        - name: discord
+          discord:
+            credential: community
+            text: "{{ steps.full.text }}"
+          retry: { attempts: 3, wait: 10s }
+        - name: posted
+          email:
+            credential: mail
+            to: "{{ value.email }}"
+            subject: "Posted: {{ value.product }}"
+            text: "It is out: {{ steps.toot.body.url }}\n{{ steps.decide.comment }}"
+      else:
+        - name: not_posted
+          email:
+            credential: mail
+            to: "{{ value.email }}"
+            subject: "Not posted: {{ value.product }}"
+            text: "The post about {{ value.product }} was not posted{{ steps.decide.timed_out == true ? ': no answer came in time' : '' }}. {{ steps.decide.comment }}"

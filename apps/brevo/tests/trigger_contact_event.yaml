@@ -1,0 +1,9 @@
+description: A contact put on a list, as Brevo sends it
+trigger: contact_event
+workflow: wf1
+credential: { api_key: xkeysib-test-1, "webhook_secret@wf1": brevo-hook-secret-test }
+delivery:
+  headers: { x-webhook-token: brevo-hook-secret-test }
+  body: '{"id":8,"email":"kim@example.com","event":"listAddition","key":"k-test","list_id":[3],"date":"2026-11-27 10:05:00","ts":1795770300,"ts_event":1795770300}'
+  at: 1795770301
+runs: [{"id":8,"email":"kim@example.com","event":"listAddition","key":"k-test","list_id":[3],"date":"2026-11-27 10:05:00","ts":1795770300,"ts_event":1795770300}]

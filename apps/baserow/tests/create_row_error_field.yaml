@@ -1,0 +1,7 @@
+description: A row that has a field named error is not a refusal
+action: create_row
+credential: { token: br-test-token }
+input: { table_id: 1203, fields: { Name: Check, error: none } }
+exchanges:
+  - answer: { body: { id: 9, order: "9.00000000000000000000", Name: Check, error: none } }
+result: { id: 9, order: "9.00000000000000000000", Name: Check, error: none }

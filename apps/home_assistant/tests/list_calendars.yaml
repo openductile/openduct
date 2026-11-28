@@ -1,0 +1,7 @@
+description: The calendar entities
+action: list_calendars
+credential: { url: "http://home.example:8123", token: ha-test-token }
+exchanges:
+  - sent: { method: GET, url: "http://home.example:8123/api/calendars" }
+    answer: { status: 200, body: [{ entity_id: calendar.holidays, name: Holidays }, { entity_id: calendar.shop, name: Shop hours }] }
+result: [{ entity_id: calendar.holidays, name: Holidays }, { entity_id: calendar.shop, name: Shop hours }]

@@ -1,0 +1,50 @@
+description: A comment's text changed
+action: edit_comment
+credential: {api_key: pubkey-test-1, api_secret: secret-test-1, access_token: token-test-1}
+input: {post: '6003', message: 'Yes, we ship to Canada and Mexico.'}
+exchanges:
+- sent:
+    method: POST
+    url: https://disqus.com/api/3.0/posts/update.json
+    query: {api_key: pubkey-test-1, api_secret: secret-test-1, access_token: token-test-1}
+    body: {post: '6003', message: 'Yes, we ship to Canada and Mexico.'}
+  answer:
+    status: 200
+    body:
+      code: 0
+      response:
+        id: '6003'
+        forum: shop-example
+        thread: '7001'
+        parent: 6002
+        author: &id001 {username: shop_example, name: Shop Example, id: '100', isAnonymous: false, profileUrl: 'https://disqus.com/by/ann_example/'}
+        message: <p>Yes, we ship to Canada.</p>
+        raw_message: Yes, we ship to Canada and Mexico.
+        createdAt: '2026-11-27T11:30:00'
+        isApproved: true
+        isSpam: false
+        isDeleted: false
+        isFlagged: false
+        isHighlighted: false
+        isEdited: true
+        likes: 0
+        dislikes: 0
+        points: 0
+result:
+  id: '6003'
+  forum: shop-example
+  thread: '7001'
+  parent: 6002
+  author: *id001
+  message: <p>Yes, we ship to Canada.</p>
+  raw_message: Yes, we ship to Canada and Mexico.
+  createdAt: '2026-11-27T11:30:00'
+  isApproved: true
+  isSpam: false
+  isDeleted: false
+  isFlagged: false
+  isHighlighted: false
+  isEdited: true
+  likes: 0
+  dislikes: 0
+  points: 0

@@ -1,0 +1,10 @@
+action: create_saved_search
+credential: { api_key: us_test_1 }
+input: { name: Brand X look-alikes, query: "page.title:\"Brand X\"", tlp: amber }
+exchanges:
+  - sent:
+      method: POST
+      url: https://urlscan.io/api/v1/user/searches/
+      body: { search: { name: Brand X look-alikes, query: "page.title:\"Brand X\"", datasource: scans, tlp: amber } }
+    answer: { status: 201, body: { search: { _id: s-1, name: Brand X look-alikes, query: "page.title:\"Brand X\"", datasource: scans, tlp: amber } } }
+result: { _id: s-1, name: Brand X look-alikes, query: "page.title:\"Brand X\"", datasource: scans, tlp: amber }

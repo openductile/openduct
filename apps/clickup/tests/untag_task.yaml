@@ -1,0 +1,12 @@
+description: "Take a tag off a task"
+action: untag_task
+credential: { api_key: test-key }
+input: { task_id: abc, tag_name: name }
+exchanges:
+  - sent:
+      method: DELETE
+      url: "https://api.clickup.com/api/v2/task/abc/tag/name"
+      query: {}
+      headers: { authorization: test-key }
+    answer: { status: 200, body: {} }
+result: { untagged: true }

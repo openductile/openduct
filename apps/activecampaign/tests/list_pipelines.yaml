@@ -1,0 +1,29 @@
+description: The deal pipelines
+action: list_pipelines
+credential:
+  account: shopexample
+  api_key: test-key
+exchanges:
+- sent:
+    method: GET
+    url: https://shopexample.api-us1.com/api/3/dealGroups
+    headers:
+      api-token: test-key
+  answer:
+    status: 200
+    body:
+      dealGroups:
+      - &id001
+        id: '1'
+        title: Sales
+        currency: usd
+        stages:
+        - '1'
+        - '2'
+        - '3'
+        autoassign: '1'
+      dealStages: []
+      meta:
+        total: '1'
+result:
+- *id001

@@ -1,0 +1,42 @@
+description: "Look up a person"
+action: get_person
+credential: { api_key: test-key }
+input: { id: 1 }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://api.pipedrive.com/api/v2/persons/1"
+      query: {}
+      headers: { x-api-token: test-key }
+    answer:
+      status: 200
+      body:
+        success: true
+        data:
+          id: 1
+          name: example
+          first_name: example
+          last_name: example
+          owner_id: 1
+          org_id: 1
+          add_time: example
+          update_time: example
+          emails: [{ value: example, primary: true, label: example }]
+          phones: [{ value: example, primary: true, label: example }]
+          is_deleted: true
+          visible_to: 1
+result:
+  id: 1
+  name: example
+  first_name: example
+  last_name: example
+  owner_id: 1
+  org_id: 1
+  add_time: example
+  update_time: example
+  emails:
+  - {value: example, primary: true, label: example}
+  phones:
+  - {value: example, primary: true, label: example}
+  is_deleted: true
+  visible_to: 1

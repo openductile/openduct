@@ -1,0 +1,8 @@
+description: The files in a folder of a site's library, named by its path
+action: list_library_files
+credential: { access_token: eyJ0 }
+input: { site_id: "example.sharepoint.com,da60e844-ba1d-49bc-b4d4-d5e36bae9019,712a596e-90a1-49e3-9b48-bfa80bee8740", folder: Contracts/2026 }
+exchanges:
+  - sent: { method: GET, url: "https://graph.microsoft.com/v1.0/sites/example.sharepoint.com,da60e844-ba1d-49bc-b4d4-d5e36bae9019,712a596e-90a1-49e3-9b48-bfa80bee8740/drive/root:/Contracts/2026:/children" }
+    answer: { body: { value: [{ id: 01BYE5RZ6QN3ZWBTUFOFD3GSPGOHDJD36K, name: Example Co.pdf, size: 120438, file: { mimeType: application/pdf }, webUrl: "https://example.sharepoint.com/sites/sales/Shared%20Documents/Contracts/2026/Example%20Co.pdf" }] } }
+result: [{ id: 01BYE5RZ6QN3ZWBTUFOFD3GSPGOHDJD36K, name: Example Co.pdf, size: 120438, file: { mimeType: application/pdf }, webUrl: "https://example.sharepoint.com/sites/sales/Shared%20Documents/Contracts/2026/Example%20Co.pdf" }]

@@ -1,0 +1,59 @@
+# Made by `openduct app from-openapi`: Look up a column.
+description: "Look up a column, made from the API description's schemas"
+action: get_column
+credential: { token: test-token }
+input: { doc_id: doc_1, table_id_or_name: example, column_id_or_name: example }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://docs.superhuman.com/apis/v1/docs/doc_1/tables/example/columns/example"
+      query: {}
+      headers: { authorization: "Bearer test-token" }
+    answer:
+      status: 200
+      body:
+        id: c-tuVwxYz
+        type: column
+        href: "https://example.com/1"
+        name: Completed
+        display: true
+        calculated: true
+        formula: example
+        defaultValue: Test
+        format: { type: text, isArray: true, label: example, disableIf: example, action: example }
+        parent:
+          id: grid-pqRst-U
+          type: table
+          tableType: table
+          href: "https://example.com/1"
+          browserLink: "https://example.com/1"
+          name: Tasks
+          parent:
+            id: canvas-IjkLmnO
+            type: page
+            href: "https://example.com/1"
+            browserLink: "https://example.com/1"
+            name: example
+result:
+  id: c-tuVwxYz
+  type: column
+  href: "https://example.com/1"
+  name: Completed
+  display: true
+  calculated: true
+  formula: example
+  defaultValue: Test
+  format: { type: text, isArray: true, label: example, disableIf: example, action: example }
+  parent:
+    id: grid-pqRst-U
+    type: table
+    tableType: table
+    href: "https://example.com/1"
+    browserLink: "https://example.com/1"
+    name: Tasks
+    parent:
+      id: canvas-IjkLmnO
+      type: page
+      href: "https://example.com/1"
+      browserLink: "https://example.com/1"
+      name: example

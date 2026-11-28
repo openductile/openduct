@@ -1,0 +1,91 @@
+name: Log your spending by texting a Telegram bot
+description: >-
+  Text your own Telegram bot what you spent - "12.50 lunch", "taxi 23", "/total" - and each one becomes a row in the
+  Expenses sheet of your Google Sheets spreadsheet, sorted into a kind of cost; /total answers with this month's
+  spending by kind. Only your own chat is listened to: set your chat's id below (the bot's first message to you shows
+  it in the run). Needs: telegram (your bot's token), google_sheets.
+category: Productivity
+trigger:
+  telegram: { when: new_message, credential: telegram, every: 1m }
+# What a test runs on: a message as this trigger gives it.
+sample:
+  message_id: 512
+  date: 1795770000
+  chat: { id: 123456789, type: private }
+  from: { id: 123456789, first_name: Mia }
+  text: 12.50 lunch with the team
+steps:
+  # Your own chat's id: messages from anyone else are left alone.
+  - where: value.chat.id == 123456789 && value.text != null
+  - name: said
+    javascript: |
+      // Reads "12.50 lunch", "lunch 12,50" or "$12.50 lunch"; /total and /help are commands.
+      const text = String(value.text).trim();
+      if (text.startsWith("/total")) return { kind: "total" };
+      const m = text.match(/(\d+(?:[.,]\d{1,2})?)/);
+      if (!m) return { kind: "help" };
+      const amount = Math.round(parseFloat(m[1].replace(",", ".")) * 100) / 100;
+      const note = text.replace(m[0], "").replace(/[$€£]/g, "").trim() || "no note";
+      const kinds = {
+        food: ["lunch", "dinner", "breakfast", "coffee", "groceries", "snack"],
+        travel: ["taxi", "uber", "train", "bus", "fuel", "gas", "parking", "flight"],
+        home: ["rent", "power", "electricity", "water", "internet"],
+        fun: ["cinema", "movie", "concert", "game", "book"],
+      };
+      const words = note.toLowerCase();
+      const kind_of_cost = Object.keys(kinds).find((k) => kinds[k].some((w) => words.includes(w))) || "other";
+      const day = new Date(value.date * 1000).toISOString().slice(0, 10);
+      return { kind: "expense", amount, note, kind_of_cost, day };
+  - name: act
+    switch:
+      cases:
+        - label: an expense
+          when: steps.said.kind == 'expense'
+          steps:
+            - name: row
+              google_sheets:
+                action: add_row
+                credential: google_sheets
+                spreadsheet_id: your-spreadsheet-id
+                sheet: Expenses
+                values: ["{{ steps.said.day }}", "{{ steps.said.amount }}", "{{ steps.said.kind_of_cost }}", "{{ steps.said.note }}"]
+              retry: { attempts: 3, wait: 10s }
+            - name: logged
+              telegram:
+                credential: telegram
+                chat_id: "{{ value.chat.id }}"
+                text: "Logged {{ '%.2f'.format([steps.said.amount]) }} for {{ steps.said.note }} ({{ steps.said.kind_of_cost }})."
+        - label: this month's total
+          when: steps.said.kind == 'total'
+          steps:
+            - name: rows
+              google_sheets:
+                action: read_rows
+                credential: google_sheets
+                spreadsheet_id: your-spreadsheet-id
+                range: Expenses!A:D
+            - name: month
+              javascript: |
+                // Rows are [day, amount, kind, note]; only this month's are counted.
+                const month = new Date(value.date * 1000).toISOString().slice(0, 7);
+                const by = {};
+                let all = 0;
+                for (const r of steps.rows || []) {
+                  const amount = parseFloat(String(r[1]).replace(",", "."));
+                  if (!String(r[0]).startsWith(month) || isNaN(amount)) continue;
+                  by[r[2] || "other"] = (by[r[2] || "other"] || 0) + amount;
+                  all += amount;
+                }
+                const lines = Object.entries(by).sort((a, b) => b[1] - a[1]).map(([k, v]) => `${k}: ${v.toFixed(2)}`);
+                return { text: `${month}: ${all.toFixed(2)} in all` + (lines.length ? "\n" + lines.join("\n") : "") };
+            - name: total
+              telegram:
+                credential: telegram
+                chat_id: "{{ value.chat.id }}"
+                text: "{{ steps.month.text }}"
+      default:
+        - name: how
+          telegram:
+            credential: telegram
+            chat_id: "{{ value.chat.id }}"
+            text: "Send what you spent and what for, as: 12.50 lunch. Send /total for this month's spending."

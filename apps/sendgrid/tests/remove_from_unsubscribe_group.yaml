@@ -1,0 +1,8 @@
+description: An address that gets offers again
+action: remove_from_unsubscribe_group
+credential: { token: SG.test-key }
+input: { group_id: "22", email: ann@example.com }
+exchanges:
+  - sent: { method: DELETE, url: https://api.sendgrid.com/v3/asm/groups/22/suppressions/ann@example.com }
+    answer: { status: 204 }
+result: { removed: true }

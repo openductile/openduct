@@ -1,0 +1,9 @@
+description: "Travis CI refuses a repository the token may not see: the step fails in its words"
+action: get_repo
+credential: { token: test-token }
+input: { repo: shop-example/secret }
+exchanges:
+  - answer:
+      status: 404
+      body: { "@type": error, error_type: not_found, error_message: "repository not found (or insufficient access)", resource_type: repository }
+error: "Travis CI answered 404: repository not found (or insufficient access)"

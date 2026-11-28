@@ -2,7 +2,7 @@ name: A daily report from Postgres, by e-mail
 description: >-
   Every day, count yesterday's orders and their total in your database (an orders table with total and created_at)
   and e-mail the figures to your team.
-category: Databases
+category: Data
 trigger:
   schedule: { every: 1d }
 # What a test runs on: an event as this trigger gives it.

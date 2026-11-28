@@ -1,0 +1,41 @@
+description: Someone's address from their name and the company's website
+action: find_email
+credential: { api_key: hunter-test-key }
+input: { domain: example.com, first_name: Ann, last_name: Example }
+exchanges:
+  - sent:
+      method: GET
+      url: https://api.hunter.io/v2/email-finder
+      query: { domain: example.com, first_name: Ann, last_name: Example }
+      headers: { x-api-key: hunter-test-key }
+    answer:
+      body:
+        data:
+          first_name: Ann
+          last_name: Example
+          email: ann.example@example.com
+          score: 97
+          domain: example.com
+          accept_all: false
+          position: Head of Sales
+          twitter: null
+          linkedin_url: null
+          phone_number: null
+          company: Example Inc
+          sources: [{ domain: blog.example.com, uri: "https://blog.example.com/team", extracted_on: "2026-10-01", last_seen_on: "2026-11-20", still_on_page: true }]
+          verification: { date: "2026-11-21", status: valid }
+        meta: { params: { first_name: Ann, last_name: Example, full_name: null, domain: example.com, company: null, max_duration: null } }
+result:
+  first_name: Ann
+  last_name: Example
+  email: ann.example@example.com
+  score: 97
+  domain: example.com
+  accept_all: false
+  position: Head of Sales
+  twitter: null
+  linkedin_url: null
+  phone_number: null
+  company: Example Inc
+  sources: [{ domain: blog.example.com, uri: "https://blog.example.com/team", extracted_on: "2026-10-01", last_seen_on: "2026-11-20", still_on_page: true }]
+  verification: { date: "2026-11-21", status: valid }

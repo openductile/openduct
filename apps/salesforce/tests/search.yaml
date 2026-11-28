@@ -1,0 +1,15 @@
+description: The records a SOSL search finds, of two kinds
+action: search
+credential: { access_token: "00D000000000001!AQ.test", instance: examplecorp.my.salesforce.com }
+input: { sosl: "FIND {Lee} IN ALL FIELDS RETURNING Lead(Id, Name), Contact(Id, Name)" }
+exchanges:
+  - sent:
+      method: GET
+      url: https://examplecorp.my.salesforce.com/services/data/v67.0/search/
+      query: { q: "FIND {Lee} IN ALL FIELDS RETURNING Lead(Id, Name), Contact(Id, Name)" }
+    answer:
+      body:
+        searchRecords:
+          - { attributes: { type: Lead, url: /services/data/v67.0/sobjects/Lead/00Q5e000001AbcDEAZ }, Id: 00Q5e000001AbcDEAZ, Name: Ann Lee }
+result:
+  - { attributes: { type: Lead, url: /services/data/v67.0/sobjects/Lead/00Q5e000001AbcDEAZ }, Id: 00Q5e000001AbcDEAZ, Name: Ann Lee }

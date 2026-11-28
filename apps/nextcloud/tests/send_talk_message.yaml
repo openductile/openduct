@@ -1,0 +1,13 @@
+description: A message posted to a Talk conversation, without notifying anyone
+action: send_talk_message
+credential: { url: "https://cloud.example.com", username: ann, password: app-pass-1 }
+input: { token: a1b2c3d4, message: "New order 1001 from Example Coffee", silent: true }
+exchanges:
+  - sent:
+      method: POST
+      url: "https://cloud.example.com/ocs/v2.php/apps/spreed/api/v1/chat/a1b2c3d4"
+      body: { message: "New order 1001 from Example Coffee", silent: true }
+    answer:
+      status: 201
+      body: { ocs: { meta: { status: ok, statuscode: 201 }, data: { id: 501, token: a1b2c3d4, message: "New order 1001 from Example Coffee", actorId: ann, actorDisplayName: Ann Example, timestamp: 1795600000, messageType: comment } } }
+result: { id: 501, token: a1b2c3d4, message: "New order 1001 from Example Coffee", actorId: ann, actorDisplayName: Ann Example, timestamp: 1795600000, messageType: comment }

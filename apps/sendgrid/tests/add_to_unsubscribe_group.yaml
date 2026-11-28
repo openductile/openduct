@@ -1,0 +1,11 @@
+description: An address that gets no more offers
+action: add_to_unsubscribe_group
+credential: { token: SG.test-key }
+input: { group_id: "22", emails: ann@example.com }
+exchanges:
+  - sent:
+      method: POST
+      url: https://api.sendgrid.com/v3/asm/groups/22/suppressions
+      body: { recipient_emails: [ann@example.com] }
+    answer: { status: 201, body: { recipient_emails: [ann@example.com] } }
+result: { recipient_emails: [ann@example.com] }

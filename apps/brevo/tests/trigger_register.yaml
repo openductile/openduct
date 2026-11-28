@@ -1,0 +1,9 @@
+description: Turning the workflow on subscribes its address to the emails' events, with a token of its own in a header
+trigger: email_event
+register: true
+workflow: wf1
+address: https://studio.example/hooks/h1
+credential: { api_key: xkeysib-test-1 }
+exchanges:
+  - sent: { method: POST, url: https://api.brevo.com/v3/webhooks, headers: { api-key: xkeysib-test-1 } }
+    answer: { status: 201, body: { id: 7 } }

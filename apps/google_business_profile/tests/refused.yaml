@@ -1,0 +1,12 @@
+description: "Google refuses a location the account does not manage, in its words"
+action: list_reviews
+credential: {"access_token": "ya29.test"}
+input: {"account_id": "1001", "location_id": "9999"}
+exchanges:
+  - sent:
+      method: GET
+      url: "https://mybusiness.googleapis.com/v4/accounts/1001/locations/9999/reviews"
+      query: {"pageSize": "50"}
+      headers: {"authorization": "Bearer ya29.test"}
+    answer: {"status": 403, "body": {"error": {"code": 403, "message": "The caller does not have permission", "status": "PERMISSION_DENIED"}}}
+error: "The caller does not have permission"

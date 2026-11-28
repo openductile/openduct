@@ -1,0 +1,8 @@
+description: How many open records there are
+action: count_records
+credential: { api_token: test-nocodb-token }
+input: { base_id: pexample0001, table_id: mexample0001, where: "(Status,eq,Open)" }
+exchanges:
+  - sent: { method: GET, url: https://app.nocodb.com/api/v3/data/pexample0001/mexample0001/count, query: { where: "(Status,eq,Open)" } }
+    answer: { body: { count: 12 } }
+result: { count: 12 }

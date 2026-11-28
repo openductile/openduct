@@ -1,0 +1,12 @@
+description: Posts of a team that hold the words
+action: search_posts
+credential: { server_url: "https://chat.example.com", token: testmmtoken0000000000000000 }
+input: { team_id: t1aaaaaaaaaaaaaaaaaaaaaaaa, terms: "shipped in:orders" }
+exchanges:
+  - sent:
+      method: POST
+      url: https://chat.example.com/api/v4/teams/t1aaaaaaaaaaaaaaaaaaaaaaaa/posts/search
+      headers: { authorization: Bearer testmmtoken0000000000000000 }
+      body: { terms: "shipped in:orders", is_or_search: false }
+    answer: { body: { order: [p1aaaaaaaaaaaaaaaaaaaaaaaa], posts: { p1aaaaaaaaaaaaaaaaaaaaaaaa: { id: p1aaaaaaaaaaaaaaaaaaaaaaaa, create_at: 1764237600000, update_at: 1764237600000, user_id: u1aaaaaaaaaaaaaaaaaaaaaaaa, channel_id: c1aaaaaaaaaaaaaaaaaaaaaaaa, root_id: "", message: The order shipped., type: "", props: {} } }, matches: { p1aaaaaaaaaaaaaaaaaaaaaaaa: [shipped] } } }
+result: [{ id: p1aaaaaaaaaaaaaaaaaaaaaaaa, create_at: 1764237600000, update_at: 1764237600000, user_id: u1aaaaaaaaaaaaaaaaaaaaaaaa, channel_id: c1aaaaaaaaaaaaaaaaaaaaaaaa, root_id: "", message: The order shipped., type: "", props: {} }]

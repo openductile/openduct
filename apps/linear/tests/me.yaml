@@ -1,0 +1,10 @@
+action: me
+credential: { api_key: lin_api_test1 }
+exchanges:
+  - sent:
+      method: POST
+      url: https://api.linear.app/graphql
+      headers: { authorization: lin_api_test1 }
+      body: { query: "query { viewer { id name displayName admin organization { id name urlKey } } }" }
+    answer: { body: { data: { viewer: { id: u-1, name: Ann Lee, displayName: ann, admin: false, organization: { id: org-test-1, name: Example Co, urlKey: example } } } } }
+result: { id: u-1, name: Ann Lee, displayName: ann, admin: false, organization: { id: org-test-1, name: Example Co, urlKey: example } }

@@ -1,0 +1,220 @@
+# Copyright 2026 Ductile AI, Inc
+# SPDX-License-Identifier: Apache-2.0
+# Gotify: written from its own API description, gotify/server v3.1.1 (commit e6361caa5125) docs/spec.json
+# (Swagger 2.0, MIT), checked against `openduct app from-openapi`'s reading of it.
+app: gotify
+name: Gotify
+category: messaging
+description: Push notifications from your own Gotify server to its phone and web apps, and the messages it holds.
+docs: https://gotify.net/api-docs
+base_url_field: base_url
+sign_in:
+  - id: gotify
+    label: An application's token (to send messages)
+    fields:
+      - { name: base_url, label: "Your Gotify's address, such as https://gotify.example.com" }
+      - { name: token, label: "The application's token (Apps → the app → its token)", secret: true }
+    headers: { X-Gotify-Key: "{{ credential.token }}" }
+  - id: gotify_client
+    label: A client's token (to send, read and remove messages, and manage applications)
+    fields:
+      - { name: base_url, label: "Your Gotify's address, such as https://gotify.example.com" }
+      - { name: token, label: "A client's token (Clients → Create client → its token)", secret: true }
+    headers: { X-Gotify-Key: "{{ credential.token }}" }
+error: "status >= 400 ? (has(value.errorDescription) ? value.error + ': ' + value.errorDescription : value.error) : null"
+actions:
+  send_message:
+    label: Send a notification
+    description: Sends a message to everyone who listens to the application - with a title and a priority if given; Markdown is allowed.
+    write: true
+    method: POST
+    path: /message
+    inputs:
+      - { name: message, label: "The message", required: true }
+      - { name: title, label: Title }
+      - { name: priority, label: "Priority: 0 to 10 (the application's own if not given)", kind: number }
+      - { name: app_id, label: "The application's id: needed only with a client's token", kind: number }
+      - { name: extras, label: "Extras for the apps that show it (as JSON), such as {\"client::display\": {\"contentType\": \"text/markdown\"}}", kind: record }
+    send:
+      message: "{{ input.message }}"
+      title: "{{ input.title }}"
+      priority: "{{ input.priority }}"
+      appid: "{{ input.app_id }}"
+      extras: "{{ input.extras }}"
+    output:
+      id: number
+      appid: number
+      title: text
+      message: text
+      priority: number
+      date: text
+      extras: record
+  list_messages:
+    label: List messages
+    description: The messages of every application, the newest first; every page, up to 2,000.
+    method: GET
+    path: /message
+    query: { limit: "200" }
+    items: value.messages
+    next: "has(value.paging.next) && value.paging.next != null && value.paging.next != '' ? {'since': string(value.paging.since)} : null"
+    max_pages: 10
+    output:
+      id: number
+      appid: number
+      title: text
+      message: text
+      priority: number
+      date: text
+      extras: record
+  list_app_messages:
+    label: List an application's messages
+    description: The messages one application sent, the newest first; every page, up to 2,000.
+    method: GET
+    path: "/application/{{ input.app_id }}/message"
+    inputs:
+      - { name: app_id, label: "The application's id (List applications gives it)", required: true, kind: number }
+    query: { limit: "200" }
+    items: value.messages
+    next: "has(value.paging.next) && value.paging.next != null && value.paging.next != '' ? {'since': string(value.paging.since)} : null"
+    max_pages: 10
+    output:
+      id: number
+      appid: number
+      title: text
+      message: text
+      priority: number
+      date: text
+      extras: record
+  delete_message:
+    label: Remove a message
+    description: Removes one message, by its id.
+    write: true
+    method: DELETE
+    path: "/message/{{ input.message_id }}"
+    inputs:
+      - { name: message_id, label: "The message's id", required: true, kind: number }
+    result: "{'removed': status < 300}"
+    output: { removed: boolean }
+  delete_app_messages:
+    label: Remove an application's messages
+    description: Removes every message one application sent.
+    write: true
+    method: DELETE
+    path: "/application/{{ input.app_id }}/message"
+    inputs:
+      - { name: app_id, label: "The application's id", required: true, kind: number }
+    result: "{'removed': status < 300}"
+    output: { removed: boolean }
+  delete_all_messages:
+    label: Remove every message
+    description: Removes the messages of every application.
+    write: true
+    method: DELETE
+    path: /message
+    result: "{'removed': status < 300}"
+    output: { removed: boolean }
+  list_applications:
+    label: List applications
+    description: The applications that may send messages, each with its id and token.
+    method: GET
+    path: /application
+    items: value
+    output:
+      id: number
+      name: text
+      description: text
+      token: text
+      defaultPriority: number
+      internal: boolean
+      image: text
+      sortKey: text
+      createdAt: text
+      lastUsed: text
+  create_application:
+    label: Add an application
+    description: Makes a new application that may send messages; its token is in the answer.
+    write: true
+    method: POST
+    path: /application
+    inputs:
+      - { name: name, label: "Its name", required: true }
+      - { name: description, label: "What it is for" }
+      - { name: default_priority, label: "The priority of its messages when they give none", kind: number }
+    send:
+      name: "{{ input.name }}"
+      description: "{{ input.description }}"
+      defaultPriority: "{{ input.default_priority }}"
+    output:
+      id: number
+      name: text
+      description: text
+      token: text
+      defaultPriority: number
+      internal: boolean
+      image: text
+      sortKey: text
+      createdAt: text
+      lastUsed: text
+  update_application:
+    label: Change an application
+    description: Changes an application's name, description or default priority.
+    write: true
+    method: PUT
+    path: "/application/{{ input.app_id }}"
+    inputs:
+      - { name: app_id, label: "The application's id", required: true, kind: number }
+      - { name: name, label: "Its name", required: true }
+      - { name: description, label: "What it is for" }
+      - { name: default_priority, label: "The priority of its messages when they give none", kind: number }
+    send:
+      name: "{{ input.name }}"
+      description: "{{ input.description }}"
+      defaultPriority: "{{ input.default_priority }}"
+    output:
+      id: number
+      name: text
+      description: text
+      token: text
+      defaultPriority: number
+      internal: boolean
+      image: text
+      sortKey: text
+      createdAt: text
+      lastUsed: text
+  delete_application:
+    label: Remove an application
+    description: Removes an application and its messages; its token no longer sends.
+    write: true
+    method: DELETE
+    path: "/application/{{ input.app_id }}"
+    inputs:
+      - { name: app_id, label: "The application's id", required: true, kind: number }
+    result: "{'removed': status < 300}"
+    output: { removed: boolean }
+  get_current_user:
+    label: Get the signed-in user
+    description: The user the client's token belongs to, and whether they are an admin.
+    method: GET
+    path: /current/user
+    output: { id: number, name: text, admin: boolean, createdAt: text }
+  get_health:
+    label: Check the server's health
+    description: Whether the server and its database are well.
+    method: GET
+    path: /health
+    output: { health: text, database: text }
+  get_version:
+    label: Get the server's version
+    description: The version of Gotify the server runs.
+    method: GET
+    path: /version
+    output: { version: text, commit: text, buildDate: text }
+triggers:
+  new_message:
+    label: A new message
+    description: Each message any application sends, the newest asked for every minute (with a client's token).
+    poll:
+      action: list_messages
+      id: string(item.id)
+      newest_first: true
+      every: 1m

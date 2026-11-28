@@ -1,0 +1,12 @@
+description: An item changed since the poll before runs again; one unchanged does not
+trigger: changed_list_item
+credential: { access_token: eyJ0 }
+input: { site_id: "example.sharepoint.com,da60e844-ba1d-49bc-b4d4-d5e36bae9019,712a596e-90a1-49e3-9b48-bfa80bee8740", list_id: Orders }
+seen: { items: [["1", "d5d0b6915aa6cf52"], ["2", "d2f5797dc1552cf6"]] }
+exchanges:
+  - answer:
+      body:
+        value:
+          - { id: "1", fields: { Title: Order 1042, Status: Shipped }, lastModifiedDateTime: "2026-11-27T11:00:00Z" }
+          - { id: "2", fields: { Title: Order 1043, Status: Open }, lastModifiedDateTime: "2026-11-27T10:00:00Z" }
+runs: [{ id: "1", fields: { Title: Order 1042, Status: Shipped }, lastModifiedDateTime: "2026-11-27T11:00:00Z" }]

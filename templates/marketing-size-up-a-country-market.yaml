@@ -1,0 +1,88 @@
+name: Size up a country before you sell there
+description: >-
+  For teams weighing a new market: fill in a short form with a country's two-letter code and what you would sell, and a
+  row is added to your Markets sheet with the facts that matter first - population, region and capital, the currencies
+  and languages, income per person and how many people are online, each with its year - from REST Countries and the
+  World Bank's open data. Compare the rows side by side to choose. Needs: a Google Sheets sign-in called sheets.
+category: Marketing
+trigger:
+  form:
+    title: Size up a market
+    description: One country at a time. The facts land in the Markets sheet within a minute.
+    fields:
+      - { name: country, label: "Country code", type: text, required: true, max_length: 2, help: "Two letters, as DE or BR" }
+      - { name: product, label: "What you would sell there", type: text, required: true, max_length: 120 }
+      - { name: notes, label: Notes, type: long_text, max_length: 1000 }
+    thanks: Thank you - the country's row is being added to the Markets sheet.
+# What a test runs on: an event as this trigger gives it.
+sample:
+  country: de
+  product: Reusable shipping boxes
+  notes: Two resellers asked about it this month.
+steps:
+  - name: settings
+    set:
+      # Change this to your own spreadsheet.
+      spreadsheet: "'your-spreadsheet-id'"
+      code: value.country.trim().upperAscii()
+  - name: today
+    datetime: {}
+  - name: country
+    http:
+      method: GET
+      url: "https://restcountries.com/v3.1/alpha/{{ steps.settings.code }}"
+      query: { fields: "name,population,region,subregion,capital,currencies,languages" }
+      fail_on_status: true
+      sample:
+        name: { common: Germany, official: Federal Republic of Germany }
+        population: 83491249
+        region: Europe
+        subregion: Western Europe
+        capital: [Berlin]
+        currencies: { EUR: { name: Euro, symbol: "€" } }
+        languages: { deu: German }
+    retry: { attempts: 3, wait: 5s }
+  - name: income
+    http:
+      method: GET
+      url: "https://api.worldbank.org/v2/country/{{ steps.settings.code }}/indicator/NY.GDP.PCAP.CD"
+      query: { format: json, mrv: "1" }
+      sample:
+        - { page: 1, pages: 1, per_page: 50, total: 1 }
+        - - { indicator: { id: NY.GDP.PCAP.CD, value: "GDP per capita (current US$)" }, date: "2024", value: 55800.2 }
+    retry: { attempts: 3, wait: 5s }
+  - name: online
+    http:
+      method: GET
+      url: "https://api.worldbank.org/v2/country/{{ steps.settings.code }}/indicator/IT.NET.USER.ZS"
+      query: { format: json, mrv: "1" }
+      sample:
+        - { page: 1, pages: 1, per_page: 50, total: 1 }
+        - - { indicator: { id: IT.NET.USER.ZS, value: "Individuals using the Internet (% of population)" }, date: "2023", value: 92.5 }
+    retry: { attempts: 3, wait: 5s }
+  - name: facts
+    set:
+      # REST Countries answers one country as a record, or a list of one.
+      c: "type(steps.country.body) == list ? steps.country.body[0] : steps.country.body"
+      # The World Bank answers [paging, [the latest value]]; a country with no figure has an empty list or null.
+      gdp: "type(steps.income.body) == list && size(steps.income.body) > 1 && type(steps.income.body[1]) == list && size(steps.income.body[1]) > 0 ? steps.income.body[1][0] : null"
+      web: "type(steps.online.body) == list && size(steps.online.body) > 1 && type(steps.online.body[1]) == list && size(steps.online.body[1]) > 0 ? steps.online.body[1][0] : null"
+  - name: add
+    google_sheets:
+      credential: sheets
+      action: add_row
+      spreadsheet_id: "{{ steps.settings.spreadsheet }}"
+      sheet: Markets
+      values:
+        - "{{ steps.today.date }}"
+        - "{{ value.product }}"
+        - "{{ steps.facts.c.name.common }}"
+        - "{{ steps.facts.c.region }} / {{ steps.facts.c.subregion }}"
+        - "{{ size(steps.facts.c.capital) > 0 ? steps.facts.c.capital[0] : '' }}"
+        - "{{ steps.facts.c.population }}"
+        - "{{ steps.facts.c.currencies.map(k, k).join(', ') }}"
+        - "{{ steps.facts.c.languages.map(k, steps.facts.c.languages[k]).join(', ') }}"
+        - "{{ steps.facts.gdp == null || steps.facts.gdp.value == null ? 'n/a' : string(round(steps.facts.gdp.value, 0)) + ' USD (' + steps.facts.gdp.date + ')' }}"
+        - "{{ steps.facts.web == null || steps.facts.web.value == null ? 'n/a' : string(round(steps.facts.web.value, 1)) + '% (' + steps.facts.web.date + ')' }}"
+        - "{{ has(value.notes) && value.notes != null ? value.notes : '' }}"
+    retry: { attempts: 3, wait: 10s }

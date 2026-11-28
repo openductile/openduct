@@ -17,11 +17,11 @@ use http_body_util::Full;
 use hyper::header::{HeaderName, HeaderValue};
 use hyper::{Response, StatusCode};
 use openduct_flow::runner::{self, Topics};
-use openduct_flow::{Kind, Step, Trigger, Workflow};
+use openduct_flow::{Kind, Step, Trigger};
 use serde_json::{Value, json};
 
 use crate::State;
-use crate::history::{end_of, tail};
+use crate::history::end_of;
 use crate::http::{Answer, Call, json as answer_json, problem};
 use crate::workflows::{definition_of, now_ms, queue, queued};
 
@@ -55,9 +55,13 @@ pub(crate) async fn deliver(state: &State, call: &Call, hook: &str) -> Answer {
         return problem(StatusCode::NOT_FOUND, "no such webhook");
     };
     let definition = definition_of(state, &record).await;
-    let Ok(workflow) = Workflow::from_json(&definition, Some(&record.id)) else {
+    let Ok(workflow) = crate::custom_apps::workflow(&record.workspace, &definition, Some(&record.id)) else {
         return problem(StatusCode::NOT_FOUND, "no such webhook");
     };
+    // G3 app triggers: an app's own delivery, checked against the app's signature.
+    if let Trigger::App(t) = &workflow.trigger {
+        return crate::app_hooks::deliver(state, call, &record, t).await;
+    }
     let Trigger::Webhook { token } = &workflow.trigger else {
         return problem(StatusCode::NOT_FOUND, "no such webhook");
     };
@@ -89,7 +93,20 @@ pub(crate) async fn deliver(state: &State, call: &Call, hook: &str) -> Answer {
     } else if call.content_type.starts_with("application/x-www-form-urlencoded") {
         Value::Object(form(&String::from_utf8_lossy(&call.raw)))
     } else if call.content_type.starts_with("multipart/form-data") {
-        Value::Object(multipart(&call.content_type, &call.raw))
+        let mut fields = multipart(&call.content_type, &call.raw);
+        // G6 files: the form's files kept, each given to the run as its field's value.
+        let kept = crate::run_files::uploads(
+            state,
+            &record.workspace,
+            &call.content_type,
+            &call.raw,
+            &mut fields,
+        )
+        .await;
+        if let Err(e) = kept {
+            return problem(StatusCode::UNPROCESSABLE_ENTITY, &e);
+        }
+        Value::Object(fields)
     } else {
         Value::String(String::from_utf8_lossy(&call.raw).into_owned())
     };
@@ -141,13 +158,23 @@ pub(crate) async fn deliver(state: &State, call: &Call, hook: &str) -> Answer {
     let deadline = Instant::now() + RESPOND_WAIT;
     let mut next = from;
     loop {
-        let topic = runs.clone();
-        let found = state
-            .with_client(|client| Box::pin(async move { tail(client, &topic, i64::MAX / 4, next).await }))
-            .await
-            .unwrap_or_default();
+        // Waits with every other reader of the node, in one request (Shared::fetch): answered the moment a run is
+        // kept, so the caller hears as soon as its run is done - not at the next look.
+        let found =
+            match tokio::time::timeout_at(deadline.into(), state.shared.fetch(&runs, &[(0, next)])).await {
+                Ok(Ok(fetched)) => fetched
+                    .into_iter()
+                    .filter(|f| f.partition == 0)
+                    .flat_map(|f| crate::history::records_from(f.batches, &mut next))
+                    .collect::<Vec<_>>(),
+                // The broker did not answer this once: looked at again, until the caller's time is up.
+                Ok(Err(_)) => {
+                    tokio::time::sleep(Duration::from_millis(150)).await;
+                    Vec::new()
+                }
+                Err(_) => Vec::new(),
+            };
         for r in found {
-            next = next.max(r.offset + 1);
             if r.key.as_deref() == Some(run.as_bytes()) {
                 let kept: Value = r
                     .value
@@ -160,7 +187,6 @@ pub(crate) async fn deliver(state: &State, call: &Call, hook: &str) -> Answer {
         if Instant::now() >= deadline {
             return answer_json(StatusCode::ACCEPTED, &json!({ "accepted": true, "run": run }));
         }
-        tokio::time::sleep(Duration::from_millis(150)).await;
     }
 }
 
@@ -171,6 +197,7 @@ fn answers(steps: &[Step]) -> bool {
         Kind::If { then, otherwise, .. } => answers(then) || answers(otherwise),
         Kind::ForEach { steps, .. } => answers(steps),
         Kind::Switch { cases, otherwise } => cases.iter().any(|c| answers(&c.steps)) || answers(otherwise),
+        Kind::Ai(ai) => ai.routes().any(answers), // G7 more AI steps: a category's steps
         _ => false,
     })
 }
@@ -232,6 +259,7 @@ fn query_value<'a>(query: &'a str, name: &str) -> Option<&'a str> {
 /// `a=1&b=x%20y` as a record of text.
 /// A multipart form's fields (`multipart/form-data`, as Jotform and forms with a file upload send them): each text
 /// field by its name - a name given more than once, a list - and a file by its file name only; its bytes are not kept.
+/// (A delivery's files are kept by `crate::run_files::uploads`, which gives each field its file.) // G6 files
 pub(crate) fn multipart(content_type: &str, raw: &[u8]) -> serde_json::Map<String, Value> {
     let mut out = serde_json::Map::new();
     let Some(boundary) = content_type
@@ -288,7 +316,8 @@ pub(crate) fn form(text: &str) -> serde_json::Map<String, Value> {
         .collect()
 }
 
-fn decode(text: &str) -> String {
+// forms-and-resume: also a form's answer's.
+pub(crate) fn decode(text: &str) -> String {
     let bytes = text.as_bytes();
     let mut out = Vec::with_capacity(bytes.len());
     let mut i = 0;

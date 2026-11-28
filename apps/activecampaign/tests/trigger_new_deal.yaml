@@ -1,0 +1,47 @@
+description: A deal added since the last poll starts a run
+trigger: new_deal
+credential:
+  account: shopexample
+  api_key: test-key
+seen:
+  items:
+  - - '7'
+    - ''
+exchanges:
+- sent:
+    method: GET
+    url: https://shopexample.api-us1.com/api/3/deals
+    query:
+      orders[cdate]: DESC
+      limit: '100'
+    headers:
+      api-token: test-key
+  answer:
+    status: 200
+    body:
+      deals:
+      - &id001
+        id: '8'
+        title: Wholesale order
+        value: '45678'
+        currency: usd
+        status: '0'
+        contact: '113'
+        group: '1'
+        stage: '2'
+        owner: '1'
+        cdate: '2026-11-27T10:05:00-06:00'
+      - id: '7'
+        title: Spring order
+        value: '45678'
+        currency: usd
+        status: '0'
+        contact: '113'
+        group: '1'
+        stage: '2'
+        owner: '1'
+        cdate: '2026-11-27T10:05:00-06:00'
+      meta:
+        total: '2'
+runs:
+- *id001

@@ -1,0 +1,15 @@
+description: Every page, by the Link header's next
+action: list_issues
+credential: { token: test-token-1 }
+input: { owner: example-shop, repo: website, state: all }
+exchanges:
+  - sent:
+      url: https://api.github.com/repos/example-shop/website/issues
+      query: { state: all, per_page: "100" }
+    answer:
+      headers: { Link: '<https://api.github.com/repositories/1/issues?state=all&per_page=100&page=2>; rel="next", <https://api.github.com/repositories/1/issues?state=all&per_page=100&page=2>; rel="last"' }
+      body: [{ number: 2 }]
+  - sent:
+      url: https://api.github.com/repositories/1/issues?state=all&per_page=100&page=2
+    answer: { body: [{ number: 1 }] }
+result: [{ number: 2 }, { number: 1 }]

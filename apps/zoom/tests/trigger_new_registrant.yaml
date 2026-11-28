@@ -1,0 +1,9 @@
+description: Someone registered since the last poll starts a run
+trigger: new_registrant
+credential: { access_token: zoom-test-token }
+input: { meeting_id: "85700000001" }
+seen: { cursor: null, items: [["reg-test-1", ""]] }
+exchanges:
+  - sent: { method: GET, url: https://api.zoom.us/v2/meetings/85700000001/registrants, query: { page_size: "300" } }
+    answer: { body: { page_size: 300, total_records: 2, registrants: [{ id: reg-test-1, email: ann@example.com, first_name: Ann, last_name: Lee, status: approved, create_time: "2026-11-27T10:00:00Z", join_url: "https://us02web.zoom.us/w/85700000001?tk=test1" }, { id: reg-test-2, email: kim@example.com, first_name: Kim, status: approved, create_time: "2026-11-27T11:00:00Z", join_url: "https://us02web.zoom.us/w/85700000001?tk=test2" }] } }
+runs: [{ id: reg-test-2, email: kim@example.com, first_name: Kim, status: approved, create_time: "2026-11-27T11:00:00Z", join_url: "https://us02web.zoom.us/w/85700000001?tk=test2" }]

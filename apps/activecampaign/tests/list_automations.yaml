@@ -1,0 +1,28 @@
+description: The account's automations
+action: list_automations
+credential:
+  account: shopexample
+  api_key: test-key
+exchanges:
+- sent:
+    method: GET
+    url: https://shopexample.api-us1.com/api/3/automations
+    query:
+      limit: '100'
+    headers:
+      api-token: test-key
+  answer:
+    status: 200
+    body:
+      automations:
+      - &id001
+        id: '4'
+        name: Welcome series
+        status: '1'
+        entered: '120'
+        exited: '80'
+        cdate: '2026-02-01T09:00:00-06:00'
+      meta:
+        total: '1'
+result:
+- *id001

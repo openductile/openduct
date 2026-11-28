@@ -1,0 +1,37 @@
+description: A WhatsApp template, its blanks filled in
+action: send_whatsapp_template
+credential:
+  api_key: abcd1234
+  api_secret: test-secret
+input:
+  to: '14155550100'
+  from: '14155550199'
+  template: order_shipped
+  parameters:
+  - A-100
+  - Tuesday
+  locale: en_US
+exchanges:
+- sent:
+    method: POST
+    url: https://api.nexmo.com/v1/messages
+    headers:
+      authorization: Basic YWJjZDEyMzQ6dGVzdC1zZWNyZXQ=
+    body:
+      channel: whatsapp
+      message_type: template
+      to: '14155550100'
+      from: '14155550199'
+      template:
+        name: order_shipped
+        parameters:
+        - A-100
+        - Tuesday
+      whatsapp:
+        policy: deterministic
+        locale: en_US
+  answer:
+    status: 202
+    body: &id001
+      message_uuid: aaaaaaaa-bbbb-4ccc-8ddd-0123456789ab
+result: *id001

@@ -1,0 +1,8 @@
+description: A paid invoice moved to another folder
+action: move
+credential: { access_token: sl.test-token }
+input: { from_path: /Invoices/INV-1042.pdf, to_path: /Invoices/Paid/INV-1042.pdf }
+exchanges:
+  - sent: { url: https://api.dropboxapi.com/2/files/move_v2, body: { from_path: /Invoices/INV-1042.pdf, to_path: /Invoices/Paid/INV-1042.pdf } }
+    answer: { body: { metadata: { ".tag": file, id: "id:a4ayc_80_OEAAAAAAAAAXw", name: INV-1042.pdf, path_display: /Invoices/Paid/INV-1042.pdf } } }
+result: { ".tag": file, id: "id:a4ayc_80_OEAAAAAAAAAXw", name: INV-1042.pdf, path_display: /Invoices/Paid/INV-1042.pdf }

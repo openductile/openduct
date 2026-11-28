@@ -1,0 +1,6 @@
+action: add_row
+credential: { project_url: "https://abcdefgh.supabase.co", api_key: sb_secret_test1 }
+input: { table: nothere, row: { name: Ann } }
+exchanges:
+  - answer: { status: 404, body: { code: "42P01", details: null, hint: null, message: 'relation "public.nothere" does not exist' } }
+error: 'Supabase answered 404: relation "public.nothere" does not exist'

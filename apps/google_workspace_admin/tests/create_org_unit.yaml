@@ -1,0 +1,7 @@
+action: create_org_unit
+credential: { access_token: ya29.test }
+input: { name: Leavers, description: Accounts of people who left }
+exchanges:
+  - sent: { method: POST, url: https://admin.googleapis.com/admin/directory/v1/customer/my_customer/orgunits, body: { name: Leavers, parentOrgUnitPath: /, description: Accounts of people who left } }
+    answer: { body: { orgUnitId: "id:03ph8a2z0002", name: Leavers, orgUnitPath: /Leavers, parentOrgUnitPath: /, description: Accounts of people who left } }
+result: { orgUnitId: "id:03ph8a2z0002", name: Leavers, orgUnitPath: /Leavers, parentOrgUnitPath: /, description: Accounts of people who left }

@@ -1,0 +1,15 @@
+description: A budget raised to 50 a day (in millionths)
+action: change_campaign_budgets
+credential: { access_token: ya29.test }
+input:
+  customer_id: "1234567890"
+  operations: [{ update: { resourceName: customers/1234567890/campaignBudgets/71, amountMicros: "50000000" }, updateMask: amount_micros }]
+  developer_token: devtok-test
+exchanges:
+  - sent:
+      method: POST
+      url: "https://googleads.googleapis.com/v26/customers/1234567890/campaignBudgets:mutate"
+      body:
+        operations: [{ update: { resourceName: customers/1234567890/campaignBudgets/71, amountMicros: "50000000" }, updateMask: amount_micros }]
+    answer: { status: 200, body: { results: [{ resourceName: customers/1234567890/campaignBudgets/71 }] } }
+result: { results: [{ resourceName: customers/1234567890/campaignBudgets/71 }] }

@@ -33,7 +33,8 @@ pub fn main() -> ExitCode {
                 engine(&script)
             });
             match ran {
-                Ok(answer) => json!({ "result": answer.result, "logs": answer.logs }),
+                // data tables: `state`, when the script was given one.
+                Ok(answer) => json!({ "result": answer.result, "logs": answer.logs, "state": answer.state }),
                 Err(failure) => json!({ "error": failure.error, "logs": failure.logs }),
             }
         }

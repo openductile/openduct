@@ -1,0 +1,9 @@
+description: Text found nowhere, and nothing to put in its place - Google leaves the count out when it is 0
+action: replace_text
+credential: { access_token: ya29.a0 }
+input: { document: 1AbCdEfGhIjKlMnOpQrStUvWxYz0123456789, find: DRAFT }
+exchanges:
+  - sent:
+      body: { requests: [{ replaceAllText: { containsText: { text: DRAFT }, replaceText: "" } }] }
+    answer: { body: { documentId: 1AbCdEfGhIjKlMnOpQrStUvWxYz0123456789, replies: [{ replaceAllText: {} }] } }
+result: { id: 1AbCdEfGhIjKlMnOpQrStUvWxYz0123456789, replaced: 0 }

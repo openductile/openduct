@@ -1,0 +1,11 @@
+description: A gym session added by hand, sent as a form
+action: create_activity
+credential: { access_token: st_test_1 }
+input: { name: Gym, sport_type: WeightTraining, start_date_local: "2026-11-27T18:00:00Z", elapsed_time: 3600, description: Legs day, trainer: true }
+exchanges:
+  - sent:
+      method: POST
+      url: https://www.strava.com/api/v3/activities
+      body: { name: Gym, sport_type: WeightTraining, start_date_local: "2026-11-27T18:00:00Z", elapsed_time: "3600", description: Legs day, trainer: "1" }
+    answer: { status: 201, body: { id: 99002, name: Gym, sport_type: WeightTraining, elapsed_time: 3600, trainer: true } }
+result: { id: 99002, name: Gym, sport_type: WeightTraining, elapsed_time: 3600, trainer: true }

@@ -1,0 +1,11 @@
+description: Posts in one community that hold the words, the newest first
+action: search_posts
+credential: { access_token: test-reddit-token }
+input: { q: trade show, subreddit: smallbusiness, sort: new }
+exchanges:
+  - sent:
+      method: GET
+      url: https://oauth.reddit.com/r/smallbusiness/search
+      query: { q: trade show, restrict_sr: "true", sort: new, type: link, limit: "100" }
+    answer: { body: { kind: Listing, data: { after: null, before: null, children: [{ kind: t3, data: { id: 1h2ab3d, name: t3_1h2ab3d, title: Our first trade show, author: example_shop, subreddit: smallbusiness, selftext: "", url: "https://www.reddit.com/r/smallbusiness/comments/1h2ab3d/", permalink: /r/smallbusiness/comments/1h2ab3d/, created_utc: 1764237600, score: 12, num_comments: 3, over_18: false } }] } } }
+result: [{ id: 1h2ab3d, name: t3_1h2ab3d, title: Our first trade show, author: example_shop, subreddit: smallbusiness, selftext: "", url: "https://www.reddit.com/r/smallbusiness/comments/1h2ab3d/", permalink: /r/smallbusiness/comments/1h2ab3d/, created_utc: 1764237600, score: 12, num_comments: 3, over_18: false }]

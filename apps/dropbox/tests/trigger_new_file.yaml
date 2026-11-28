@@ -1,0 +1,18 @@
+description: A file put in a folder since the poll before; folders start nothing
+trigger: new_file
+credential: { access_token: sl.test-token }
+input: { path: /Invoices }
+seen: { items: [["id:a4ayc_80_OEAAAAAAAAAXw", ""]] }
+exchanges:
+  - sent:
+      url: https://api.dropboxapi.com/2/files/list_folder
+      body: { path: /Invoices, recursive: false, limit: 2000 }
+    answer:
+      body:
+        entries:
+          - { ".tag": file, id: "id:a4ayc_80_OEAAAAAAAAAXw", name: INV-1042.pdf, rev: a1c10ce0dd78 }
+          - { ".tag": folder, id: "id:a4ayc_80_OEAAAAAAAAAYa", name: Paid }
+          - { ".tag": file, id: "id:a4ayc_80_OEAAAAAAAAAZf", name: INV-2001.pdf, rev: b1c10ce0dd01 }
+        cursor: c1
+        has_more: false
+runs: [{ ".tag": file, id: "id:a4ayc_80_OEAAAAAAAAAZf", name: INV-2001.pdf, rev: b1c10ce0dd01 }]

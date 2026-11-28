@@ -1,0 +1,133 @@
+description: "List my workspaces: what it sends, and an answer shaped as Clockify's API description says"
+action: list_workspaces
+credential: { api_key: test-key }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://api.clockify.me/api/v1/workspaces"
+      query: {}
+      headers: { x-api-key: test-key }
+    answer:
+      status: 200
+      body:
+        - cakeOrganizationId: "67d471fb56aa9668b7bfa295"
+          costRate: { amount: 10500, currency: USD }
+          currencies: [{ code: USD, id: "5b641568b07987035750505e", isDefault: true }]
+          featureSubscriptionType: STANDARD_2021
+          features:
+            ACTIVITY_MONITORING: ACTIVITY_MONITORING
+            ADD_TIME_FOR_OTHERS: ACTIVITY_MONITORING
+            ADMIN_PANEL: ACTIVITY_MONITORING
+            ALERTS: ACTIVITY_MONITORING
+            APPROVAL: ACTIVITY_MONITORING
+            ATTENDANCE_REPORT: ACTIVITY_MONITORING
+            AUDIT_LOG: ACTIVITY_MONITORING
+            AUTOMATIC_LOCK: ACTIVITY_MONITORING
+            BILLABLE_HOURS: ACTIVITY_MONITORING
+            BRANDED_REPORTS: ACTIVITY_MONITORING
+            BREAKS: ACTIVITY_MONITORING
+            BULK_EDIT: ACTIVITY_MONITORING
+          hourlyRate: { amount: 10500, currency: USD }
+          id: "64a687e29ae1f428e7ebe303"
+          imageUrl: example
+          memberships:
+            - costRate: { amount: 10500, currency: USD }
+              hourlyRate: { amount: 10500, currency: USD }
+              membershipStatus: PENDING
+              membershipType: WORKSPACE
+              targetId: "64c777ddd3fcab07cfbb210c"
+              userId: "5a0ab5acb07987125438b60f"
+          name: example
+          subdomain: { enabled: true, name: coolcompany }
+          workspaceSettings:
+            activeBillableHours: true
+            adminOnlyPages: PROJECT
+            approvalSettings: { approvalEnabled: true, approvalPeriod: WEEKLY, approvalRoles: [ADMIN] }
+            auditLogSettings:
+              auditEnabled: true
+              clientAuditing: true
+              clientStartedRecording: "2020-06-01T08:00:00Z"
+              expensesAuditing: true
+              expensesStartedRecording: "2020-06-01T08:00:00Z"
+              projectAuditing: true
+              projectStartedRecording: "2020-06-01T08:00:00Z"
+              tagAuditing: true
+              tagStartedRecording: "2020-06-01T08:00:00Z"
+              timeEntryAuditing: true
+              timeEntryStartedRecording: "2020-06-01T08:00:00Z"
+            automaticLock:
+              changeDay: MONDAY
+              dayOfMonth: 15
+              firstDay: MONDAY
+              olderThanPeriod: DAYS
+              olderThanValue: 5
+              type: WEEKLY
+            breakSettings:
+              breaksEnabled: true
+              defaultBreakEntities: { projectId: project_1, taskId: task_1 }
+            canManagerEditUsersTime: true
+            canManagerLaunchKiosk: true
+            canSeeTimeSheet: true
+            canSeeTracker: true
+            companyAddress: example
+            currencyFormat: CURRENCY_SPACE_VALUE
+result:
+  - cakeOrganizationId: "67d471fb56aa9668b7bfa295"
+    costRate: { amount: 10500, currency: USD }
+    currencies: [{ code: USD, id: "5b641568b07987035750505e", isDefault: true }]
+    featureSubscriptionType: STANDARD_2021
+    features:
+      ACTIVITY_MONITORING: ACTIVITY_MONITORING
+      ADD_TIME_FOR_OTHERS: ACTIVITY_MONITORING
+      ADMIN_PANEL: ACTIVITY_MONITORING
+      ALERTS: ACTIVITY_MONITORING
+      APPROVAL: ACTIVITY_MONITORING
+      ATTENDANCE_REPORT: ACTIVITY_MONITORING
+      AUDIT_LOG: ACTIVITY_MONITORING
+      AUTOMATIC_LOCK: ACTIVITY_MONITORING
+      BILLABLE_HOURS: ACTIVITY_MONITORING
+      BRANDED_REPORTS: ACTIVITY_MONITORING
+      BREAKS: ACTIVITY_MONITORING
+      BULK_EDIT: ACTIVITY_MONITORING
+    hourlyRate: { amount: 10500, currency: USD }
+    id: "64a687e29ae1f428e7ebe303"
+    imageUrl: example
+    memberships:
+      - costRate: { amount: 10500, currency: USD }
+        hourlyRate: { amount: 10500, currency: USD }
+        membershipStatus: PENDING
+        membershipType: WORKSPACE
+        targetId: "64c777ddd3fcab07cfbb210c"
+        userId: "5a0ab5acb07987125438b60f"
+    name: example
+    subdomain: { enabled: true, name: coolcompany }
+    workspaceSettings:
+      activeBillableHours: true
+      adminOnlyPages: PROJECT
+      approvalSettings: { approvalEnabled: true, approvalPeriod: WEEKLY, approvalRoles: [ADMIN] }
+      auditLogSettings:
+        auditEnabled: true
+        clientAuditing: true
+        clientStartedRecording: "2020-06-01T08:00:00Z"
+        expensesAuditing: true
+        expensesStartedRecording: "2020-06-01T08:00:00Z"
+        projectAuditing: true
+        projectStartedRecording: "2020-06-01T08:00:00Z"
+        tagAuditing: true
+        tagStartedRecording: "2020-06-01T08:00:00Z"
+        timeEntryAuditing: true
+        timeEntryStartedRecording: "2020-06-01T08:00:00Z"
+      automaticLock:
+        changeDay: MONDAY
+        dayOfMonth: 15
+        firstDay: MONDAY
+        olderThanPeriod: DAYS
+        olderThanValue: 5
+        type: WEEKLY
+      breakSettings: { breaksEnabled: true, defaultBreakEntities: { projectId: project_1, taskId: task_1 } }
+      canManagerEditUsersTime: true
+      canManagerLaunchKiosk: true
+      canSeeTimeSheet: true
+      canSeeTracker: true
+      companyAddress: example
+      currencyFormat: CURRENCY_SPACE_VALUE

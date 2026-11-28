@@ -1,0 +1,11 @@
+description: A list renamed
+action: rename_list
+credential: { token: SG.test-key }
+input: { list_id: 1b2c3d4e-5f6a-4b7c-8d9e-0f1a2b3c4d5e, name: Summer sale }
+exchanges:
+  - sent:
+      method: PATCH
+      url: https://api.sendgrid.com/v3/marketing/lists/1b2c3d4e-5f6a-4b7c-8d9e-0f1a2b3c4d5e
+      body: { name: Summer sale }
+    answer: { body: { id: 1b2c3d4e-5f6a-4b7c-8d9e-0f1a2b3c4d5e, name: Summer sale, contact_count: 0 } }
+result: { id: 1b2c3d4e-5f6a-4b7c-8d9e-0f1a2b3c4d5e, name: Summer sale, contact_count: 0 }

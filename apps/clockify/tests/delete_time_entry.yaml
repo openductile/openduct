@@ -1,0 +1,12 @@
+description: "Remove a time entry: what it sends, and an answer shaped as Clockify's API description says"
+action: delete_time_entry
+credential: { api_key: test-key }
+input: { workspace_id: "64a687e29ae1f428e7ebe303", time_entry_id: "64c777ddd3fcab07cfbb210c" }
+exchanges:
+  - sent:
+      method: DELETE
+      url: "https://api.clockify.me/api/v1/workspaces/64a687e29ae1f428e7ebe303/time-entries/64c777ddd3fcab07cfbb210c"
+      query: {}
+      headers: { x-api-key: test-key }
+    answer: { status: 204 }
+result: { deleted: true }

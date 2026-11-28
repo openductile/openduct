@@ -1,0 +1,224 @@
+# Copyright 2026 Ductile AI, Inc
+# SPDX-License-Identifier: Apache-2.0
+# Google Cloud Firestore: written by hand from Google's REST reference for Firestore (v1),
+# https://firebase.google.com/docs/firestore/reference/rest, and its discovery document
+# https://firestore.googleapis.com/$discovery/rest?version=v1 (revision 20261109, fetched 2026-11-27).
+app: google_firestore
+name: Google Cloud Firestore
+category: database
+description: Documents in a Google Cloud Firestore database, read, added, changed, queried and counted.
+docs: https://firebase.google.com/docs/firestore/reference/rest
+hosts: [firestore.googleapis.com]
+base_url: https://firestore.googleapis.com/v1
+sign_in:
+  - id: google_firestore
+    label: Sign in with Google
+    oauth2:
+      authorize: https://accounts.google.com/o/oauth2/v2/auth
+      token: https://oauth2.googleapis.com/token
+      scopes: [https://www.googleapis.com/auth/datastore]
+      extra: { access_type: offline, prompt: consent }
+    headers:
+      Authorization: "Bearer {{ credential.access_token }}"
+error: "status < 400 ? null : (has(value.error) ? value.error.message : null)"
+actions:
+  get_document:
+    label: Get a document
+    description: "One document of a collection, by its ID: its fields, with Firestore's kind for each."
+    method: GET
+    path: "/projects/{{ input.project_id }}/databases/{{ has(input.database) && input.database != null ? input.database : '(default)' }}/documents/{{ input.collection }}/{{ input.document_id }}"
+    inputs: &doc
+      - { name: project_id, label: "The Google Cloud project's ID", required: true }
+      - { name: collection, label: "The collection, such as orders (or orders/A-100/lines)", required: true }
+      - { name: document_id, label: "The document's ID", required: true }
+      - { name: database, label: "The database's ID ((default) by default)" }
+    output: &document { name: text, fields: record, createTime: text, updateTime: text }
+  list_documents:
+    label: List documents
+    description: "The documents of a collection, in the order of a field if asked for; every page."
+    method: GET
+    path: "/projects/{{ input.project_id }}/databases/{{ has(input.database) && input.database != null ? input.database : '(default)' }}/documents/{{ input.collection }}"
+    inputs:
+      - { name: project_id, label: "The Google Cloud project's ID", required: true }
+      - { name: collection, label: "The collection, such as orders", required: true }
+      - { name: order_by, label: "In the order of, such as total desc" }
+      - { name: database, label: "The database's ID ((default) by default)" }
+    query: { orderBy: "{{ input.order_by }}", pageSize: "300" }
+    items: "has(value.documents) ? value.documents : []"
+    next: "has(value.nextPageToken) && value.nextPageToken != '' ? {'pageToken': value.nextPageToken} : null"
+    output: *document
+  create_document:
+    label: Add a document
+    description: "A new document in a collection, with the ID given or one Firestore makes."
+    write: true
+    method: POST
+    path: "/projects/{{ input.project_id }}/databases/{{ has(input.database) && input.database != null ? input.database : '(default)' }}/documents/{{ input.collection }}"
+    inputs:
+      - { name: project_id, label: "The Google Cloud project's ID", required: true }
+      - { name: collection, label: "The collection, such as orders", required: true }
+      - name: fields
+        label: "Its fields, each with its kind"
+        required: true
+        description: >-
+          A record of each field and its value as Firestore writes it, such as {"customer": {"stringValue": "Pat"},
+          "total": {"doubleValue": 42.5}, "items": {"integerValue": "3"}, "paid": {"booleanValue": true}}.
+        kind: record
+      - { name: document_id, label: "Its ID (Firestore makes one if none is given)" }
+      - { name: database, label: "The database's ID ((default) by default)" }
+    query: { documentId: "{{ input.document_id }}" }
+    send: { fields: "{{ input.fields }}" }
+    output: *document
+  update_document:
+    label: Change a document
+    description: "Sets the fields given on a document that is there; its other fields stay as they are."
+    write: true
+    method: POST
+    path: "/projects/{{ input.project_id }}/databases/{{ has(input.database) && input.database != null ? input.database : '(default)' }}/documents:commit"
+    inputs:
+      - { name: project_id, label: "The Google Cloud project's ID", required: true }
+      - { name: collection, label: "The collection, such as orders", required: true }
+      - { name: document_id, label: "The document's ID", required: true }
+      - name: fields
+        label: "The fields to set, each with its kind"
+        required: true
+        description: "A record of each field and its value as Firestore writes it, such as {\"status\": {\"stringValue\": \"shipped\"}}."
+        kind: record
+      - { name: database, label: "The database's ID ((default) by default)" }
+    send:
+      writes:
+        - update:
+            name: "{{ 'projects/' + input.project_id + '/databases/' + (has(input.database) && input.database != null ? input.database : '(default)') + '/documents/' + input.collection + '/' + input.document_id }}"
+            fields: "{{ input.fields }}"
+          updateMask: { fieldPaths: "{{ input.fields.map(k, k) }}" }
+          currentDocument: { exists: true }
+    result: "{'updateTime': value.writeResults[0].updateTime, 'commitTime': value.commitTime}"
+    output: { updateTime: text, commitTime: text }
+  set_document:
+    label: Write a whole document
+    description: "Writes a document with exactly the fields given, adding it if it is not there and replacing it if it is."
+    write: true
+    method: PATCH
+    path: "/projects/{{ input.project_id }}/databases/{{ has(input.database) && input.database != null ? input.database : '(default)' }}/documents/{{ input.collection }}/{{ input.document_id }}"
+    inputs:
+      - { name: project_id, label: "The Google Cloud project's ID", required: true }
+      - { name: collection, label: "The collection, such as orders", required: true }
+      - { name: document_id, label: "The document's ID", required: true }
+      - name: fields
+        label: "All its fields, each with its kind"
+        required: true
+        description: "A record of each field and its value as Firestore writes it, such as {\"status\": {\"stringValue\": \"new\"}}."
+        kind: record
+      - { name: database, label: "The database's ID ((default) by default)" }
+    send: { fields: "{{ input.fields }}" }
+    output: *document
+  delete_document:
+    label: Delete a document
+    description: "Deletes a document; the documents of its own collections stay."
+    write: true
+    method: DELETE
+    path: "/projects/{{ input.project_id }}/databases/{{ has(input.database) && input.database != null ? input.database : '(default)' }}/documents/{{ input.collection }}/{{ input.document_id }}"
+    inputs: *doc
+    result: "{'deleted': true}"
+    output: { deleted: boolean }
+  find_documents:
+    label: Find documents
+    description: "The documents of a collection whose field compares to a value (equal by default), in an order, up to a number."
+    method: POST
+    path: "/projects/{{ input.project_id }}/databases/{{ has(input.database) && input.database != null ? input.database : '(default)' }}/documents:runQuery"
+    inputs: &query
+      - { name: project_id, label: "The Google Cloud project's ID", required: true }
+      - { name: collection, label: "The collection, such as orders", required: true }
+      - { name: field, label: "The field, such as status (or customer.city)", required: true }
+      - { name: value, label: "The value it is compared with", required: true }
+      - name: operator
+        label: "How: EQUAL (the default), NOT_EQUAL, LESS_THAN, LESS_THAN_OR_EQUAL, GREATER_THAN, GREATER_THAN_OR_EQUAL, ARRAY_CONTAINS"
+      - { name: value_kind, label: "The value's kind: string (the default), integer, double or boolean" }
+      - { name: order_by, label: "In the order of this field" }
+      - { name: descending, label: "Highest or newest first", kind: boolean }
+      - { name: limit, label: "How many at most", kind: number }
+      - { name: database, label: "The database's ID ((default) by default)" }
+    send:
+      structuredQuery:
+        from: [{ collectionId: "{{ input.collection }}" }]
+        where:
+          fieldFilter:
+            field: { fieldPath: "{{ input.field }}" }
+            op: "{{ has(input.operator) && input.operator != null ? input.operator : 'EQUAL' }}"
+            value: >-
+              {{ !has(input.value_kind) || input.value_kind == null || input.value_kind == 'string' ? {'stringValue': string(input.value)}
+                : (input.value_kind == 'integer' ? {'integerValue': string(input.value)}
+                : (input.value_kind == 'double' ? {'doubleValue': double(input.value)}
+                : {'booleanValue': string(input.value) == 'true'})) }}
+        orderBy: >-
+          {{ has(input.order_by) && input.order_by != null
+            ? [{'field': {'fieldPath': input.order_by}, 'direction': has(input.descending) && input.descending == true ? 'DESCENDING' : 'ASCENDING'}]
+            : null }}
+        limit: "{{ input.limit }}"
+    # Firestore answers a list: one entry for each document, and one with only the time when there is none.
+    result: "value.filter(r, has(r.document)).map(r, r.document)"
+    output: *document
+  count_documents:
+    label: Count documents
+    description: "How many documents of a collection there are, or how many whose field compares to a value."
+    method: POST
+    path: "/projects/{{ input.project_id }}/databases/{{ has(input.database) && input.database != null ? input.database : '(default)' }}/documents:runAggregationQuery"
+    inputs:
+      - { name: project_id, label: "The Google Cloud project's ID", required: true }
+      - { name: collection, label: "The collection, such as orders", required: true }
+      - { name: field, label: "Only those whose field, such as status ..." }
+      - { name: value, label: "... compares to this value" }
+      - { name: operator, label: "How: EQUAL (the default), NOT_EQUAL, LESS_THAN, GREATER_THAN ..." }
+      - { name: value_kind, label: "The value's kind: string (the default), integer, double or boolean" }
+      - { name: database, label: "The database's ID ((default) by default)" }
+    send:
+      structuredAggregationQuery:
+        structuredQuery:
+          from: [{ collectionId: "{{ input.collection }}" }]
+          where: >-
+            {{ has(input.field) && input.field != null && has(input.value) && input.value != null
+              ? {'fieldFilter': {'field': {'fieldPath': input.field},
+                  'op': has(input.operator) && input.operator != null ? input.operator : 'EQUAL',
+                  'value': !has(input.value_kind) || input.value_kind == null || input.value_kind == 'string' ? {'stringValue': string(input.value)}
+                    : (input.value_kind == 'integer' ? {'integerValue': string(input.value)}
+                    : (input.value_kind == 'double' ? {'doubleValue': double(input.value)}
+                    : {'booleanValue': string(input.value) == 'true'})) } }
+              : null }}
+        # An empty count ({}) would be left out of the body: the largest up_to Firestore takes counts them all.
+        aggregations: [{ alias: count, count: { upTo: "9223372036854775807" } }]
+    result: "{'count': int(value[0].result.aggregateFields['count'].integerValue), 'readTime': value[0].readTime}"
+    output: { count: number, readTime: text }
+  list_collections:
+    label: List collections
+    description: "The collections at the top of the database, or under a document."
+    method: POST
+    path: "/projects/{{ input.project_id }}/databases/{{ has(input.database) && input.database != null ? input.database : '(default)' }}/documents{{ has(input.document) && input.document != null ? '/' + input.document : '' }}:listCollectionIds"
+    inputs:
+      - { name: project_id, label: "The Google Cloud project's ID", required: true }
+      - { name: document, label: "Under this document, such as orders/A-100 (the top by default)" }
+      - { name: database, label: "The database's ID ((default) by default)" }
+    send: { pageSize: 300 }
+    page_in: body
+    items: "has(value.collectionIds) ? value.collectionIds.map(c, {'id': c}) : []"
+    next: "has(value.nextPageToken) && value.nextPageToken != '' ? {'pageToken': value.nextPageToken} : null"
+    output: { id: text }
+triggers:
+  new_document:
+    label: A new document
+    description: "Each document added to a collection, asked for every few minutes (the first 5,000 of the collection)."
+    inputs: &watch
+      - { name: project_id, label: "The Google Cloud project's ID", required: true }
+      - { name: collection, label: "The collection, such as orders", required: true }
+      - { name: database, label: "The database's ID ((default) by default)" }
+    poll:
+      action: list_documents
+      input: { project_id: "{{ input.project_id }}", collection: "{{ input.collection }}", database: "{{ input.database }}" }
+      id: item.name
+  changed_document:
+    label: A document added or changed
+    description: "Each document added to a collection or changed, asked for every few minutes (the first 5,000 of the collection)."
+    inputs: *watch
+    poll:
+      action: list_documents
+      input: { project_id: "{{ input.project_id }}", collection: "{{ input.collection }}", database: "{{ input.database }}" }
+      id: item.name
+      version: item.updateTime

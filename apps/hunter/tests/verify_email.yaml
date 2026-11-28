@@ -1,0 +1,14 @@
+description: An address that mail will reach
+action: verify_email
+credential: { api_key: hunter-test-key }
+input: { email: ann.example@example.com }
+exchanges:
+  - sent:
+      method: GET
+      url: https://api.hunter.io/v2/email-verifier
+      query: { email: ann.example@example.com }
+    answer:
+      body:
+        data: { status: valid, score: 100, email: ann.example@example.com, regexp: true, gibberish: false, disposable: false, webmail: false, mx_records: true, smtp_server: true, smtp_check: true, accept_all: false, block: false, sources: [] }
+        meta: { params: { email: ann.example@example.com } }
+result: { status: valid, score: 100, email: ann.example@example.com, regexp: true, gibberish: false, disposable: false, webmail: false, mx_records: true, smtp_server: true, smtp_check: true, accept_all: false, block: false, sources: [] }

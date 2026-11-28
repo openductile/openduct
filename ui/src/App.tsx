@@ -5,6 +5,8 @@ import { useEffect, useState, type FormEvent } from "react";
 import { api, setWorkspace, type Session } from "./api";
 import { Credentials } from "./Credentials";
 import { Files } from "./Files";
+import { Tables } from "./Tables"; // data tables
+import { Apps } from "./Apps"; // app generator: the workspace's own apps
 import { Members } from "./Members";
 import { Sidebar, useFolded, useNarrow } from "./Sidebar";
 import { Editor } from "./Editor";
@@ -158,7 +160,7 @@ function SignIn(props: { onDone: (s: Session) => void }) {
   );
 }
 
-type Page = "dashboard" | "overview" | "workflows" | "pipelines" | "templates" | "runs" | "logs" | "credentials" | "files" | "members" | "settings";
+type Page = "dashboard" | "overview" | "workflows" | "pipelines" | "templates" | "runs" | "logs" | "credentials" | "files" | "tables" | "members" | "settings" | "apps"; // app generator: apps
 
 const PAGE_TITLES: Record<Page, string> = {
   dashboard: "Dashboard",
@@ -170,6 +172,8 @@ const PAGE_TITLES: Record<Page, string> = {
   logs: "Logs",
   credentials: "Credentials",
   files: "Files",
+  tables: "Tables", // data tables
+  apps: "Apps", // app generator
   members: "Members",
   settings: "Settings",
 };
@@ -182,7 +186,7 @@ function routeOf(address: string): { page: Page; id: string | null } {
   if (workflow) return { page: "workflows", id: workflow[1] ?? null };
   const page = path.split("/")[1] as Page;
   // The dashboard is home: where the studio opens, and where an address it does not know leads.
-  return { page: ["overview", "workflows", "pipelines", "templates", "runs", "logs", "credentials", "files", "members", "settings"].includes(page) ? page : "dashboard", id: null };
+  return { page: ["overview", "workflows", "pipelines", "templates", "runs", "logs", "credentials", "files", "tables", "members", "settings", "apps"].includes(page) ? page : "dashboard", id: null };
 }
 
 /** The workspace last shown in this browser, if the user still has it. */
@@ -312,6 +316,10 @@ function Studio(props: { session: Session; onSignedOut: () => void }) {
         <Credentials key={workspace} canEdit={canEdit} hash={location.hash} />
       ) : route.page === "files" ? (
         <Files key={workspace} canEdit={canEdit} />
+      ) : route.page === "tables" ? ( // data tables
+        <Tables key={workspace} canEdit={canEdit} />
+      ) : route.page === "apps" ? ( // app generator
+        <Apps key={workspace} canEdit={canEdit} />
       ) : route.page === "members" ? (
         <Members key={workspace} workspace={workspace} me={session.account.id} />
       ) : route.page === "pipelines" ? (

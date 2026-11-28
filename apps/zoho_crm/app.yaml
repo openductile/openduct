@@ -1,0 +1,312 @@
+# Copyright 2026 Ductile AI, Inc
+# SPDX-License-Identifier: Apache-2.0
+app: zoho_crm
+name: Zoho CRM
+category: crm
+description: Leads, contacts, accounts, deals and every other module of Zoho CRM - found, added, changed, converted and noted.
+docs: https://www.zoho.com/crm/developer/docs/api/v8/
+hosts:
+  - www.zohoapis.com
+  - www.zohoapis.eu
+  - www.zohoapis.in
+  - www.zohoapis.com.au
+  - www.zohoapis.jp
+  - www.zohoapis.ca
+  - www.zohoapis.sa
+  - www.zohoapis.com.cn
+base_url: https://www.zohoapis.com/crm/v8
+# One sign-in for each of Zoho's data centres: an account is held in one, and its tokens are asked for there.
+sign_in:
+  - id: zoho_crm
+    label: Sign in with Zoho (United States, zoho.com)
+    oauth2:
+      authorize: https://accounts.zoho.com/oauth/v2/auth
+      token: https://accounts.zoho.com/oauth/v2/token
+      scopes: ["ZohoCRM.modules.ALL,ZohoCRM.coql.READ,ZohoCRM.settings.fields.READ"]
+      extra: { access_type: offline, prompt: consent }
+    headers: { Authorization: "Zoho-oauthtoken {{ credential.access_token }}" }
+  - id: zoho_crm_eu
+    label: Sign in with Zoho (Europe, zoho.eu)
+    base_url: https://www.zohoapis.eu/crm/v8
+    oauth2:
+      authorize: https://accounts.zoho.com/oauth/v2/auth
+      token: https://accounts.zoho.eu/oauth/v2/token
+      scopes: ["ZohoCRM.modules.ALL,ZohoCRM.coql.READ,ZohoCRM.settings.fields.READ"]
+      extra: { access_type: offline, prompt: consent }
+    headers: { Authorization: "Zoho-oauthtoken {{ credential.access_token }}" }
+  - id: zoho_crm_in
+    label: Sign in with Zoho (India, zoho.in)
+    base_url: https://www.zohoapis.in/crm/v8
+    oauth2:
+      authorize: https://accounts.zoho.com/oauth/v2/auth
+      token: https://accounts.zoho.in/oauth/v2/token
+      scopes: ["ZohoCRM.modules.ALL,ZohoCRM.coql.READ,ZohoCRM.settings.fields.READ"]
+      extra: { access_type: offline, prompt: consent }
+    headers: { Authorization: "Zoho-oauthtoken {{ credential.access_token }}" }
+  - id: zoho_crm_au
+    label: Sign in with Zoho (Australia, zoho.com.au)
+    base_url: https://www.zohoapis.com.au/crm/v8
+    oauth2:
+      authorize: https://accounts.zoho.com/oauth/v2/auth
+      token: https://accounts.zoho.com.au/oauth/v2/token
+      scopes: ["ZohoCRM.modules.ALL,ZohoCRM.coql.READ,ZohoCRM.settings.fields.READ"]
+      extra: { access_type: offline, prompt: consent }
+    headers: { Authorization: "Zoho-oauthtoken {{ credential.access_token }}" }
+  - id: zoho_crm_jp
+    label: Sign in with Zoho (Japan, zoho.jp)
+    base_url: https://www.zohoapis.jp/crm/v8
+    oauth2:
+      authorize: https://accounts.zoho.com/oauth/v2/auth
+      token: https://accounts.zoho.jp/oauth/v2/token
+      scopes: ["ZohoCRM.modules.ALL,ZohoCRM.coql.READ,ZohoCRM.settings.fields.READ"]
+      extra: { access_type: offline, prompt: consent }
+    headers: { Authorization: "Zoho-oauthtoken {{ credential.access_token }}" }
+  - id: zoho_crm_ca
+    label: Sign in with Zoho (Canada, zohocloud.ca)
+    base_url: https://www.zohoapis.ca/crm/v8
+    oauth2:
+      authorize: https://accounts.zoho.com/oauth/v2/auth
+      token: https://accounts.zohocloud.ca/oauth/v2/token
+      scopes: ["ZohoCRM.modules.ALL,ZohoCRM.coql.READ,ZohoCRM.settings.fields.READ"]
+      extra: { access_type: offline, prompt: consent }
+    headers: { Authorization: "Zoho-oauthtoken {{ credential.access_token }}" }
+  - id: zoho_crm_sa
+    label: Sign in with Zoho (Saudi Arabia, zoho.sa)
+    base_url: https://www.zohoapis.sa/crm/v8
+    oauth2:
+      authorize: https://accounts.zoho.com/oauth/v2/auth
+      token: https://accounts.zoho.sa/oauth/v2/token
+      scopes: ["ZohoCRM.modules.ALL,ZohoCRM.coql.READ,ZohoCRM.settings.fields.READ"]
+      extra: { access_type: offline, prompt: consent }
+    headers: { Authorization: "Zoho-oauthtoken {{ credential.access_token }}" }
+  - id: zoho_crm_cn
+    label: Sign in with Zoho (China, zoho.com.cn)
+    base_url: https://www.zohoapis.com.cn/crm/v8
+    oauth2:
+      authorize: https://accounts.zoho.com.cn/oauth/v2/auth
+      token: https://accounts.zoho.com.cn/oauth/v2/token
+      scopes: ["ZohoCRM.modules.ALL,ZohoCRM.coql.READ,ZohoCRM.settings.fields.READ"]
+      extra: { access_type: offline, prompt: consent }
+    headers: { Authorization: "Zoho-oauthtoken {{ credential.access_token }}" }
+# A refusal comes as {code, message} - or, for a record written, in its place in data (with 200, 201 or 207).
+error: >-
+  has(value.data) && type(value.data) == list && size(value.data) > 0 && type(value.data[0]) == map
+  && has(value.data[0].status) && value.data[0].status == 'error'
+  ? value.data[0].code + ': ' + value.data[0].message
+  : (has(value.code) && has(value.message) ? value.code + ': ' + value.message : null)
+default_action: create_record
+actions:
+  list_records:
+    label: List records
+    description: >-
+      The records of a module - Leads, Contacts, Accounts, Deals, Tasks or one of your own - newest first, with the
+      fields asked for; every page, up to 2,000.
+    method: GET
+    path: "/{{ input.module }}"
+    inputs:
+      - { name: module, label: "Which module, by its API name: Leads, Contacts, Accounts, Deals, Tasks...", required: true }
+      - { name: fields, label: "Which fields, by their API names, separated by commas: such as Last_Name, Email, Company", required: true }
+      - { name: sort_by, label: "Newest first by Created_Time or Modified_Time (Created_Time when empty), or id" }
+      - { name: oldest_first, label: Oldest first instead, kind: boolean }
+      - { name: view_id, label: "Only those in this list view (its id)" }
+    query:
+      fields: "{{ input.fields.replace(' ', '') }}"
+      sort_by: "{{ has(input.sort_by) && input.sort_by != null ? input.sort_by : 'Created_Time' }}"
+      sort_order: "{{ has(input.oldest_first) && input.oldest_first == true ? 'asc' : 'desc' }}"
+      cvid: "{{ input.view_id }}"
+      per_page: "200"
+    items: value.data
+    next: "value.info.more_records == true ? {'page': string(int(value.info.page) + 1)} : null"
+    output: { id: text, Created_Time: text, Modified_Time: text, Owner: record }
+  get_record:
+    label: Get a record
+    description: One record of a module, by its id, with every field.
+    method: GET
+    path: "/{{ input.module }}/{{ input.id }}"
+    inputs:
+      - { name: module, label: "Which module, by its API name: Leads, Contacts, Accounts, Deals...", required: true }
+      - { name: id, label: "The record's id", required: true }
+    result: value.data[0]
+    output: { id: text, Owner: record, Created_Time: text, Modified_Time: text, Created_By: record, Modified_By: record }
+  search_records:
+    label: Find records
+    description: >-
+      Records of a module with an email address, a phone number, a word anywhere in them, or that meet criteria such as
+      ((Lead_Source:equals:Web)and(City:equals:Austin)); every page, up to 2,000.
+    method: GET
+    path: "/{{ input.module }}/search"
+    inputs:
+      - { name: module, label: "Which module, by its API name", required: true }
+      - { name: email, label: "With this email address" }
+      - { name: phone, label: "Or with this phone number" }
+      - { name: word, label: "Or with this word anywhere (two letters at least)" }
+      - { name: criteria, label: "Or meeting this, such as ((Last_Name:starts_with:Lee)and(Lead_Source:equals:Web))" }
+      - { name: fields, label: "Which fields, separated by commas (every field when empty)" }
+    query:
+      email: "{{ input.email }}"
+      phone: "{{ input.phone }}"
+      word: "{{ input.word }}"
+      criteria: "{{ input.criteria }}"
+      fields: "{{ input.fields.replace(' ', '') }}"
+      per_page: "200"
+    items: value.data
+    next: "value.info.more_records == true ? {'page': string(int(value.info.page) + 1)} : null"
+    output: { id: text, Created_Time: text, Modified_Time: text, Owner: record }
+  query_records:
+    label: Ask with a query
+    description: >-
+      Records from one module or several, as a COQL query asks for them: such as select Last_Name, Email from
+      Contacts where Lead_Source = 'Web' order by Created_Time desc limit 200.
+    method: POST
+    path: /coql
+    inputs:
+      - { name: query, label: "The COQL query: select ... from ... where ... limit ...", required: true }
+    send: { select_query: "{{ input.query }}" }
+    items: value.data
+    output: { id: text }
+  create_record:
+    label: Add a record
+    description: A new record in a module, from its fields; gives its id and when it was made.
+    write: true
+    method: POST
+    path: "/{{ input.module }}"
+    inputs:
+      - { name: module, label: "Which module, by its API name: Leads, Contacts, Accounts, Deals...", required: true }
+      - name: record
+        label: "Its fields by their API names (as JSON)"
+        description: "such as {\"Last_Name\": \"Lee\", \"Email\": \"ann@example.com\", \"Company\": \"Example Ltd\"}"
+        required: true
+        kind: record
+    send: { data: "{{ [input.record] }}" }
+    result: value.data[0].details
+    output: { id: text, Created_Time: text, Modified_Time: text, Created_By: record, Modified_By: record }
+  update_record:
+    label: Change a record
+    description: The fields given changed on one record; the others stay as they are.
+    write: true
+    method: PUT
+    path: "/{{ input.module }}/{{ input.id }}"
+    inputs:
+      - { name: module, label: "Which module, by its API name", required: true }
+      - { name: id, label: "The record's id", required: true }
+      - { name: record, label: "The fields to change, by their API names (as JSON)", required: true, kind: record }
+    send: { data: "{{ [input.record] }}" }
+    result: value.data[0].details
+    output: { id: text, Modified_Time: text, Modified_By: record }
+  upsert_record:
+    label: Add or change a record
+    description: >-
+      A record changed when one with the same email (or another unique field) is there already, added when not; says
+      which it did.
+    write: true
+    method: POST
+    path: "/{{ input.module }}/upsert"
+    inputs:
+      - { name: module, label: "Which module, by its API name", required: true }
+      - { name: record, label: "Its fields by their API names (as JSON)", required: true, kind: record }
+      - { name: match_on, label: "Matched on these fields, separated by commas (the module's own duplicate check when empty)", description: "such as Email" }
+    send:
+      data: "{{ [input.record] }}"
+      duplicate_check_fields: "{{ input.match_on.split(',').map(f, f.trim()) }}"
+    result: "{'action': value.data[0].action, 'id': value.data[0].details.id, 'details': value.data[0].details}"
+    output: { action: text, id: text, details: record }
+  delete_record:
+    label: Delete a record
+    description: One record moved to the recycle bin, by its id.
+    write: true
+    method: DELETE
+    path: "/{{ input.module }}/{{ input.id }}"
+    inputs:
+      - { name: module, label: "Which module, by its API name", required: true }
+      - { name: id, label: "The record's id", required: true }
+    result: value.data[0].details
+    output: { id: text }
+  convert_lead:
+    label: Convert a lead
+    description: >-
+      A lead made into a contact and an account - and a deal, when a deal's name is given; gives the new records'
+      ids.
+    write: true
+    method: POST
+    path: "/Leads/{{ input.lead_id }}/actions/convert"
+    inputs:
+      - { name: lead_id, label: "The lead's id", required: true }
+      - { name: deal_name, label: "Make a deal with this name too" }
+      - { name: deal_stage, label: "The deal's stage, such as Qualification" }
+      - { name: deal_closing_date, label: "The deal's closing date (2026-12-31)" }
+      - { name: deal_amount, label: "The deal's amount", kind: number }
+      - { name: account_id, label: "Add to this account (its id) rather than make one" }
+      - { name: notify_owner, label: "Tell the lead's owner by email", kind: boolean }
+    send:
+      data:
+        - Deals:
+            Deal_Name: "{{ input.deal_name }}"
+            Stage: "{{ input.deal_stage }}"
+            Closing_Date: "{{ input.deal_closing_date }}"
+            Amount: "{{ input.deal_amount }}"
+          Accounts: { id: "{{ input.account_id }}" }
+          notify_lead_owner: "{{ input.notify_owner }}"
+    result: value.data[0].details
+    output: { Contacts: record, Accounts: record, Deals: record }
+  add_note:
+    label: Add a note to a record
+    description: A note on a lead, contact, account, deal or any record, with a title and text.
+    write: true
+    method: POST
+    path: /Notes
+    inputs:
+      - { name: module, label: "The record's module, by its API name: Leads, Contacts, Deals...", required: true }
+      - { name: id, label: "The record's id", required: true }
+      - { name: text, label: "The note", required: true }
+      - { name: title, label: "Its title" }
+    send:
+      data:
+        - Note_Title: "{{ input.title }}"
+          Note_Content: "{{ input.text }}"
+          Parent_Id: { module: { api_name: "{{ input.module }}" }, id: "{{ input.id }}" }
+    result: value.data[0].details
+    output: { id: text, Created_Time: text, Modified_Time: text, Created_By: record }
+  list_fields:
+    label: List a module's fields
+    description: Each field of a module - the API name the other actions take, the name shown, and its kind - your own fields too.
+    method: GET
+    path: /settings/fields
+    inputs:
+      - { name: module, label: "Which module, by its API name", required: true }
+    query: { module: "{{ input.module }}" }
+    items: "value.fields.map(f, {'api_name': f.api_name, 'label': f.field_label, 'kind': f.data_type, 'custom': f.custom_field, 'read_only': f.read_only})"
+    output: { api_name: text, label: text, kind: text, custom: boolean, read_only: boolean }
+triggers:
+  new_record:
+    label: A new record
+    description: >-
+      Each record added to a module - a new lead, contact or deal - asked for every few minutes, and read in full.
+    inputs:
+      - { name: module, label: "Which module, by its API name: Leads, Contacts, Accounts, Deals...", required: true }
+    poll:
+      method: GET
+      path: "/{{ input.module }}"
+      query: { fields: Created_Time, sort_by: Created_Time, sort_order: desc, per_page: "200" }
+      items: value.data
+      next: "value.info.more_records == true ? {'page': string(int(value.info.page) + 1)} : null"
+      newest_first: true
+      id: item.id
+      each: { action: get_record, input: { module: "{{ input.module }}", id: "{{ item.id }}" } }
+      every: 5m
+  changed_record:
+    label: A record added or changed
+    description: >-
+      Each record added to a module or changed in it, asked for every few minutes, and read in full.
+    inputs:
+      - { name: module, label: "Which module, by its API name: Leads, Contacts, Accounts, Deals...", required: true }
+    poll:
+      method: GET
+      path: "/{{ input.module }}"
+      query: { fields: Modified_Time, sort_by: Modified_Time, sort_order: desc, per_page: "200" }
+      items: value.data
+      next: "value.info.more_records == true ? {'page': string(int(value.info.page) + 1)} : null"
+      newest_first: true
+      id: item.id
+      version: item.Modified_Time
+      each: { action: get_record, input: { module: "{{ input.module }}", id: "{{ item.id }}" } }
+      every: 5m

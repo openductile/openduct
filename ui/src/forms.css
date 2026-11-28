@@ -1,0 +1,27 @@
+/* Copyright 2026 Ductile AI, Inc */
+/* SPDX-License-Identifier: Apache-2.0 */
+
+/* Forms: the fields list, the preview of a form's page, and the runs that wait. */
+.form-builder { display: grid; gap: 0.6rem; }
+.form-fields { display: grid; gap: 0.5rem; }
+.form-field { display: grid; gap: 0.35rem; padding: 0.5rem; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); }
+.ff-row { display: grid; grid-template-columns: 1.4fr 1fr 0.9fr auto auto; gap: 0.4rem; align-items: center; }
+.ff-row.ff-more { grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr)); }
+.ff-row .tools { display: flex; gap: 0.2rem; }
+.ff-line { display: grid; gap: 0.25rem; font-weight: 400; }
+.ff-line > span { color: var(--muted); font-size: var(--fs-sm); }
+.ff-line textarea { min-height: 3.5rem; }
+.ff-pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr)); gap: 0.5rem; align-items: end; }
+.form-preview { border: 1px dashed var(--line); border-radius: 10px; padding: 0.8rem 1rem; display: grid; gap: 0.55rem; background: var(--panel); }
+.form-preview h3 { margin: 0; font-size: 1.05rem; }
+.fp-field { display: grid; gap: 0.2rem; }
+.fp-label { font-weight: 600; font-size: var(--fs-md); }
+.fp-req { color: var(--danger); }
+.fp-actions { display: flex; gap: 0.5rem; }
+.fp-actions .fp-reject { background: transparent; color: var(--danger); border: 1px solid var(--danger); }
+.waiting-runs { display: grid; gap: 0.4rem; margin: 0 0 1rem; }
+.waiting-runs h3 { margin: 0; font-size: var(--fs-md); color: var(--muted); font-weight: 400; }
+.status.waiting { background: #fef0c7; color: #93370d; }
+@media (max-width: 40rem) {
+  .ff-row { grid-template-columns: 1fr 1fr; }
+}

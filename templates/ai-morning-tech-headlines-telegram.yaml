@@ -1,0 +1,60 @@
+name: Morning tech headlines in your Telegram channel
+description: >-
+  Every morning at 7:00 (Berlin time), read the ten top stories on Hacker News through its public API, have a model
+  sum up what the tech world is talking about in a few lines, and post the note with the links to your Telegram
+  channel - for a team that wants the news without scrolling. Add your bot to the channel as an admin. Needs: bot
+  (telegram), model (ai).
+category: AI
+trigger:
+  schedule: { every: day, at: "07:00", timezone: Europe/Berlin }
+# What a test runs on: an event as this trigger gives it.
+sample:
+  scheduled_at: '2026-11-27T06:00:00Z'
+steps:
+  - name: top
+    http:
+      url: https://hacker-news.firebaseio.com/v0/topstories.json
+      sample: [46100001, 46100002, 46100003]
+    retry: { attempts: 3, wait: 30s }
+  - name: ten
+    list:
+      items: steps.top.body
+      limit: 10
+  - name: stories
+    for_each:
+      items: steps.ten
+      steps:
+        - name: story
+          http:
+            url: "https://hacker-news.firebaseio.com/v0/item/{{ item }}.json"
+            sample:
+              id: 46100001
+              type: story
+              title: A database that fits in a single file, ten years on
+              url: https://blog.example.com/single-file-database
+              score: 412
+              descendants: 187
+          retry: { attempts: 3, wait: 10s }
+          on_error: continue
+  # Stories with a title only (a story that failed to load is left out); "Ask HN" posts link to their discussion.
+  - name: lines
+    set:
+      list: >-
+        steps.stories.filter(s, has(s.story.body) && has(s.story.body.title)).map(s,
+          s.story.body.title + ' (' + string(s.story.body.score) + ' points) ' +
+          (has(s.story.body.url) ? s.story.body.url : 'https://news.ycombinator.com/item?id=' + string(s.story.body.id)))
+  - where: size(steps.lines.list) > 0
+  - name: note
+    ai:
+      credential: model
+      system: >-
+        You write a short morning note for a busy product team: in three sentences at most, what the tech world is
+        talking about today, judged from these headlines. No hype, no emoji.
+      prompt: "{{ steps.lines.list.join('\\n') }}"
+      max_tokens: 250
+  - name: post
+    telegram:
+      credential: bot
+      chat_id: "@your_team_channel"
+      text: "{{ steps.note.text }}\n\n{{ steps.lines.list.join('\\n') }}"
+    retry: { attempts: 3, wait: 10s }

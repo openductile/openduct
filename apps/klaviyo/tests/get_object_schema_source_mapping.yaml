@@ -1,0 +1,29 @@
+# Made by `openduct app from-openapi`: Get Source Mapping for Object Schema.
+description: "Get Source Mapping for Object Schema, made from the API description's schemas"
+action: get_object_schema_source_mapping
+credential: { api_key: test-key }
+input: { id: "01K61DKJ7EKJ0ES9VE456XF5JG" }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://a.klaviyo.com/api/object-schemas/01K61DKJ7EKJ0ES9VE456XF5JG/source-mapping"
+      query: {}
+      headers: { authorization: test-key, revision: "2026-10-15" }
+    answer:
+      status: 200
+      body:
+        data:
+          type: source-mapping
+          id: "01K5HQC66PGHV35SYJC5ZV3DZA"
+          attributes: { property_mappings: [null], relationship_mappings: [{}] }
+          links: { self: "https://example.com/1" }
+        links: { self: "https://example.com/1" }
+        meta: { agent_hints: { next_steps: [example] } }
+result:
+  data:
+    type: source-mapping
+    id: "01K5HQC66PGHV35SYJC5ZV3DZA"
+    attributes: { property_mappings: [null], relationship_mappings: [{}] }
+    links: { self: "https://example.com/1" }
+  links: { self: "https://example.com/1" }
+  meta: { agent_hints: { next_steps: [example] } }

@@ -1,0 +1,14 @@
+description: A run started, not waited for
+action: run_actor
+credential: { api_token: apify_api_test1 }
+input: { actor: apify/web-scraper, input: { startUrls: [{ url: "https://example.com" }] }, max_total_charge_usd: 1.5 }
+exchanges:
+  - sent:
+      method: POST
+      url: https://api.apify.com/v2/actors/apify~web-scraper/runs
+      query: { maxTotalChargeUsd: "1.5" }
+      body: { startUrls: [{ url: "https://example.com" }] }
+    answer:
+      status: 201
+      body: { data: { id: HG7ML7M8z78YcAPEB, status: READY, defaultDatasetId: wmKPijuyDnPZAPRMk, defaultKeyValueStoreId: eJNzqsbPiopwJcgGQ } }
+result: { id: HG7ML7M8z78YcAPEB, status: READY, defaultDatasetId: wmKPijuyDnPZAPRMk, defaultKeyValueStoreId: eJNzqsbPiopwJcgGQ }

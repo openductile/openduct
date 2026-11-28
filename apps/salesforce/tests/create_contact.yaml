@@ -1,0 +1,12 @@
+description: "A contact under an account"
+action: create_contact
+credential: { access_token: "00D000000000001!AQ.test", instance: examplecorp.my.salesforce.com }
+input: { last_name: Okafor, first_name: Bo, email: bo@example.com, account_id: 0015e00000AbCdEAAV }
+exchanges:
+  - sent:
+      method: POST
+      url: https://examplecorp.my.salesforce.com/services/data/v67.0/sobjects/Contact/
+      headers: { authorization: Bearer 00D000000000001!AQ.test }
+      body: { LastName: Okafor, FirstName: Bo, Email: bo@example.com, AccountId: 0015e00000AbCdEAAV }
+    answer: { status: 201, body: { id: 0035e00000XyZaBAAV, success: true, errors: [] } }
+result: { id: 0035e00000XyZaBAAV, success: true, errors: [] }

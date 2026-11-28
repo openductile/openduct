@@ -1,0 +1,13 @@
+description: 'BambooHR refuses: the step fails in the words of its error header'
+action: get_employee
+credential:
+  company_domain: acme
+  api_key: test-key
+input:
+  employee_id: '999'
+exchanges:
+- answer:
+    status: 404
+    headers:
+      X-BambooHR-Error-Message: Employee not found
+error: 'BambooHR answered 404: Employee not found'

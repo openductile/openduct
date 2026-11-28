@@ -259,6 +259,13 @@ const CASES: &[Case] = &[
         status: "done",
         says: "\"orders\"",
     },
+    // MCP: a tool's call for an item not in the price list answers with why.
+    Case {
+        template: "mcp-price-list-tool",
+        event: r#"{"sku":"NOPE","qty":1}"#,
+        status: "failed",
+        says: "no price for sku NOPE",
+    },
 ];
 
 #[test]

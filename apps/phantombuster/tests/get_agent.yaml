@@ -1,0 +1,13 @@
+description: A Phantom looked up
+action: get_agent
+credential: { api_key: pb_test_key_1 }
+input: { id: "7345678901234567" }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://api.phantombuster.com/api/v2/agents/fetch"
+      query: { id: "7345678901234567" }
+    answer:
+      status: 200
+      body: { id: "7345678901234567", name: Maps search, script: Maps Search Export.js, lastEndType: finished, launchType: manually, nbLaunches: 14 }
+result: { id: "7345678901234567", name: Maps search, script: Maps Search Export.js, lastEndType: finished, launchType: manually, nbLaunches: 14 }

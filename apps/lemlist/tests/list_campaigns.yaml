@@ -1,0 +1,12 @@
+description: "Running campaigns, newest first"
+action: list_campaigns
+credential: {"api_key": "test-key"}
+input: {"status": "running"}
+exchanges:
+  - sent:
+      method: GET
+      url: "https://api.lemlist.com/api/campaigns"
+      query: {"version": "v2", "status": "running", "sortBy": "createdAt", "sortOrder": "desc", "limit": "100"}
+      headers: {"authorization": "Basic OnRlc3Qta2V5"}
+    answer: {"status": 200, "body": [{"_id": "cam_A1", "name": "Autumn outreach", "status": "running", "createdAt": "2026-11-01T09:00:00.000Z", "createdBy": "usr_U1", "labels": [], "hasError": false, "errors": []}, {"_id": "cam_A2", "name": "Webinar follow-up", "status": "running", "createdAt": "2026-10-15T09:00:00.000Z", "createdBy": "usr_U1", "labels": [], "hasError": false, "errors": []}]}
+result: [{"_id": "cam_A1", "name": "Autumn outreach", "status": "running", "createdAt": "2026-11-01T09:00:00.000Z", "createdBy": "usr_U1", "labels": [], "hasError": false, "errors": []}, {"_id": "cam_A2", "name": "Webinar follow-up", "status": "running", "createdAt": "2026-10-15T09:00:00.000Z", "createdBy": "usr_U1", "labels": [], "hasError": false, "errors": []}]

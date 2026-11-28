@@ -1,0 +1,9 @@
+action: list_playlist_videos
+credential: { access_token: ya29.a0 }
+input: { playlist_id: UU_x5XG1OV2P6uZZ5FSM9Ttw }
+exchanges:
+  - sent:
+      url: https://www.googleapis.com/youtube/v3/playlistItems
+      query: { part: "snippet,contentDetails", playlistId: UU_x5XG1OV2P6uZZ5FSM9Ttw, maxResults: "50" }
+    answer: { body: { items: [{ id: pi1, contentDetails: { videoId: v1 } }] } }
+result: [{ id: pi1, contentDetails: { videoId: v1 } }]

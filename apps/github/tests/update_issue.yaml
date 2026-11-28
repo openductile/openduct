@@ -1,0 +1,10 @@
+action: update_issue
+credential: { token: test-token-1 }
+input: { owner: example-shop, repo: website, number: 1347, state: closed, state_reason: completed }
+exchanges:
+  - sent:
+      method: PATCH
+      url: https://api.github.com/repos/example-shop/website/issues/1347
+      body: { state: closed, state_reason: completed }
+    answer: { body: { number: 1347, state: closed } }
+result: { number: 1347, state: closed }

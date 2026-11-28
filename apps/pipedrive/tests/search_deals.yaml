@@ -1,0 +1,14 @@
+description: "Search deals: each match out of Pipedrive's wrapping, over two pages by its cursor"
+action: search_deals
+credential: { api_key: test-pipedrive-token }
+input: { term: chairs, status: open }
+exchanges:
+  - sent:
+      method: GET
+      url: https://api.pipedrive.com/api/v2/deals/search
+      query: { term: chairs, status: open, limit: "100" }
+      headers: { x-api-token: test-pipedrive-token }
+    answer: { body: { success: true, data: { items: [{ result_score: 0.9, item: { id: 41, type: deal, title: Example Co - 50 chairs, value: 4500, currency: USD, status: open } }] }, additional_data: { next_cursor: eyJmaWVsZCI6ImlkIiwiaWQiOjJ9 } } }
+  - sent: { method: GET, url: https://api.pipedrive.com/api/v2/deals/search, query: { term: chairs, status: open, limit: "100", cursor: eyJmaWVsZCI6ImlkIiwiaWQiOjJ9 } }
+    answer: { body: { success: true, data: { items: [{ result_score: 0.5, item: { id: 42, type: deal, title: Example Co - 10 chairs, value: 900, currency: USD, status: won } }] }, additional_data: { next_cursor: null } } }
+result: [{ id: 41, type: deal, title: Example Co - 50 chairs, value: 4500, currency: USD, status: open }, { id: 42, type: deal, title: Example Co - 10 chairs, value: 900, currency: USD, status: won }]

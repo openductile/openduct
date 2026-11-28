@@ -1,0 +1,13 @@
+action: list_fields
+credential: { access_token: 1000.test.token }
+input: { module: Leads }
+exchanges:
+  - sent: { method: GET, url: https://www.zohoapis.com/crm/v8/settings/fields, query: { module: Leads } }
+    answer:
+      body:
+        fields:
+          - { api_name: Last_Name, field_label: Last Name, data_type: text, custom_field: false, read_only: false, id: "1000000000000002001" }
+          - { api_name: Budget_Range, field_label: Budget range, data_type: picklist, custom_field: true, read_only: false, id: "1000000000000002002" }
+result:
+  - { api_name: Last_Name, label: Last Name, kind: text, custom: false, read_only: false }
+  - { api_name: Budget_Range, label: Budget range, kind: picklist, custom: true, read_only: false }

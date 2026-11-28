@@ -1,0 +1,40 @@
+# Made by `openduct app from-openapi`: Update Order.
+description: "Update Order, made from the API description's schemas"
+action: update_order
+credential: { token: test-token }
+input: { site_id: site_1, order_id: order_1 }
+exchanges:
+  - sent:
+      method: PATCH
+      url: "https://api.webflow.com/v2/sites/site_1/orders/order_1"
+      query: {}
+      headers: { authorization: "Bearer test-token" }
+      body: {}
+    answer:
+      status: 200
+      body:
+        orderId: dfa-3f1
+        status: pending
+        comment: example
+        orderComment: example
+        acceptedOn: "2018-12-03T22:06:15.761Z"
+        fulfilledOn: "2018-12-03T22:06:15.761Z"
+        refundedOn: "2018-12-03T22:06:15.761Z"
+        disputedOn: "2018-12-03T22:06:15.761Z"
+        disputeUpdatedOn: "2018-12-03T22:06:15.761Z"
+        disputeLastStatus: warning_needs_response
+        customerPaid: { unit: USD, value: "5892", string: example }
+        netAmount: { unit: USD, value: "5892", string: example }
+result:
+  orderId: dfa-3f1
+  status: pending
+  comment: example
+  orderComment: example
+  acceptedOn: "2018-12-03T22:06:15.761Z"
+  fulfilledOn: "2018-12-03T22:06:15.761Z"
+  refundedOn: "2018-12-03T22:06:15.761Z"
+  disputedOn: "2018-12-03T22:06:15.761Z"
+  disputeUpdatedOn: "2018-12-03T22:06:15.761Z"
+  disputeLastStatus: warning_needs_response
+  customerPaid: { unit: USD, value: "5892", string: example }
+  netAmount: { unit: USD, value: "5892", string: example }

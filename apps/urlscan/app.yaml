@@ -1,0 +1,213 @@
+# Copyright 2026 Ductile AI, Inc
+# SPDX-License-Identifier: Apache-2.0
+#
+# Started with `openduct app from-openapi` from urlscan.io's own API description
+# (https://docs.urlscan.io/_bundle/apis/urlscan-openapi.yaml, fetched 2026-11-27); finished by hand.
+app: urlscan
+name: urlscan.io
+category: security
+description: Scan a web address in a sandbox browser, see what it loads and whether it is malicious, and search past scans.
+docs: https://docs.urlscan.io/apis/urlscan-openapi
+hosts: [urlscan.io]
+base_url: https://urlscan.io
+sign_in:
+  - id: urlscan
+    label: An API key
+    fields:
+      - { name: api_key, label: "The API key (Settings & API, in your urlscan.io account)", secret: true }
+    headers: { api-key: "{{ credential.api_key }}" }
+actions:
+  scan_url:
+    label: Scan a web address
+    description: >-
+      Sends a web address to be opened in urlscan.io's browser; the answer is the scan's id. The result is ready
+      after some 10 to 30 seconds (Get a scan's result).
+    write: true
+    method: POST
+    path: /api/v1/scan
+    inputs:
+      - { name: url, label: The web address, required: true }
+      - { name: visibility, label: "Who may see it: public (the default), unlisted or private" }
+      - { name: country, label: "Scan from this country (a two-letter code, such as de)" }
+      - { name: tags, label: "Tags (separated by commas, at most 10)" }
+      - { name: referer, label: "A referring page to send" }
+      - { name: customagent, label: "A browser name (user agent) to use" }
+    send:
+      url: "{{ input.url }}"
+      visibility: "{{ input.visibility }}"
+      country: "{{ input.country }}"
+      tags: "{{ input.tags.split(',').map(t, t.trim()) }}"
+      referer: "{{ input.referer }}"
+      customagent: "{{ input.customagent }}"
+    output: { uuid: text, url: text, visibility: text, country: text, message: text, result: text, api: text }
+  get_scan_result:
+    label: Get a scan's result
+    description: >-
+      What a scan found: the page, its verdicts (malicious or not, brands), the domains, addresses and files it
+      loaded. urlscan.io answers 404 while the scan is still running: ask again a few seconds later.
+    method: GET
+    path: "/api/v1/result/{{ input.uuid }}/"
+    inputs:
+      - { name: uuid, label: "The scan's id (from Scan a web address)", required: true }
+    output: { task: record, page: record, verdicts: record, lists: record, stats: record, meta: record, submitter: record, data: record }
+  get_scan_dom:
+    label: Get a scanned page's source
+    description: The page's HTML as the browser held it at the end of the scan.
+    method: GET
+    path: "/dom/{{ input.uuid }}/"
+    inputs:
+      - { name: uuid, label: "The scan's id", required: true }
+    result: "{'html': value}"
+    output: { html: text }
+  search:
+    label: Search past scans
+    description: >-
+      Scans (or, with urlscan Pro, hostnames, incidents and more) matching a query, such as domain:example.com or
+      page.domain:example.com AND date:>now-7d; the newest first, every page up to the most.
+    method: GET
+    path: /api/v1/search
+    inputs:
+      - { name: q, label: "The query (such as domain:example.com)", required: true }
+      - { name: datasource, label: "scans (the default), hostnames, incidents, notifications or certificates (urlscan Pro)" }
+    query: { q: "{{ input.q }}", datasource: "{{ input.datasource }}", size: "100" }
+    items: value.results
+    next: "value.has_more && size(value.results) > 0 ? {'search_after': value.results[size(value.results) - 1].sort.map(s, string(s)).join(',')} : null"
+    output: &found { _id: text, task: record, page: record, verdicts: record, stats: record, result: text, screenshot: text, sort: list }
+  find_similar_scans:
+    label: Find scans that look alike (urlscan Pro)
+    description: Scans of pages built like the one given, the same kit at another address for instance.
+    method: GET
+    path: "/api/v1/pro/result/{{ input.uuid }}/similar/"
+    inputs:
+      - { name: uuid, label: "The scan's id", required: true }
+      - { name: q, label: "Only those that also match this query" }
+    query: { q: "{{ input.q }}", size: "100" }
+    items: value.results
+    next: "value.has_more && size(value.results) > 0 ? {'search_after': value.results[size(value.results) - 1].sort.map(s, string(s)).join(',')} : null"
+    output: *found
+  hostname_history:
+    label: A hostname's history
+    description: Where and when a hostname was seen (certificates, scans, DNS), every page.
+    method: GET
+    path: "/api/v1/hostname/{{ input.hostname }}"
+    inputs:
+      - { name: hostname, label: "The hostname (such as www.example.com)", required: true }
+    query: { limit: "1000" }
+    items: value.results
+    next: "size(value.results) > 0 && has(value.pageState) && value.pageState != null && value.pageState != '' ? {'pageState': value.pageState} : null"
+    output: { seen_on: text, source: text, sub_id: text, first_seen: text, last_seen: text, data: record }
+  check_malicious:
+    label: How often something was seen malicious (urlscan Pro)
+    description: For an IP address, hostname, domain or web address, how many malicious scans saw it, first and last.
+    method: GET
+    path: "/api/v1/malicious/{{ input.type }}/{{ input.value }}"
+    inputs:
+      - { name: type, label: "ip, hostname, domain or url", required: true }
+      - { name: value, label: "The address, name or web address", required: true }
+    output: { observable: text, type: text, count: number, firstSeen: text, lastSeen: text }
+  set_scan_visibility:
+    label: Change who may see a scan (urlscan Pro)
+    description: "Makes one of your (or your team's) scans public, unlisted or private, or removes it."
+    write: true
+    method: PUT
+    path: "/api/v1/result/{{ input.uuid }}/visibility/"
+    inputs:
+      - { name: uuid, label: "The scan's id", required: true }
+      - { name: visibility, label: "public, unlisted, private or deleted", required: true }
+    send: { visibility: "{{ input.visibility }}" }
+    output: { uuid: text, message: text, visibility: text }
+  list_saved_searches:
+    label: List saved searches
+    description: Your saved searches (and your team's).
+    method: GET
+    path: /api/v1/user/searches/
+    items: value.searches
+    output: &search { _id: text, name: text, query: text, datasource: text, tlp: text, usertags: list, createdAt: text }
+  create_saved_search:
+    label: Save a search
+    description: A search kept under a name, to be run again or watched by a subscription.
+    write: true
+    method: POST
+    path: /api/v1/user/searches/
+    inputs:
+      - { name: name, label: Name, required: true }
+      - { name: query, label: "The query (such as page.domain:example.com)", required: true }
+      - { name: datasource, label: "scans (the default) or hostnames" }
+      - { name: description, label: "What it is for" }
+      - { name: tlp, label: "How widely it may be shared: red, amber+strict, amber, green or clear" }
+    send:
+      search:
+        name: "{{ input.name }}"
+        query: "{{ input.query }}"
+        datasource: "{{ has(input.datasource) && input.datasource != null ? input.datasource : 'scans' }}"
+        longDescription: "{{ input.description }}"
+        tlp: "{{ input.tlp }}"
+    result: value.search
+    output: *search
+  update_saved_search:
+    label: Change a saved search
+    description: "Changes a saved search's name, query or description."
+    write: true
+    method: PUT
+    path: "/api/v1/user/searches/{{ input.id }}/"
+    inputs:
+      - { name: id, label: "The saved search's id", required: true }
+      - { name: name, label: Name, required: true }
+      - { name: query, label: The query, required: true }
+      - { name: datasource, label: "scans (the default) or hostnames" }
+      - { name: description, label: "What it is for" }
+    send:
+      search:
+        name: "{{ input.name }}"
+        query: "{{ input.query }}"
+        datasource: "{{ has(input.datasource) && input.datasource != null ? input.datasource : 'scans' }}"
+        longDescription: "{{ input.description }}"
+    result: value.search
+    output: *search
+  delete_saved_search:
+    label: Remove a saved search
+    description: "Removes one of your saved searches."
+    write: true
+    method: DELETE
+    path: "/api/v1/user/searches/{{ input.id }}/"
+    inputs:
+      - { name: id, label: "The saved search's id", required: true }
+    result: "{'deleted': status < 300}"
+    output: { deleted: boolean }
+  list_subscriptions:
+    label: List subscriptions
+    description: Your subscriptions to saved searches, and where and how often they report.
+    method: GET
+    path: /api/v1/user/subscriptions/
+    items: value.subscriptions
+    output: { _id: text, name: text, searchIds: list, frequency: text, emailAddresses: list, isActive: boolean }
+  get_quotas:
+    label: How much of the quota is used
+    description: For each kind of call (public, unlisted and private scans, searches), the limits and what is left.
+    method: GET
+    path: /api/v1/quotas
+    output: { scope: text, limits: record }
+  list_countries:
+    label: Countries a scan can be made from
+    description: "The countries urlscan.io can scan from, as two-letter codes."
+    method: GET
+    path: /api/v1/availableCountries
+    items: "value.countries.map(c, {'country': c})"
+    output: { country: text }
+triggers:
+  new_search_result:
+    label: A new scan matching a search
+    description: >-
+      Each new scan matching a query, the newest asked for every few minutes: a page using your brand, a scan of your
+      domain by someone else.
+    inputs:
+      - { name: q, label: "The query (such as page.domain:example.com)", required: true }
+      - { name: datasource, label: "scans (the default), or another kind (urlscan Pro)" }
+    poll:
+      method: GET
+      path: /api/v1/search
+      query: { q: "{{ input.q }}", datasource: "{{ input.datasource }}", size: "100" }
+      items: value.results
+      newest_first: true
+      id: item._id
+      every: 15m

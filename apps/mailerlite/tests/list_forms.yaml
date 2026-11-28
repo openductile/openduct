@@ -1,0 +1,44 @@
+description: The embedded forms
+action: list_forms
+credential:
+  api_key: test-key
+input:
+  type: embedded
+exchanges:
+- sent:
+    method: GET
+    url: https://connect.mailerlite.com/api/forms/embedded
+    query: {}
+    headers:
+      authorization: Bearer test-key
+      accept: application/json
+  answer:
+    status: 200
+    body:
+      data:
+      - &id001
+        id: '38965245585131492'
+        type: embedded
+        slug: Ec7t3n
+        name: Footer sign-up
+        created_at: '2026-03-17 14:42:33'
+        conversions_count: 25
+        opens_count: 900
+        conversion_rate:
+          float: 0.03
+          string: 3%
+        settings: []
+        last_registration_at: '2026-11-19 08:01:00'
+        active: true
+      links:
+        first: null
+        last: null
+        prev: null
+        next: null
+      meta:
+        path: https://connect.mailerlite.com/api
+        per_page: 1000
+        next_cursor: null
+        prev_cursor: null
+result:
+- *id001

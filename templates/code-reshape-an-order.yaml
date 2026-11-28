@@ -2,7 +2,7 @@ name: Reshape an order with JavaScript
 description: >-
   When an order comes in over a webhook, reshape it with your own JavaScript - totals, a slug, the lines a shop's
   system wants - and write the result to the orders topic. console.log shows in the run.
-category: Code
+category: E-commerce
 trigger:
   webhook: {}
 # What a test runs on: an event as this trigger gives it.

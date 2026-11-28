@@ -1,0 +1,23 @@
+description: A made-up sensor set to a value, with its unit
+action: set_state
+credential: { url: "http://home.example:8123", token: ha-test-token }
+input: { entity_id: sensor.orders_today, state: "25", attributes: { unit_of_measurement: orders } }
+exchanges:
+  - sent:
+      method: POST
+      url: "http://home.example:8123/api/states/sensor.orders_today"
+      body: { state: "25", attributes: { unit_of_measurement: orders } }
+    answer:
+      status: 201
+      body:
+        entity_id: sensor.orders_today
+        state: "25"
+        attributes: { unit_of_measurement: orders }
+        last_changed: "2026-11-27T09:00:00+00:00"
+        last_updated: "2026-11-27T09:00:00+00:00"
+result:
+  entity_id: sensor.orders_today
+  state: "25"
+  attributes: { unit_of_measurement: orders }
+  last_changed: "2026-11-27T09:00:00+00:00"
+  last_updated: "2026-11-27T09:00:00+00:00"

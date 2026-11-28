@@ -1,0 +1,14 @@
+description: One contact sent by name and company; the fields not given are left out
+action: enrich_contact
+credential: { api_key: dc_test_key_1 }
+input: { first_name: Ann, last_name: Example, company: Example Coffee, website: coffee.example, language: en }
+exchanges:
+  - sent:
+      method: POST
+      url: "https://api.dropcontact.com/v1/enrich/all"
+      headers: { x-access-token: dc_test_key_1 }
+      body:
+        data: [{ first_name: Ann, last_name: Example, company: Example Coffee, website: coffee.example }]
+        language: en
+    answer: { status: 200, body: { error: false, success: true, credits_left: 1249, request_id: qzmxkpvlrtdnhwa } }
+result: { error: false, success: true, credits_left: 1249, request_id: qzmxkpvlrtdnhwa }

@@ -1,0 +1,10 @@
+action: create_contact
+credential: { api_key: xkeysib-test-1 }
+input: { email: ann@example.com, attributes: { FIRSTNAME: Ann, LASTNAME: Lee }, list_ids: "3, 5" }
+exchanges:
+  - sent:
+      method: POST
+      url: https://api.brevo.com/v3/contacts
+      body: { email: ann@example.com, attributes: { FIRSTNAME: Ann, LASTNAME: Lee }, listIds: [3, 5] }
+    answer: { status: 201, body: { id: 42 } }
+result: { id: 42, created: true }

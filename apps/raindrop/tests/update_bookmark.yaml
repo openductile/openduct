@@ -1,0 +1,12 @@
+description: "A bookmark marked a favourite and moved"
+action: update_bookmark
+credential: { token: test-token }
+input: { bookmark_id: 1002, important: true, collection_id: 77 }
+exchanges:
+  - sent:
+      method: PUT
+      url: https://api.raindrop.io/rest/v1/raindrop/1002
+      body: { important: true, collection: { $id: 77 } }
+    answer:
+      body: { result: true, item: { _id: 1002, link: "https://news.example/story", important: true, collection: { $id: 77 } } }
+result: { _id: 1002, link: "https://news.example/story", important: true, collection: { $id: 77 } }

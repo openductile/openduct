@@ -1,0 +1,12 @@
+description: Extraction models over two pages
+action: list_models
+credential: { api_key: md_test_1 }
+input: { model_type: extraction }
+exchanges:
+  - sent: { method: GET, url: https://api-v2.mindee.net/v2/search/models, query: { model_type: extraction, per_page: "100" } }
+    answer: { body: { models: [{ id: 9a1d6f3e-0000-4000-8000-0000000000c1, name: Invoices, model_type: extraction, webhooks: [] }], pagination: { per_page: 100, page: 1, total_items: 101, total_pages: 2 } } }
+  - sent: { url: https://api-v2.mindee.net/v2/search/models, query: { model_type: extraction, per_page: "100", page: "2" } }
+    answer: { body: { models: [{ id: 1a2b3c4d-0000-4000-8000-0000000000c6, name: Receipts, model_type: extraction, webhooks: [] }], pagination: { per_page: 100, page: 2, total_items: 101, total_pages: 2 } } }
+result:
+  - { id: 9a1d6f3e-0000-4000-8000-0000000000c1, name: Invoices, model_type: extraction, webhooks: [] }
+  - { id: 1a2b3c4d-0000-4000-8000-0000000000c6, name: Receipts, model_type: extraction, webhooks: [] }

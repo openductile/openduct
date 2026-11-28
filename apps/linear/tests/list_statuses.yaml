@@ -1,0 +1,9 @@
+action: list_statuses
+credential: { api_key: lin_api_test1 }
+input: { team: ENG }
+exchanges:
+  - sent:
+      url: https://api.linear.app/graphql
+      body: { query: "query($filter: WorkflowStateFilter) { workflowStates(first: 100, filter: $filter) { nodes { id name type position team { key } } } }", variables: { filter: { team: { key: { eq: ENG } } } } }
+    answer: { body: { data: { workflowStates: { nodes: [{ id: st-1, name: Todo, type: unstarted, position: 1, team: { key: ENG } }, { id: st-2, name: Done, type: completed, position: 3, team: { key: ENG } }] } } } }
+result: [{ id: st-1, name: Todo, type: unstarted, position: 1, team: { key: ENG } }, { id: st-2, name: Done, type: completed, position: 3, team: { key: ENG } }]

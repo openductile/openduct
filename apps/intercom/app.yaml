@@ -1,0 +1,1211 @@
+# Copyright 2026 Ductile AI, Inc
+# SPDX-License-Identifier: Apache-2.0
+# Intercom: made by `openduct app from-openapi` from https://github.com/intercom/Intercom-OpenAPI/blob/41d37651259d/descriptions/2.18/api.intercom.io.yaml (MIT licence) (Intercom API 2.18, OpenAPI 3.0).
+# Checked as made. Change what you like, then run `openduct app check` and `openduct app test` again.
+app: intercom
+name: Intercom
+category: support
+description: "The intercom API reference."
+docs: "https://developers.intercom.com"
+hosts: [api.intercom.io]
+base_url: "https://api.intercom.io"
+sign_in:
+  - id: intercom
+    label: "An access token"
+    fields: [{ name: token, label: "The access token (or API key) it sends as a bearer token", secret: true }]
+    headers: { Authorization: "Bearer {{ credential.token }}" }
+actions:
+  list_content_import_sources:
+    label: "List content import sources"
+    description: "You can retrieve a list of all content import sources for a workspace."
+    method: GET
+    path: "/ai/content_import_sources"
+    inputs:
+      - { name: intercom_version, label: "Intercom version" }
+      - { name: page, label: "The page of results to fetch", kind: number }
+    query: { page: "{{ input.page }}", per_page: "100" }
+    headers: { Intercom-Version: "{{ input.intercom_version }}" }
+    items: value.data
+    next: "value.pages.next == null || value.pages.next == '' ? null : (value.pages.next.startsWith('http') ? value.pages.next : 'https://api.intercom.io' + value.pages.next)"
+    output:
+      type: text
+      id: number
+      last_synced_at: number
+      sync_behavior: text
+      status: text
+      url: text
+      created_at: number
+      updated_at: number
+      audience_ids: list
+  list_articles:
+    label: "List all articles"
+    description: "You can fetch a list of all articles by making a GET request to https://api.intercom.io/articles."
+    method: GET
+    path: "/articles"
+    inputs:
+      - { name: intercom_version, label: "Intercom version" }
+      - { name: page, label: "The page of results to fetch", kind: number }
+    query: { page: "{{ input.page }}", per_page: "100" }
+    headers: { Intercom-Version: "{{ input.intercom_version }}" }
+    items: value.data
+    next: "value.pages.next == null || value.pages.next == '' ? null : (value.pages.next.startsWith('http') ? value.pages.next : 'https://api.intercom.io' + value.pages.next)"
+    output:
+      type: text
+      id: text
+      workspace_id: text
+      content_id: text
+      title: text
+      description: text
+      body: text
+      body_markdown: text
+      author_id: number
+      state: text
+      created_at: number
+      updated_at: number
+      has_unpublished_changes: boolean
+      draft_updated_at: number
+      url: text
+      parent_ids: list
+      audience_ids: list
+      ai_chatbot_availability: boolean
+      ai_copilot_availability: boolean
+      ai_sales_agent_availability: boolean
+      created_by_id: number
+      updated_by_id: number
+      exclude_from_article_suggestions: boolean
+      help_center_audience: text
+      scheduled_publish_at: number
+      scheduled_unpublish_at: number
+      default_locale: text
+      translated_content: record
+      tags: record
+      folder_id: number
+  list_scroll:
+    label: "Scroll over all companies"
+    description: "The list all companies functionality does not work well for huge datasets, and can result in errors and performance problems when paging deeply."
+    method: GET
+    path: "/companies/scroll"
+    inputs:
+      - { name: intercom_version, label: "Intercom version" }
+      - { name: scroll_param, label: "The scroll_param from the previous response" }
+    query: { scroll_param: "{{ input.scroll_param }}" }
+    headers: { Intercom-Version: "{{ input.intercom_version }}" }
+    items: value.data
+    output:
+      type: text
+      id: text
+      name: text
+      app_id: text
+      plan: record
+      company_id: text
+      remote_created_at: number
+      created_at: number
+      updated_at: number
+      last_request_at: number
+      size: number
+      website: text
+      industry: text
+      monthly_spend: number
+      session_count: number
+      user_count: number
+      custom_attributes: record
+      tags: record
+      segments: record
+      notes: record
+  list_deleted:
+    label: "List deleted contacts"
+    description: "Fetch a paginated list of the contacts in your workspace that are no longer active, so you can recover ones whose id, email, or external_id you no longer have and then permanently delete them."
+    method: GET
+    path: "/contacts/deleted"
+    inputs:
+      - { name: intercom_version, label: "Intercom version" }
+      - name: escape_identity
+        label: "By default, email values in the response are HTML-escaped (for example, & is…"
+        kind: boolean
+        description: "By default, email values in the response are HTML-escaped (for example, & is returned as &amp;)."
+    query: { escape_identity: "{{ input.escape_identity }}", per_page: "100" }
+    headers: { Intercom-Version: "{{ input.intercom_version }}" }
+    items: value.data
+    next: "size(value.data) < 100 ? null : {'page': (page == null ? 1 : int(page['page'])) + 1}"
+    output:
+      type: text
+      id: text
+      external_id: text
+      email: text
+      role: text
+      status: text
+      merged_into_id: text
+      updated_at: number
+  list_conversations:
+    label: "List all conversations"
+    description: "You can fetch a list of all conversations."
+    method: GET
+    path: "/conversations"
+    inputs:
+      - { name: intercom_version, label: "Intercom version" }
+      - name: include_monitors
+        label: "If set to true, the response will include a monitor_evaluations array on each…"
+        kind: boolean
+        description: "If set to true, the response will include a monitor_evaluations array on each conversation with the latest QA monitor evaluation for each monitor that has evaluated it."
+      - name: include_scorecards
+        label: "If set to true, the response will include a scorecards array on each…"
+        kind: boolean
+        description: "If set to true, the response will include a scorecards array on each conversation with any QA scorecard results."
+    query:
+      include_monitors: "{{ input.include_monitors }}"
+      include_scorecards: "{{ input.include_scorecards }}"
+      per_page: "100"
+    headers: { Intercom-Version: "{{ input.intercom_version }}" }
+    items: value.conversations
+    next: "value.pages.next.starting_after == null || value.pages.next.starting_after == '' ? null : {'starting_after': value.pages.next.starting_after}"
+    output:
+      type: text
+      id: text
+      title: text
+      created_at: number
+      updated_at: number
+      waiting_since: number
+      snoozed_until: number
+      open: boolean
+      state: text
+      read: boolean
+      priority: text
+      admin_assignee_id: number
+      team_assignee_id: number
+      company: record
+      tags: record
+      conversation_rating: record
+      source: record
+      contacts: record
+      teammates: record
+      custom_attributes: record
+      first_contact_reply: record
+      sla_applied: record
+      statistics: record
+      linked_objects: record
+      ai_agent_participated: boolean
+      ai_agent: record
+      sales_agent_participated: boolean
+      sales_agent: record
+      channel: record
+      topics: record
+      ticket: record
+      external_references: list
+      monitor_evaluations: list
+      scorecards: list
+  create_content_import_source:
+    label: "Create a content import source"
+    description: "You can create a new content import source by sending a POST request to this endpoint."
+    write: true
+    method: POST
+    path: "/ai/content_import_sources"
+    inputs:
+      - { name: intercom_version, label: "Intercom version" }
+      - { name: status, label: "The status of the content import source" }
+      - { name: url, label: "The URL of the content import source", required: true }
+      - name: audience_ids
+        label: "The unique identifiers for the audiences to associate with this content import…"
+        kind: number
+    headers: { Intercom-Version: "{{ input.intercom_version }}" }
+    send:
+      sync_behavior: api
+      status: "{{ input.status }}"
+      url: "{{ input.url }}"
+      audience_ids: "{{ input.audience_ids }}"
+    output:
+      type: text
+      id: number
+      last_synced_at: number
+      sync_behavior: text
+      status: text
+      url: text
+      created_at: number
+      updated_at: number
+      audience_ids: list
+  create_article:
+    label: "Create an article"
+    description: "You can create a new article by making a POST request to https://api.intercom.io/articles."
+    write: true
+    method: POST
+    path: "/articles"
+    inputs:
+      - { name: intercom_version, label: "Intercom version" }
+      - { name: title, label: "The title of the article" }
+      - { name: description, label: "The description of the article" }
+      - { name: body, label: "The content of the article in HTML" }
+      - { name: body_markdown, label: "The content of the article in markdown" }
+      - { name: author_id, label: "The id of the author of the article", kind: number }
+      - { name: state, label: "Whether the article will be published or will be a draft" }
+      - { name: parent_id, label: "The id of the article's parent collection or section", kind: number }
+      - { name: parent_ids, label: "The ids of the parent collections to place this article in", kind: list }
+      - { name: locale, label: "The locale of the article's default content, for example en" }
+      - { name: translated_content, label: "The Translated Content of an Article", kind: record }
+      - name: folder_id
+        label: "The ID of the folder to place this article in, or null to leave it without a…"
+        kind: number
+      - name: audience_ids
+        label: "The list of audience IDs to assign to this article for Fin AI Agent targeting"
+        kind: list
+      - name: ai_chatbot_availability
+        label: "Whether the article should be available for AI Chatbot (Fin)"
+        kind: boolean
+      - name: ai_copilot_availability
+        label: "Whether the article should be available for AI Copilot"
+        kind: boolean
+      - name: ai_sales_agent_availability
+        label: "Whether the article should be available for AI Sales Agent"
+        kind: boolean
+      - name: scheduled_publish_at
+        label: "ISO 8601 timestamp at which to schedule a future publish of the article"
+      - name: scheduled_unpublish_at
+        label: "ISO 8601 timestamp at which to schedule a future unpublish of the article"
+    headers: { Intercom-Version: "{{ input.intercom_version }}" }
+    send:
+      title: "{{ input.title }}"
+      description: "{{ input.description }}"
+      body: "{{ input.body }}"
+      body_markdown: "{{ input.body_markdown }}"
+      author_id: "{{ input.author_id }}"
+      state: "{{ input.state }}"
+      parent_id: "{{ input.parent_id }}"
+      parent_ids: "{{ input.parent_ids }}"
+      locale: "{{ input.locale }}"
+      translated_content: "{{ input.translated_content }}"
+      folder_id: "{{ input.folder_id }}"
+      audience_ids: "{{ input.audience_ids }}"
+      ai_chatbot_availability: "{{ input.ai_chatbot_availability }}"
+      ai_copilot_availability: "{{ input.ai_copilot_availability }}"
+      ai_sales_agent_availability: "{{ input.ai_sales_agent_availability }}"
+      scheduled_publish_at: "{{ input.scheduled_publish_at }}"
+      scheduled_unpublish_at: "{{ input.scheduled_unpublish_at }}"
+    output:
+      statistics: record
+      type: text
+      id: text
+      workspace_id: text
+      content_id: text
+      title: text
+      description: text
+      body: text
+      body_markdown: text
+      author_id: number
+      state: text
+      created_at: number
+      updated_at: number
+      has_unpublished_changes: boolean
+      draft_updated_at: number
+      url: text
+      parent_ids: list
+      audience_ids: list
+      ai_chatbot_availability: boolean
+      ai_copilot_availability: boolean
+      ai_sales_agent_availability: boolean
+      created_by_id: number
+      updated_by_id: number
+      exclude_from_article_suggestions: boolean
+      help_center_audience: text
+      scheduled_publish_at: number
+      scheduled_unpublish_at: number
+      default_locale: text
+      translated_content: record
+      tags: record
+      folder_id: number
+  create_company:
+    label: "Create or Update a company"
+    description: "You can create or update a company."
+    write: true
+    method: POST
+    path: "/companies"
+    inputs:
+      - { name: intercom_version, label: "Intercom version" }
+      - { name: name, label: "The name of the Company" }
+      - { name: company_id, label: "The company id you have defined for the company" }
+      - { name: id, label: "An alternative name for company_id" }
+      - { name: plan, label: "The name of the plan you have associated with the company" }
+      - { name: size, label: "The number of employees in this company", kind: number }
+      - { name: website, label: "The URL for this company's website" }
+      - { name: industry, label: "The industry that this company operates in" }
+      - name: custom_attributes
+        label: "Values for custom attributes that already exist in your workspace"
+        kind: record
+      - { name: remote_created_at, label: "The time the company was created by you", kind: number }
+      - name: update_last_request_at
+        label: "Set to true to update the company's last seen time to now"
+        kind: boolean
+      - name: monthly_spend
+        label: "How much revenue the company generates for your business"
+        kind: number
+    headers: { Intercom-Version: "{{ input.intercom_version }}" }
+    send:
+      name: "{{ input.name }}"
+      company_id: "{{ input.company_id }}"
+      id: "{{ input.id }}"
+      plan: "{{ input.plan }}"
+      size: "{{ input.size }}"
+      website: "{{ input.website }}"
+      industry: "{{ input.industry }}"
+      custom_attributes: "{{ input.custom_attributes }}"
+      remote_created_at: "{{ input.remote_created_at }}"
+      update_last_request_at: "{{ input.update_last_request_at }}"
+      monthly_spend: "{{ input.monthly_spend }}"
+    output:
+      type: text
+      id: text
+      name: text
+      app_id: text
+      plan: record
+      company_id: text
+      remote_created_at: number
+      created_at: number
+      updated_at: number
+      last_request_at: number
+      size: number
+      website: text
+      industry: text
+      monthly_spend: number
+      session_count: number
+      user_count: number
+      custom_attributes: record
+      tags: record
+      segments: record
+      notes: record
+  create_contact:
+    label: "Create contact"
+    description: "You can create a new contact (ie. user or lead)."
+    write: true
+    method: POST
+    path: "/contacts"
+    inputs:
+      - { name: intercom_version, label: "Intercom version" }
+      - { name: role, label: "The role of the contact" }
+      - { name: external_id, label: "A unique identifier for the contact which is given to Intercom" }
+      - name: email_verified
+        label: "Whether the contact has proved they own this email address, for example through…"
+        kind: boolean
+        description: "Whether the contact has proved they own this email address, for example through a confirmation link or one-time code you sent."
+      - { name: email, label: "The contacts email" }
+      - { name: phone, label: "The contacts phone" }
+      - { name: name, label: "The contacts name" }
+      - { name: avatar, label: "An image URL containing the avatar of a contact" }
+      - name: signed_up_at
+        label: "(Unix timestamp in seconds) The time specified for when a contact signed up"
+        kind: number
+      - name: last_seen_at
+        label: "(Unix timestamp in seconds) The time when the contact was last seen (either…"
+        kind: number
+        description: "(Unix timestamp in seconds) The time when the contact was last seen (either where the Intercom Messenger was installed or when specified manually)."
+      - name: owner_id
+        label: "The id of an admin that has been assigned account ownership of the contact"
+      - name: unsubscribed_from_emails
+        label: "Whether the contact is unsubscribed from emails"
+        kind: boolean
+      - name: sms_consent
+        label: "Whether the contact has consented to receive SMS messages"
+        kind: boolean
+      - name: unsubscribed_from_sms
+        label: "Whether the contact is unsubscribed from SMS messages"
+        kind: boolean
+      - name: language_override
+        label: "A preferred language setting for the contact, used by the Intercom Messenger…"
+        description: "A preferred language setting for the contact, used by the Intercom Messenger even if their browser settings change."
+      - name: custom_attributes
+        label: "The custom attributes which are set for the contact"
+        kind: record
+    headers: { Intercom-Version: "{{ input.intercom_version }}" }
+    send:
+      role: "{{ input.role }}"
+      external_id: "{{ input.external_id }}"
+      email_verified: "{{ input.email_verified }}"
+      email: "{{ input.email }}"
+      phone: "{{ input.phone }}"
+      name: "{{ input.name }}"
+      avatar: "{{ input.avatar }}"
+      signed_up_at: "{{ input.signed_up_at }}"
+      last_seen_at: "{{ input.last_seen_at }}"
+      owner_id: "{{ input.owner_id }}"
+      unsubscribed_from_emails: "{{ input.unsubscribed_from_emails }}"
+      sms_consent: "{{ input.sms_consent }}"
+      unsubscribed_from_sms: "{{ input.unsubscribed_from_sms }}"
+      language_override: "{{ input.language_override }}"
+      custom_attributes: "{{ input.custom_attributes }}"
+    output:
+      enabled_push_messaging: boolean
+      type: text
+      id: text
+      external_id: text
+      workspace_id: text
+      role: text
+      email: text
+      email_domain: text
+      email_verified: boolean
+      phone: text
+      whatsapp_number: text
+      name: text
+      owner_id: text
+      has_hard_bounced: boolean
+      marked_email_as_spam: boolean
+      unsubscribed_from_emails: boolean
+      created_at: number
+      updated_at: number
+      signed_up_at: number
+      last_seen_at: number
+      last_replied_at: number
+      last_contacted_at: number
+      last_email_opened_at: number
+      last_email_clicked_at: number
+      language_override: text
+      browser: text
+      browser_version: text
+      browser_language: text
+      os: text
+      android_app_name: text
+      android_app_version: text
+      android_device: text
+      android_os_version: text
+      android_sdk_version: text
+      android_last_seen_at: number
+      ios_app_name: text
+      ios_app_version: text
+      ios_device: text
+      ios_os_version: text
+      ios_sdk_version: text
+      ios_last_seen_at: number
+      custom_attributes: record
+      avatar: text
+      tags: record
+      notes: record
+      companies: record
+      location: record
+      social_profiles: record
+      opted_out_subscription_types: record
+      opted_in_subscription_types: record
+      utm_campaign: text
+      utm_content: text
+      utm_medium: text
+      utm_source: text
+      utm_term: text
+      referrer: text
+      sms_consent: boolean
+      unsubscribed_from_sms: boolean
+      merge_history: list
+  create_conversation:
+    label: "Creates a conversation"
+    description: "You can create a conversation that has been initiated by a contact (ie. user or lead)."
+    write: true
+    method: POST
+    path: "/conversations"
+    inputs:
+      - { name: intercom_version, label: "Intercom version" }
+      - { name: from, label: From, required: true, kind: record }
+      - { name: body, label: "The content of the message", required: true }
+      - { name: subject, label: "The title of the email" }
+      - { name: attachment_urls, label: "A list of image URLs that will be added as attachments", kind: list }
+      - name: created_at
+        label: "The time the conversation was created as a UTC Unix timestamp"
+        kind: number
+      - { name: brand_id, label: "The unique identifier of the brand to associate with this conversation" }
+    headers: { Intercom-Version: "{{ input.intercom_version }}" }
+    send:
+      from: "{{ input.from }}"
+      body: "{{ input.body }}"
+      subject: "{{ input.subject }}"
+      attachment_urls: "{{ input.attachment_urls }}"
+      created_at: "{{ input.created_at }}"
+      brand_id: "{{ input.brand_id }}"
+    output:
+      type: text
+      id: text
+      created_at: number
+      subject: text
+      body: text
+      message_type: text
+      conversation_id: text
+      owner: record
+      template: text
+      external_id: text
+      whatsapp_message_id: text
+  get_content_import_source:
+    label: "Retrieve a content import source"
+    description: "You can retrieve a content import source."
+    method: GET
+    path: "/ai/content_import_sources/{{ input.source_id }}"
+    inputs:
+      - name: source_id
+        label: "The unique identifier for the content import source which is given by Intercom"
+        required: true
+      - { name: intercom_version, label: "Intercom version" }
+    headers: { Intercom-Version: "{{ input.intercom_version }}" }
+    output:
+      type: text
+      id: number
+      last_synced_at: number
+      sync_behavior: text
+      status: text
+      url: text
+      created_at: number
+      updated_at: number
+      audience_ids: list
+  get_article:
+    label: "Retrieve an article"
+    description: "You can fetch the details of a single article by making a GET request to https://api.intercom.io/articles/ ."
+    method: GET
+    path: "/articles/{{ input.article_id }}"
+    inputs:
+      - name: article_id
+        label: "The unique identifier for the article which is given by Intercom"
+        required: true
+        kind: number
+      - { name: intercom_version, label: "Intercom version" }
+    headers: { Intercom-Version: "{{ input.intercom_version }}" }
+    output:
+      statistics: record
+      type: text
+      id: text
+      workspace_id: text
+      content_id: text
+      title: text
+      description: text
+      body: text
+      body_markdown: text
+      author_id: number
+      state: text
+      created_at: number
+      updated_at: number
+      has_unpublished_changes: boolean
+      draft_updated_at: number
+      url: text
+      parent_ids: list
+      audience_ids: list
+      ai_chatbot_availability: boolean
+      ai_copilot_availability: boolean
+      ai_sales_agent_availability: boolean
+      created_by_id: number
+      updated_by_id: number
+      exclude_from_article_suggestions: boolean
+      help_center_audience: text
+      scheduled_publish_at: number
+      scheduled_unpublish_at: number
+      default_locale: text
+      translated_content: record
+      tags: record
+      folder_id: number
+  get_company:
+    label: "Retrieve a company by ID"
+    description: "You can fetch a single company."
+    method: GET
+    path: "/companies/{{ input.company_id }}"
+    inputs:
+      - name: company_id
+        label: "The unique identifier for the company which is given by Intercom"
+        required: true
+      - { name: intercom_version, label: "Intercom version" }
+      - { name: type, label: "Set to user or users to return the company's users instead of the company" }
+      - { name: page, label: "The page of users to fetch", kind: number }
+      - { name: per_page, label: "How many users to return per page", kind: number }
+    query: { type: "{{ input.type }}", page: "{{ input.page }}", per_page: "{{ input.per_page }}" }
+    headers: { Intercom-Version: "{{ input.intercom_version }}" }
+  get_contact:
+    label: "Get a contact"
+    description: "You can fetch the details of a single contact."
+    method: GET
+    path: "/contacts/{{ input.contact_id }}"
+    inputs:
+      - { name: contact_id, label: contact_id, required: true }
+      - { name: intercom_version, label: "Intercom version" }
+      - name: include_merge_history
+        label: "Pass true to include the contact's merge history in the response"
+        kind: boolean
+      - name: escape_identity
+        label: "By default, name and email values in the response, including nested ones such…"
+        kind: boolean
+        description: "By default, name and email values in the response, including nested ones such as social profile names, are HTML-escaped (for example, & is returned as &amp;)."
+    query:
+      include_merge_history: "{{ input.include_merge_history }}"
+      escape_identity: "{{ input.escape_identity }}"
+    headers: { Intercom-Version: "{{ input.intercom_version }}" }
+    output:
+      enabled_push_messaging: boolean
+      type: text
+      id: text
+      external_id: text
+      workspace_id: text
+      role: text
+      email: text
+      email_domain: text
+      email_verified: boolean
+      phone: text
+      whatsapp_number: text
+      name: text
+      owner_id: text
+      has_hard_bounced: boolean
+      marked_email_as_spam: boolean
+      unsubscribed_from_emails: boolean
+      created_at: number
+      updated_at: number
+      signed_up_at: number
+      last_seen_at: number
+      last_replied_at: number
+      last_contacted_at: number
+      last_email_opened_at: number
+      last_email_clicked_at: number
+      language_override: text
+      browser: text
+      browser_version: text
+      browser_language: text
+      os: text
+      android_app_name: text
+      android_app_version: text
+      android_device: text
+      android_os_version: text
+      android_sdk_version: text
+      android_last_seen_at: number
+      ios_app_name: text
+      ios_app_version: text
+      ios_device: text
+      ios_os_version: text
+      ios_sdk_version: text
+      ios_last_seen_at: number
+      custom_attributes: record
+      avatar: text
+      tags: record
+      notes: record
+      companies: record
+      location: record
+      social_profiles: record
+      opted_out_subscription_types: record
+      opted_in_subscription_types: record
+      utm_campaign: text
+      utm_content: text
+      utm_medium: text
+      utm_source: text
+      utm_term: text
+      referrer: text
+      sms_consent: boolean
+      unsubscribed_from_sms: boolean
+      merge_history: list
+  get_conversation:
+    label: "Retrieve a conversation"
+    description: "You can fetch the details of a single conversation."
+    method: GET
+    path: "/conversations/{{ input.conversation_id }}"
+    inputs:
+      - { name: conversation_id, label: "The id of the conversation to target", required: true, kind: number }
+      - { name: intercom_version, label: "Intercom version" }
+      - { name: display_as, label: "Set to plaintext to retrieve conversation messages in plain text" }
+      - name: include_translations
+        label: "If set to true, conversation parts will be translated to the detected language…"
+        kind: boolean
+        description: "If set to true, conversation parts will be translated to the detected language of the conversation."
+      - name: include_email_history
+        label: "If set to true, the source of the conversation will include the email history,…"
+        kind: boolean
+        description: "If set to true, the source of the conversation will include the email history, for conversations started by email."
+      - name: parts_created_after
+        label: "Only include conversation parts created at or after this time, as a Unix…"
+        kind: number
+        description: "Only include conversation parts created at or after this time, as a Unix timestamp in seconds."
+      - name: parts_created_before
+        label: "Only include conversation parts created at or before this time, as a Unix…"
+        kind: number
+        description: "Only include conversation parts created at or before this time, as a Unix timestamp in seconds."
+      - name: include_monitors
+        label: "If set to true, the response will include a monitor_evaluations array with the…"
+        kind: boolean
+        description: "If set to true, the response will include a monitor_evaluations array with the latest QA monitor evaluation for each monitor that has evaluated this conversation."
+      - name: include_scorecards
+        label: "If set to true, the response will include a scorecards array with any QA…"
+        kind: boolean
+        description: "If set to true, the response will include a scorecards array with any QA scorecard results for this conversation."
+      - { name: page, label: "The page of conversation parts to return", kind: number }
+      - name: per_page
+        label: "The number of conversation parts per page, between 1 and 500"
+        kind: number
+    query:
+      display_as: "{{ input.display_as }}"
+      include_translations: "{{ input.include_translations }}"
+      include_email_history: "{{ input.include_email_history }}"
+      parts_created_after: "{{ input.parts_created_after }}"
+      parts_created_before: "{{ input.parts_created_before }}"
+      include_monitors: "{{ input.include_monitors }}"
+      include_scorecards: "{{ input.include_scorecards }}"
+      page: "{{ input.page }}"
+      per_page: "{{ input.per_page }}"
+    headers: { Intercom-Version: "{{ input.intercom_version }}" }
+    output:
+      type: text
+      id: text
+      title: text
+      created_at: number
+      updated_at: number
+      waiting_since: number
+      snoozed_until: number
+      open: boolean
+      state: text
+      read: boolean
+      priority: text
+      admin_assignee_id: number
+      team_assignee_id: number
+      company: record
+      tags: record
+      conversation_rating: record
+      source: record
+      contacts: record
+      teammates: record
+      custom_attributes: record
+      first_contact_reply: record
+      sla_applied: record
+      statistics: record
+      conversation_parts: record
+      linked_objects: record
+      ai_agent_participated: boolean
+      ai_agent: record
+      sales_agent_participated: boolean
+      sales_agent: record
+      channel: record
+      external_references: list
+      monitor_evaluations: list
+      scorecards: list
+  update_bulk:
+    label: "Bulk update contacts"
+    description: "You can bulk update contacts by submitting an array of contact objects with the fields to update."
+    write: true
+    method: PUT
+    path: "/contacts/bulk"
+    inputs:
+      - { name: intercom_version, label: "Intercom version" }
+      - { name: contacts, label: "An array of contact objects to update", required: true, kind: list }
+      - { name: job, label: Optional, kind: record }
+    headers: { Intercom-Version: "{{ input.intercom_version }}" }
+    send: { contacts: "{{ input.contacts }}", job: "{{ input.job }}" }
+    output:
+      id: text
+      type: text
+      state: text
+      created_at: number
+      updated_at: number
+      completed_at: number
+      tasks: list
+      url: text
+  get_search:
+    label: "Search for articles"
+    description: "You can search for articles by making a GET request to https://api.intercom.io/articles/search."
+    method: GET
+    path: "/articles/search"
+    inputs:
+      - { name: intercom_version, label: "Intercom version" }
+      - { name: phrase, label: "The phrase within your articles to search for" }
+      - { name: state, label: "The state of the Articles returned" }
+      - { name: help_center_id, label: "The ID of the Help Center to search in", kind: number }
+      - name: highlight
+        label: "Return a highlighted version of the matching content within your articles"
+        kind: boolean
+      - { name: page, label: "The page of results to fetch", kind: number }
+      - { name: per_page, label: "The number of results to return per page", kind: number }
+    query:
+      phrase: "{{ input.phrase }}"
+      state: "{{ input.state }}"
+      help_center_id: "{{ input.help_center_id }}"
+      highlight: "{{ input.highlight }}"
+      page: "{{ input.page }}"
+      per_page: "{{ input.per_page }}"
+    headers: { Intercom-Version: "{{ input.intercom_version }}" }
+    output: { type: text, total_count: number, data: record, pages: record }
+  get_companies:
+    label: "Retrieve companies"
+    description: "You can fetch a single company by passing in company_id or name."
+    method: GET
+    path: "/companies"
+    inputs:
+      - { name: intercom_version, label: "Intercom version" }
+      - { name: name, label: "The name of the company to filter by" }
+      - { name: company_id, label: "The company_id of the company to filter by" }
+      - { name: tag_id, label: "The tag_id of the company to filter by" }
+      - { name: segment_id, label: "The segment_id of the company to filter by" }
+      - name: type
+        label: "Set to user or users, together with company_id or name, to return that…"
+        description: "Set to user or users, together with company_id or name, to return that company's users instead of the company."
+      - { name: page, label: "The page of results to fetch", kind: number }
+      - { name: per_page, label: "How many results to display per page", kind: number }
+    query:
+      name: "{{ input.name }}"
+      company_id: "{{ input.company_id }}"
+      tag_id: "{{ input.tag_id }}"
+      segment_id: "{{ input.segment_id }}"
+      type: "{{ input.type }}"
+      page: "{{ input.page }}"
+      per_page: "{{ input.per_page }}"
+    headers: { Intercom-Version: "{{ input.intercom_version }}" }
+  update_content_import_source:
+    label: "Update a content import source"
+    description: "You can update an existing content import source."
+    write: true
+    method: PUT
+    path: "/ai/content_import_sources/{{ input.source_id }}"
+    inputs:
+      - name: source_id
+        label: "The unique identifier for the content import source which is given by Intercom"
+        required: true
+      - { name: intercom_version, label: "Intercom version" }
+      - name: sync_behavior
+        label: "If you intend to create or update External Pages via the API, this should be…"
+        required: true
+      - { name: status, label: "The status of the content import source" }
+      - { name: url, label: "The URL of the content import source", required: true }
+      - name: audience_ids
+        label: "The unique identifiers for the audiences to associate with this content import…"
+        kind: number
+      - name: apply_audience_to_existing_content
+        label: "When true, the audience will be applied to all existing external pages…"
+        kind: boolean
+        description: "When true, the audience will be applied to all existing external pages belonging to this content import source."
+    headers: { Intercom-Version: "{{ input.intercom_version }}" }
+    send:
+      sync_behavior: "{{ input.sync_behavior }}"
+      status: "{{ input.status }}"
+      url: "{{ input.url }}"
+      audience_ids: "{{ input.audience_ids }}"
+      apply_audience_to_existing_content: "{{ input.apply_audience_to_existing_content }}"
+    output:
+      type: text
+      id: number
+      last_synced_at: number
+      sync_behavior: text
+      status: text
+      url: text
+      created_at: number
+      updated_at: number
+      audience_ids: list
+  update_article:
+    label: "Update an article"
+    description: "You can update the details of a single article by making a PUT request to https://api.intercom.io/articles/ ."
+    write: true
+    method: PUT
+    path: "/articles/{{ input.article_id }}"
+    inputs:
+      - name: article_id
+        label: "The unique identifier for the article which is given by Intercom"
+        required: true
+        kind: number
+      - { name: intercom_version, label: "Intercom version" }
+      - { name: title, label: "The title of the article" }
+      - { name: description, label: "The description of the article" }
+      - { name: body, label: "The content of the article in HTML" }
+      - { name: body_markdown, label: "The content of the article in markdown" }
+      - { name: author_id, label: "The id of the author of the article", kind: number }
+      - { name: state, label: "Whether the article will be published or will be a draft" }
+      - { name: parent_id, label: "The id of the collection or section to move the article into" }
+      - { name: parent_ids, label: "The ids of the parent collections to place this article in", kind: list }
+      - { name: translated_content, label: "The Translated Content of an Article", kind: record }
+      - name: folder_id
+        label: "The ID of the folder to place this article in, or null to remove it from its…"
+        kind: number
+      - name: audience_ids
+        label: "The list of audience IDs to assign to this article for Fin AI Agent targeting"
+        kind: list
+      - name: ai_chatbot_availability
+        label: "Whether the article should be available for AI Chatbot (Fin)"
+        kind: boolean
+      - name: ai_copilot_availability
+        label: "Whether the article should be available for AI Copilot"
+        kind: boolean
+      - name: ai_sales_agent_availability
+        label: "Whether the article should be available for AI Sales Agent"
+        kind: boolean
+      - name: scheduled_publish_at
+        label: "ISO 8601 timestamp at which to schedule a future publish of the article"
+      - name: scheduled_unpublish_at
+        label: "ISO 8601 timestamp at which to schedule a future unpublish of the article"
+    headers: { Intercom-Version: "{{ input.intercom_version }}" }
+    send:
+      title: "{{ input.title }}"
+      description: "{{ input.description }}"
+      body: "{{ input.body }}"
+      body_markdown: "{{ input.body_markdown }}"
+      author_id: "{{ input.author_id }}"
+      state: "{{ input.state }}"
+      parent_id: "{{ input.parent_id }}"
+      parent_ids: "{{ input.parent_ids }}"
+      translated_content: "{{ input.translated_content }}"
+      folder_id: "{{ input.folder_id }}"
+      audience_ids: "{{ input.audience_ids }}"
+      ai_chatbot_availability: "{{ input.ai_chatbot_availability }}"
+      ai_copilot_availability: "{{ input.ai_copilot_availability }}"
+      ai_sales_agent_availability: "{{ input.ai_sales_agent_availability }}"
+      scheduled_publish_at: "{{ input.scheduled_publish_at }}"
+      scheduled_unpublish_at: "{{ input.scheduled_unpublish_at }}"
+    output:
+      statistics: record
+      type: text
+      id: text
+      workspace_id: text
+      content_id: text
+      title: text
+      description: text
+      body: text
+      body_markdown: text
+      author_id: number
+      state: text
+      created_at: number
+      updated_at: number
+      has_unpublished_changes: boolean
+      draft_updated_at: number
+      url: text
+      parent_ids: list
+      audience_ids: list
+      ai_chatbot_availability: boolean
+      ai_copilot_availability: boolean
+      ai_sales_agent_availability: boolean
+      created_by_id: number
+      updated_by_id: number
+      exclude_from_article_suggestions: boolean
+      help_center_audience: text
+      scheduled_publish_at: number
+      scheduled_unpublish_at: number
+      default_locale: text
+      translated_content: record
+      tags: record
+      folder_id: number
+  update_company:
+    label: "Update a company"
+    description: "You can update a single company using the Intercom provisioned id."
+    write: true
+    method: PUT
+    path: "/companies/{{ input.company_id }}"
+    inputs:
+      - name: company_id
+        label: "The unique identifier for the company which is given by Intercom"
+        required: true
+      - { name: intercom_version, label: "Intercom version" }
+      - { name: name, label: "The name of the Company" }
+      - name: update_last_request_at
+        label: "Set to true to update the company's last seen time to now"
+        kind: boolean
+      - { name: plan, label: "The name of the plan you have associated with the company" }
+      - { name: size, label: "The number of employees in this company", kind: number }
+      - { name: website, label: "The URL for this company's website" }
+      - { name: industry, label: "The industry that this company operates in" }
+      - name: custom_attributes
+        label: "Values for custom attributes that already exist in your workspace"
+        kind: record
+      - { name: remote_created_at, label: "The time the company was created by you", kind: number }
+      - name: monthly_spend
+        label: "How much revenue the company generates for your business"
+        kind: number
+    headers: { Intercom-Version: "{{ input.intercom_version }}" }
+    send:
+      name: "{{ input.name }}"
+      update_last_request_at: "{{ input.update_last_request_at }}"
+      plan: "{{ input.plan }}"
+      size: "{{ input.size }}"
+      website: "{{ input.website }}"
+      industry: "{{ input.industry }}"
+      custom_attributes: "{{ input.custom_attributes }}"
+      remote_created_at: "{{ input.remote_created_at }}"
+      monthly_spend: "{{ input.monthly_spend }}"
+    output:
+      type: text
+      id: text
+      name: text
+      app_id: text
+      plan: record
+      company_id: text
+      remote_created_at: number
+      created_at: number
+      updated_at: number
+      last_request_at: number
+      size: number
+      website: text
+      industry: text
+      monthly_spend: number
+      session_count: number
+      user_count: number
+      custom_attributes: record
+      tags: record
+      segments: record
+      notes: record
+  update_conversation:
+    label: "Update a conversation"
+    description: "You can update an existing conversation."
+    write: true
+    method: PUT
+    path: "/conversations/{{ input.conversation_id }}"
+    inputs:
+      - { name: conversation_id, label: "The id of the conversation to target", required: true, kind: number }
+      - { name: intercom_version, label: "Intercom version" }
+      - { name: display_as, label: "Set to plaintext to retrieve conversation messages in plain text" }
+      - { name: read, label: "Mark a conversation as read within Intercom", kind: boolean }
+      - { name: title, label: "The title given to the conversation" }
+      - name: custom_attributes
+        label: "The custom attributes which are set on this object, as key-value pairs"
+        kind: record
+      - { name: company_id, label: "The ID of the company that the conversation is associated with" }
+    query: { display_as: "{{ input.display_as }}" }
+    headers: { Intercom-Version: "{{ input.intercom_version }}" }
+    send:
+      read: "{{ input.read }}"
+      title: "{{ input.title }}"
+      custom_attributes: "{{ input.custom_attributes }}"
+      company_id: "{{ input.company_id }}"
+    output:
+      type: text
+      id: text
+      title: text
+      created_at: number
+      updated_at: number
+      waiting_since: number
+      snoozed_until: number
+      open: boolean
+      state: text
+      read: boolean
+      priority: text
+      admin_assignee_id: number
+      team_assignee_id: number
+      company: record
+      tags: record
+      conversation_rating: record
+      source: record
+      contacts: record
+      teammates: record
+      custom_attributes: record
+      first_contact_reply: record
+      sla_applied: record
+      statistics: record
+      conversation_parts: record
+      linked_objects: record
+      ai_agent_participated: boolean
+      ai_agent: record
+      sales_agent_participated: boolean
+      sales_agent: record
+      channel: record
+      external_references: list
+      monitor_evaluations: list
+      scorecards: list
+  merge_contact:
+    label: "Merge two contacts"
+    description: "You can merge one contact into another."
+    write: true
+    method: POST
+    path: "/contacts/merge"
+    inputs:
+      - { name: intercom_version, label: "Intercom version" }
+      - name: include_merge_history
+        label: "Pass true to include the merge history of the resulting contact in the…"
+        kind: boolean
+        description: "Pass true to include the merge history of the resulting contact in the response, with at most the 10 most recent merges."
+      - name: from
+        label: "The unique identifier for the contact to merge away from (the source contact)"
+        required: true
+      - name: into
+        label: "The unique identifier for the contact to merge into (the destination contact)"
+        required: true
+      - name: skip_duplicate_validation
+        label: "When true, bypasses the check that the two contacts must be duplicates…"
+        kind: boolean
+        description: "When true, bypasses the check that the two contacts must be duplicates (matching email or phone), allowing non-duplicate contacts to be merged."
+    query: { include_merge_history: "{{ input.include_merge_history }}" }
+    headers: { Intercom-Version: "{{ input.intercom_version }}" }
+    send:
+      from: "{{ input.from }}"
+      into: "{{ input.into }}"
+      skip_duplicate_validation: "{{ input.skip_duplicate_validation }}"
+    output:
+      enabled_push_messaging: boolean
+      type: text
+      id: text
+      external_id: text
+      workspace_id: text
+      role: text
+      email: text
+      email_domain: text
+      email_verified: boolean
+      phone: text
+      whatsapp_number: text
+      name: text
+      owner_id: text
+      has_hard_bounced: boolean
+      marked_email_as_spam: boolean
+      unsubscribed_from_emails: boolean
+      created_at: number
+      updated_at: number
+      signed_up_at: number
+      last_seen_at: number
+      last_replied_at: number
+      last_contacted_at: number
+      last_email_opened_at: number
+      last_email_clicked_at: number
+      language_override: text
+      browser: text
+      browser_version: text
+      browser_language: text
+      os: text
+      android_app_name: text
+      android_app_version: text
+      android_device: text
+      android_os_version: text
+      android_sdk_version: text
+      android_last_seen_at: number
+      ios_app_name: text
+      ios_app_version: text
+      ios_device: text
+      ios_os_version: text
+      ios_sdk_version: text
+      ios_last_seen_at: number
+      custom_attributes: record
+      avatar: text
+      tags: record
+      notes: record
+      companies: record
+      location: record
+      social_profiles: record
+      opted_out_subscription_types: record
+      opted_in_subscription_types: record
+      utm_campaign: text
+      utm_content: text
+      utm_medium: text
+      utm_source: text
+      utm_term: text
+      referrer: text
+      sms_consent: boolean
+      unsubscribed_from_sms: boolean
+      merge_history: list
+  search_conversation:
+    label: "Search conversations"
+    description: "You can search for multiple conversations by the value of their attributes in order to fetch exactly which ones you want."
+    write: true
+    method: POST
+    path: "/conversations/search"
+    inputs:
+      - { name: intercom_version, label: "Intercom version" }
+      - name: include_monitors
+        label: "If set to true, the response will include a monitor_evaluations array on each…"
+        kind: boolean
+        description: "If set to true, the response will include a monitor_evaluations array on each conversation with the latest QA monitor evaluation for each monitor that has evaluated it."
+      - name: include_scorecards
+        label: "If set to true, the response will include a scorecards array on each…"
+        kind: boolean
+        description: "If set to true, the response will include a scorecards array on each conversation with any QA scorecard results."
+      - { name: query, label: Query, required: true, kind: record }
+      - { name: pagination, label: Pagination, kind: record }
+      - { name: sort, label: "How to sort the results", kind: record }
+    query:
+      include_monitors: "{{ input.include_monitors }}"
+      include_scorecards: "{{ input.include_scorecards }}"
+    headers: { Intercom-Version: "{{ input.intercom_version }}" }
+    send: { query: "{{ input.query }}", pagination: "{{ input.pagination }}", sort: "{{ input.sort }}" }
+    output: { type: text, conversations: list, total_count: number, pages: record }
+  tags_external_page:
+    label: "Add a tag to an external page"
+    description: "Apply an existing tag to an external page."
+    write: true
+    method: POST
+    path: "/ai/external_pages/{{ input.external_page_id }}/tags"
+    inputs:
+      - name: external_page_id
+        label: "The unique identifier for the external page which is given by Intercom"
+        required: true
+      - { name: intercom_version, label: "Intercom version" }
+      - { name: id, label: "The unique identifier of the tag to apply, as given by Intercom", required: true }
+      - { name: admin_id, label: "Optional id of the teammate to attribute the tagging to" }
+    headers: { Intercom-Version: "{{ input.intercom_version }}" }
+    send: { id: "{{ input.id }}", admin_id: "{{ input.admin_id }}" }
+    output: { type: text, id: text, name: text, applied_at: number, applied_by: record }

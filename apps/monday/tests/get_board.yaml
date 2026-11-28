@@ -1,0 +1,45 @@
+description: A board's groups and columns
+action: get_board
+credential:
+  token: monday-test-token
+input:
+  board_id: '1234567890'
+exchanges:
+- sent:
+    body:
+      query: 'query ($ids: [ID!]) { boards(ids: $ids) { id name description state board_kind workspace_id url items_count
+        updated_at groups { id title color } columns { id title type } } }'
+      variables:
+        ids:
+        - '1234567890'
+  answer:
+    body:
+      data:
+        boards:
+        - id: '1234567890'
+          name: Orders
+          groups:
+          - id: topics
+            title: New orders
+            color: '#579bfc'
+          columns:
+          - id: name
+            title: Name
+            type: name
+          - id: status
+            title: Status
+            type: status
+result:
+  id: '1234567890'
+  name: Orders
+  groups:
+  - id: topics
+    title: New orders
+    color: '#579bfc'
+  columns:
+  - id: name
+    title: Name
+    type: name
+  - id: status
+    title: Status
+    type: status

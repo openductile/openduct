@@ -1,0 +1,7 @@
+action: delete_message
+credential: { workspace: acme, user_id: uAbC123, token: rc_test_1 }
+input: { room_id: rSales1, message_id: mSg001 }
+exchanges:
+  - sent: { method: POST, url: https://acme.rocket.chat/api/v1/chat.delete, body: { roomId: rSales1, msgId: mSg001 } }
+    answer: { body: { _id: mSg001, ts: 1795773700000, success: true } }
+result: { _id: mSg001, ts: 1795773700000, success: true }

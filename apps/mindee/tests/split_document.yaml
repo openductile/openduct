@@ -1,0 +1,7 @@
+action: split_document
+credential: { api_key: md_test_1 }
+input: { model_id: 5b7c9d1e-0000-4000-8000-0000000000c3, url: "https://files.example.com/batch.pdf", alias: batch-11 }
+exchanges:
+  - sent: { method: POST, url: https://api-v2.mindee.net/v2/products/split/enqueue, body: { model_id: 5b7c9d1e-0000-4000-8000-0000000000c3, url: "https://files.example.com/batch.pdf", alias: batch-11 } }
+    answer: { status: 202, body: { job: { id: 4eab6f50-0000-4000-8000-0000000000b4, status: Processing, alias: batch-11 } } }
+result: { id: 4eab6f50-0000-4000-8000-0000000000b4, status: Processing, alias: batch-11 }

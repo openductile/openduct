@@ -1,0 +1,14 @@
+description: "Search people: each match out of Pipedrive's wrapping, over two pages by its cursor"
+action: search_people
+credential: { api_key: test-pipedrive-token }
+input: { term: ann@example.com, exact_match: true }
+exchanges:
+  - sent:
+      method: GET
+      url: https://api.pipedrive.com/api/v2/persons/search
+      query: { term: ann@example.com, exact_match: "true", limit: "100" }
+      headers: { x-api-token: test-pipedrive-token }
+    answer: { body: { success: true, data: { items: [{ result_score: 0.9, item: { id: 7, type: person, name: Ann Example, emails: [ann@example.com] } }] }, additional_data: { next_cursor: eyJmaWVsZCI6ImlkIiwiaWQiOjJ9 } } }
+  - sent: { method: GET, url: https://api.pipedrive.com/api/v2/persons/search, query: { term: ann@example.com, exact_match: "true", limit: "100", cursor: eyJmaWVsZCI6ImlkIiwiaWQiOjJ9 } }
+    answer: { body: { success: true, data: { items: [{ result_score: 0.5, item: { id: 8, type: person, name: Ann Sample, emails: [ann.sample@example.com] } }] }, additional_data: { next_cursor: null } } }
+result: [{ id: 7, type: person, name: Ann Example, emails: [ann@example.com] }, { id: 8, type: person, name: Ann Sample, emails: [ann.sample@example.com] }]

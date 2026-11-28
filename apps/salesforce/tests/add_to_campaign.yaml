@@ -1,0 +1,12 @@
+description: "A lead added to a campaign"
+action: add_to_campaign
+credential: { access_token: "00D000000000001!AQ.test", instance: examplecorp.my.salesforce.com }
+input: { campaign_id: 7015e000000CmPgAAC, lead_id: 00Q5e000001AbcDEAZ, status: Sent }
+exchanges:
+  - sent:
+      method: POST
+      url: https://examplecorp.my.salesforce.com/services/data/v67.0/sobjects/CampaignMember/
+      headers: { authorization: Bearer 00D000000000001!AQ.test }
+      body: { CampaignId: 7015e000000CmPgAAC, LeadId: 00Q5e000001AbcDEAZ, Status: Sent }
+    answer: { status: 201, body: { id: 00v5e00000MeMbRAAV, success: true, errors: [] } }
+result: { id: 00v5e00000MeMbRAAV, success: true, errors: [] }

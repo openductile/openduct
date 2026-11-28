@@ -1,0 +1,16 @@
+description: The cluster's indices, as JSON
+action: list_indices
+credential: {url: 'https://search.example.com:9200', api_key: VnVhQ2ZHY0JDZGJrUW0tZTVhT3g6dWkybHAyYXhUTm1zeWFrdzl0dk5udw==}
+input: {health: green}
+exchanges:
+- sent:
+    method: GET
+    url: https://search.example.com:9200/_cat/indices
+    query: {format: json, health: green}
+    headers: {authorization: ApiKey VnVhQ2ZHY0JDZGJrUW0tZTVhT3g6dWkybHAyYXhUTm1zeWFrdzl0dk5udw==}
+  answer:
+    status: 200
+    body: &id001
+    - {health: green, status: open, index: orders, uuid: kTq1bJwYQ0eS8m3a2RzVxg, pri: '1', rep: '1', docs.count: '1200', docs.deleted: '4',
+      store.size: 1.2mb, pri.store.size: 620kb}
+result: *id001

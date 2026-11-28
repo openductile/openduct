@@ -1,0 +1,11 @@
+description: A record added to another table
+action: create_record
+credential: { instance: acme, username: integration.user, password: pw-test-1 }
+input: { table: sc_task, fields: { short_description: Order a laptop for Ann, assignment_group: 287ebd7da9fe198100f92cc8d1d2154e } }
+exchanges:
+  - sent:
+      method: POST
+      url: "https://acme.service-now.com/api/now/table/sc_task"
+      body: { short_description: Order a laptop for Ann, assignment_group: 287ebd7da9fe198100f92cc8d1d2154e }
+    answer: { status: 201, body: { result: { sys_id: 1f2e3d4c5b6a79880716253443526170, number: SCTASK0010001, short_description: Order a laptop for Ann, state: "1" } } }
+result: { sys_id: 1f2e3d4c5b6a79880716253443526170, number: SCTASK0010001, short_description: Order a laptop for Ann, state: "1" }

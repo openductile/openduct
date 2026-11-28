@@ -1,0 +1,58 @@
+# Made by `openduct app from-openapi`: Search conversations.
+description: "Search conversations, made from the API description's schemas"
+action: search_conversation
+credential: { token: test-token }
+input: { query: {} }
+exchanges:
+  - sent:
+      method: POST
+      url: "https://api.intercom.io/conversations/search"
+      query: {}
+      headers: { authorization: "Bearer test-token" }
+      body: {}
+    answer:
+      status: 200
+      body:
+        type: conversation.list
+        conversations:
+          - type: conversation
+            id: "1295"
+            title: example
+            created_at: 1663597223
+            updated_at: 1663597260
+            waiting_since: 1663597260
+            snoozed_until: 1663597260
+            open: true
+            state: open
+            read: true
+            priority: none
+            admin_assignee_id: 0
+        total_count: 12345
+        pages:
+          type: pages
+          page: 1
+          next: { page: 2, starting_after: your-cursor-from-response }
+          per_page: 2
+          total_pages: 13
+result:
+  type: conversation.list
+  conversations:
+    - type: conversation
+      id: "1295"
+      title: example
+      created_at: 1663597223
+      updated_at: 1663597260
+      waiting_since: 1663597260
+      snoozed_until: 1663597260
+      open: true
+      state: open
+      read: true
+      priority: none
+      admin_assignee_id: 0
+  total_count: 12345
+  pages:
+    type: pages
+    page: 1
+    next: { page: 2, starting_after: your-cursor-from-response }
+    per_page: 2
+    total_pages: 13

@@ -1,0 +1,43 @@
+name: New files from a partner's SFTP server into a table
+description: >-
+  Every five minutes, look for new CSV files in the outgoing folder of a partner's SFTP server (an sftp credential
+  called partner_sftp - its key is kept the first time it is reached), read each new one, add its rows to the orders
+  data table, and move the file into the done folder, so the partner sees it was taken. Make the table once, under
+  Tables: orders, with the columns the partner's files have.
+category: Data
+trigger:
+  storage:
+    credential: partner_sftp
+    folder: outgoing
+    pattern: "*.csv"
+    every: 5m
+# What a test runs on: an event as this trigger gives it.
+sample:
+  name: orders-2026-11-27.csv
+  path: outgoing/orders-2026-11-27.csv
+  kind: file
+  size: 2048
+  modified: "2026-11-27T09:00:00Z"
+  change: new
+steps:
+  - name: file
+    storage:
+      action: read
+      credential: partner_sftp
+      path: "{{ value.path }}"
+  - name: orders
+    extract_file:
+      file: steps.file
+      format: csv
+  - name: keep
+    table:
+      name: orders
+      action: insert
+      rows: steps.orders.rows
+  - name: done
+    storage:
+      action: move
+      credential: partner_sftp
+      path: "{{ value.path }}"
+      to: "done/{{ value.name }}"
+      overwrite: true

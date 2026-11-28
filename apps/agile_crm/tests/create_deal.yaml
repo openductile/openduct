@@ -1,0 +1,41 @@
+description: A deal made, its close date sent as Agile CRM's seconds since 1970
+action: create_deal
+credential: {domain: shopexample, email: dana@shop.example, api_key: agile-test-key}
+input:
+  name: Ten seats
+  expected_value: 600
+  milestone: Proposal
+  probability: 50
+  close_date: '2026-12-31T00:00:00Z'
+  contact_ids: ['5629585249009664']
+exchanges:
+- sent:
+    method: POST
+    url: https://shopexample.agilecrm.com/dev/api/opportunity
+    headers: {authorization: Basic ZGFuYUBzaG9wLmV4YW1wbGU6YWdpbGUtdGVzdC1rZXk=, accept: application/json}
+    query: {}
+    body:
+      name: Ten seats
+      expected_value: 600
+      milestone: Proposal
+      probability: 50
+      close_date: 1798675200
+      contact_ids: ['5629585249009664']
+  answer:
+    status: 200
+    body: &id001
+      id: '5717827835133952'
+      name: Ten seats
+      description: ''
+      expected_value: 600.0
+      probability: 50
+      milestone: Proposal
+      pipeline_id: '5730082031140864'
+      close_date: 1798675200
+      created_time: 1764237600
+      owner_id: '6263975862861824'
+      contact_ids: ['5629585249009664']
+      contacts: []
+      custom_data: []
+      archived: false
+result: *id001

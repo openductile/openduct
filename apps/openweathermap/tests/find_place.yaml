@@ -1,0 +1,10 @@
+action: find_place
+credential: { api_key: test-owm-key-1 }
+input: { place: "Springfield,IL,US", limit: 1 }
+exchanges:
+  - sent:
+      method: GET
+      url: https://api.openweathermap.org/geo/1.0/direct
+      query: { appid: test-owm-key-1, q: "Springfield,IL,US", limit: "1" }
+    answer: { body: [{ name: Springfield, lat: 39.7990, lon: -89.6440, country: US, state: Illinois }] }
+result: [{ name: Springfield, lat: 39.7990, lon: -89.6440, country: US, state: Illinois }]

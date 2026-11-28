@@ -1,0 +1,18 @@
+description: A Phantom's last two launches
+action: list_launches
+credential: { api_key: pb_test_key_1 }
+input: { agent_id: "7345678901234567", limit: 2 }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://api.phantombuster.com/api/v2/containers/fetch-all"
+      query: { agentId: "7345678901234567", limit: "2" }
+    answer:
+      status: 200
+      body:
+        containers:
+          - { id: "4512345678901234", status: finished, createdAt: 1795600000000, endType: finished, endedAt: 1795600300000, exitCode: 0 }
+          - { id: "4512345678901233", status: finished, createdAt: 1795500000000, endType: error, endedAt: 1795500100000, exitCode: 1 }
+result:
+  - { id: "4512345678901234", status: finished, createdAt: 1795600000000, endType: finished, endedAt: 1795600300000, exitCode: 0 }
+  - { id: "4512345678901233", status: finished, createdAt: 1795500000000, endType: error, endedAt: 1795500100000, exitCode: 1 }

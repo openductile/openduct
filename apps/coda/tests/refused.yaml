@@ -1,0 +1,6 @@
+# Made by `openduct app from-openapi`: a refusal.
+description: "Coda refuses list_docs: the step fails in its words"
+action: list_docs
+credential: { token: test-token }
+exchanges: [{ answer: { status: 404, body: { message: "Not found" } } }]
+error: "Coda answered 404: Not found"

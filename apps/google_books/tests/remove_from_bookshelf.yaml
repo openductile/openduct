@@ -1,0 +1,11 @@
+description: "A book taken off a shelf"
+action: remove_from_bookshelf
+credential: { access_token: ya29.test }
+input: { shelf: "2", volume_id: zyTCAlFPjgYC }
+exchanges:
+  - sent:
+      method: POST
+      url: https://books.googleapis.com/books/v1/mylibrary/bookshelves/2/removeVolume
+      query: { volumeId: zyTCAlFPjgYC }
+    answer: { status: 204 }
+result: { removed: true }

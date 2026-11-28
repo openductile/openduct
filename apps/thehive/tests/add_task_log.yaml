@@ -1,0 +1,34 @@
+description: Work logged on a task
+action: add_task_log
+credential:
+  url: https://thehive.example.com
+  api_key: test-key
+input:
+  task_id: ~12288
+  message: Sender added to the block list.
+exchanges:
+- sent:
+    method: POST
+    url: https://thehive.example.com/api/v1/task/~12288/log
+    headers:
+      authorization: Bearer test-key
+    body:
+      message: Sender added to the block list.
+  answer:
+    status: 201
+    body:
+      _id: ~28672
+      _type: Log
+      _createdAt: 1795161800000
+      message: Sender added to the block list.
+      date: 1795161800000
+      owner: analyst@example.com
+      attachments: []
+result:
+  _id: ~28672
+  _type: Log
+  _createdAt: 1795161800000
+  message: Sender added to the block list.
+  date: 1795161800000
+  owner: analyst@example.com
+  attachments: []

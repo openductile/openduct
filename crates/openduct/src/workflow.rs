@@ -18,6 +18,9 @@ pub(crate) enum WorkflowCommand {
         /// The workflow file (YAML or JSON).
         file: PathBuf,
     },
+    // developer CI/CD: pull, diff, push, rollback and promote against a running studio.
+    #[command(flatten)]
+    Remote(crate::workflow_remote::RemoteCommand),
     /// Run a workflow file on sample events, sending nothing: prints each run, step by step.
     Test {
         /// The workflow file (YAML or JSON).
@@ -31,9 +34,38 @@ pub(crate) enum WorkflowCommand {
     },
 }
 
+/// How many next times `check` shows for a schedule.
+const NEXT_SHOWN: usize = 5;
+
+/// For a schedule: what it is in plain words, and its next times - on its own clock, and in UTC.
+fn schedule_lines(workflow: &Workflow, now: i64) -> Vec<String> {
+    let Some(says) = openduct_flow::calendar::says(&workflow.trigger) else {
+        return Vec::new();
+    };
+    let mut lines = vec![format!("runs {says}; next:")];
+    for at in openduct_flow::calendar::next_runs(&workflow.trigger, now, NEXT_SHOWN) {
+        let local = openduct_flow::calendar::local(&workflow.trigger, at);
+        let utc = openduct_flow::runner::iso(at);
+        lines.push(if local == utc {
+            format!("  {utc}")
+        } else {
+            format!("  {local}  ({utc})")
+        });
+    }
+    lines
+}
+
+fn now_ms() -> i64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_or(0, |d| i64::try_from(d.as_millis()).unwrap_or(0))
+}
+
 fn load(file: &Path) -> Result<Workflow, String> {
     let text = std::fs::read_to_string(file).map_err(|e| format!("cannot read {}: {e}", file.display()))?;
-    Workflow::parse(&text).map_err(|e| format!("{}: {e}", file.display()))
+    // developer CI/CD: a file's `on: true` (whether a push turns it on) is the file's, not the workflow's.
+    let read = openduct_studio::workflow_files::read(&file.display().to_string(), &text)?;
+    Workflow::from_json(&read.definition, None).map_err(|e| format!("{}: {e}", file.display()))
 }
 
 pub(crate) async fn command(command: WorkflowCommand) -> Result<(), String> {
@@ -41,6 +73,18 @@ pub(crate) async fn command(command: WorkflowCommand) -> Result<(), String> {
         WorkflowCommand::Check { file } => {
             let w = load(&file)?;
             println!("workflow {} ({}): {} steps, ready", w.name, w.id, w.steps.len());
+            // cron-schedules: a schedule says when it runs next.
+            for line in schedule_lines(&w, now_ms()) {
+                println!("{line}");
+            }
+            // MCP: what AI assistants are offered.
+            if let Some(tool) = &w.tool {
+                println!(
+                    "offered as the tool {}, taking {} argument(s)",
+                    tool.name,
+                    tool.inputs.len()
+                );
+            }
             Ok(())
         }
         WorkflowCommand::Test {
@@ -89,5 +133,37 @@ pub(crate) async fn command(command: WorkflowCommand) -> Result<(), String> {
             }
             Ok(())
         }
+        WorkflowCommand::Remote(remote) => crate::workflow_remote::command(remote).await, // developer CI/CD
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_schedule_says_when_it_runs_next() {
+        let w = Workflow::parse(
+            "name: Report\ntrigger:\n  schedule:\n    every: week\n    on: monday\n    at: '08:00'\n    \
+             timezone: Europe/Berlin\n",
+        )
+        .unwrap();
+        // Friday 27 November 2026, 10:00 UTC.
+        let lines = schedule_lines(&w, 1_795_773_600_000);
+        assert_eq!(
+            lines[0],
+            "runs every week on Monday at 08:00 (Europe/Berlin); next:"
+        );
+        assert_eq!(lines[1], "  2026-11-30T08:00:00+01:00  (2026-11-30T07:00:00Z)");
+        assert_eq!(lines.len(), 1 + NEXT_SHOWN);
+        let every = Workflow::parse("name: Tick\ntrigger: { schedule: { every: 1h } }\n").unwrap();
+        assert_eq!(
+            schedule_lines(&every, 1_795_773_600_000)[..2],
+            [
+                "runs every 1h, counted from midnight UTC; next:",
+                "  2026-11-27T11:00:00Z"
+            ]
+        );
+        assert!(schedule_lines(&Workflow::parse("name: By hand\n").unwrap(), 0).is_empty());
     }
 }

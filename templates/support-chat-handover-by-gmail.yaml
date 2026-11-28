@@ -1,0 +1,76 @@
+name: Hand a chatbot conversation over to a person by Gmail
+description: >-
+  When your site's chatbot cannot help, it calls this workflow's address (with its token) with the conversation: the
+  conversation is written out as a readable e-mail to your support inbox, with why it was handed over and the page
+  the customer was on, and the customer is told by e-mail that a person will answer within a working day. The
+  chatbot is answered at once with the ticket's reference, to show the customer. Needs: gmail.
+category: Support
+trigger:
+  # Left empty here: each workflow made from the template is given a token of its own.
+  webhook: { token: "" }
+# What a test runs on: an event as this trigger gives it.
+sample:
+  session: s-7f3k29
+  reason: The customer asks for a refund above what the bot may give.
+  page: /orders/10482
+  customer: { name: Rosa Diaz, email: rosa.diaz@example.com }
+  transcript:
+    - { role: user, content: "Hi, my blender arrived with a cracked jug.", at: "2026-11-27T14:02:11Z" }
+    - { role: assistant, content: "I am sorry to hear that. Could you give me your order number?", at: "2026-11-27T14:02:15Z" }
+    - { role: user, content: "10482. I want my money back, not a new jug.", at: "2026-11-27T14:03:40Z" }
+steps:
+  # Writes the conversation out as an e-mail, checks the customer's address, and makes a short reference.
+  - name: letter
+    javascript: |
+      const c = value.customer || {};
+      const email = (c.email || "").trim().toLowerCase();
+      const valid = /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email);
+      const turns = Array.isArray(value.transcript) ? value.transcript : [];
+      const lines = turns.map(t => {
+        const who = t.role === "user" ? (c.name || "Customer") : "Chatbot";
+        const time = t.at ? t.at.slice(11, 16) + " UTC" : "";
+        return `${time} ${who}: ${String(t.content || "").trim()}`.trim();
+      });
+      const last = [...turns].reverse().find(t => t.role === "user");
+      // A short reference from the session, the same each time the same chat is handed over.
+      const ref = "CH-" + String(value.session || "").replace(/[^A-Za-z0-9]/g, "").slice(-6).toUpperCase();
+      return {
+        valid,
+        email,
+        ref,
+        subject: `[${ref}] Chat handed over: ${(last && last.content || "a question").slice(0, 60)}`,
+        body: [
+          `Customer: ${c.name || "not given"} <${email || "no e-mail"}>`,
+          `Why: ${value.reason || "not given"}`,
+          `Page: ${value.page || "not given"}`,
+          `Turns: ${turns.length}`,
+          "",
+          ...lines,
+          "",
+          `Answer the customer at ${email} and quote ${ref}.`,
+        ].join("\n"),
+      };
+  - where: steps.letter.valid == true
+  - name: to_support
+    gmail:
+      action: send_email
+      credential: gmail
+      to: support@example.com
+      subject: "{{ steps.letter.subject }}"
+      text: "{{ steps.letter.body }}"
+    retry: { attempts: 3, wait: 10s }
+  - name: to_customer
+    gmail:
+      action: send_email
+      credential: gmail
+      to: "{{ steps.letter.email }}"
+      subject: "We have your question ({{ steps.letter.ref }})"
+      text: >-
+        Hello {{ has(value.customer.name) ? value.customer.name : 'there' }}, thank you for your patience. A person
+        from our team has your conversation and will answer you within one working day. Your reference is
+        {{ steps.letter.ref }}.
+    retry: { attempts: 3, wait: 10s }
+  - name: reply
+    respond:
+      status: 200
+      body: { handed_over: true, reference: "{{ steps.letter.ref }}" }

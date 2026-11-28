@@ -1,0 +1,11 @@
+description: One row streamed into a table
+action: add_rows
+credential: { access_token: ya29.bq-test }
+input: { project_id: example-shop-1, dataset_id: shop, table_id: orders, row: { order_id: A-1003, total: 64, paid: true } }
+exchanges:
+  - sent:
+      method: POST
+      url: https://bigquery.googleapis.com/bigquery/v2/projects/example-shop-1/datasets/shop/tables/orders/insertAll
+      body: { rows: [{ json: { order_id: A-1003, total: 64, paid: true } }] }
+    answer: { body: { kind: bigquery#tableDataInsertAllResponse } }
+result: { added: true }

@@ -1,0 +1,9 @@
+description: Turning the workflow off ends the subscription
+trigger: email_event
+unregister: true
+workflow: wf1
+credential: { api_key: xkeysib-test-1, "webhook_secret@wf1": k, "webhook_id@wf1": "7" }
+exchanges:
+  - sent: { method: DELETE, url: https://api.brevo.com/v3/webhooks/7 }
+    answer: { status: 204 }
+kept: { webhook_secret: "", webhook_id: "" }

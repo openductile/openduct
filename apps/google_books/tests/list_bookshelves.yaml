@@ -1,0 +1,17 @@
+description: "The signed-in user's bookshelves"
+action: list_bookshelves
+credential: { access_token: ya29.test }
+exchanges:
+  - sent:
+      method: GET
+      url: https://books.googleapis.com/books/v1/mylibrary/bookshelves
+      headers: { authorization: Bearer ya29.test }
+    answer:
+      body:
+        kind: "books#bookshelves"
+        items:
+          - { kind: "books#bookshelf", id: 0, title: Favorites, access: PRIVATE, volumeCount: 3, updated: "2026-11-20T10:00:00.000Z" }
+          - { kind: "books#bookshelf", id: 2, title: To read, access: PRIVATE, volumeCount: 5, updated: "2026-11-26T08:00:00.000Z" }
+result:
+  - { kind: "books#bookshelf", id: 0, title: Favorites, access: PRIVATE, volumeCount: 3, updated: "2026-11-20T10:00:00.000Z" }
+  - { kind: "books#bookshelf", id: 2, title: To read, access: PRIVATE, volumeCount: 5, updated: "2026-11-26T08:00:00.000Z" }

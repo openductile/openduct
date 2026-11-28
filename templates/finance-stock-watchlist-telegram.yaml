@@ -1,0 +1,86 @@
+name: Stock price alerts on Telegram from a watchlist sheet
+description: >-
+  Every 30 minutes while the US market is open, read your watchlist from a Google Sheet (symbol, alert below, alert
+  above), get each quote from Finnhub, and send a Telegram message when a price crosses one of your levels - once a
+  day for each level, not every half hour. Change the levels in the sheet whenever you like. Needs: Google Sheets
+  (sheets), a Finnhub API key as a header credential named X-Finnhub-Token (finnhub) and a Telegram bot (bot).
+category: Finance
+trigger:
+  # Every 30 minutes from 9:30 to 16:00, Monday to Friday, New York time.
+  schedule: { cron: ["30 9 * * 1-5", "*/30 10-15 * * 1-5", "0 16 * * 1-5"], timezone: America/New_York }
+# What a test runs on: an event as this trigger gives it.
+sample:
+  scheduled_at: '2026-11-27T15:30:00Z'
+steps:
+  - name: sheet
+    google_sheets:
+      action: read_rows
+      credential: sheets
+      spreadsheet_id: your-sheet-id
+      # A header row, then: symbol, alert below, alert above.
+      range: Watchlist!A1:C100
+    retry: { attempts: 3, wait: 30s }
+  - name: watch
+    python: |
+      import re
+      def number(x):
+          try:
+              return float(str(x).replace(",", "").replace("$", "").strip())
+          except ValueError:
+              return None
+      watch = []
+      for row in (steps.get("sheet") or [])[1:]:
+          symbol = str(row[0]).strip().upper() if row else ""
+          if not re.fullmatch(r"[A-Z][A-Z0-9.\-]{0,9}", symbol):
+              continue
+          below = number(row[1]) if len(row) > 1 else None
+          above = number(row[2]) if len(row) > 2 else None
+          if below is None and above is None:
+              continue
+          watch.append({"symbol": symbol, "below": below, "above": above})
+      result = {"list": watch[:50], "count": len(watch)}
+  - name: quotes
+    for_each:
+      items: steps.watch.list
+      steps:
+        - name: quote
+          http:
+            credential: finnhub
+            url: https://finnhub.io/api/v1/quote
+            query: { symbol: "{{ item.symbol }}" }
+            # c: the price now, pc: the last close, dp: the change in percent.
+            sample: { c: 112.4, d: -6.1, dp: -5.15, h: 119.0, l: 111.8, o: 118.2, pc: 118.5, t: 1795793400 }
+          retry: { attempts: 3, wait: 15s }
+  - name: crossed
+    python:
+      state: true
+      code: |
+        # A level crossed today is told once: state remembers which, by day.
+        day = value["scheduled_at"][:10]
+        told = state.get("told") or {}
+        told = {k: v for k, v in told.items() if v == day}
+        alerts = []
+        for w, q in zip(steps["watch"]["list"], steps.get("quotes") or []):
+            price = ((q.get("quote") or {}).get("body") or {}).get("c")
+            if not price:
+                continue
+            change = ((q.get("quote") or {}).get("body") or {}).get("dp") or 0
+            for side, level in (("below", w["below"]), ("above", w["above"])):
+                if level is None:
+                    continue
+                hit = price < level if side == "below" else price > level
+                key = f"{w['symbol']}:{side}:{level}"
+                if hit and key not in told:
+                    told[key] = day
+                    alerts.append(f"{w['symbol']} is {price:.2f}, {side} your {level:.2f} ({change:+.2f}% today)")
+        state["told"] = told
+        result = {"alerts": alerts, "count": len(alerts)}
+  - name: tell
+    if:
+      when: steps.crossed.count > 0
+      then:
+        - telegram:
+            credential: bot
+            chat_id: "123456789"
+            text: "Watchlist:\n{{ steps.crossed.alerts.join('\\n') }}"
+          retry: { attempts: 3, wait: 20s }

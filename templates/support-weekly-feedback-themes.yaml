@@ -1,0 +1,99 @@
+name: What customers said this week, in themes, by email
+description: >-
+  For product and support teams who collect feedback in a Google Sheet (the day in column A, the customer in B, where it
+  came from in C, what they said in D): every Monday at 9:00, the last seven days' feedback is read, grouped by a model
+  into the themes that came up most - each with how often and one customer's own words - plus what people praised and
+  what they asked for, and emailed to the team. A week with no feedback sends a one-line note. Needs: a Google Sheets
+  sign-in called sheets, an AI credential called model, and a Gmail sign-in called gmail.
+category: Support
+trigger:
+  schedule: { every: week, on: [monday], at: "09:00", timezone: Europe/Paris }
+# What a test runs on: an event as this trigger gives it.
+sample:
+  scheduled_at: "2026-11-30T08:00:00Z"
+steps:
+  - name: settings
+    set:
+      # Change these to your own.
+      spreadsheet: "'your-spreadsheet-id'"
+      send_to: "'product@example.com'"
+  - name: feedback
+    google_sheets:
+      credential: sheets
+      action: read_rows
+      spreadsheet_id: "{{ steps.settings.spreadsheet }}"
+      range: Feedback!A2:D
+    retry: { attempts: 3, wait: 10s }
+  - name: this_week
+    javascript: |
+      // The rows of the last seven days. Days are read as 2026-11-27, 11/27/2026 (month first) or 27.11.2026.
+      const read = s => {
+        s = String(s || "").trim();
+        let m;
+        if ((m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/))) return Date.UTC(+m[1], m[2] - 1, +m[3]);
+        if ((m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/))) return Date.UTC(+m[3], m[1] - 1, +m[2]);
+        if ((m = s.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})/))) return Date.UTC(+m[3], m[2] - 1, +m[1]);
+        return NaN;
+      };
+      const until = Date.parse(value.scheduled_at);
+      const since = until - 7 * 24 * 3600 * 1000;
+      const rows = (steps.feedback || [])
+        .map(r => ({ day: read(r[0]), customer: String(r[1] || ""), from: String(r[2] || ""), said: String(r[3] || "").trim() }))
+        .filter(r => r.said && r.day >= since && r.day < until);
+      const unread = (steps.feedback || []).filter(r => r[3] && Number.isNaN(read(r[0]))).length;
+      // One line each, cut short, so a busy week still fits one request.
+      const lines = rows.map(r => `[${r.from || "?"}] ${r.said.slice(0, 500)}`);
+      return { count: rows.length, unread, text: lines.join("\n").slice(0, 150000) };
+  - name: themes
+    if:
+      when: steps.this_week.count > 0
+      then:
+        - name: grouped
+          ai:
+            credential: model
+            system: >-
+              You read a week of customer feedback, one message a line, and group it. Give the themes that came up
+              most (at most six), each with how many messages are about it and one short quote in the customer's own
+              words; then what people praised and what they asked for, a line each. Only what the messages say.
+              Answer as JSON.
+            prompt: "{{ steps.this_week.text }}"
+            schema:
+              type: object
+              properties:
+                themes:
+                  type: array
+                  maxItems: 6
+                  items:
+                    type: object
+                    properties:
+                      theme: { type: string }
+                      count: { type: integer }
+                      quote: { type: string }
+                    required: [theme, count, quote]
+                praised: { type: string }
+                asked_for: { type: string }
+              required: [themes, praised, asked_for]
+            max_tokens: 900
+        - name: report
+          set:
+            text: >-
+              steps.grouped.json.themes == null ? steps.grouped.text :
+              steps.grouped.json.themes.map(t, '- ' + t.theme + ' (' + string(t.count) + '): "' + t.quote + '"').join('\n')
+              + '\n\nPraised: ' + steps.grouped.json.praised + '\nAsked for: ' + steps.grouped.json.asked_for
+        - name: send
+          gmail:
+            credential: gmail
+            action: send_email
+            to: "{{ steps.settings.send_to }}"
+            subject: "Customer feedback this week: {{ steps.this_week.count }} messages"
+            text: "{{ steps.report.text }}{{ steps.this_week.unread > 0 ? '\\n\\n(' + string(steps.this_week.unread) + ' rows with a day that could not be read were left out.)' : '' }}"
+          retry: { attempts: 3, wait: 30s }
+      else:
+        - name: quiet
+          gmail:
+            credential: gmail
+            action: send_email
+            to: "{{ steps.settings.send_to }}"
+            subject: Customer feedback this week
+            text: No feedback was added to the sheet in the last seven days.
+          retry: { attempts: 3, wait: 30s }

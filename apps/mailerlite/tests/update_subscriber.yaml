@@ -1,0 +1,75 @@
+description: A field changed
+action: update_subscriber
+credential:
+  api_key: test-key
+input:
+  subscriber_id: '31986843064993537'
+  fields:
+    city: Denver
+exchanges:
+- sent:
+    method: PUT
+    url: https://connect.mailerlite.com/api/subscribers/31986843064993537
+    headers:
+      authorization: Bearer test-key
+      accept: application/json
+    body:
+      fields:
+        city: Denver
+  answer:
+    status: 200
+    body:
+      data:
+        id: '31986843064993537'
+        email: pat@example.com
+        status: active
+        source: api
+        sent: 3
+        opens_count: 2
+        clicks_count: 1
+        open_rate: 66.67
+        click_rate: 33.33
+        ip_address: null
+        subscribed_at: '2026-11-01 14:03:50'
+        unsubscribed_at: null
+        created_at: '2026-11-01 14:03:50'
+        updated_at: '2026-11-02 09:00:00'
+        fields:
+          name: Pat
+          last_name: Sample
+          company: Sample Supplies
+          city: Denver
+          country: null
+          phone: null
+          state: null
+          z_i_p: null
+        groups: &id001 []
+        opted_in_at: null
+        optin_ip: null
+result:
+  id: '31986843064993537'
+  email: pat@example.com
+  status: active
+  source: api
+  sent: 3
+  opens_count: 2
+  clicks_count: 1
+  open_rate: 66.67
+  click_rate: 33.33
+  ip_address: null
+  subscribed_at: '2026-11-01 14:03:50'
+  unsubscribed_at: null
+  created_at: '2026-11-01 14:03:50'
+  updated_at: '2026-11-02 09:00:00'
+  fields:
+    name: Pat
+    last_name: Sample
+    company: Sample Supplies
+    city: Denver
+    country: null
+    phone: null
+    state: null
+    z_i_p: null
+  groups: *id001
+  opted_in_at: null
+  optin_ip: null

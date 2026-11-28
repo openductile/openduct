@@ -1,0 +1,12 @@
+# Made by `openduct app from-openapi`: Delete Collection Item.
+description: "Delete Collection Item, made from the API description's schemas"
+action: delete_item
+credential: { token: test-token }
+input: { collection_id: collection_1, item_id: item_1 }
+exchanges:
+  - sent:
+      method: DELETE
+      url: "https://api.webflow.com/v2/collections/collection_1/items/item_1"
+      query: {}
+      headers: { authorization: "Bearer test-token" }
+    answer: { status: 204 }

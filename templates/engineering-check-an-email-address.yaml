@@ -1,0 +1,64 @@
+name: Check an email address before you use it (for other workflows)
+description: >-
+  A small workflow for your other workflows to call - from a sign-up, a form or an import, with "Run a workflow"
+  (run_workflow: {workflow: <this one>, input: "{'email': value.email}"}): it checks the address is written right,
+  suggests the fix for a mistyped common domain (gmial.com, hotmial.com...), and asks the public DNS (Google's DNS over
+  HTTPS) whether the domain can receive mail at all. It answers with valid, accepts_mail, the mail servers, a suggestion
+  and the reason, so the caller decides. Nothing is sent to the address. Needs: nothing.
+category: Engineering
+trigger: manual
+# What a test runs on: what a calling workflow gives it.
+sample:
+  email: " Robin.Lee@Example.com "
+steps:
+  - name: shape
+    javascript: |
+      // Is it written like an email address? Its domain, and a likely fix for a common typo.
+      const email = String(value.email || "").trim().toLowerCase();
+      const ok = /^[a-z0-9.!#$%&'*+/=?^_`{|}~-]+@([a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,}$/.test(email)
+        && !email.includes("..") && email.length <= 254;
+      const domain = ok ? email.split("@")[1] : "";
+      const typos = { "gmial.com": "gmail.com", "gmai.com": "gmail.com", "gamil.com": "gmail.com", "gmail.co": "gmail.com",
+                      "hotmial.com": "hotmail.com", "hotmal.com": "hotmail.com", "outlok.com": "outlook.com",
+                      "yaho.com": "yahoo.com", "yahooo.com": "yahoo.com", "iclod.com": "icloud.com" };
+      const fixed = typos[domain];
+      return { email, ok, domain, suggestion: fixed ? email.replace(/@.*/, "@" + fixed) : null,
+               reason: ok ? null : "it is not written like an email address" };
+  - name: ask_dns
+    if:
+      # Only an address written right is looked up.
+      when: steps.shape.ok
+      then:
+        - name: mx
+          http:
+            method: GET
+            url: https://dns.google/resolve
+            query: { name: "{{ steps.shape.domain }}", type: MX }
+            headers: { Accept: application/dns-json }
+            timeout: 10s
+            sample:
+              Status: 0
+              Answer:
+                - { name: "example.com.", type: 15, TTL: 3600, data: "10 mx1.mail.example.com." }
+                - { name: "example.com.", type: 15, TTL: 3600, data: "20 mx2.mail.example.com." }
+          retry: { attempts: 3, wait: 2s }
+  # What the calling workflow is given: this, the run's last step.
+  - name: answer
+    set:
+      email: steps.shape.email
+      valid: steps.shape.ok
+      domain: steps.shape.domain
+      # DNS status 0 is an answer; 3 is a domain that does not exist. An MX record of "0 ." says it takes no mail.
+      mail_servers: >-
+        has(steps.mx) && steps.mx.body.Status == 0 && has(steps.mx.body.Answer)
+          ? steps.mx.body.Answer.filter(a, a.type == 15 && size(a.data.split(' ')) > 1 && a.data.split(' ')[1] != '.').map(a, regex.replace(a.data.split(' ')[1], r'\.$', ''))
+          : []
+      accepts_mail: >-
+        has(steps.mx) && steps.mx.body.Status == 0 && has(steps.mx.body.Answer)
+          && steps.mx.body.Answer.exists(a, a.type == 15 && size(a.data.split(' ')) > 1 && a.data.split(' ')[1] != '.')
+      suggestion: steps.shape.suggestion
+      reason: >-
+        !steps.shape.ok ? steps.shape.reason
+          : steps.mx.body.Status == 3 ? 'the domain does not exist'
+          : !(has(steps.mx.body.Answer) && steps.mx.body.Answer.exists(a, a.type == 15)) ? 'the domain has no mail servers'
+          : null

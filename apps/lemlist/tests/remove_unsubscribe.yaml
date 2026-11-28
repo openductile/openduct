@@ -1,0 +1,11 @@
+description: "An email campaigns may write to again; lemlist answers in words"
+action: remove_unsubscribe
+credential: {"api_key": "test-key"}
+input: {"value": "cy@example.com"}
+exchanges:
+  - sent:
+      method: DELETE
+      url: "https://api.lemlist.com/api/v2/unsubscribes/variables/cy@example.com"
+      headers: {"authorization": "Basic OnRlc3Qta2V5"}
+    answer: {"status": 200, "body": "Variable subscribed"}
+result: {"answer": "Variable subscribed"}

@@ -1,0 +1,91 @@
+# Copyright 2026 Ductile AI, Inc
+# SPDX-License-Identifier: Apache-2.0
+# Google Translate, through Cloud Translation - Basic (v2): written by hand from Google's discovery document,
+# https://translation.googleapis.com/$discovery/rest?version=v2 (revision 20170525, fetched 2026-11-27), and its
+# reference pages (CC BY 4.0). Labels and descriptions are our own words.
+app: google_translate
+name: Google Translate
+category: data
+description: Text translated between languages, and the language of a text told.
+docs: https://cloud.google.com/translate/docs/reference/rest/v2/translate
+hosts: [translation.googleapis.com]
+base_url: https://translation.googleapis.com/language/translate
+sign_in:
+  - id: google_translate
+    label: An API key
+    fields:
+      - { name: api_key, label: "The API key (Google Cloud console: APIs & Services, Credentials)", secret: true }
+    query: { key: "{{ credential.api_key }}" }
+  - id: google_translate_oauth
+    label: Sign in with Google
+    oauth2:
+      authorize: https://accounts.google.com/o/oauth2/v2/auth
+      token: https://oauth2.googleapis.com/token
+      scopes: [https://www.googleapis.com/auth/cloud-translation]
+      extra: { access_type: offline, prompt: consent }
+    headers:
+      Authorization: "Bearer {{ credential.access_token }}"
+error: value.error.message
+default_action: translate_text
+actions:
+  translate_text:
+    label: Translate text
+    description: A text in another language; the language it is in is told when not given.
+    method: POST
+    path: /v2
+    inputs:
+      - { name: text, label: "The text", required: true }
+      - { name: target, label: "Into this language (a code such as fr, de, es, ja, zh-TW)", required: true }
+      - { name: source, label: "From this language (told by Google when left out)" }
+      - { name: html, label: "The text is HTML (its tags are kept)", kind: boolean }
+    send:
+      q: ["{{ input.text }}"]
+      target: "{{ input.target }}"
+      source: "{{ input.source }}"
+      format: "{{ has(input.html) && input.html == true ? 'html' : 'text' }}"
+    result: >-
+      {'text': value.data.translations[0].translatedText,
+       'detected_source_language': has(value.data.translations[0].detectedSourceLanguage) ? value.data.translations[0].detectedSourceLanguage : ''}
+    output: { text: text, detected_source_language: text }
+  translate_texts:
+    label: Translate several texts
+    description: Up to 128 texts in another language at once, in the order given.
+    method: POST
+    path: /v2
+    inputs:
+      - { name: texts, label: "The texts", required: true, kind: list }
+      - { name: target, label: "Into this language (a code such as fr, de, es, ja, zh-TW)", required: true }
+      - { name: source, label: "From this language (told by Google when left out)" }
+      - { name: html, label: "The texts are HTML (their tags are kept)", kind: boolean }
+    send:
+      q: "{{ input.texts }}"
+      target: "{{ input.target }}"
+      source: "{{ input.source }}"
+      format: "{{ has(input.html) && input.html == true ? 'html' : 'text' }}"
+    result: >-
+      value.data.translations.map(t, {'text': t.translatedText,
+       'detected_source_language': has(t.detectedSourceLanguage) ? t.detectedSourceLanguage : ''})
+    output: { text: text, detected_source_language: text }
+  detect_language:
+    label: Tell a text's language
+    description: The language a text is most likely in, and how sure Google is.
+    method: POST
+    path: /v2/detect
+    inputs:
+      - { name: text, label: "The text", required: true }
+    send: { q: ["{{ input.text }}"] }
+    result: >-
+      {'language': value.data.detections[0][0].language,
+       'confidence': has(value.data.detections[0][0].confidence) ? value.data.detections[0][0].confidence : 0.0,
+       'is_reliable': has(value.data.detections[0][0].isReliable) ? value.data.detections[0][0].isReliable : false}
+    output: { language: text, confidence: number, is_reliable: boolean }
+  list_languages:
+    label: List languages
+    description: The languages Google translates between, with their names in a language of your choice.
+    method: GET
+    path: /v2/languages
+    inputs:
+      - { name: names_in, label: "Their names in this language (a code such as en); codes only when left out" }
+    query: { target: "{{ input.names_in }}" }
+    items: value.data.languages
+    output: { language: text, name: text }

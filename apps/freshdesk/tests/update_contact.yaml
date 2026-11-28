@@ -1,0 +1,51 @@
+description: A contact given a new job title
+action: update_contact
+credential:
+  domain: acme
+  api_key: test-key
+input:
+  contact_id: '5001'
+  job_title: Head buyer
+exchanges:
+- sent:
+    method: PUT
+    url: https://acme.freshdesk.com/api/v2/contacts/5001
+    headers:
+      authorization: Basic dGVzdC1rZXk6WA==
+    body:
+      job_title: Head buyer
+  answer:
+    status: 200
+    body:
+      id: 5001
+      name: Pat Sample
+      email: pat@example.com
+      phone: null
+      mobile: 555-0142
+      company_id: 8
+      job_title: Head buyer
+      address: null
+      active: true
+      language: en
+      time_zone: Eastern Time (US & Canada)
+      tags: &id001
+      - wholesale
+      custom_fields: &id002 {}
+      created_at: '2026-11-10T09:08:16Z'
+      updated_at: '2026-11-10T09:08:16Z'
+result:
+  id: 5001
+  name: Pat Sample
+  email: pat@example.com
+  phone: null
+  mobile: 555-0142
+  company_id: 8
+  job_title: Head buyer
+  address: null
+  active: true
+  language: en
+  time_zone: Eastern Time (US & Canada)
+  tags: *id001
+  custom_fields: *id002
+  created_at: '2026-11-10T09:08:16Z'
+  updated_at: '2026-11-10T09:08:16Z'

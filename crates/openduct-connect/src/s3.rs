@@ -18,15 +18,12 @@
 //! ```
 
 use std::collections::BTreeMap;
-use std::fmt::Write as _;
 use std::io::Write as _;
 use std::time::{Duration, Instant};
 
 use chrono::Utc;
-use hmac::{KeyInit, Mac};
 use openduct_pipeline::Connector;
 use reqwest::{Client, Url};
-use sha2::{Digest, Sha256};
 
 use crate::settings::{Limits, Settings};
 use crate::{SinkOutcome, SinkRecord, web};
@@ -248,32 +245,7 @@ impl S3Sink {
 
 /// An object key as a URL path: every byte but the unreserved ones and `/` percent-encoded, as S3 signs it.
 fn encode_key(key: &str) -> String {
-    let mut out = String::new();
-    for b in key.bytes() {
-        if b.is_ascii_alphanumeric() || matches!(b, b'-' | b'_' | b'.' | b'~' | b'/') {
-            out.push(char::from(b));
-        } else {
-            let _ = write!(out, "%{b:02X}");
-        }
-    }
-    out
-}
-
-fn hex(bytes: &[u8]) -> String {
-    bytes
-        .iter()
-        .fold(String::with_capacity(bytes.len() * 2), |mut s, b| {
-            let _ = write!(s, "{b:02x}");
-            s
-        })
-}
-
-fn hmac(key: &[u8], data: &str) -> Vec<u8> {
-    let Ok(mut mac) = hmac::Hmac::<Sha256>::new_from_slice(key) else {
-        return Vec::new();
-    };
-    mac.update(data.as_bytes());
-    mac.finalize().into_bytes().to_vec()
+    crate::sigv4::encode_path(key)
 }
 
 /// The headers that sign a PUT with AWS Signature Version 4.
@@ -283,47 +255,19 @@ fn sign(
     path: &str,
     body: &[u8],
     now: chrono::DateTime<Utc>,
-) -> Vec<(&'static str, String)> {
-    let stamp = now.format("%Y%m%dT%H%M%SZ").to_string();
-    let date = now.format("%Y%m%d").to_string();
-    let payload = hex(&Sha256::digest(body));
-    let mut headers = vec![
-        ("host", host.to_owned()),
-        ("x-amz-content-sha256", payload.clone()),
-        ("x-amz-date", stamp.clone()),
-    ];
-    if let Some(token) = &s3.session_token {
-        headers.push(("x-amz-security-token", token.clone()));
-    }
-    let canonical_headers: String = headers
-        .iter()
-        .map(|(n, v)| format!("{n}:{}\n", v.trim()))
-        .collect();
-    let signed_headers = headers.iter().map(|(n, _)| *n).collect::<Vec<_>>().join(";");
-    let request = format!("PUT\n{path}\n\n{canonical_headers}\n{signed_headers}\n{payload}");
-    let scope = format!("{date}/{}/s3/aws4_request", s3.region);
-    let to_sign = format!(
-        "AWS4-HMAC-SHA256\n{stamp}\n{scope}\n{}",
-        hex(&Sha256::digest(request.as_bytes()))
-    );
-    let key = ["aws4_request"].iter().fold(
-        hmac(
-            &hmac(
-                &hmac(format!("AWS4{}", s3.secret_key).as_bytes(), &date),
-                &s3.region,
-            ),
-            "s3",
-        ),
-        |k, part| hmac(&k, part),
-    );
-    let signature = hex(&hmac(&key, &to_sign));
-    let mut out: Vec<(&'static str, String)> = headers.into_iter().filter(|(n, _)| *n != "host").collect();
-    out.push((
-        "Authorization",
-        format!(
-            "AWS4-HMAC-SHA256 Credential={}/{scope}, SignedHeaders={signed_headers}, Signature={signature}",
-            s3.access_key
-        ),
-    ));
-    out
+) -> Vec<(String, String)> {
+    let request = crate::sigv4::Request {
+        method: "PUT",
+        host,
+        path,
+        query: &[],
+        region: &s3.region,
+        service: "s3",
+    };
+    let keys = crate::sigv4::Keys {
+        access: &s3.access_key,
+        secret: &s3.secret_key,
+        token: s3.session_token.as_deref(),
+    };
+    crate::sigv4::headers(&request, &[], &crate::sigv4::sha256_hex(body), &keys, now)
 }

@@ -1,0 +1,31 @@
+description: "The signed-in user, with the default group to shorten in"
+action: get_user
+credential: { token: test-token }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://api-ssl.bitly.com/v4/user"
+      query: {}
+      headers: { authorization: "Bearer test-token" }
+    answer:
+      status: 200
+      body:
+        login: ann_example
+        name: Ann Example
+        is_active: true
+        created: "2025-03-01T09:00:00+0000"
+        modified: "2026-11-01T09:00:00+0000"
+        is_sso_user: false
+        emails: [{ email: "ann@example.com", is_primary: true, is_verified: true }]
+        is_2fa_enabled: true
+        default_group_guid: Bx1ab23cD4E
+result:
+  login: ann_example
+  name: Ann Example
+  is_active: true
+  created: "2025-03-01T09:00:00+0000"
+  modified: "2026-11-01T09:00:00+0000"
+  is_sso_user: false
+  emails: [{ email: "ann@example.com", is_primary: true, is_verified: true }]
+  is_2fa_enabled: true
+  default_group_guid: Bx1ab23cD4E

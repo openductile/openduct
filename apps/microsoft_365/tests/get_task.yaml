@@ -1,0 +1,27 @@
+description: "One To Do task"
+action: get_task
+credential: { access_token: eyJ0 }
+input: { list_id: AAMkShop2, task_id: AlMKXwbQ1 }
+exchanges:
+  - sent:
+      method: GET
+      url: https://graph.microsoft.com/v1.0/me/todo/lists/AAMkShop2/tasks/AlMKXwbQ1
+    answer:
+      body:
+        id: AlMKXwbQ1
+        title: Pack order 1042
+        status: inProgress
+        importance: high
+        isReminderOn: false
+        categories: [Orders]
+        body: { content: "Gift wrap requested", contentType: text }
+        dueDateTime: { dateTime: "2026-12-01T17:00:00.0000000", timeZone: UTC }
+result:
+  id: AlMKXwbQ1
+  title: Pack order 1042
+  status: inProgress
+  importance: high
+  isReminderOn: false
+  categories: [Orders]
+  body: { content: "Gift wrap requested", contentType: text }
+  dueDateTime: { dateTime: "2026-12-01T17:00:00.0000000", timeZone: UTC }

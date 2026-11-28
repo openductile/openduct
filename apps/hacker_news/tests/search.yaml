@@ -1,0 +1,20 @@
+description: Stories about a subject with at least 50 points, the most relevant first
+action: search
+credential: {}
+input: { query: watering timer, min_points: 50 }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://hn.algolia.com/api/v1/search"
+      query: { query: watering timer, tags: story, numericFilters: "points>=50" }
+    answer:
+      status: 200
+      body:
+        hits:
+          - { objectID: "46100001", title: "Show HN: A plant watering timer", url: "https://plants.example/timer", author: ann_example, points: 120, num_comments: 2, created_at_i: 1795600000 }
+        nbHits: 1
+        page: 0
+        nbPages: 1
+        hitsPerPage: 20
+result:
+  - { objectID: "46100001", title: "Show HN: A plant watering timer", url: "https://plants.example/timer", author: ann_example, points: 120, num_comments: 2, created_at_i: 1795600000 }

@@ -1,0 +1,7 @@
+description: A request the sign-in may not make
+action: get_subreddit
+credential: { access_token: test-reddit-token }
+input: { subreddit: private_example }
+exchanges:
+  - answer: { status: 403, body: { message: Forbidden, error: 403 } }
+error: "Reddit answered 403: Forbidden"

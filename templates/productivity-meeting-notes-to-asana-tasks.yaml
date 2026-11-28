@@ -1,0 +1,81 @@
+name: Meeting notes into a recap and Asana tasks
+description: >-
+  When your meeting tool writes a meeting's transcript into your PostgreSQL database (a meeting_notes table: id, title,
+  attendees, transcript), the new row is picked up within two minutes: a model writes a short recap and lists the
+  action items with their owners and due days, each action item becomes a task in your Asana project, and the
+  attendees get the recap from Gmail with the tasks listed. Needs: notes_db (postgres), model (ai), asana (bearer: an
+  Asana personal access token), mail (gmail).
+category: Productivity
+trigger:
+  postgres: { credential: notes_db, table: meeting_notes, cursor: id, every: 2m }
+# What a test runs on: a new row as this trigger gives it.
+sample:
+  id: 1042
+  title: Spring catalogue planning
+  attendees: ana.silva@example.com, raj.mehta@example.com, li.wong@example.com
+  held_at: '2026-11-27 15:00:00'
+  transcript: >-
+    Ana: We need the spring catalogue at the printer by January 20. Raj, can you get the final prices from suppliers
+    by December 12? Raj: Yes, I'll chase the two late ones this week. Li: I'll book the photographer for the first
+    week of January and send the shot list by December 5. Ana: Good. I'll draft the cover copy. Let's meet again on
+    the 15th.
+steps:
+  - where: value.transcript != null && size(value.transcript) > 200
+  - name: recap
+    summarise:
+      credential: model
+      text: "{{ value.transcript }}"
+      length: at most six bullet points
+      style: bullets
+      instructions: Say what was decided and what happens next. No small talk.
+  - name: actions
+    extract:
+      credential: model
+      text: "{{ value.transcript }}"
+      instructions: Only actions someone agreed to do. Due days as YYYY-MM-DD; the meeting was on {{ value.held_at }}.
+      schema:
+        type: object
+        properties:
+          items:
+            type: array
+            maxItems: 20
+            items:
+              type: object
+              properties:
+                task: { type: string, description: "what to do, starting with a verb" }
+                owner: { type: string, description: "who agreed to do it" }
+                due: { type: string, description: "the day it is due, as 2026-12-12, or empty" }
+              required: [task, owner, due]
+        required: [items]
+  - name: tasks
+    for_each:
+      items: "has(steps.actions.json.items) && steps.actions.json.items != null ? steps.actions.json.items : []"
+      steps:
+        - name: task
+          http:
+            method: POST
+            url: https://app.asana.com/api/1.0/tasks
+            credential: asana
+            json:
+              data:
+                name: "{{ item.task }} ({{ item.owner }})"
+                notes: "From the meeting {{ value.title }} on {{ value.held_at }}."
+                due_on: "{{ item.due.matches(r'^\\d{4}-\\d{2}-\\d{2}$') ? item.due : null }}"
+                # Your Asana project's id: the number in its address.
+                projects: ["1200000000000001"]
+            sample: { data: { gid: "1209876543210001", name: Get final prices from suppliers (Raj), permalink_url: "https://app.asana.com/0/1200000000000001/1209876543210001" } }
+          retry: { attempts: 3, wait: 10s }
+  - name: listed
+    set:
+      lines: >-
+        has(steps.actions.json.items) && steps.actions.json.items != null
+        ? steps.actions.json.items.map(i, '- ' + i.task + ' (' + i.owner + (i.due != '' ? ', by ' + i.due : '') + ')')
+        : []
+  - name: send
+    gmail:
+      action: send_email
+      credential: mail
+      to: "{{ value.attendees }}"
+      subject: "Recap: {{ value.title }}"
+      text: "{{ steps.recap.summary }}\n\nAction items (in Asana):\n{{ size(steps.listed.lines) > 0 ? steps.listed.lines.join('\\n') : 'none agreed' }}"
+    retry: { attempts: 3, wait: 10s }

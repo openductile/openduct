@@ -1,0 +1,12 @@
+description: The same, server to server, with a token the app's id and secret got
+action: create_lead
+sign_in: salesforce_client
+credential: { instance: examplecorp.my.salesforce.com, client_id: 3MVG9_test, client_secret: secret_test, access_token: "00D000000000003!AQ.test", expires_at: "4102444800" }
+input: { last_name: Lee, company: Example Co }
+exchanges:
+  - sent:
+      method: POST
+      url: https://examplecorp.my.salesforce.com/services/data/v67.0/sobjects/Lead/
+      headers: { authorization: Bearer 00D000000000003!AQ.test }
+    answer: { status: 201, body: { id: 00Q5e000001AbcDHAZ, success: true, errors: [] } }
+result: { id: 00Q5e000001AbcDHAZ, success: true, errors: [] }

@@ -1,0 +1,9 @@
+description: A project id that is not there - Asana's own words
+action: create_task
+credential: { token: "2/1200000000000001/1209999999999999:0a1b2c3d4e5f" }
+input: { name: Anything, project: "999" }
+exchanges:
+  - answer:
+      status: 400
+      body: { errors: [{ message: "projects: [0]: Not a recognized ID: 999", help: "For more information on API status codes and how to handle them, read the docs on errors: https://developers.asana.com/docs/errors" }] }
+error: "Asana answered 400: projects: [0]: Not a recognized ID: 999"

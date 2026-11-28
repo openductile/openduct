@@ -1,0 +1,79 @@
+description: "List a workspace's spaces"
+action: list_spaces
+credential: { api_key: test-key }
+input: { team_id: 123 }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://api.clickup.com/api/v2/team/123/space"
+      query: {}
+      headers: { authorization: test-key }
+    answer:
+      status: 200
+      body:
+        spaces:
+          - id: id_1
+            name: example
+            private: true
+            color: example
+            avatar: example
+            admin_can_manage: true
+            archived: true
+            members:
+              - user:
+                  id: 1
+                  username: example
+                  email: "ann@example.com"
+                  color: example
+                  profilePicture: example
+                  initials: example
+                  week_start_day: 1
+                  global_font_support: true
+                  timezeone: example
+            statuses: [{ id: id_1, status: example, color: example, orderindex: 1, type: example }]
+            multiple_assignees: true
+            features:
+              due_dates:
+                enabled: true
+                start_date: true
+                remap_due_dates: true
+                remap_closed_due_date: true
+              time_tracking: { enabled: true }
+              tags: { enabled: true }
+              time_estimates: { enabled: true }
+              checklists: { enabled: true }
+              custom_fields: { enabled: true }
+              remap_dependencies: { enabled: true }
+              dependency_warning: { enabled: true }
+              portfolios: { enabled: true }
+result:
+  - id: id_1
+    name: example
+    private: true
+    color: example
+    avatar: example
+    admin_can_manage: true
+    archived: true
+    members:
+      - user:
+          id: 1
+          username: example
+          email: "ann@example.com"
+          color: example
+          profilePicture: example
+          initials: example
+          week_start_day: 1
+          global_font_support: true
+          timezeone: example
+    statuses: [{ id: id_1, status: example, color: example, orderindex: 1, type: example }]
+    multiple_assignees: true
+    features:
+      due_dates: { enabled: true, start_date: true, remap_due_dates: true, remap_closed_due_date: true }
+      time_tracking: { enabled: true }
+      tags: { enabled: true }
+      time_estimates: { enabled: true }
+      checklists: { enabled: true }
+      custom_fields: { enabled: true }
+      remap_dependencies: { enabled: true }
+      dependency_warning: { enabled: true }
+      portfolios: { enabled: true }

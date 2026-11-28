@@ -1,0 +1,32 @@
+description: An order put under its own id, in place of the one there
+action: save_document
+credential: {url: 'https://search.example.com:9200', api_key: VnVhQ2ZHY0JDZGJrUW0tZTVhT3g6dWkybHAyYXhUTm1zeWFrdzl0dk5udw==}
+input:
+  index: orders
+  id: o-1001
+  document: {order: '1001', total: 30}
+exchanges:
+- sent:
+    method: PUT
+    url: https://search.example.com:9200/orders/_doc/o-1001
+    query: {}
+    headers: {authorization: ApiKey VnVhQ2ZHY0JDZGJrUW0tZTVhT3g6dWkybHAyYXhUTm1zeWFrdzl0dk5udw==}
+    body: {order: '1001', total: 30}
+  answer:
+    status: 200
+    body:
+      _index: orders
+      _id: o-1001
+      _version: 2
+      result: updated
+      _seq_no: 1
+      _primary_term: 1
+      _shards: &id001 {total: 2, successful: 1, failed: 0}
+result:
+  _index: orders
+  _id: o-1001
+  _version: 2
+  result: updated
+  _seq_no: 1
+  _primary_term: 1
+  _shards: *id001

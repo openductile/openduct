@@ -1,0 +1,59 @@
+name: An end-of-day digest of a busy Slack channel
+description: >-
+  Each weekday at 17:30 (Los Angeles time), read the day's messages in one Slack channel - your support or project
+  channel - have a model write a short digest of what was decided, what is still open and who is waiting on whom, and
+  post it to a digest channel, so people who were away catch up in a minute. Put the channel's id (C..., in its
+  details) in the first step. Needs: slack_read (bearer: the Slack app's bot token, with channels:history), model
+  (ai), team (slack).
+category: Productivity
+trigger:
+  schedule: { every: weekday, at: "17:30", timezone: America/Los_Angeles }
+# What a test runs on: an event as this trigger gives it.
+sample:
+  scheduled_at: '2026-11-26T01:30:00Z'
+steps:
+  # Slack's conversations.history, read with the bot token: the last nine hours of the channel.
+  - name: history
+    http:
+      url: https://slack.com/api/conversations.history
+      credential: slack_read
+      query:
+        channel: C0000000000
+        oldest: "{{ string(int(timestamp(value.scheduled_at)) - 32400) }}"
+        limit: "200"
+      # A test answers with this; a real run with Slack's answer.
+      sample:
+        ok: true
+        messages:
+          - { user: U02, ts: "1795744000.000300", text: "Agreed: refunds over 200 go to Maya from Monday." }
+          - { user: U03, ts: "1795741000.000200", text: "Still waiting on the courier for the Denver returns - Leo will chase tomorrow." }
+          - { user: U01, ts: "1795738000.000100", text: "Checkout error on Safari is fixed in 4.12, please retest." }
+          - { subtype: channel_join, user: U04, ts: "1795736000.000050", text: "joined the channel" }
+    retry: { attempts: 3, wait: 30s }
+  # Slack answers 200 with ok: false when it refuses (a wrong channel, a missing scope).
+  - name: refused
+    if:
+      when: steps.history.body.ok != true
+      then:
+        - stop: { error: "Slack refused to read the channel: {{ steps.history.body.error }}" }
+  # People's messages only, oldest first: joins, bots and edits notices left out.
+  - name: said
+    set:
+      lines: >-
+        steps.history.body.messages.filter(m, !has(m.subtype) && has(m.text)).map(m, m.text)
+  - where: size(steps.said.lines) > 0
+  - name: digest
+    summarise:
+      credential: model
+      text: "{{ steps.said.lines }}"
+      length: at most six bullet points
+      style: bullets
+      instructions: >-
+        These are one working day of a team's channel, newest first. Say what was decided, what is still open, and
+        who is waiting on whom. Plain words; leave out greetings and thanks.
+  - name: post
+    slack:
+      credential: team
+      channel: "#daily-digest"
+      text: "Today in the channel ({{ size(steps.said.lines) }} messages):\n{{ steps.digest.summary }}"
+    retry: { attempts: 3, wait: 10s }

@@ -74,6 +74,14 @@ pub struct Client {
     correlation: i32,
     client_id: String,
     timeout: Duration,
+    /// A request was sent and its answer not read to the end: the caller gave up (its own time ran out, or it was
+    /// dropped - a person closing the page a webhook's answer was for, a reader told to stop while it waited). The
+    /// answer is still on its way, and the next request on this connection would read it as its own. So the next
+    /// request is sent on a connection made anew ([`Client::mid_exchange`]).
+    mid_exchange: bool,
+    /// Where it connected, and how: to connect again.
+    addr: String,
+    security: ClientSecurity,
 }
 
 /// A topic as Metadata reports it.
@@ -135,13 +143,34 @@ impl Client {
         let mut client = Self {
             stream,
             correlation: 0,
+            mid_exchange: false,
             client_id: "openduct-cli".to_owned(),
             timeout,
+            addr: addr.to_owned(),
+            security: security.clone(),
         };
         if let Some(how) = &security.sign_in {
             client.sign_in(how).await?;
         }
         Ok(client)
+    }
+
+    /// Connects anew, as it first did. (Its future is named here, not worked out: connecting signs in, which sends,
+    /// which may connect anew.)
+    fn connect_again(
+        &mut self,
+    ) -> std::pin::Pin<Box<dyn Future<Output = Result<(), ClientError>> + Send + '_>> {
+        Box::pin(async move {
+            let mut fresh = Self::connect_with(&self.addr, self.timeout, &self.security).await?;
+            fresh.client_id = std::mem::take(&mut self.client_id);
+            *self = fresh;
+            Ok(())
+        })
+    }
+
+    /// Whether a request of this connection was left without its answer read: the next one goes on a new connection.
+    pub fn mid_exchange(&self) -> bool {
+        self.mid_exchange
     }
 
     /// Send one request at `version` and wait for its answer.
@@ -175,6 +204,13 @@ impl Client {
             .map_err(|e| ClientError::Protocol(e.to_string()))?;
         let len = i32::try_from(body.len()).map_err(|_| ClientError::Protocol("request too large".into()))?;
         let correlation = self.correlation;
+        if self.mid_exchange {
+            // The old connection still has an answer coming that nobody waits for: this request, and those after
+            // it, go on a new one.
+            self.connect_again().await?;
+        }
+        // Until the answer is read whole: a caller that gives up meanwhile leaves this set.
+        self.mid_exchange = true;
         let exchange = async {
             self.stream.write_all(&len.to_be_bytes()).await?;
             self.stream.write_all(&body).await?;
@@ -198,6 +234,7 @@ impl Client {
         let mut frame = tokio::time::timeout(timeout, exchange)
             .await
             .map_err(|_| ClientError::Timeout(timeout))??;
+        self.mid_exchange = false;
         let response_header = ResponseHeader::decode(&mut frame, key.response_header_version(version))
             .map_err(|e| ClientError::Protocol(e.to_string()))?;
         if response_header.correlation_id != correlation {

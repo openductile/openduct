@@ -1,0 +1,38 @@
+description: Subscribed to a list, again if they had unsubscribed
+action: add_to_list
+credential:
+  api_key: test-key
+  secret_key: test-secret
+input:
+  list_id: '55'
+  email: pat@example.com
+  properties:
+    firstname: Pat
+exchanges:
+- sent:
+    method: POST
+    url: https://api.mailjet.com/v3/REST/contactslist/55/managecontact
+    headers:
+      authorization: Basic dGVzdC1rZXk6dGVzdC1zZWNyZXQ=
+    body:
+      Action: addforce
+      Email: pat@example.com
+      Properties:
+        firstname: Pat
+  answer:
+    status: 201
+    body:
+      Count: 1
+      Data:
+      - Action: addforce
+        Email: pat@example.com
+        Name: ''
+        Properties:
+          firstname: Pat
+      Total: 1
+result:
+  Action: addforce
+  Email: pat@example.com
+  Name: ''
+  Properties:
+    firstname: Pat

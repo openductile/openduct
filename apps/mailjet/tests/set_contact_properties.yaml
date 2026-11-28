@@ -1,0 +1,36 @@
+description: A record of properties becomes the list Mailjet takes (one property - the engine gives a record's keys in no fixed order yet)
+action: set_contact_properties
+credential:
+  api_key: test-key
+  secret_key: test-secret
+input:
+  contact_id: '1001'
+  properties:
+    firstname: Pat
+exchanges:
+- sent:
+    method: PUT
+    url: https://api.mailjet.com/v3/REST/contactdata/1001
+    headers:
+      authorization: Basic dGVzdC1rZXk6dGVzdC1zZWNyZXQ=
+    body:
+      Data:
+      - Name: firstname
+        Value: Pat
+  answer:
+    status: 200
+    body:
+      Count: 1
+      Data:
+      - ContactID: 1001
+        ID: 1001
+        Data:
+        - Name: firstname
+          Value: Pat
+      Total: 1
+result:
+  ContactID: 1001
+  ID: 1001
+  Data:
+  - Name: firstname
+    Value: Pat

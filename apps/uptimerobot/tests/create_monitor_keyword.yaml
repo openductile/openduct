@@ -1,0 +1,11 @@
+description: A page watched for a word
+action: create_monitor
+credential: { api_key: ur_test_1 }
+input: { friendly_name: Checkout works, url: "https://shop.example.com/cart", type: KEYWORD, keyword_value: Pay now, keyword_type: ALERT_NOT_EXISTS, keyword_case_type: CaseInsensitive, interval: 600 }
+exchanges:
+  - sent:
+      method: POST
+      url: https://api.uptimerobot.com/v3/monitors
+      body: { friendlyName: Checkout works, url: "https://shop.example.com/cart", type: KEYWORD, interval: 600, timeout: 30, keywordValue: Pay now, keywordType: ALERT_NOT_EXISTS, keywordCaseType: CaseInsensitive }
+    answer: { status: 201, body: { id: 803, friendlyName: Checkout works, type: KEYWORD, status: STARTED } }
+result: { id: 803, friendlyName: Checkout works, type: KEYWORD, status: STARTED }

@@ -1,0 +1,14 @@
+# Made by `openduct app from-openapi`: Update an existing inbox by ID or email address.
+description: "Update an existing inbox by ID or email address, made from the API description's schemas"
+action: update_inbox
+credential: { token: test-token }
+input: { inbox_id: inbox_1 }
+exchanges:
+  - sent:
+      method: PATCH
+      url: "https://api.resend.com/inboxes/inbox_1"
+      query: {}
+      headers: { authorization: "Bearer test-token" }
+      body: {}
+    answer: { status: 200, body: { object: inbox, id: b3e2b2b6-3f0e-4c8e-9ad3-2f43a1e2c7f1 } }
+result: { object: inbox, id: b3e2b2b6-3f0e-4c8e-9ad3-2f43a1e2c7f1 }

@@ -1,0 +1,76 @@
+name: Draft an answer to a customer, for other workflows and AI assistants
+description: >-
+  A helper the workspace's other workflows run (with a Run a workflow step) and AI assistants call (as a tool of this
+  workspace): given a customer's question and e-mail address, an AI agent looks for the answer in your FAQ data table
+  and checks the customer's own recent orders in your PostgreSQL database - only that customer's, read only - and
+  gives back a draft answer, how sure it is, and whether a person should look first. It sends nothing itself. Make
+  the table once, under Tables: faq, with the text columns question and answer. Needs: model (an AI credential),
+  shop_db (postgres, with an orders table: id, email, status, total, created_at).
+category: Support
+trigger: manual
+# Offered to AI assistants through the workspace's MCP server.
+tool:
+  name: draft_customer_answer
+  description: A draft answer to a customer's question, from the FAQ and the customer's own orders, with how sure it is.
+  input:
+    question: { type: string, description: "What the customer asked, in their words", required: true }
+    customer_email: { type: string, description: "The customer's e-mail address", required: true }
+# What a test runs on: what another workflow, or an assistant, gives it.
+sample:
+  question: My order has not arrived yet - when will it come?
+  customer_email: lee.chen@example.com
+steps:
+  - where: has(value.question) && has(value.customer_email) && value.customer_email.contains('@')
+  - name: draft
+    agent:
+      credential: model
+      instructions: >-
+        You draft answers for a small online shop's support team; a person reads each draft before it is sent. Look
+        in the FAQ first. When the question is about an order, read the customer's recent orders. Use only what the
+        FAQ and the orders say; never promise a refund or a date they do not give. Write the draft kindly, in at
+        most five sentences, then say how sure you are and whether a person should look first.
+      input: "Question from {{ value.customer_email }}: {{ value.question }}"
+      tools:
+        - name: search_faq
+          description: FAQ entries whose question contains a word or two, as delivery or refund.
+          parameters:
+            type: object
+            properties:
+              words: { type: string, description: "One or two words to look for" }
+            required: [words]
+          table:
+            name: faq
+            action: get
+            where: [{ column: question, op: contains, value: "{{ args.words }}" }]
+            limit: 5
+        - name: customer_orders
+          description: "The customer's ten most recent orders: id, status, total and the day each was placed."
+          # Only the customer this run is about: the e-mail comes from the caller, never from the model.
+          postgres:
+            credential: shop_db
+            sql: >-
+              SELECT id, status, total, created_at FROM orders WHERE lower(email) = lower($1)
+              ORDER BY created_at DESC LIMIT 10
+            params: [value.customer_email]
+            read_only: true
+            max_rows: 10
+      allow: [search_faq, customer_orders]
+      output:
+        schema:
+          type: object
+          properties:
+            answer: { type: string }
+            sure: { type: string, enum: [sure, fairly sure, not sure] }
+            needs_person: { type: boolean }
+          required: [answer, sure, needs_person]
+      max_turns: 6
+      max_tool_calls: 6
+  - name: result
+    javascript: |
+      // What callers get back, the same whatever the agent said.
+      const d = (steps.draft && steps.draft.json) || {};
+      return {
+        answer: d.answer || steps.draft.text || "",
+        sure: d.sure || "not sure",
+        needs_person: d.needs_person !== false,
+      };

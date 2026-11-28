@@ -1,0 +1,7 @@
+action: list_coins
+credential: { api_key: CG-test1 }
+input: { include_platform: true }
+exchanges:
+  - sent: { method: GET, url: https://api.coingecko.com/api/v3/coins/list, query: { include_platform: "true" } }
+    answer: { body: [{ id: bitcoin, symbol: btc, name: Bitcoin, platforms: {} }, { id: example-token, symbol: ext, name: Example Token, platforms: { ethereum: "0x00000000000000000000000000000000000000aa" } }] }
+result: [{ id: bitcoin, symbol: btc, name: Bitcoin, platforms: {} }, { id: example-token, symbol: ext, name: Example Token, platforms: { ethereum: "0x00000000000000000000000000000000000000aa" } }]

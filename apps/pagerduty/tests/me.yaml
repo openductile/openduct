@@ -1,0 +1,8 @@
+description: Who signed in, with a token from PagerDuty's sign-in
+action: me
+sign_in: pagerduty_oauth
+credential: { access_token: pd_oauth_test_1 }
+exchanges:
+  - sent: { method: GET, url: https://api.pagerduty.com/users/me, headers: { authorization: Bearer pd_oauth_test_1 } }
+    answer: { body: { user: { id: PUSER01, name: Ann Lee, email: ann@example.com } } }
+result: { id: PUSER01, name: Ann Lee, email: ann@example.com }

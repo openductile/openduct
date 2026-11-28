@@ -1,0 +1,76 @@
+name: A Telegram bot that tells customers where their repair is
+description: >-
+  For a repair shop - bikes, phones, appliances: customers write to your Telegram bot with their ticket number, and an
+  AI agent looks the repair up in your repairs table before it says anything about it, remembering each chat. When a
+  customer is unhappy, disputes a price or the ticket cannot be found, a second look by AI hands the chat to your staff
+  channel. Make the table repairs under Tables (ticket, item, status, ready_on, price). Needs: bot (telegram), model
+  (ai), staff_bot (telegram).
+category: Support
+trigger:
+  # Telegram is given the workflow's address when it is turned on, and sends each message as it comes.
+  telegram: { when: message, credential: bot }
+# What a test runs on: a message as this trigger gives it.
+sample:
+  message_id: 311
+  date: 1795770000
+  chat: { id: 524880113, type: private }
+  from: { id: 524880113, first_name: Noor }
+  text: Hi, is my bike ready? Ticket R-2207
+steps:
+  # Photos, stickers and joins carry no text: nothing to answer.
+  - where: value.text != null && value.text != ''
+  - name: helper
+    agent:
+      credential: model
+      instructions: >-
+        You answer the customers of a repair shop on Telegram, kindly, in at most three short sentences. Opening
+        hours: Monday to Saturday, 9:00 to 18:00. When a customer asks about a repair, look it up by its ticket number
+        (as R-2207) with repair_status before you answer, and never guess a status, a date or a price. If you have no
+        ticket number, ask for it. If the ticket is not found, say a person will check and write back today.
+      input: "{{ value.text }}"
+      tools:
+        - name: repair_status
+          description: A repair's item, status (received, waiting_for_parts, in_progress, ready), the day it is ready and its price, by ticket number.
+          parameters:
+            type: object
+            properties:
+              ticket: { type: string, description: "The ticket number, as R-2207" }
+            required: [ticket]
+          table: { name: repairs, action: get, where: { ticket: "{{ args.ticket.trim().upperAscii() }}" }, limit: 1 }
+      allow: [repair_status]
+      # Each chat keeps its own conversation; /start begins again.
+      memory: { key: "{{ value.chat.id }}", window: 10, clear: "value.text == '/start'" }
+      max_turns: 5
+      max_tool_calls: 4
+  - name: handoff
+    ai:
+      credential: model
+      system: >-
+        You read one exchange between a repair shop's assistant and a customer. Say whether a person on the staff
+        should take over: the customer is unhappy or complaining, disputes a price, asks for something the assistant
+        cannot do, or the ticket was not found.
+      prompt: "Customer: {{ value.text }}\nAssistant: {{ steps.helper.text }}"
+      schema:
+        type: object
+        properties:
+          needs_person: { type: boolean }
+          reason: { type: string, description: "why, in a few words" }
+        required: [needs_person, reason]
+      max_tokens: 150
+  - name: tell_staff
+    if:
+      when: steps.handoff.json.needs_person == true
+      then:
+        - name: to_staff
+          telegram:
+            credential: staff_bot
+            # Your staff channel: its @name, or the group's id.
+            chat_id: "@repairs_staff"
+            text: "Please take over the chat with {{ value.from.first_name }} (chat {{ value.chat.id }}): {{ steps.handoff.json.reason }}. They wrote: {{ value.text }}"
+          retry: { attempts: 3, wait: 5s }
+  - name: reply
+    telegram:
+      credential: bot
+      chat_id: "{{ value.chat.id }}"
+      text: "{{ steps.helper.text }}"
+    retry: { attempts: 3, wait: 5s }

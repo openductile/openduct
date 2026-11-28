@@ -1,0 +1,22 @@
+description: Messages posted after the newest one dealt with, oldest first
+trigger: new_message
+credential: { bot_token: xoxb-1 }
+input: { channel: C1 }
+seen: { cursor: "1700000000.000100", items: [] }
+exchanges:
+  - sent:
+      method: GET
+      url: https://slack.com/api/conversations.history
+      query: { channel: C1, oldest: "1700000000.000100", limit: "100" }
+      headers: { authorization: Bearer xoxb-1 }
+    answer:
+      body:
+        ok: true
+        messages:
+          - { type: message, user: U2, text: second, ts: "1700000060.000300" }
+          - { type: message, user: U1, text: first, ts: "1700000030.000200" }
+        has_more: false
+runs:
+  - { type: message, user: U1, text: first, ts: "1700000030.000200" }
+  - { type: message, user: U2, text: second, ts: "1700000060.000300" }
+cursor: "1700000060.000300"

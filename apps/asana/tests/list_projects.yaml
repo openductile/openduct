@@ -1,0 +1,11 @@
+description: The projects of a team that are not archived
+action: list_projects
+credential: { token: "2/1200000000000001/1209999999999999:0a1b2c3d4e5f" }
+input: { team: "1208000000000001", archived: false }
+exchanges:
+  - sent:
+      method: GET
+      url: https://app.asana.com/api/1.0/projects
+      query: { team: "1208000000000001", archived: "false", opt_fields: "name,archived,color,notes,owner.name,team.name,due_on,start_on,created_at,modified_at,permalink_url", limit: "100" }
+    answer: { body: { data: [{ gid: "1201000000000001", name: Billing, archived: false, team: { gid: "1208000000000001", name: Office } }], next_page: null } }
+result: [{ gid: "1201000000000001", name: Billing, archived: false, team: { gid: "1208000000000001", name: Office } }]

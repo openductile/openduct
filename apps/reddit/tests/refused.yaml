@@ -1,0 +1,7 @@
+description: "A post to a community that does not exist: Reddit answers 200 with its errors, and the step fails in its words"
+action: submit_post
+credential: { access_token: test-reddit-token }
+input: { subreddit: no_such_place_example, title: Hello }
+exchanges:
+  - answer: { status: 200, body: { json: { errors: [[SUBREDDIT_NOEXIST, "that community doesn't exist", sr]] } } }
+error: "that community doesn't exist (SUBREDDIT_NOEXIST)"

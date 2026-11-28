@@ -1,0 +1,68 @@
+description: A task by its short ID
+action: get_task_by_short_id
+credential:
+  api_key: test-key
+input:
+  short_id: 31aac0a5
+exchanges:
+- sent:
+    method: GET
+    url: https://onfleet.com/api/v2/tasks/shortId/31aac0a5
+    headers:
+      authorization: Basic dGVzdC1rZXk6
+  answer:
+    status: 200
+    body: &id001
+      id: 11z1BbsQUZFHD1XAd~emDDeK
+      timeCreated: 1795161600000
+      timeLastModified: 1795161600278
+      organization: yAM*fDkztrT3gUcz9mNDgNOL
+      shortId: 31aac0a5
+      trackingURL: https://onf.lt/31aac0a5
+      worker: null
+      merchant: yAM*fDkztrT3gUcz9mNDgNOL
+      executor: yAM*fDkztrT3gUcz9mNDgNOL
+      creator: EJmsbJgHiRLPjNVE7GEIPs7*
+      dependencies: []
+      state: 0
+      completeAfter: null
+      completeBefore: null
+      pickupTask: false
+      notes: 2 boxes of mugs
+      completionDetails:
+        events: []
+        time: null
+      feedback: []
+      metadata: []
+      overrides: {}
+      container:
+        type: ORGANIZATION
+        organization: yAM*fDkztrT3gUcz9mNDgNOL
+      recipients:
+      - id: xX87G1gSkeLvGXlHn2tn0~iB
+        organization: yAM*fDkztrT3gUcz9mNDgNOL
+        timeCreated: 1795161600000
+        timeLastModified: 1795161600000
+        name: Pat Sample
+        phone: '+14155550100'
+        notes: Ring twice
+        skipSMSNotifications: false
+        metadata: []
+      destination:
+        id: pfT5L1JclTdhvRnP9GQzMFuL
+        timeCreated: 1795161600000
+        timeLastModified: 1795161600000
+        location:
+        - -122.4128901
+        - 37.787933
+        address:
+          apartment: ''
+          state: California
+          postalCode: '94109'
+          country: United States
+          city: San Francisco
+          street: Sample Street
+          number: '100'
+        notes: Green door
+        metadata: []
+result: *id001

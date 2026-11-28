@@ -1,0 +1,370 @@
+# Copyright 2026 Ductile AI, Inc
+# SPDX-License-Identifier: Apache-2.0
+# Written by hand from Trello's REST API description (developer.atlassian.com/cloud/trello/swagger.v3.json).
+app: trello
+name: Trello
+category: productivity
+description: Boards, lists and cards of Trello - make and move cards, comment, label, assign, checklists - and a board's activity.
+docs: https://developer.atlassian.com/cloud/trello/rest/
+hosts: [api.trello.com]
+base_url: https://api.trello.com/1
+sign_in:
+  - id: trello
+    label: An API key and a token
+    fields:
+      - { name: api_key, label: "Your Power-Up's API key (trello.com/power-ups/admin, API key)" }
+      - { name: token, label: "A token for your account (the Token link beside the API key)", secret: true }
+    query: { key: "{{ credential.api_key }}", token: "{{ credential.token }}" }
+# Trello answers a refusal with a few words as plain text (or, at times, a message).
+error: >-
+  status >= 400 ? (type(value) == string ? value : (type(value) == map && has(value.message) ? string(value.message) : null)) : null
+default_action: create_card
+actions:
+  create_card:
+    label: Create a card
+    description: A new card at the bottom (or top) of a list, with its text, dates, members and labels.
+    write: true
+    method: POST
+    path: /cards
+    body: none
+    inputs:
+      - { name: list_id, label: "The list it goes in (its id)", required: true }
+      - { name: name, label: "The card's name", required: true }
+      - { name: desc, label: "Its description (Markdown)" }
+      - { name: due, label: "When it is due (ISO 8601, such as 2026-12-01T17:00:00Z)" }
+      - { name: start, label: "When it starts (ISO 8601)" }
+      - { name: pos, label: "Where in the list: top, bottom (the default) or a number" }
+      - { name: member_ids, label: "Members on it: their ids, with commas" }
+      - { name: label_ids, label: "Labels on it: their ids, with commas" }
+      - { name: url_source, label: "An address to attach to it" }
+    query:
+      idList: "{{ input.list_id }}"
+      name: "{{ input.name }}"
+      desc: "{{ input.desc }}"
+      due: "{{ input.due }}"
+      start: "{{ input.start }}"
+      pos: "{{ input.pos }}"
+      idMembers: "{{ input.member_ids }}"
+      idLabels: "{{ input.label_ids }}"
+      urlSource: "{{ input.url_source }}"
+    output: { id: text, name: text, desc: text, idList: text, idBoard: text, idMembers: list, idLabels: list, labels: list, due: text, start: text, dueComplete: boolean, closed: boolean, pos: number, url: text, shortUrl: text, dateLastActivity: text }
+  get_card:
+    label: Look up a card
+    description: A card's name, text, list, dates, members, labels and address.
+    method: GET
+    path: "/cards/{{ input.card_id }}"
+    inputs:
+      - { name: card_id, label: "The card's id (or its short link)", required: true }
+      - { name: checklists, label: "Its checklists too: all or none (the default)" }
+      - { name: attachments, label: "Its attachments too", kind: boolean }
+    query: { checklists: "{{ input.checklists }}", attachments: "{{ input.attachments }}" }
+    output: { id: text, name: text, desc: text, idList: text, idBoard: text, idMembers: list, idLabels: list, labels: list, due: text, start: text, dueComplete: boolean, closed: boolean, pos: number, url: text, shortUrl: text, dateLastActivity: text }
+  update_card:
+    label: Change a card
+    description: Only what is given changes - move it to another list, mark it done, archive it.
+    write: true
+    method: PUT
+    path: "/cards/{{ input.card_id }}"
+    body: none
+    inputs:
+      - { name: card_id, label: "The card's id", required: true }
+      - { name: name, label: "Its name" }
+      - { name: desc, label: "Its description (Markdown)" }
+      - { name: list_id, label: "Move it to this list (its id)" }
+      - { name: board_id, label: "Move it to this board (its id; give a list of it too)" }
+      - { name: pos, label: "Where in the list: top, bottom or a number" }
+      - { name: due, label: "When it is due (ISO 8601)" }
+      - { name: due_complete, label: "Marked done", kind: boolean }
+      - { name: closed, label: "Archived", kind: boolean }
+      - { name: member_ids, label: "Members on it: their ids, with commas (in place of those it had)" }
+      - { name: label_ids, label: "Labels on it: their ids, with commas (in place of those it had)" }
+    query:
+      name: "{{ input.name }}"
+      desc: "{{ input.desc }}"
+      idList: "{{ input.list_id }}"
+      idBoard: "{{ input.board_id }}"
+      pos: "{{ input.pos }}"
+      due: "{{ input.due }}"
+      dueComplete: "{{ input.due_complete }}"
+      closed: "{{ input.closed }}"
+      idMembers: "{{ input.member_ids }}"
+      idLabels: "{{ input.label_ids }}"
+    output: { id: text, name: text, desc: text, idList: text, idBoard: text, idMembers: list, idLabels: list, labels: list, due: text, start: text, dueComplete: boolean, closed: boolean, pos: number, url: text, shortUrl: text, dateLastActivity: text }
+  delete_card:
+    label: Remove a card
+    description: The card is gone for good (archive it with Change a card to keep it).
+    write: true
+    method: DELETE
+    path: "/cards/{{ input.card_id }}"
+    inputs:
+      - { name: card_id, label: "The card's id", required: true }
+    result: "{'removed': status < 300}"
+    output: { removed: boolean }
+  comment_on_card:
+    label: Comment on a card
+    description: A comment, as the token's owner.
+    write: true
+    method: POST
+    path: "/cards/{{ input.card_id }}/actions/comments"
+    body: none
+    inputs:
+      - { name: card_id, label: "The card's id", required: true }
+      - { name: text, label: "The comment", required: true }
+    query: { text: "{{ input.text }}" }
+    output: { id: text, idMemberCreator: text, type: text, date: text, data: record }
+  add_label:
+    label: Label a card
+    description: One of the board's labels put on the card.
+    write: true
+    method: POST
+    path: "/cards/{{ input.card_id }}/idLabels"
+    body: none
+    inputs:
+      - { name: card_id, label: "The card's id", required: true }
+      - { name: label_id, label: "The label's id (List a board's labels gives it)", required: true }
+    query: { value: "{{ input.label_id }}" }
+    output: { labels: list }
+    result: "{'labels': value}"
+  remove_label:
+    label: Take a label off a card
+    description: The label stays on the board; only this card loses it.
+    write: true
+    method: DELETE
+    path: "/cards/{{ input.card_id }}/idLabels/{{ input.label_id }}"
+    inputs:
+      - { name: card_id, label: "The card's id", required: true }
+      - { name: label_id, label: "The label's id", required: true }
+    result: "{'removed': status < 300}"
+    output: { removed: boolean }
+  add_member:
+    label: Add someone to a card
+    description: A member of the board put on the card.
+    write: true
+    method: POST
+    path: "/cards/{{ input.card_id }}/idMembers"
+    body: none
+    inputs:
+      - { name: card_id, label: "The card's id", required: true }
+      - { name: member_id, label: "The member's id (List a board's members gives it)", required: true }
+    query: { value: "{{ input.member_id }}" }
+    result: "{'members': value}"
+    output: { members: list }
+  remove_member:
+    label: Take someone off a card
+    description: The member stays on the board; only this card loses them.
+    write: true
+    method: DELETE
+    path: "/cards/{{ input.card_id }}/idMembers/{{ input.member_id }}"
+    inputs:
+      - { name: card_id, label: "The card's id", required: true }
+      - { name: member_id, label: "The member's id", required: true }
+    result: "{'removed': status < 300}"
+    output: { removed: boolean }
+  add_checklist:
+    label: Add a checklist to a card
+    description: A new, empty checklist on the card; add its items with Add an item to a checklist.
+    write: true
+    method: POST
+    path: "/cards/{{ input.card_id }}/checklists"
+    body: none
+    inputs:
+      - { name: card_id, label: "The card's id", required: true }
+      - { name: name, label: "The checklist's name", required: true }
+    query: { name: "{{ input.name }}" }
+    output: { id: text, name: text, idCard: text, idBoard: text, checkItems: list }
+  add_checklist_item:
+    label: Add an item to a checklist
+    description: An item at the end of a checklist, done or not, for someone or not.
+    write: true
+    method: POST
+    path: "/checklists/{{ input.checklist_id }}/checkItems"
+    body: none
+    inputs:
+      - { name: checklist_id, label: "The checklist's id", required: true }
+      - { name: name, label: "The item", required: true }
+      - { name: checked, label: "Done already", kind: boolean }
+      - { name: due, label: "When it is due (ISO 8601)" }
+      - { name: member_id, label: "Who it is for (a member's id)" }
+    query: { name: "{{ input.name }}", checked: "{{ input.checked }}", due: "{{ input.due }}", idMember: "{{ input.member_id }}" }
+    output: { id: text, name: text, state: text, idChecklist: text, due: text, idMember: text }
+  check_item:
+    label: Tick a checklist item
+    description: An item of a card's checklist marked done (or not done again).
+    write: true
+    method: PUT
+    path: "/cards/{{ input.card_id }}/checkItem/{{ input.item_id }}"
+    body: none
+    inputs:
+      - { name: card_id, label: "The card's id", required: true }
+      - { name: item_id, label: "The item's id", required: true }
+      - { name: done, label: "Done (yes unless said)", kind: boolean }
+    query: { state: "{{ has(input.done) && input.done == false ? 'incomplete' : 'complete' }}" }
+    output: { id: text, name: text, state: text, idChecklist: text }
+  attach_link:
+    label: Attach a link to a card
+    description: An address attached to the card, with a name.
+    write: true
+    method: POST
+    path: "/cards/{{ input.card_id }}/attachments"
+    body: none
+    inputs:
+      - { name: card_id, label: "The card's id", required: true }
+      - { name: url, label: "The address", required: true }
+      - { name: name, label: "Its name" }
+      - { name: set_cover, label: "Show it as the card's cover", kind: boolean }
+    query: { url: "{{ input.url }}", name: "{{ input.name }}", setCover: "{{ input.set_cover }}" }
+    output: { id: text, name: text, url: text, date: text, isUpload: boolean }
+  list_boards:
+    label: List your boards
+    description: The boards the token's owner is on - open ones unless said - with their ids.
+    method: GET
+    path: /members/me/boards
+    inputs:
+      - { name: filter, label: "Which: open (the default), closed, starred, members, organization, public or all" }
+    query: { filter: "{{ has(input.filter) && input.filter != null ? input.filter : 'open' }}" }
+    items: value
+    output: { id: text, name: text, desc: text, closed: boolean, idOrganization: text, url: text, shortUrl: text, starred: boolean }
+  get_board:
+    label: Look up a board
+    description: A board's name, description, workspace and address.
+    method: GET
+    path: "/boards/{{ input.board_id }}"
+    inputs:
+      - { name: board_id, label: "The board's id (or its short link)", required: true }
+    output: { id: text, name: text, desc: text, closed: boolean, idOrganization: text, url: text, shortUrl: text, labelNames: record }
+  create_board:
+    label: Create a board
+    description: A new board, with Trello's usual lists and labels unless said.
+    write: true
+    method: POST
+    path: /boards/
+    body: none
+    inputs:
+      - { name: name, label: "The board's name", required: true }
+      - { name: desc, label: "Its description" }
+      - { name: workspace_id, label: "In this workspace (its id)" }
+      - { name: default_lists, label: "Make the usual lists, To Do, Doing and Done (yes unless said)", kind: boolean }
+      - { name: permission_level, label: "Who may see it: private (the default), org or public" }
+    query:
+      name: "{{ input.name }}"
+      desc: "{{ input.desc }}"
+      idOrganization: "{{ input.workspace_id }}"
+      defaultLists: "{{ input.default_lists }}"
+      prefs_permissionLevel: "{{ input.permission_level }}"
+    output: { id: text, name: text, desc: text, url: text, shortUrl: text }
+  list_lists:
+    label: List a board's lists
+    description: The board's lists, left to right, with their ids.
+    method: GET
+    path: "/boards/{{ input.board_id }}/lists"
+    inputs:
+      - { name: board_id, label: "The board's id", required: true }
+    items: value
+    output: { id: text, name: text, closed: boolean, pos: number, idBoard: text }
+  create_list:
+    label: Create a list
+    description: A new list on a board, at the right end unless placed.
+    write: true
+    method: POST
+    path: /lists
+    body: none
+    inputs:
+      - { name: board_id, label: "The board's id", required: true }
+      - { name: name, label: "The list's name", required: true }
+      - { name: pos, label: "Where: top, bottom or a number" }
+    query: { idBoard: "{{ input.board_id }}", name: "{{ input.name }}", pos: "{{ input.pos }}" }
+    output: { id: text, name: text, closed: boolean, pos: number, idBoard: text }
+  archive_list:
+    label: Archive a list
+    description: The list and its cards are archived (or brought back).
+    write: true
+    method: PUT
+    path: "/lists/{{ input.list_id }}/closed"
+    body: none
+    inputs:
+      - { name: list_id, label: "The list's id", required: true }
+      - { name: archived, label: "Archived (yes unless said)", kind: boolean }
+    query: { value: "{{ has(input.archived) && input.archived == false ? 'false' : 'true' }}" }
+    output: { id: text, name: text, closed: boolean }
+  list_cards:
+    label: List a list's cards
+    description: The open cards of a list, top to bottom.
+    method: GET
+    path: "/lists/{{ input.list_id }}/cards"
+    inputs:
+      - { name: list_id, label: "The list's id", required: true }
+    items: value
+    output: { id: text, name: text, desc: text, idList: text, idBoard: text, idMembers: list, idLabels: list, labels: list, due: text, start: text, dueComplete: boolean, closed: boolean, pos: number, url: text, shortUrl: text, dateLastActivity: text }
+  list_board_cards:
+    label: List a board's cards
+    description: The open cards of every list of a board.
+    method: GET
+    path: "/boards/{{ input.board_id }}/cards"
+    inputs:
+      - { name: board_id, label: "The board's id", required: true }
+    items: value
+    output: { id: text, name: text, desc: text, idList: text, idBoard: text, idMembers: list, idLabels: list, labels: list, due: text, start: text, dueComplete: boolean, closed: boolean, pos: number, url: text, shortUrl: text, dateLastActivity: text }
+  list_labels:
+    label: List a board's labels
+    description: The board's labels - their ids, names and colors.
+    method: GET
+    path: "/boards/{{ input.board_id }}/labels"
+    inputs:
+      - { name: board_id, label: "The board's id", required: true }
+    items: value
+    output: { id: text, idBoard: text, name: text, color: text }
+  list_members:
+    label: List a board's members
+    description: Who is on the board - their ids, names and user names.
+    method: GET
+    path: "/boards/{{ input.board_id }}/members"
+    inputs:
+      - { name: board_id, label: "The board's id", required: true }
+    items: value
+    output: { id: text, fullName: text, username: text }
+  search:
+    label: Search cards
+    description: Cards whose name, text or comments hold the words, on all your boards or the ones named.
+    method: GET
+    path: /search
+    inputs:
+      - { name: query, label: "The words (Trello's search operators too, such as label:urgent due:week)", required: true }
+      - { name: board_ids, label: "Only on these boards: their ids, with commas" }
+      - { name: limit, label: "At most this many (1 to 1,000; 10 when empty)", kind: number }
+      - { name: partial, label: "Words may be the start of a word", kind: boolean }
+    query: { query: "{{ input.query }}", idBoards: "{{ input.board_ids }}", modelTypes: cards, cards_limit: "{{ input.limit }}", partial: "{{ input.partial }}" }
+    items: value.cards
+    output: { id: text, name: text, desc: text, idList: text, idBoard: text, idMembers: list, idLabels: list, labels: list, due: text, start: text, dueComplete: boolean, closed: boolean, pos: number, url: text, shortUrl: text, dateLastActivity: text }
+  list_board_activity:
+    label: List a board's activity
+    description: What was done on the board, the newest first - cards made, moved and changed, comments - by kind.
+    method: GET
+    path: "/boards/{{ input.board_id }}/actions"
+    inputs:
+      - { name: board_id, label: "The board's id", required: true }
+      - { name: filter, label: "Only these kinds, with commas: createCard, updateCard, commentCard, addMemberToCard ..." }
+      - { name: since, label: "Only since (an action's id, or ISO 8601)" }
+      - { name: limit, label: "At most this many (1 to 1,000; 50 when empty)", kind: number }
+    query: { filter: "{{ input.filter }}", since: "{{ input.since }}", limit: "{{ input.limit }}" }
+    items: value
+    output: { id: text, type: text, date: text, idMemberCreator: text, data: record, memberCreator: record }
+triggers:
+  board_activity:
+    label: Something done on a board
+    description: >-
+      Each card made on the board (or, as chosen, each card changed or moved, each comment ...), the newest asked for
+      every few minutes. The run gets what was done, by whom, and the card, list and board it was on.
+    inputs:
+      - { name: board_id, label: "The board's id", required: true }
+      - { name: kinds, label: "Which, with commas: createCard (the default), updateCard, commentCard, addMemberToCard, addChecklistToCard ..." }
+    poll:
+      action: list_board_activity
+      input: { board_id: "{{ input.board_id }}", filter: "{{ input.kinds == null ? 'createCard' : input.kinds }}", limit: "100" }
+      newest_first: true
+      id: item.id
+      event: >-
+        {'id': item.id, 'type': item.type, 'date': item.date, 'by': has(item.memberCreator) ? item.memberCreator : null,
+        'card': has(item.data.card) ? item.data.card : null, 'list': has(item.data.list) ? item.data.list : null,
+        'board': has(item.data.board) ? item.data.board : null, 'text': has(item.data.text) ? item.data.text : null,
+        'data': item.data}
+      every: 5m

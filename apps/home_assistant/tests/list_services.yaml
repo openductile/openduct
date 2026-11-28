@@ -1,0 +1,7 @@
+description: The integrations and their services
+action: list_services
+credential: { url: "http://home.example:8123", token: ha-test-token }
+exchanges:
+  - sent: { method: GET, url: "http://home.example:8123/api/services" }
+    answer: { status: 200, body: [{ domain: light, services: { turn_on: {}, turn_off: {} } }] }
+result: [{ domain: light, services: { turn_on: {}, turn_off: {} } }]

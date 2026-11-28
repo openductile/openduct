@@ -1,0 +1,13 @@
+description: 'A contact that is not there: the step fails with what ActiveCampaign says'
+action: get_contact
+credential:
+  account: shopexample
+  api_key: test-key
+input:
+  contact_id: '999'
+exchanges:
+- answer:
+    status: 404
+    body:
+      message: No Result found for Subscriber with id 999
+error: 'ActiveCampaign answered 404: No Result found for Subscriber with id 999'

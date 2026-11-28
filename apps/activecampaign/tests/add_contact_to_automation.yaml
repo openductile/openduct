@@ -1,0 +1,38 @@
+description: A contact put into an automation by email
+action: add_contact_to_automation
+credential:
+  account: shopexample
+  api_key: test-key
+input:
+  automation_id: 4
+  email: ann@example.com
+exchanges:
+- sent:
+    method: POST
+    url: https://shopexample.api-us1.com/api/3/contactAutomations
+    headers:
+      api-token: test-key
+    body:
+      contactAutomation:
+        automation: 4
+        contact_email: ann@example.com
+  answer:
+    status: 201
+    body:
+      contacts:
+      - id: '113'
+        email: ann@example.com
+        firstName: Ann
+        lastName: Example
+        phone: '+15555550100'
+        cdate: '2026-11-27T10:00:00-06:00'
+        udate: '2026-11-27T10:00:00-06:00'
+        orgid: '0'
+      contactAutomation: &id001
+        id: '88'
+        contact: '113'
+        seriesid: '4'
+        status: '1'
+        adddate: '2026-11-27T10:20:00-06:00'
+        automation: '4'
+result: *id001

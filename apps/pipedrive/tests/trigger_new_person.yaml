@@ -1,0 +1,8 @@
+description: People added since the last poll
+trigger: new_person
+credential: { api_key: test-pipedrive-token }
+seen: { items: [["7", ""]] }
+exchanges:
+  - sent: { method: GET, url: https://api.pipedrive.com/api/v2/persons, query: { sort_by: add_time, sort_direction: desc, limit: "100" } }
+    answer: { body: { success: true, data: [{ id: 8, name: Bo Example, emails: [{ value: bo@example.com, primary: true, label: work }], add_time: "2026-11-27T10:00:00Z" }, { id: 7, name: Ann Example, emails: [{ value: ann@example.com, primary: true, label: work }], add_time: "2026-11-26T10:00:00Z" }], additional_data: { next_cursor: c2 } } }
+runs: [{ id: 8, name: Bo Example, emails: [{ value: bo@example.com, primary: true, label: work }], add_time: "2026-11-27T10:00:00Z" }]

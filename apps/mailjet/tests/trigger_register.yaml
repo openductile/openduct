@@ -1,0 +1,29 @@
+description: Turning the workflow on gives Mailjet the workflow's address, with a password of its own in it
+trigger: email_event
+register: true
+workflow: wf1
+address: https://studio.example/hooks/h1
+credential:
+  api_key: test-key
+  secret_key: test-secret
+input:
+  event: open
+exchanges:
+- sent:
+    method: POST
+    url: https://api.mailjet.com/v3/REST/eventcallbackurl
+    headers:
+      authorization: Basic dGVzdC1rZXk6dGVzdC1zZWNyZXQ=
+  answer:
+    status: 201
+    body:
+      Count: 1
+      Data:
+      - APIKeyID: 4
+        ID: 301
+        Version: 1
+        Url: https://studio.example/hooks/h1
+        EventType: open
+        IsBackup: false
+        Status: alive
+      Total: 1

@@ -1,0 +1,23 @@
+description: A launch looked up with its results
+action: get_launch
+credential: { api_key: pb_test_key_1 }
+input: { id: "4512345678901234", with_result: true }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://api.phantombuster.com/api/v2/containers/fetch"
+      query: { id: "4512345678901234", withResultObject: "true" }
+    answer:
+      status: 200
+      body:
+        id: "4512345678901234"
+        status: finished
+        endType: finished
+        exitCode: 0
+        resultObject: "[{\"title\":\"Rose City Roasters\",\"website\":\"https://roasters.example\"}]"
+result:
+  id: "4512345678901234"
+  status: finished
+  endType: finished
+  exitCode: 0
+  resultObject: "[{\"title\":\"Rose City Roasters\",\"website\":\"https://roasters.example\"}]"

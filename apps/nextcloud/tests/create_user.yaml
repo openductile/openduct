@@ -1,0 +1,11 @@
+description: A user added with groups and a quota; no password, so Nextcloud emails them
+action: create_user
+credential: { url: "https://cloud.example.com", username: admin, password: app-pass-2 }
+input: { userid: carol, display_name: Carol Example, email: carol@example.com, groups: [staff], quota: 5 GB }
+exchanges:
+  - sent:
+      method: POST
+      url: "https://cloud.example.com/ocs/v2.php/cloud/users"
+      body: { userid: carol, displayName: Carol Example, email: carol@example.com, groups: [staff], quota: 5 GB }
+    answer: { status: 200, body: { ocs: { meta: { status: ok, statuscode: 200 }, data: { id: carol } } } }
+result: { id: carol }

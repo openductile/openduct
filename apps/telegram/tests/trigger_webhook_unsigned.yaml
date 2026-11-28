@@ -1,0 +1,8 @@
+description: A delivery without the secret is refused
+trigger: message
+workflow: wf1
+credential: { bot_token: "123:abc", "webhook_secret@wf1": s3cr3t }
+delivery:
+  body: '{"update_id": 902, "message": {"message_id": 7, "text": "hello?"}}'
+  at: 1700000000
+refused: "it has no x-telegram-bot-api-secret-token header"

@@ -1,0 +1,13 @@
+description: A contact put in a campaign by email
+action: add_to_campaign
+credential: {domain: shopexample, email: dana@shop.example, api_key: agile-test-key}
+input: {email: ann@example.com, campaign_id: '5727517264576512'}
+exchanges:
+- sent:
+    method: POST
+    url: https://shopexample.agilecrm.com/dev/api/campaigns/enroll/email
+    headers: {authorization: Basic ZGFuYUBzaG9wLmV4YW1wbGU6YWdpbGUtdGVzdC1rZXk=, accept: application/json}
+    query: {}
+    body: {email: ann@example.com, workflow-id: '5727517264576512'}
+  answer: {status: 200}
+result: {added: true}

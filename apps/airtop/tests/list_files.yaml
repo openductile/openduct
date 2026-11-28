@@ -1,0 +1,65 @@
+description: "List files"
+action: list_files
+credential: { token: test-token }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://api.airtop.ai/api/v1/files"
+      query: {}
+      headers: { authorization: "Bearer test-token" }
+    answer:
+      status: 200
+      body:
+        data:
+          files:
+            - deleted: true
+              deletionTime: "2026-01-15T09:30:00Z"
+              expiryTime: "2026-01-15T09:30:00Z"
+              fileBytes: 1
+              fileName: example
+              fileType: example
+              id: "00000000-0000-4000-8000-000000000001"
+              lastHeartbeatTime: "2026-01-15T09:30:00Z"
+              orgId: "00000000-0000-4000-8000-000000000001"
+              sessionIds: [null]
+              status: example
+              uploadCompleteTime: "2026-01-15T09:30:00Z"
+          pagination:
+            currentLimit: 1
+            currentPage: 1
+            finalCount: 1
+            hasMore: true
+            initialCount: 1
+            nextOffset: 1
+            numberOfPages: 1
+            totalItems: 1
+        errors: [{ code: example, details: {}, message: example, reason: example }]
+        meta: { requestId: request_1 }
+        warnings: [{ code: example, details: {}, message: example, reason: example }]
+result:
+  data:
+    files:
+      - deleted: true
+        deletionTime: "2026-01-15T09:30:00Z"
+        expiryTime: "2026-01-15T09:30:00Z"
+        fileBytes: 1
+        fileName: example
+        fileType: example
+        id: "00000000-0000-4000-8000-000000000001"
+        lastHeartbeatTime: "2026-01-15T09:30:00Z"
+        orgId: "00000000-0000-4000-8000-000000000001"
+        sessionIds: [null]
+        status: example
+        uploadCompleteTime: "2026-01-15T09:30:00Z"
+    pagination:
+      currentLimit: 1
+      currentPage: 1
+      finalCount: 1
+      hasMore: true
+      initialCount: 1
+      nextOffset: 1
+      numberOfPages: 1
+      totalItems: 1
+  errors: [{ code: example, details: {}, message: example, reason: example }]
+  meta: { requestId: request_1 }
+  warnings: [{ code: example, details: {}, message: example, reason: example }]

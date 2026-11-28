@@ -1,0 +1,11 @@
+description: Two items put live without publishing the whole site
+action: publish_items
+credential: { token: test-token }
+input: { collection_id: col_1, item_ids: [itm_1, itm_2] }
+exchanges:
+  - sent:
+      method: POST
+      url: "https://api.webflow.com/v2/collections/col_1/items/publish"
+      body: { itemIds: [itm_1, itm_2] }
+    answer: { status: 202, body: { publishedItemIds: [itm_1, itm_2], errors: [] } }
+result: { publishedItemIds: [itm_1, itm_2], errors: [] }

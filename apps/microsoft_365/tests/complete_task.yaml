@@ -1,0 +1,20 @@
+description: "A To Do task marked done"
+action: complete_task
+credential: { access_token: eyJ0 }
+input: { list_id: AAMkShop2, task_id: AlMKXwbQ1 }
+exchanges:
+  - sent:
+      method: PATCH
+      url: https://graph.microsoft.com/v1.0/me/todo/lists/AAMkShop2/tasks/AlMKXwbQ1
+      body: { status: completed }
+    answer:
+      body:
+        id: AlMKXwbQ1
+        title: Pack order 1042
+        status: completed
+        completedDateTime: { dateTime: "2026-11-27T00:00:00.0000000", timeZone: UTC }
+result:
+  id: AlMKXwbQ1
+  title: Pack order 1042
+  status: completed
+  completedDateTime: { dateTime: "2026-11-27T00:00:00.0000000", timeZone: UTC }

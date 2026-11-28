@@ -1,0 +1,11 @@
+description: A delivery signed more than five minutes ago is refused - an old one sent again runs nothing
+trigger: interaction
+sign_in: discord_bot
+credential: { bot_token: test-bot-token, public_key: 3a2e578f29addf031da4172d5c614f059c027eba074c2e13ab54bc7cc51c1180 }
+delivery:
+  headers:
+    x-signature-ed25519: 1d00cea9cbb3442aef6555f230d1d7a7fc8ca189cde79f6fe64888f0b8901df201742280e4508f58f1c0a4e986ac6f4dadf52f22c51bf31de87648f9d982540c
+    x-signature-timestamp: "1700000000"
+  body: '{"id":"1100000000000000002","application_id":"1000000000000000001","type":2,"token":"dGVzdC1jb21tYW5kLXRva2Vu","guild_id":"900000000000000001","channel_id":"910000000000000001","member":{"user":{"id":"920000000000000001","username":"ann"}},"data":{"id":"930000000000000001","name":"price","type":1,"options":[{"name":"item","type":3,"value":"tea"}]},"version":1}'
+  at: 1700000400
+refused: "signed too long ago"

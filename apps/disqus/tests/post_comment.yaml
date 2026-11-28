@@ -1,0 +1,33 @@
+description: A reply to a comment
+action: post_comment
+credential: {api_key: pubkey-test-1, api_secret: secret-test-1, access_token: token-test-1}
+input: {message: 'Yes, we ship to Canada.', parent: '6002'}
+exchanges:
+- sent:
+    method: POST
+    url: https://disqus.com/api/3.0/posts/create.json
+    query: {api_key: pubkey-test-1, api_secret: secret-test-1, access_token: token-test-1}
+    body: {message: 'Yes, we ship to Canada.', parent: '6002'}
+  answer:
+    status: 200
+    body:
+      code: 0
+      response: &id001
+        id: '6003'
+        forum: shop-example
+        thread: '7001'
+        parent: 6002
+        author: {username: shop_example, name: Shop Example, id: '100', isAnonymous: false, profileUrl: 'https://disqus.com/by/ann_example/'}
+        message: <p>Yes, we ship to Canada.</p>
+        raw_message: Yes, we ship to Canada.
+        createdAt: '2026-11-27T11:30:00'
+        isApproved: true
+        isSpam: false
+        isDeleted: false
+        isFlagged: false
+        isHighlighted: false
+        isEdited: false
+        likes: 0
+        dislikes: 0
+        points: 0
+result: *id001

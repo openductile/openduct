@@ -1,0 +1,138 @@
+# Copyright 2026 Ductile AI, Inc
+# SPDX-License-Identifier: Apache-2.0
+app: youtube
+name: YouTube
+category: social
+description: Videos, playlists and channels on YouTube, found, read and kept in order.
+docs: https://developers.google.com/youtube/v3/docs
+hosts: [www.googleapis.com]
+base_url: https://www.googleapis.com/youtube/v3
+sign_in:
+  - id: youtube
+    label: Sign in with Google
+    oauth2:
+      authorize: https://accounts.google.com/o/oauth2/v2/auth
+      token: https://oauth2.googleapis.com/token
+      scopes: [https://www.googleapis.com/auth/youtube]
+      extra: { access_type: offline, prompt: consent }
+    headers:
+      Authorization: "Bearer {{ credential.access_token }}"
+error: value.error.message
+default_action: get_video
+actions:
+  get_video:
+    label: Look up a video
+    description: A video's title, description, channel, length and its counts of views, likes and comments.
+    method: GET
+    path: /videos
+    inputs:
+      - { name: video_id, label: "The video's id (the v= of its address)", required: true }
+      - { name: parts, label: "What to give, with commas (snippet,contentDetails,statistics when empty)" }
+    query:
+      id: "{{ input.video_id }}"
+      part: "{{ has(input.parts) && input.parts != null ? input.parts : 'snippet,contentDetails,statistics' }}"
+    result: "size(value.items) == 0 ? null : value.items[0]"
+  find_videos:
+    label: Find videos
+    description: >-
+      Videos by words, by a channel, or since a time - newest first or as YouTube ranks them. YouTube allows a
+      project 100 searches a day: up to 50 videos a page, 2 pages.
+    method: GET
+    path: /search
+    inputs:
+      - { name: q, label: "Words the videos are about" }
+      - { name: channel_id, label: "Only this channel's videos: its id" }
+      - { name: published_after, label: "Published since (2026-11-01T00:00:00Z)" }
+      - { name: order, label: "date (newest first), relevance (the default), viewCount or rating" }
+      - { name: region, label: "Videos seen in this country (US, GB ...)" }
+    query:
+      part: snippet
+      type: video
+      q: "{{ input.q }}"
+      channelId: "{{ input.channel_id }}"
+      publishedAfter: "{{ input.published_after }}"
+      order: "{{ input.order }}"
+      regionCode: "{{ input.region }}"
+      maxResults: "50"
+    items: value.items
+    next: "has(value.nextPageToken) ? {'pageToken': value.nextPageToken} : null"
+    max_pages: 2
+  update_video:
+    label: Change a video's title and description
+    description: >-
+      Its title, description, tags and category, all at once: YouTube clears what is not given, so give the
+      description and tags it should keep (Look up a video gives them).
+    write: true
+    method: PUT
+    path: /videos
+    query: { part: snippet }
+    inputs:
+      - { name: video_id, label: "The video's id", required: true }
+      - { name: title, label: Title, required: true }
+      - { name: category_id, label: "Its category's id (22 is People & Blogs; Look up a video gives its own)", required: true }
+      - { name: description, label: Description }
+      - { name: tags, label: "Tags: a list of words", kind: list }
+    send:
+      id: "{{ input.video_id }}"
+      snippet:
+        title: "{{ input.title }}"
+        categoryId: "{{ input.category_id }}"
+        description: "{{ input.description }}"
+        tags: "{{ input.tags }}"
+  list_playlist_videos:
+    label: List a playlist's videos
+    description: "Every video of a playlist, up to 500 (a channel's uploads are the playlist its Look up a channel gives)."
+    method: GET
+    path: /playlistItems
+    inputs:
+      - { name: playlist_id, label: "The playlist's id", required: true }
+    query: { part: "snippet,contentDetails", playlistId: "{{ input.playlist_id }}", maxResults: "50" }
+    items: value.items
+    next: "has(value.nextPageToken) ? {'pageToken': value.nextPageToken} : null"
+  add_to_playlist:
+    label: Add a video to a playlist
+    write: true
+    method: POST
+    path: /playlistItems
+    query: { part: snippet }
+    inputs:
+      - { name: playlist_id, label: "The playlist's id", required: true }
+      - { name: video_id, label: "The video's id", required: true }
+    send:
+      snippet:
+        playlistId: "{{ input.playlist_id }}"
+        resourceId: { kind: "youtube#video", videoId: "{{ input.video_id }}" }
+  remove_from_playlist:
+    label: Take a video out of a playlist
+    write: true
+    method: DELETE
+    path: /playlistItems
+    query: { id: "{{ input.playlist_item_id }}" }
+    inputs:
+      - { name: playlist_item_id, label: "Its place in the playlist: the item's id (List a playlist's videos gives it)", required: true }
+    result: "{'removed': status == 204}"
+  make_playlist:
+    label: Make a playlist
+    write: true
+    method: POST
+    path: /playlists
+    query: { part: "snippet,status" }
+    inputs:
+      - { name: title, label: Title, required: true }
+      - { name: description, label: Description }
+      - { name: privacy, label: "public, unlisted or private (the default)" }
+    send:
+      snippet: { title: "{{ input.title }}", description: "{{ input.description }}" }
+      status: { privacyStatus: "{{ has(input.privacy) && input.privacy != null ? input.privacy : 'private' }}" }
+  get_channel:
+    label: Look up a channel
+    description: A channel's name, its counts of subscribers, views and videos, and its uploads playlist; your own when no id is given.
+    method: GET
+    path: /channels
+    inputs:
+      - { name: channel_id, label: "The channel's id (yours when empty)" }
+    query:
+      part: "snippet,statistics,contentDetails"
+      id: "{{ input.channel_id }}"
+      mine: "{{ has(input.channel_id) && input.channel_id != null ? null : 'true' }}"
+    result: "!has(value.items) || size(value.items) == 0 ? null : value.items[0]"

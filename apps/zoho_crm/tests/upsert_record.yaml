@@ -1,0 +1,10 @@
+action: upsert_record
+credential: { access_token: 1000.test.token }
+input: { module: Contacts, record: { Last_Name: Lee, Email: ann@example.com, Phone: "+1 555 0100" }, match_on: Email }
+exchanges:
+  - sent:
+      method: POST
+      url: https://www.zohoapis.com/crm/v8/Contacts/upsert
+      body: { data: [{ Last_Name: Lee, Email: ann@example.com, Phone: "+1 555 0100" }], duplicate_check_fields: [Email] }
+    answer: { body: { data: [{ code: SUCCESS, duplicate_field: Email, action: update, status: success, message: record updated, details: { id: "1000000000000000201", Modified_Time: "2026-11-27T10:00:00-05:00" } }] } }
+result: { action: update, id: "1000000000000000201", details: { id: "1000000000000000201", Modified_Time: "2026-11-27T10:00:00-05:00" } }

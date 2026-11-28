@@ -1,0 +1,7 @@
+action: list_coin_tickers
+credential: { api_key: CG-test1 }
+input: { id: bitcoin, exchange_ids: gdax }
+exchanges:
+  - sent: { method: GET, url: https://api.coingecko.com/api/v3/coins/bitcoin/tickers, query: { exchange_ids: gdax } }
+    answer: { body: { name: Bitcoin, tickers: [{ base: BTC, target: USD, market: { name: Coinbase Exchange, identifier: gdax }, last: 76950.1, volume: 13786.1, trust_score: green }] } }
+result: [{ base: BTC, target: USD, market: { name: Coinbase Exchange, identifier: gdax }, last: 76950.1, volume: 13786.1, trust_score: green }]

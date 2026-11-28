@@ -1,0 +1,7 @@
+action: read_text
+credential: { api_key: md_test_1 }
+input: { model_id: 7d9ebf30-0000-4000-8000-0000000000c5, url: "https://files.example.com/letter.pdf" }
+exchanges:
+  - sent: { method: POST, url: https://api-v2.mindee.net/v2/products/ocr/enqueue, body: { model_id: 7d9ebf30-0000-4000-8000-0000000000c5, url: "https://files.example.com/letter.pdf" } }
+    answer: { status: 202, body: { job: { id: 60cd8172-0000-4000-8000-0000000000b6, status: Processing } } }
+result: { id: 60cd8172-0000-4000-8000-0000000000b6, status: Processing }

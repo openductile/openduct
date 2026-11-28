@@ -1,0 +1,18 @@
+description: An order made since the poll before, signed in with a personal access token
+trigger: new_order
+sign_in: keap_key
+credential: { api_key: KeapAK-test-1 }
+seen: { items: [["5001", ""]] }
+exchanges:
+  - sent:
+      method: GET
+      url: https://api.keap.com/crm/rest/v2/orders
+      query: { order_by: order_time desc, page_size: "100" }
+      headers: { authorization: Bearer KeapAK-test-1 }
+    answer:
+      body:
+        orders:
+          - { id: "5002", title: Order 5002, status: PAID, total: 49.0, order_time: "2026-11-27T10:00:00Z", contact: { id: "102", email: bob@example.com } }
+          - { id: "5001", title: Order 5001, status: PAID, total: 25.0, order_time: "2026-11-26T08:00:00Z", contact: { id: "101", email: ann@example.com } }
+runs:
+  - { id: "5002", title: Order 5002, status: PAID, total: 49.0, order_time: "2026-11-27T10:00:00Z", contact: { id: "102", email: bob@example.com } }

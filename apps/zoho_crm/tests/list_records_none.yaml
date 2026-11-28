@@ -1,0 +1,8 @@
+description: A module with no records answers 204 and gives none
+action: list_records
+credential: { access_token: 1000.test.token }
+input: { module: Deals, fields: Deal_Name, oldest_first: true }
+exchanges:
+  - sent: { url: https://www.zohoapis.com/crm/v8/Deals, query: { fields: Deal_Name, sort_by: Created_Time, sort_order: asc, per_page: "200" } }
+    answer: { status: 204 }
+result: []

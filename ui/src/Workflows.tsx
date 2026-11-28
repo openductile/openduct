@@ -19,6 +19,7 @@ const TRIGGERS: Record<string, string> = {
   topic: "Topic",
   manual: "By hand",
   failed: "When one fails",
+  chat: "Chat", // chat trigger (G8)
 };
 
 /** The colour of a template's category. */

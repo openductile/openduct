@@ -1,0 +1,14 @@
+description: Leads with a word in them, the newest first
+action: find_leads
+credential: { address: "https://mycompany.example.com", api_key: 6578616d706c65206b6579 }
+input: { search: chairs }
+exchanges:
+  - sent:
+      url: https://mycompany.example.com/json/2/crm.lead/search_read
+      body:
+        domain: ["|", "|", [name, ilike, chairs], [contact_name, ilike, chairs], [email_from, ilike, chairs]]
+        fields: [name, type, contact_name, partner_name, email_from, phone, expected_revenue, probability, stage_id, user_id, partner_id, create_date, write_date]
+        order: create_date desc
+        limit: 100
+    answer: { body: [{ id: 12, name: Website order for 20 chairs, type: opportunity, stage_id: [1, New], expected_revenue: 2400 }] }
+result: [{ id: 12, name: Website order for 20 chairs, type: opportunity, stage_id: [1, New], expected_revenue: 2400 }]

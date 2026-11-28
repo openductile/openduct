@@ -1,0 +1,39 @@
+# Made by `openduct app from-openapi`: Retrieve Organizations.
+description: "Retrieve Organizations, made from the API description's schemas"
+action: list_organizations
+credential: { token: test-token }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://api-ssl.bitly.com/v4/organizations"
+      query: {}
+      headers: { authorization: "Bearer test-token" }
+    answer:
+      status: 200
+      body:
+        organizations:
+          - references: {}
+            name: example
+            is_active: true
+            guid: guid_1
+            tier: example
+            tier_family: example
+            tier_display_name: example
+            role: example
+            created: example
+            modified: example
+            bsds: [example]
+            require_sso: none
+result:
+  - references: {}
+    name: example
+    is_active: true
+    guid: guid_1
+    tier: example
+    tier_family: example
+    tier_display_name: example
+    role: example
+    created: example
+    modified: example
+    bsds: [example]
+    require_sso: none

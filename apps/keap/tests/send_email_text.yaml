@@ -1,0 +1,17 @@
+description: An email to two contacts, sent with a service account key; the message goes in Base64, as Keap asks
+action: send_email
+sign_in: keap_key
+credential: { api_key: KeapAK-test-1 }
+input: { contacts: ["101", "102"], subject: Shipped, html: "<p>Your order has shipped.</p>", text: Your order has shipped. }
+exchanges:
+  - sent:
+      method: POST
+      url: "https://api.keap.com/crm/rest/v2/emails:send"
+      headers: { authorization: "Bearer KeapAK-test-1" }
+      body:
+        contacts: ["101", "102"]
+        subject: Shipped
+        html_content: PHA+WW91ciBvcmRlciBoYXMgc2hpcHBlZC48L3A+
+        plain_content: WW91ciBvcmRlciBoYXMgc2hpcHBlZC4=
+    answer: { status: 202 }
+result: null

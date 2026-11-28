@@ -1,0 +1,19 @@
+description: "The books on the To read shelf"
+action: list_bookshelf_books
+credential: { access_token: ya29.test }
+input: { shelf: "2" }
+exchanges:
+  - sent:
+      method: GET
+      url: https://books.googleapis.com/books/v1/mylibrary/bookshelves/2/volumes
+      query: { maxResults: "40" }
+    answer:
+      body:
+        kind: "books#volumes"
+        totalItems: 2
+        items:
+          - { kind: "books#volume", id: zyTCAlFPjgYC, volumeInfo: { title: The Example Garden, authors: [Ann Example] } }
+          - { kind: "books#volume", id: aBcDeFgHiJ0C, volumeInfo: { title: Roses for Everyone, authors: [Ann Example] } }
+result:
+  - { kind: "books#volume", id: zyTCAlFPjgYC, volumeInfo: { title: The Example Garden, authors: [Ann Example] } }
+  - { kind: "books#volume", id: aBcDeFgHiJ0C, volumeInfo: { title: Roses for Everyone, authors: [Ann Example] } }

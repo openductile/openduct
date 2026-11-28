@@ -1,0 +1,20 @@
+description: With no service given, the subscription is for the whole account
+trigger: incident_changed
+register: true
+workflow: wf2
+address: https://studio.example/hooks/h2
+credential: { api_key: pd_test_1 }
+input: { events: "incident.triggered,incident.acknowledged" }
+exchanges:
+  - sent:
+      method: POST
+      url: https://api.pagerduty.com/webhook_subscriptions
+      body:
+        webhook_subscription:
+          type: webhook_subscription
+          description: OpenDuct workflow wf2
+          delivery_method: { type: http_delivery_method, url: https://studio.example/hooks/h2 }
+          events: [incident.triggered, incident.acknowledged]
+          filter: { type: account_reference }
+    answer: { body: { webhook_subscription: { id: PWHSUB2, delivery_method: { secret: pd_whsec_test_2 } } } }
+kept: { webhook_secret: pd_whsec_test_2, webhook_id: PWHSUB2 }

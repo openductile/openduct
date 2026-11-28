@@ -1,0 +1,7 @@
+description: The image templates - fewer than 25 is the last page
+action: list_image_templates
+credential: { api_key: bb_ak_v5_test }
+exchanges:
+  - sent: { method: GET, url: "https://api.bannerbear.com/v5/image_templates" }
+    answer: { status: 200, body: [{ uid: tpl_A1b2, name: Order thank-you card, width: 1200, height: 630, tags: [orders] }] }
+result: [{ uid: tpl_A1b2, name: Order thank-you card, width: 1200, height: 630, tags: [orders] }]

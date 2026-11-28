@@ -1,0 +1,9 @@
+description: A task completed, when the workflow asked only for tasks added, is answered and runs nothing
+trigger: event
+credential: { token: todoist-test-token, webhook_secret: todoist-app-client-secret-test }
+input: { events: item:added }
+delivery:
+  headers: { x-todoist-hmac-sha256: "EpC9/AGVRD5D87cOw7Q1O/9zx9aEVW3SeUJu8PCjIAo=", x-todoist-delivery-id: dlv-test-2 }
+  body: '{"event_name":"item:completed","user_id":"1000001","event_data":{"id":"6Xtest0000000003","content":"Ring the bank","project_id":"6Xproj0000000001","priority":1,"checked":false},"initiator":{"id":"1000001","full_name":"Ann Lee"},"triggered_at":"2026-11-27T10:39:38.000000Z","version":"10"}'
+  at: 1795770000
+passed: true

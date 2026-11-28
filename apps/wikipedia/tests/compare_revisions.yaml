@@ -1,0 +1,8 @@
+description: What changed between two revisions
+action: compare_revisions
+credential: { contact: ops@example.com }
+input: { from: 1300000001, to: 1300000002 }
+exchanges:
+  - sent: { method: GET, url: https://en.wikipedia.org/w/rest.php/v1/revision/1300000001/compare/1300000002 }
+    answer: { body: { from: { id: 1300000001, slot_role: main, sections: [] }, to: { id: 1300000002, slot_role: main, sections: [] }, diff: [{ type: 3, lineNumber: 12, text: Jupiter is the largest planet. }] } }
+result: { from: { id: 1300000001, slot_role: main, sections: [] }, to: { id: 1300000002, slot_role: main, sections: [] }, diff: [{ type: 3, lineNumber: 12, text: Jupiter is the largest planet. }] }

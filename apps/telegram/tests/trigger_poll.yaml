@@ -1,0 +1,20 @@
+description: New messages since the last poll, each a run, oldest first; the next poll asks from after the last
+trigger: new_message
+credential: { bot_token: "123:abc" }
+seen: { cursor: 501, items: [["500", ""]] }
+exchanges:
+  - sent:
+      method: GET
+      url: https://api.telegram.org/bot123:abc/getUpdates
+      query: { offset: "501", limit: "100", timeout: "0", allowed_updates: '["message"]' }
+    answer:
+      body:
+        ok: true
+        result:
+          - { update_id: 501, message: { message_id: 2, chat: { id: 42 }, text: hello } }
+          - { update_id: 502, message: { message_id: 3, chat: { id: 42 }, text: are you there } }
+runs:
+  - { message_id: 2, chat: { id: 42 }, text: hello }
+  - { message_id: 3, chat: { id: 42 }, text: are you there }
+ids: ["501", "502"]
+cursor: 503

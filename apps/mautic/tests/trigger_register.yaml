@@ -1,0 +1,12 @@
+description: Turning the workflow on adds a webhook to Mautic with a secret of its own
+trigger: new_contact
+register: true
+workflow: wf1
+address: https://studio.example/hooks/h1
+credential: {"site_url": "https://mautic.example.com", "username": "admin", "password": "pw-test"}
+exchanges:
+  - sent:
+      method: POST
+      url: https://mautic.example.com/api/hooks/new
+      headers: { authorization: "Basic YWRtaW46cHctdGVzdA==" }
+    answer: { status: 201, body: { hook: { id: 7, name: OpenDuct workflow wf1, webhookUrl: "https://studio.example/hooks/h1", triggers: [mautic.lead_post_save_new], isPublished: true } } }

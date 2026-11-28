@@ -1,0 +1,11 @@
+description: A button press answered with a notice
+action: answer_button
+credential: { bot_token: "123:abc" }
+input: { callback_query_id: "4382bfdwdsb323b2d9", text: Approved }
+exchanges:
+  - sent:
+      method: POST
+      url: https://api.telegram.org/bot123:abc/answerCallbackQuery
+      body: { callback_query_id: "4382bfdwdsb323b2d9", text: Approved }
+    answer: { body: { ok: true, result: true } }
+result: { answered: true }

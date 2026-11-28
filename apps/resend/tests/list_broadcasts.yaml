@@ -1,0 +1,64 @@
+# Made by `openduct app from-openapi`: Retrieve a list of broadcasts.
+description: "Retrieve a list of broadcasts, made from the API description's schemas"
+action: list_broadcasts
+credential: { token: test-token }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://api.resend.com/broadcasts"
+      query: { limit: "100" }
+      headers: { authorization: "Bearer test-token" }
+    answer:
+      status: 200
+      body:
+        object: list
+        has_more: true
+        data:
+          - id: e169aa45-1ecf-4183-9955-b1499d5701d3
+            name: example
+            audience_id: "78261eea-8f8b-4381-83c6-79fa7120f1cf"
+            segment_id: "78261eea-8f8b-4381-83c6-79fa7120f1cf"
+            status: draft
+            created_at: example
+            scheduled_at: example
+            sent_at: example
+            topic_id: b6d24b8e-af0b-4c3c-be0c-359bbd97381e
+  - sent:
+      method: GET
+      url: "https://api.resend.com/broadcasts"
+      query: { limit: "100", after: e169aa45-1ecf-4183-9955-b1499d5701d3 }
+      headers: { authorization: "Bearer test-token" }
+    answer:
+      status: 200
+      body:
+        object: list
+        has_more: false
+        data:
+          - id: id_2
+            name: example
+            audience_id: "78261eea-8f8b-4381-83c6-79fa7120f1cf"
+            segment_id: "78261eea-8f8b-4381-83c6-79fa7120f1cf"
+            status: draft
+            created_at: example
+            scheduled_at: example
+            sent_at: example
+            topic_id: b6d24b8e-af0b-4c3c-be0c-359bbd97381e
+result:
+  - id: e169aa45-1ecf-4183-9955-b1499d5701d3
+    name: example
+    audience_id: "78261eea-8f8b-4381-83c6-79fa7120f1cf"
+    segment_id: "78261eea-8f8b-4381-83c6-79fa7120f1cf"
+    status: draft
+    created_at: example
+    scheduled_at: example
+    sent_at: example
+    topic_id: b6d24b8e-af0b-4c3c-be0c-359bbd97381e
+  - id: id_2
+    name: example
+    audience_id: "78261eea-8f8b-4381-83c6-79fa7120f1cf"
+    segment_id: "78261eea-8f8b-4381-83c6-79fa7120f1cf"
+    status: draft
+    created_at: example
+    scheduled_at: example
+    sent_at: example
+    topic_id: b6d24b8e-af0b-4c3c-be0c-359bbd97381e

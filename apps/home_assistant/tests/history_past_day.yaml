@@ -1,0 +1,11 @@
+description: Without a start, the past day - no time in the address
+action: history
+credential: { url: "http://home.example:8123", token: ha-test-token }
+input: { entity_id: binary_sensor.front_door }
+exchanges:
+  - sent:
+      method: GET
+      url: "http://home.example:8123/api/history/period"
+      query: { filter_entity_id: binary_sensor.front_door }
+    answer: { status: 200, body: [[{ entity_id: binary_sensor.front_door, state: "off", last_changed: "2026-11-27T07:00:00+00:00" }]] }
+result: [[{ entity_id: binary_sensor.front_door, state: "off", last_changed: "2026-11-27T07:00:00+00:00" }]]

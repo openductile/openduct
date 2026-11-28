@@ -1,0 +1,44 @@
+name: Ask your customer sheet, as a tool for AI assistants
+description: >-
+  Offers your Customers sheet in Google Sheets to AI assistants that speak MCP (a desktop assistant, your IDE, your
+  own agent): they ask a question in plain words - "who has not ordered since August?", "our five biggest customers
+  in Ohio?" - and an AI agent reads the sheet and answers from it, saying how many rows it went by. It only reads.
+  Turn it on and make a token under Settings, Tools for AI assistants. Needs: Google Sheets (sheets) and an AI
+  credential (model).
+category: Data
+trigger: manual
+# Offered to AI assistants through the workspace's MCP server: what a model reads to choose it, and what it takes.
+tool:
+  name: ask_customer_sheet
+  description: >-
+    Answers a question about the company's customers - who they are, where, what and when they last ordered, how
+    much they spent - from the Customers sheet. Ask one question at a time, in plain words.
+  input:
+    question: { type: string, description: "The question, as you would ask a colleague", required: true }
+    today: { type: string, description: "Today's date, as 2026-11-27, for questions about time" }
+  timeout: 2m
+# What a test runs on: the arguments an assistant sends.
+sample:
+  question: Which customers in Ohio have not ordered since August?
+  today: "2026-11-27"
+steps:
+  - name: analyst
+    agent:
+      credential: model
+      instructions: >-
+        You answer questions about a small company's customers from its Customers sheet. Read the sheet with
+        customers before you answer; its first row names the columns. Answer only from what the rows say, with
+        names and numbers, in at most eight lines; say how many rows you went by. If the sheet cannot answer the
+        question, say what it lacks. Today is {{ value.today != null ? value.today : 'not given: for a question about time, go by the latest date in the sheet and say so' }}.
+      input: "{{ value.question }}"
+      tools:
+        - name: customers
+          description: "Every row of the Customers sheet: its first row names the columns."
+          google_sheets: { action: read_rows, credential: sheets, spreadsheet_id: your-sheet-id, range: "Customers!A1:L2000" }
+      allow: [customers]
+      max_turns: 4
+      max_tool_calls: 3
+      max_tokens: 800
+  - name: answer
+    respond:
+      body: { answer: "{{ steps.analyst.text }}" }

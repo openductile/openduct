@@ -28,6 +28,10 @@ impl Reader {
     }
 
     pub(super) fn postgres(&self, body: &Json, at: &str) -> Result<Kind, String> {
+        // sql databases: with the settings every SQL step has, it is read as they are.
+        if crate::databases::newer(body) {
+            return self.database("postgres", body, at);
+        }
         let s = settings(body, at)?;
         if let Some(k) = s
             .keys()
@@ -74,6 +78,12 @@ impl Reader {
         })
     }
 
+    /// A `mysql` or `sqlserver` step, or a newer `postgres` one (see [`crate::databases`]). // sql databases
+    pub(super) fn database(&self, kind: &str, body: &Json, at: &str) -> Result<Kind, String> {
+        let query = crate::databases::parse(kind, body, at, &|v, a| self.expression(v, a))?;
+        Ok(Kind::Database(Box::new(query)))
+    }
+
     pub(super) fn email(&self, body: &Json, at: &str) -> Result<Kind, String> {
         const FIELDS: &[&str] = &[
             "credential",
@@ -84,6 +94,7 @@ impl Reader {
             "subject",
             "text",
             "html",
+            "attachments", // G6 files
         ];
         let s = settings(body, at)?;
         if let Some(k) = s.keys().find(|k| !FIELDS.contains(&k.as_str())) {
@@ -116,6 +127,7 @@ impl Reader {
             subject,
             text: body,
             html,
+            attachments: self.attachments(s.get("attachments"), at)?, // G6 files
         }))
     }
 
@@ -123,12 +135,28 @@ impl Reader {
         let (code, time) = match body {
             Json::String(code) => (code.as_str(), None),
             Json::Object(s) => {
-                if let Some(k) = s.keys().find(|k| !matches!(k.as_str(), "code" | "timeout")) {
-                    return Err(format!("{at}.{k}: not a setting of {kind} (code, timeout)"));
+                // data tables: `state`
+                if let Some(k) = s
+                    .keys()
+                    .find(|k| !matches!(k.as_str(), "code" | "timeout" | "state"))
+                {
+                    return Err(format!(
+                        "{at}.{k}: not a setting of {kind} (code, timeout, state)"
+                    ));
                 }
                 (text(s.get("code")).unwrap_or_default(), text(s.get("timeout")))
             }
             _ => ("", None),
+        };
+        // data tables: the workflow's state given to the script, and what it leaves there kept.
+        let state = match body.get("state") {
+            None | Some(Json::Null) => false,
+            Some(Json::Bool(b)) => *b,
+            Some(_) => {
+                return Err(format!(
+                    "{at}.state: true, to give the script the workflow's state"
+                ));
+            }
         };
         if code.trim().is_empty() {
             return Err(format!("{at}: the code"));
@@ -151,6 +179,57 @@ impl Reader {
             },
             code: code.to_owned(),
             time,
+            state, // data tables
         })
     }
 }
+
+pub(crate) const KINDS: &[&str] = &[
+    "set",
+    "where",
+    "if",
+    "for_each",
+    "http",
+    "lookup",
+    "postgres",
+    "javascript",
+    "python",
+    "email",
+    "switch",
+    "merge",
+    "list",
+    "group",
+    "respond",
+    "run_workflow",
+    "datetime",
+    "topic",
+    "wait",
+    "stop",
+    // G7 more AI steps
+    "classify",
+    "extract",
+    "summarise",
+    "sentiment",
+    "agent",         // G2 AI agents
+    "mcp",           // MCP
+    "split_text",    // retrieval
+    "vector_store",  // retrieval
+    "ask_documents", // retrieval
+    // forms-and-resume
+    "form",
+    "approval",
+    "table", // data tables
+    "state", // data tables
+    // G6 files
+    "extract_file",
+    "convert",
+    "file_details",
+    "mysql",     // sql databases
+    "sqlserver", // sql databases
+    // storage
+    "storage",
+    "compress",
+    "redis",
+    "web",     // web
+    "mailbox", // messaging
+];

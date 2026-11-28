@@ -1,0 +1,8 @@
+description: A file deleted
+action: delete
+credential: { access_token: sl.test-token }
+input: { path: /Invoices/old.pdf }
+exchanges:
+  - sent: { url: https://api.dropboxapi.com/2/files/delete_v2, body: { path: /Invoices/old.pdf } }
+    answer: { body: { metadata: { ".tag": file, id: "id:a4ayc_80_OEAAAAAAAAAZd", name: old.pdf, path_display: /Invoices/old.pdf } } }
+result: { ".tag": file, id: "id:a4ayc_80_OEAAAAAAAAAZd", name: old.pdf, path_display: /Invoices/old.pdf }

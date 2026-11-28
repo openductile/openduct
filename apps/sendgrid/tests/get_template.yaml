@@ -1,0 +1,19 @@
+description: A template and its versions
+action: get_template
+credential: { token: SG.test-key }
+input: { template_id: d-0123456789abcdef0123456789abcdef }
+exchanges:
+  - sent: { method: GET, url: https://api.sendgrid.com/v3/templates/d-0123456789abcdef0123456789abcdef }
+    answer:
+      body:
+        id: d-0123456789abcdef0123456789abcdef
+        name: Order shipped
+        generation: dynamic
+        updated_at: "2026-11-02 10:00:00"
+        versions: [{ id: 5997fcf6-2b9f-484d-acd5-7e9a99f0dc1f, template_id: d-0123456789abcdef0123456789abcdef, active: 1, name: First, subject: "Your order {{order}} has shipped" }]
+result:
+  id: d-0123456789abcdef0123456789abcdef
+  name: Order shipped
+  generation: dynamic
+  updated_at: "2026-11-02 10:00:00"
+  versions: [{ id: 5997fcf6-2b9f-484d-acd5-7e9a99f0dc1f, template_id: d-0123456789abcdef0123456789abcdef, active: 1, name: First, subject: "Your order {{order}} has shipped" }]

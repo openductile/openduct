@@ -1,0 +1,53 @@
+name: Clean product cut-outs from each new photo in Drive
+description: >-
+  Each new product photo dropped in your Google Drive photos folder has its background taken out by remove.bg, and the
+  cut-out - a transparent PNG, ready for the shop and for ads - is filed in your S3 bucket (or R2, MinIO, any
+  S3-compatible store) under the photo's name; your team's Google Chat space is told. The folder must be shared so
+  anyone with the link can view it, as remove.bg fetches each photo by its link. Needs: Google Drive (drive), a
+  remove.bg API key as a header credential named X-Api-Key (removebg), an s3 credential (shop_images) and a Google
+  Chat webhook (team_chat).
+category: E-commerce
+trigger:
+  # Your photos folder's id: the end of its address in Drive.
+  google_drive: { when: new_file, credential: drive, folder_id: your-photos-folder-id, every: 10m }
+# What a test runs on: a new file as this trigger gives it.
+sample:
+  id: 1AbCdEfGhIjKlMnOpQrStUvWxYz012345
+  name: tote-forest-front.jpg
+  mimeType: image/jpeg
+  createdTime: "2026-11-27T10:04:00.000Z"
+  modifiedTime: "2026-11-27T10:04:00.000Z"
+  webViewLink: https://drive.google.com/file/d/1AbCdEfGhIjKlMnOpQrStUvWxYz012345/view
+  size: "2483112"
+steps:
+  # Only photos: a note or a spreadsheet in the folder is left alone.
+  - where: value.mimeType != null && value.mimeType.startsWith('image/')
+  - name: cut_out
+    http:
+      method: POST
+      credential: removebg
+      url: https://api.remove.bg/v1.0/removebg
+      form:
+        image_url: "https://drive.google.com/thumbnail?id={{ value.id }}&sz=w2000"
+        size: auto
+        format: png
+      # The answer is the PNG itself.
+      response: file
+      timeout: 60s
+      sample: "(the cut-out PNG, in a real run)"
+    retry: { attempts: 3, wait: 30s }
+  - name: named
+    set:
+      path: "'cutouts/' + regex.replace(value.name, '\\\\.[A-Za-z0-9]+$', '') + '.png'"
+  - name: filed
+    storage:
+      action: write
+      credential: shop_images
+      path: "{{ steps.named.path }}"
+      file: steps.cut_out.body
+      overwrite: true
+  - name: tell
+    google_chat:
+      credential: team_chat
+      text: "New cut-out ready: {{ steps.named.path }} (from {{ value.name }} in Drive: {{ value.webViewLink }})"
+    retry: { attempts: 3, wait: 20s }

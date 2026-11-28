@@ -1,0 +1,525 @@
+# Copyright 2026 Ductile AI, Inc
+# SPDX-License-Identifier: Apache-2.0
+# ActiveCampaign: written from its own API description, https://developers.activecampaign.com/openapi/v3.json
+# (fetched 2026-11-27; OpenAPI 3.1; no licence stated: only its facts are used, the words are our own), with
+# `openduct app from-openapi`'s reading of 25 of its operations as the start.
+app: activecampaign
+name: ActiveCampaign
+category: marketing
+description: Contacts, tags, lists, automations and deals in ActiveCampaign.
+docs: https://developers.activecampaign.com/reference/overview
+hosts: ["*.api-us1.com"]
+base_url: "https://{{ credential.account }}.api-us1.com/api/3"
+sign_in:
+  - id: activecampaign
+    label: An API key
+    fields:
+      - { name: account, label: "Your account's name: the part before .api-us1.com in Settings → Developer → URL" }
+      - { name: api_key, label: "The API key (Settings → Developer → Key)", secret: true }
+    headers: { Api-Token: "{{ credential.api_key }}" }
+error: >-
+  status >= 400 ? (has(value.errors) && size(value.errors) > 0
+  ? (has(value.errors[0].title) && value.errors[0].title != '' ? value.errors[0].title : value.errors[0].detail)
+  : value.message) : null
+actions:
+  sync_contact:
+    label: Add or update a contact
+    description: Finds a contact by email and changes it, or adds it when there is none - with its name, phone and custom fields.
+    write: true
+    method: POST
+    path: /contact/sync
+    inputs:
+      - { name: email, label: "Email", required: true }
+      - { name: first_name, label: "First name" }
+      - { name: last_name, label: "Last name" }
+      - { name: phone, label: "Phone" }
+      - { name: field_values, label: "Custom fields (as JSON): [{\"field\": 1, \"value\": \"Gold\"}]", kind: list }
+    send:
+      contact:
+        email: "{{ input.email }}"
+        firstName: "{{ input.first_name }}"
+        lastName: "{{ input.last_name }}"
+        phone: "{{ input.phone }}"
+        fieldValues: "{{ input.field_values }}"
+    result: value.contact
+    output:
+      id: text
+      email: text
+      firstName: text
+      lastName: text
+      phone: text
+      orgid: text
+      orgname: text
+      cdate: text
+      udate: text
+      links: record
+  create_contact:
+    label: Add a contact
+    description: Adds a new contact; it fails when the email is already a contact's (Add or update a contact does not).
+    write: true
+    method: POST
+    path: /contacts
+    inputs:
+      - { name: email, label: "Email", required: true }
+      - { name: first_name, label: "First name" }
+      - { name: last_name, label: "Last name" }
+      - { name: phone, label: "Phone" }
+      - { name: field_values, label: "Custom fields (as JSON): [{\"field\": 1, \"value\": \"Gold\"}]", kind: list }
+    send:
+      contact:
+        email: "{{ input.email }}"
+        firstName: "{{ input.first_name }}"
+        lastName: "{{ input.last_name }}"
+        phone: "{{ input.phone }}"
+        fieldValues: "{{ input.field_values }}"
+    result: value.contact
+    output:
+      id: text
+      email: text
+      firstName: text
+      lastName: text
+      phone: text
+      orgid: text
+      orgname: text
+      cdate: text
+      udate: text
+      links: record
+  get_contact:
+    label: Get a contact
+    description: One contact, by its id.
+    method: GET
+    path: "/contacts/{{ input.contact_id }}"
+    inputs:
+      - { name: contact_id, label: "The contact's id", required: true }
+    result: value.contact
+    output:
+      id: text
+      email: text
+      firstName: text
+      lastName: text
+      phone: text
+      orgid: text
+      orgname: text
+      cdate: text
+      udate: text
+      links: record
+  find_contacts:
+    label: Find contacts
+    description: Contacts that match a search (an email, a name, a phone or an account name), or of a list or tag; the newest first; up to 1,000.
+    method: GET
+    path: /contacts
+    inputs:
+      - { name: search, label: "Search: an email address, a name, a phone number" }
+      - { name: email, label: "Only the contact with this email" }
+      - { name: list_id, label: "Only contacts on this list (its id)" }
+      - { name: tag_id, label: "Only contacts with this tag (its id)", kind: number }
+      - { name: created_after, label: "Only contacts added after (such as 2026-11-01)" }
+    query:
+      search: "{{ input.search }}"
+      email: "{{ input.email }}"
+      listid: "{{ input.list_id }}"
+      tagid: "{{ input.tag_id }}"
+      "filters[created_after]": "{{ input.created_after }}"
+      "orders[cdate]": desc
+      limit: "100"
+    items: value.contacts
+    next: "size(value.contacts) < 100 ? null : {'offset': string((page == null ? 0 : int(page.offset)) + 100)}"
+    max_pages: 10
+    output:
+      id: text
+      email: text
+      firstName: text
+      lastName: text
+      phone: text
+      orgid: text
+      orgname: text
+      cdate: text
+      udate: text
+      links: record
+  update_contact:
+    label: Change a contact
+    description: Changes a contact's email, name, phone or custom fields; what is not given stays.
+    write: true
+    method: PUT
+    path: "/contacts/{{ input.contact_id }}"
+    inputs:
+      - { name: contact_id, label: "The contact's id", required: true }
+      - { name: email, label: "Email" }
+      - { name: first_name, label: "First name" }
+      - { name: last_name, label: "Last name" }
+      - { name: phone, label: "Phone" }
+      - { name: field_values, label: "Custom fields (as JSON): [{\"field\": 1, \"value\": \"Gold\"}]", kind: list }
+    send:
+      contact:
+        email: "{{ input.email }}"
+        firstName: "{{ input.first_name }}"
+        lastName: "{{ input.last_name }}"
+        phone: "{{ input.phone }}"
+        fieldValues: "{{ input.field_values }}"
+    result: value.contact
+    output:
+      id: text
+      email: text
+      firstName: text
+      lastName: text
+      phone: text
+      orgid: text
+      orgname: text
+      cdate: text
+      udate: text
+      links: record
+  delete_contact:
+    label: Delete a contact
+    description: Deletes a contact.
+    write: true
+    method: DELETE
+    path: "/contacts/{{ input.contact_id }}"
+    inputs:
+      - { name: contact_id, label: "The contact's id", required: true }
+    result: "{'deleted': status < 300}"
+    output: { deleted: boolean }
+  add_tag_to_contact:
+    label: Tag a contact
+    description: Puts a tag on a contact.
+    write: true
+    method: POST
+    path: /contactTags
+    inputs:
+      - { name: contact_id, label: "The contact's id", required: true, kind: number }
+      - { name: tag_id, label: "The tag's id (List tags gives it)", required: true, kind: number }
+    send: { contactTag: { contact: "{{ input.contact_id }}", tag: "{{ input.tag_id }}" } }
+    result: value.contactTag
+    output: { id: text, contact: text, tag: text, cdate: text }
+  remove_tag_from_contact:
+    label: Take a tag off a contact
+    description: Takes a tag off a contact, by the id of the contact's tag (List a contact's tags gives it).
+    write: true
+    method: DELETE
+    path: "/contactTags/{{ input.contact_tag_id }}"
+    inputs:
+      - { name: contact_tag_id, label: "The id of the tag on the contact (not the tag's own id)", required: true }
+    result: "{'removed': status < 300}"
+    output: { removed: boolean }
+  list_contact_tags:
+    label: List a contact's tags
+    description: The tags on one contact, each with the id that takes it off again.
+    method: GET
+    path: "/contacts/{{ input.contact_id }}/contactTags"
+    inputs:
+      - { name: contact_id, label: "The contact's id", required: true }
+    items: value.contactTags
+    output: { id: text, contact: text, tag: text, cdate: text }
+  list_tags:
+    label: List tags
+    description: The tags of the account, each with how many contacts have it, or those whose name holds the words given.
+    method: GET
+    path: /tags
+    inputs:
+      - { name: search, label: "Only tags whose name holds this" }
+    query: { search: "{{ input.search }}", limit: "100" }
+    items: value.tags
+    next: "size(value.tags) < 100 ? null : {'offset': string((page == null ? 0 : int(page.offset)) + 100)}"
+    max_pages: 10
+    output: { id: text, tag: text, tagType: text, description: text, subscriber_count: text, cdate: text }
+  create_tag:
+    label: Add a tag
+    description: Makes a new tag for contacts.
+    write: true
+    method: POST
+    path: /tags
+    inputs:
+      - { name: name, label: "The tag", required: true }
+      - { name: description, label: "What it is for" }
+    send: { tag: { tag: "{{ input.name }}", tagType: contact, description: "{{ input.description }}" } }
+    result: value.tag
+    output: { id: text, tag: text, tagType: text, description: text, cdate: text }
+  subscribe_to_list:
+    label: Subscribe a contact to a list
+    description: Subscribes a contact to a list - or, if chosen, unsubscribes them.
+    write: true
+    method: POST
+    path: /contactLists
+    inputs:
+      - { name: contact_id, label: "The contact's id", required: true }
+      - { name: list_id, label: "The list's id (List lists gives it)", required: true }
+      - { name: unsubscribe, label: "Unsubscribe them instead", kind: boolean }
+    send:
+      contactList:
+        contact: "{{ input.contact_id }}"
+        list: "{{ input.list_id }}"
+        status: "{{ has(input.unsubscribe) && input.unsubscribe == true ? 2 : 1 }}"
+    result: "has(value.contactList) ? value.contactList : value"
+    output: { id: text, contact: text, list: text, status: text, sdate: text, udate: text }
+  list_lists:
+    label: List lists
+    description: The account's mailing lists, or those named so.
+    method: GET
+    path: /lists
+    inputs:
+      - { name: name, label: "Only the list of this name" }
+    query: { "filters[name]": "{{ input.name }}", limit: "100" }
+    items: value.lists
+    next: "size(value.lists) < 100 ? null : {'offset': string((page == null ? 0 : int(page.offset)) + 100)}"
+    max_pages: 10
+    output: { id: text, stringid: text, name: text, cdate: text, sender_url: text, sender_reminder: text }
+  add_contact_to_automation:
+    label: Put a contact into an automation
+    description: Starts an automation for a contact, by the contact's id or email (an unknown email becomes a new contact).
+    write: true
+    method: POST
+    path: /contactAutomations
+    inputs:
+      - { name: automation_id, label: "The automation's id (List automations gives it)", required: true, kind: number }
+      - { name: contact_id, label: "The contact's id" }
+      - { name: email, label: "Or the contact's email" }
+    send:
+      contactAutomation:
+        automation: "{{ input.automation_id }}"
+        contact: "{{ input.contact_id }}"
+        contact_email: "{{ input.email }}"
+    result: "has(value.contactAutomation) ? value.contactAutomation : value"
+    output: { id: text, contact: text, seriesid: text, status: text, adddate: text, automation: text }
+  list_automations:
+    label: List automations
+    description: The account's automations, with how many contacts entered and left each, or those whose name holds the words given.
+    method: GET
+    path: /automations
+    inputs:
+      - { name: search, label: "Only automations whose name holds this" }
+    query: { search: "{{ input.search }}", limit: "100" }
+    items: value.automations
+    next: "size(value.automations) < 100 ? null : {'offset': string((page == null ? 0 : int(page.offset)) + 100)}"
+    max_pages: 10
+    output: { id: text, name: text, status: text, entered: text, exited: text, cdate: text, mdate: text }
+  create_deal:
+    label: Add a deal
+    description: Adds a deal for a contact (or an account), in a pipeline or stage, with its value.
+    write: true
+    method: POST
+    path: /deals
+    inputs:
+      - { name: title, label: "Its title", required: true }
+      - { name: value, label: "Its value in cents ($456.78 is 45678)", required: true, kind: number }
+      - { name: currency, label: "Its currency, such as usd", required: true }
+      - { name: contact_id, label: "The contact it is with (or give an account)" }
+      - { name: account_id, label: "The account it is with" }
+      - { name: pipeline_id, label: "The pipeline (or give a stage)" }
+      - { name: stage_id, label: "The stage (the pipeline's first if not given)" }
+      - { name: owner_id, label: "Its owner: a user's id (needed when the pipeline does not assign one)" }
+      - { name: description, label: "A description" }
+    send:
+      deal:
+        title: "{{ input.title }}"
+        value: "{{ input.value }}"
+        currency: "{{ input.currency }}"
+        contact: "{{ input.contact_id }}"
+        account: "{{ input.account_id }}"
+        group: "{{ input.pipeline_id }}"
+        stage: "{{ input.stage_id }}"
+        owner: "{{ input.owner_id }}"
+        description: "{{ input.description }}"
+    result: value.deal
+    output:
+      id: text
+      title: text
+      description: text
+      value: text
+      currency: text
+      status: text
+      contact: text
+      account: text
+      group: text
+      stage: text
+      owner: text
+      percent: text
+      cdate: text
+      mdate: text
+  get_deal:
+    label: Get a deal
+    description: One deal, by its id.
+    method: GET
+    path: "/deals/{{ input.deal_id }}"
+    inputs:
+      - { name: deal_id, label: "The deal's id", required: true }
+    result: value.deal
+    output:
+      id: text
+      title: text
+      description: text
+      value: text
+      currency: text
+      status: text
+      contact: text
+      account: text
+      group: text
+      stage: text
+      owner: text
+      percent: text
+      cdate: text
+      mdate: text
+  list_deals:
+    label: Find deals
+    description: Deals that match a search, or of a pipeline, stage or status; up to 1,000.
+    method: GET
+    path: /deals
+    inputs:
+      - { name: search, label: "Search: words of a title, a contact or an account" }
+      - { name: pipeline_id, label: "Only deals in this pipeline", kind: number }
+      - { name: stage_id, label: "Only deals at this stage", kind: number }
+      - { name: status, label: "Only deals that are: 0 open, 1 won, 2 lost", kind: number }
+    query:
+      "filters[search]": "{{ input.search }}"
+      "filters[group]": "{{ input.pipeline_id }}"
+      "filters[stage]": "{{ input.stage_id }}"
+      "filters[status]": "{{ input.status }}"
+      limit: "100"
+    items: value.deals
+    next: "size(value.deals) < 100 ? null : {'offset': string((page == null ? 0 : int(page.offset)) + 100)}"
+    max_pages: 10
+    output:
+      id: text
+      title: text
+      description: text
+      value: text
+      currency: text
+      status: text
+      contact: text
+      account: text
+      group: text
+      stage: text
+      owner: text
+      percent: text
+      cdate: text
+      mdate: text
+  update_deal:
+    label: Change a deal
+    description: Changes a deal's title, value, stage, status (0 open, 1 won, 2 lost) or owner; what is not given stays.
+    write: true
+    method: PUT
+    path: "/deals/{{ input.deal_id }}"
+    inputs:
+      - { name: deal_id, label: "The deal's id", required: true }
+      - { name: title, label: "Its title" }
+      - { name: value, label: "Its value in cents", kind: number }
+      - { name: currency, label: "Its currency, such as usd" }
+      - { name: stage_id, label: "Move it to this stage" }
+      - { name: status, label: "Its status: 0 open, 1 won, 2 lost", kind: number }
+      - { name: owner_id, label: "Its owner: a user's id" }
+      - { name: description, label: "A description" }
+    send:
+      deal:
+        title: "{{ input.title }}"
+        value: "{{ input.value }}"
+        currency: "{{ input.currency }}"
+        stage: "{{ input.stage_id }}"
+        status: "{{ input.status }}"
+        owner: "{{ input.owner_id }}"
+        description: "{{ input.description }}"
+    result: value.deal
+    output:
+      id: text
+      title: text
+      description: text
+      value: text
+      currency: text
+      status: text
+      contact: text
+      account: text
+      group: text
+      stage: text
+      owner: text
+      percent: text
+      cdate: text
+      mdate: text
+  add_deal_note:
+    label: Add a note to a deal
+    description: Writes a note on a deal.
+    write: true
+    method: POST
+    path: "/deals/{{ input.deal_id }}/notes"
+    inputs:
+      - { name: deal_id, label: "The deal's id", required: true }
+      - { name: note, label: "The note", required: true }
+    send: { note: { note: "{{ input.note }}" } }
+    result: value.note
+    output: { id: text, note: text, relid: text, reltype: text, cdate: text, mdate: text }
+  list_pipelines:
+    label: List pipelines
+    description: The deal pipelines, each with its stages.
+    method: GET
+    path: /dealGroups
+    items: value.dealGroups
+    output: { id: text, title: text, currency: text, stages: list, autoassign: text, cdate: text, udate: text }
+  list_stages:
+    label: List deal stages
+    description: The stages of every pipeline, or of one.
+    method: GET
+    path: /dealStages
+    inputs:
+      - { name: pipeline_id, label: "Only this pipeline's stages" }
+    query: { "filters[d_groupid]": "{{ input.pipeline_id }}" }
+    items: value.dealStages
+    output: { id: text, title: text, group: text, order: text, color: text, cdate: text, udate: text }
+  set_custom_field:
+    label: Set a contact's custom field
+    description: Gives one custom field of a contact a value.
+    write: true
+    method: POST
+    path: /fieldValues
+    inputs:
+      - { name: contact_id, label: "The contact's id", required: true }
+      - { name: field_id, label: "The field's id (List custom fields gives it)", required: true }
+      - { name: value, label: "Its value", required: true }
+    send: { fieldValue: { contact: "{{ input.contact_id }}", field: "{{ input.field_id }}", value: "{{ input.value }}" } }
+    result: value.fieldValue
+    output: { id: text, contact: text, field: text, value: text, cdate: text, udate: text }
+  list_custom_fields:
+    label: List custom fields
+    description: The contact custom fields of the account, each with its id and kind.
+    method: GET
+    path: /fields
+    inputs:
+      - { name: search, label: "Only fields whose title holds this" }
+    query: { search: "{{ input.search }}", limit: "100" }
+    items: value.fields
+    next: "size(value.fields) < 100 ? null : {'offset': string((page == null ? 0 : int(page.offset)) + 100)}"
+    max_pages: 10
+    output: { id: text, title: text, type: text, perstag: text, isrequired: text, descript: text, options: list }
+  create_account:
+    label: Add an account
+    description: Adds an account (a company) that contacts and deals can belong to.
+    write: true
+    method: POST
+    path: /accounts
+    inputs:
+      - { name: name, label: "Its name", required: true }
+      - { name: website, label: "Its website" }
+      - { name: owner_id, label: "Its owner: a user's id", kind: number }
+    send: { account: { name: "{{ input.name }}", accountUrl: "{{ input.website }}", owner: "{{ input.owner_id }}" } }
+    result: value.account
+    output: { id: text, name: text, accountUrl: text, createdTimestamp: text, updatedTimestamp: text, fields: list }
+triggers:
+  new_contact:
+    label: A new contact
+    description: Each contact added to the account, the newest asked for every few minutes.
+    poll:
+      method: GET
+      path: /contacts
+      query: { "orders[cdate]": desc, limit: "100" }
+      items: value.contacts
+      next: "size(value.contacts) < 100 ? null : {'offset': string((page == null ? 0 : int(page.offset)) + 100)}"
+      id: item.id
+      newest_first: true
+      every: 5m
+  new_deal:
+    label: A new deal
+    description: Each deal added, the newest asked for every few minutes.
+    poll:
+      method: GET
+      path: /deals
+      query: { "orders[cdate]": DESC, limit: "100" }
+      items: value.deals
+      next: "size(value.deals) < 100 ? null : {'offset': string((page == null ? 0 : int(page.offset)) + 100)}"
+      id: item.id
+      newest_first: true
+      every: 5m

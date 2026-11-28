@@ -1,0 +1,56 @@
+name: The day's weather in your Discord channel each morning
+description: >-
+  Each morning at 6:45, Chicago time, ask Open-Meteo's free forecast API for the day ahead where you are - the high and
+  the low, the chance of rain, the wind - and post it to a Discord channel in one line, with a word of warning on a day
+  of rain, snow or strong wind. Good for a crew that works outside, or a household. Set your place's latitude and
+  longitude below; no key is needed. Needs: discord (the channel's webhook).
+category: Productivity
+trigger:
+  schedule: { every: day, at: "06:45", timezone: America/Chicago }
+# What a test runs on: an event as this trigger gives it.
+sample:
+  scheduled_at: '2026-11-27T12:45:00Z'
+steps:
+  - name: forecast
+    http:
+      url: https://api.open-meteo.com/v1/forecast
+      query:
+        # Your place: these are Chicago's.
+        latitude: "41.88"
+        longitude: "-87.63"
+        daily: temperature_2m_max,temperature_2m_min,precipitation_probability_max,wind_speed_10m_max,weather_code
+        temperature_unit: fahrenheit
+        wind_speed_unit: mph
+        timezone: America/Chicago
+        forecast_days: "1"
+      timeout: 20s
+      sample:
+        daily:
+          time: ["2026-11-27"]
+          temperature_2m_max: [41.2]
+          temperature_2m_min: [29.8]
+          precipitation_probability_max: [70]
+          wind_speed_10m_max: [22.4]
+          weather_code: [71]
+    retry: { attempts: 3, wait: 1m }
+  - name: today
+    set:
+      high: round(steps.forecast.body.daily.temperature_2m_max[0])
+      low: round(steps.forecast.body.daily.temperature_2m_min[0])
+      rain: steps.forecast.body.daily.precipitation_probability_max[0]
+      wind: round(steps.forecast.body.daily.wind_speed_10m_max[0])
+      # The forecast's weather code, in words (WMO codes, as Open-Meteo gives them).
+      sky: >-
+        cel.bind(c, int(steps.forecast.body.daily.weather_code[0]),
+          c == 0 ? 'clear' : c <= 3 ? 'partly cloudy' : c <= 48 ? 'foggy' : c <= 57 ? 'drizzle'
+          : c <= 67 ? 'rain' : c <= 77 ? 'snow' : c <= 82 ? 'showers' : c <= 86 ? 'snow showers' : 'thunderstorms')
+  - name: post
+    discord:
+      credential: discord
+      username: Weather
+      text: >-
+        Today: {{ steps.today.sky }}, {{ steps.today.low }} to {{ steps.today.high }}°F, {{ steps.today.rain }}% chance
+        of rain or snow, wind up to {{ steps.today.wind }} mph.{{ steps.today.sky in ['rain', 'snow', 'showers', 'snow showers',
+        'thunderstorms'] ? ' Bring a coat and plan for slow roads.' : '' }}{{ steps.today.wind >= 30 ? ' Strong wind:
+        tie down anything loose.' : '' }}
+    retry: { attempts: 3, wait: 30s }

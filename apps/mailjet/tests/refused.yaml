@@ -1,0 +1,16 @@
+description: 'Mailjet refuses: the step fails in its words'
+action: create_contact
+credential:
+  api_key: test-key
+  secret_key: test-secret
+input:
+  email: pat@example.com
+exchanges:
+- answer:
+    status: 400
+    body:
+      ErrorIdentifier: 06df1144-c6f3-4ca7-8885-7ec5d4344113
+      ErrorCode: mj-0004
+      StatusCode: 400
+      ErrorMessage: Type mismatch. Expected type "boolean".
+error: 'Mailjet answered 400: Type mismatch. Expected type "boolean".'

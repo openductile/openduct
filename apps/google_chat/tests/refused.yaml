@@ -1,0 +1,8 @@
+description: A space the person is not in - Google's own words
+action: send
+sign_in: google_chat
+credential: { access_token: ya29.chat }
+input: { text: Hi, space: spaces/NOPE }
+exchanges:
+  - answer: { status: 403, body: { error: { code: 403, message: "The caller does not have permission", status: PERMISSION_DENIED } } }
+error: "Google Chat answered 403: The caller does not have permission"

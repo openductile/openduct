@@ -1,0 +1,65 @@
+name: Your company's knowledge, as a tool for AI assistants
+description: >-
+  For teams whose people work with AI assistants: turn this on and make a token on the Settings page, and any assistant
+  that speaks MCP can ask this workspace a question about your company. It is answered from your own documents (kept in
+  Postgres with pgvector by "Keep documents for answers"), citing the passages it used; when they do not answer it, the
+  question goes on to your wiki's own MCP server's search, and the assistant is told which of the two answered. Needs: a
+  Postgres credential called docs_db, an AI credential called model (with an embedding model), and a bearer credential
+  called wiki for your wiki's MCP server.
+category: AI
+trigger: manual
+# Offered to AI assistants through the workspace's MCP server: what a model reads to choose it, and what it takes.
+tool:
+  name: ask_company_knowledge
+  description: >-
+    Answers a question about the company - its policies, products, processes and people's roles - from the company's
+    own documents, with the passages it rests on. Use it before guessing anything about the company.
+  input:
+    question: { type: string, description: "The question, in full", required: true }
+  timeout: 60s
+# What a test runs on: the arguments an assistant sends.
+sample:
+  question: Who approves a purchase over 5,000 dollars?
+steps:
+  - name: documents
+    ask_documents:
+      credential: docs_db
+      table: doc_pieces
+      embed_with: model
+      question: "{{ value.question }}"
+      top_k: 5
+      min_score: 0.3
+      instructions: If the passages do not answer the question, say only that they do not.
+      max_tokens: 500
+  - name: answered
+    if:
+      when: steps.documents.answered == true
+      then:
+        - name: from_documents
+          set:
+            answer: steps.documents.text
+            answered_by: "'documents'"
+            sources: steps.documents.sources.filter(s, s.cited == true).map(s, s.source)
+      else:
+        - name: wiki
+          mcp:
+            # Your wiki's MCP server, and the name of its search tool (the step lists its tools without one).
+            url: https://wiki.example.com/mcp
+            credential: wiki
+            tool: search
+            arguments: { query: "{{ value.question }}", limit: 5 }
+            read_only: true
+            timeout: 30s
+          retry: { attempts: 2, wait: 5s }
+        - name: from_wiki
+          set:
+            answer: "has(steps.wiki.text) && steps.wiki.text != null && steps.wiki.text != '' ? steps.wiki.text : 'Nothing in the documents or the wiki answers this.'"
+            answered_by: "'wiki'"
+            sources: "[]"
+  # What the assistant is answered with: the run's last step.
+  - name: reply
+    set:
+      question: value.question
+      answer: "has(steps.from_documents) ? steps.from_documents.answer : steps.from_wiki.answer"
+      answered_by: "has(steps.from_documents) ? 'documents' : 'wiki'"
+      sources: "has(steps.from_documents) ? steps.from_documents.sources : []"

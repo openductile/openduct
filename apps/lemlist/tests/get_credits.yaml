@@ -1,0 +1,10 @@
+description: "The credits left"
+action: get_credits
+credential: {"api_key": "test-key"}
+exchanges:
+  - sent:
+      method: GET
+      url: "https://api.lemlist.com/api/team/credits"
+      headers: {"authorization": "Basic OnRlc3Qta2V5"}
+    answer: {"status": 200, "body": {"credits": 4200, "details": {"freemium": 200}}}
+result: {"credits": 4200, "details": {"freemium": 200}}

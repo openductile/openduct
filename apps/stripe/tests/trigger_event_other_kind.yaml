@@ -1,0 +1,9 @@
+description: An event of a kind the workflow did not ask for is answered, and nothing runs
+trigger: event
+credential: { secret_key: sk_test_1, webhook_secret: whsec_test_5WbX5kEWLlfzsGNjH64I8lOOqUB6e8FH }
+input: { events: checkout.session.completed }
+delivery:
+  headers: { stripe-signature: "t=1700000000,v1=4576c5f958c9f66d2d0cfa1cbb1c53162b1c626492e6eb16585ce4501161a19d" }
+  body: '{"id":"evt_2","object":"event","type":"customer.created","data":{"object":{"id":"cus_1"}}}'
+  at: 1700000100
+passed: true

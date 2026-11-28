@@ -1,0 +1,77 @@
+name: A Telegram concierge for your holiday rental's guests
+description: >-
+  Guests write to your rental's Telegram bot in their own language. A model notes the language and puts the question
+  into English; an AI agent answers it from your house notes (Wi-Fi, check-out, parking, the bins), with the week's
+  weather from Open-Meteo and the country's public holidays from Nager.Date when they matter (both free, no key),
+  remembers each guest's conversation, and replies in the guest's language. Write your house notes in the first step.
+  Needs: a Telegram bot (bot) and an AI credential (model).
+category: Support
+trigger:
+  telegram: { when: message, credential: bot }
+# What a test runs on: a message as this trigger gives it.
+sample:
+  message_id: 44
+  chat: { id: 555000111, type: private }
+  from: { id: 555000111, first_name: Lena }
+  date: 1795770000
+  text: Hallo! Können wir morgen später auschecken? Und sind die Geschäfte am Donnerstag offen?
+steps:
+  - where: value.text != null && value.text.trim() != ''
+  - name: house
+    set:
+      notes: >-
+        'The Seaview Cottage, by the harbour in Portland, Maine, USA. Check-in from 16:00, check-out by 11:00; a later
+        check-out until 13:00 is possible when no guest arrives that day - ask the host. Wi-Fi: SeaviewGuest, password
+        on the fridge. Parking: two cars in the drive. Bins go out on Tuesday night. Nearest grocery: Harbor Market,
+        a 5-minute walk, 7:00 to 21:00. The host is Sam, reachable through this chat.'
+      latitude: 43.66
+      longitude: -70.26
+      country: "'US'"
+  - name: language
+    ai:
+      credential: model
+      system: Say which language the guest wrote in, and put the message into English, keeping its meaning.
+      prompt: "{{ value.text }}"
+      max_tokens: 300
+      schema:
+        type: object
+        properties:
+          language: { type: string, description: "The language's name in English, as German" }
+          english: { type: string }
+        required: [language, english]
+  - name: concierge
+    agent:
+      credential: model
+      instructions: >-
+        You are the friendly concierge of a holiday rental, answering its guests on Telegram. Answer from the house
+        notes; for weather, call weather, and for whether shops and offices are open on a day, call holidays - never
+        guess either. When something needs the host (a later check-out, a repair, money), say you have passed it on
+        and the host will confirm. Answer in {{ steps.language.json.language != null ? steps.language.json.language : 'the language the guest wrote in' }},
+        in at most four sentences.
+        House notes: {{ steps.house.notes }}
+      input: "{{ steps.language.json.english != null ? steps.language.json.english : value.text }}"
+      tools:
+        - name: weather
+          description: "The next seven days' weather at the house: each day's high and low (C), rain chance and wind (km/h)."
+          http:
+            url: https://api.open-meteo.com/v1/forecast
+            query:
+              latitude: "{{ steps.house.latitude }}"
+              longitude: "{{ steps.house.longitude }}"
+              daily: temperature_2m_max,temperature_2m_min,precipitation_probability_max,wind_speed_10m_max
+              timezone: auto
+        - name: holidays
+          description: "This year's public holidays in the house's country, each with its date and name."
+          http:
+            url: "https://date.nager.at/api/v3/PublicHolidays/{{ string(timestamp(int(value.date))).substring(0, 4) }}/{{ steps.house.country }}"
+      allow: [weather, holidays]
+      memory: { key: "{{ value.chat.id }}", window: 12, clear: "value.text == '/start'" }
+      max_turns: 5
+      max_tool_calls: 4
+      max_tokens: 500
+  - name: reply
+    telegram:
+      credential: bot
+      chat_id: "{{ value.chat.id }}"
+      text: "{{ steps.concierge.text }}"
+    retry: { attempts: 3, wait: 10s }

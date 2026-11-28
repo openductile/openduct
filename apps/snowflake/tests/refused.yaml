@@ -1,0 +1,13 @@
+description: SQL Snowflake cannot compile - 422, and the step fails in Snowflake's words
+action: run_sql
+credential: { account: exampleorg-example1, token: pat-test-1 }
+input: { statement: "select * from orderz" }
+exchanges:
+  - answer:
+      status: 422
+      body:
+        code: "002003"
+        sqlState: "42S02"
+        message: "SQL compilation error:\nObject 'ORDERZ' does not exist or not authorized."
+        statementHandle: 01b2c3d4-0000-4000-8000-000000000004
+error: "Snowflake answered 422: SQL compilation error"

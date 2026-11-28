@@ -1,0 +1,6 @@
+action: list_monitor_groups
+credential: { api_key: ur_test_1 }
+exchanges:
+  - sent: { method: GET, url: https://api.uptimerobot.com/v3/monitor-groups, query: { limit: "200" } }
+    answer: { body: { nextLink: null, data: [{ id: 7, name: Shop, createdAt: "2026-10-01T08:00:00Z", updatedAt: "2026-11-01T08:00:00Z" }] } }
+result: [{ id: 7, name: Shop, createdAt: "2026-10-01T08:00:00Z", updatedAt: "2026-11-01T08:00:00Z" }]

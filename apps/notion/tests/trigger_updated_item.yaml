@@ -1,0 +1,10 @@
+description: A page changed since the poll before runs again
+trigger: updated_item
+credential: { token: secret_1 }
+input: { database_id: db1 }
+seen: { items: [] }
+exchanges:
+  - sent:
+      body: { sorts: [{ timestamp: last_edited_time, direction: descending }], page_size: 100 }
+    answer: { body: { results: [{ id: p1, last_edited_time: "2026-11-27T10:00:00.000Z" }], has_more: false } }
+ids: [p1]

@@ -1,0 +1,22 @@
+description: "A To Do task moved to a new due date, in UTC when no time zone is given"
+action: update_task
+credential: { access_token: eyJ0 }
+input: { list_id: AAMkShop2, task_id: AlMKXwbQ1, status: inProgress, due: "2026-12-02T12:00:00" }
+exchanges:
+  - sent:
+      method: PATCH
+      url: https://graph.microsoft.com/v1.0/me/todo/lists/AAMkShop2/tasks/AlMKXwbQ1
+      body: { status: inProgress, dueDateTime: { dateTime: "2026-12-02T12:00:00", timeZone: UTC } }
+    answer:
+      body:
+        id: AlMKXwbQ1
+        title: Pack order 1042
+        status: inProgress
+        importance: high
+        dueDateTime: { dateTime: "2026-12-02T12:00:00.0000000", timeZone: UTC }
+result:
+  id: AlMKXwbQ1
+  title: Pack order 1042
+  status: inProgress
+  importance: high
+  dueDateTime: { dateTime: "2026-12-02T12:00:00.0000000", timeZone: UTC }

@@ -1,0 +1,44 @@
+# Made by `openduct app from-openapi`: Create a new domain.
+description: "Create a new domain, made from the API description's schemas"
+action: create_domain
+credential: { token: test-token }
+input: { name: example }
+exchanges:
+  - sent:
+      method: POST
+      url: "https://api.resend.com/domains"
+      query: {}
+      headers: { authorization: "Bearer test-token" }
+      body: { name: example }
+    answer:
+      status: 201
+      body:
+        id: id_1
+        name: example
+        created_at: example
+        status: pending
+        capabilities: { sending: enabled, receiving: enabled }
+        records:
+          - record: SPF
+            name: example
+            type: MX
+            ttl: example
+            status: pending
+            value: example
+            priority: 1
+        region: example
+        open_tracking: true
+        click_tracking: true
+        tracking_subdomain: example
+result:
+  id: id_1
+  name: example
+  created_at: example
+  status: pending
+  capabilities: { sending: enabled, receiving: enabled }
+  records:
+    - { record: SPF, name: example, type: MX, ttl: example, status: pending, value: example, priority: 1 }
+  region: example
+  open_tracking: true
+  click_tracking: true
+  tracking_subdomain: example

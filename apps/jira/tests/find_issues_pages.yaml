@@ -1,0 +1,14 @@
+description: A JQL search, page after page while Jira gives a next page's token
+action: find_issues
+credential: { site: examplecorp, email: ann@example.com, api_token: ATATT_test }
+input: { jql: "project = SUP AND created >= -7d" }
+exchanges:
+  - sent:
+      method: GET
+      url: https://examplecorp.atlassian.net/rest/api/3/search/jql
+      query: { jql: "project = SUP AND created >= -7d", fields: "summary,status,assignee,priority,issuetype,created,updated", maxResults: "100" }
+    answer: { body: { issues: [{ key: SUP-13 }], nextPageToken: CAEaAggD, isLast: false } }
+  - sent:
+      query: { jql: "project = SUP AND created >= -7d", fields: "summary,status,assignee,priority,issuetype,created,updated", maxResults: "100", nextPageToken: CAEaAggD }
+    answer: { body: { issues: [{ key: SUP-12 }], isLast: true } }
+result: [{ key: SUP-13 }, { key: SUP-12 }]

@@ -1,0 +1,62 @@
+description: One application in full
+action: get_application
+credential:
+  company_domain: acme
+  api_key: test-key
+input:
+  application_id: '5001'
+exchanges:
+- sent:
+    method: GET
+    url: https://acme.bamboohr.com/api/v1/applicant_tracking/applications/5001
+    headers:
+      authorization: Basic dGVzdC1rZXk6eA==
+      accept: application/json
+  answer:
+    status: 200
+    body:
+      id: 5001
+      appliedDate: '2026-11-14T21:40:00Z'
+      status: &id001
+        id: 1
+        label: New
+      rating: null
+      applicant: &id002
+        id: 900
+        firstName: Cleo
+        lastName: Candidate
+        avatar: null
+        email: cleo@example.com
+        source: Careers page
+      job: &id003
+        id: 21
+        title:
+          id: 3
+          label: Barista
+      questionsAndAnswers:
+      - question:
+          id: 1
+          label: Weekend shifts?
+        answer:
+          id: 2
+          label: 'Yes'
+      desiredSalary: 18/hour
+      referredBy: null
+      resumeFileId: 7781
+result:
+  id: 5001
+  appliedDate: '2026-11-14T21:40:00Z'
+  status: *id001
+  rating: null
+  applicant: *id002
+  job: *id003
+  questionsAndAnswers:
+  - question:
+      id: 1
+      label: Weekend shifts?
+    answer:
+      id: 2
+      label: 'Yes'
+  desiredSalary: 18/hour
+  referredBy: null
+  resumeFileId: 7781

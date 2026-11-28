@@ -1,0 +1,10 @@
+description: How many leads there are
+action: count_records
+credential: { address: "https://mycompany.example.com", api_key: 6578616d706c65206b6579 }
+input: { model: crm.lead }
+exchanges:
+  - sent:
+      url: https://mycompany.example.com/json/2/crm.lead/search_count
+      body: { domain: [] }
+    answer: { body: 42 }
+result: { count: 42 }

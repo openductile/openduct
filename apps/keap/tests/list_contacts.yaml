@@ -1,0 +1,118 @@
+# Made by `openduct app from-openapi`: List contacts.
+description: "List contacts, made from the API description's schemas"
+action: list_contacts
+credential: { access_token: test-access-token }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://api.keap.com/crm/rest/v2/contacts"
+      query: { page_size: "100" }
+      headers: { authorization: "Bearer test-access-token" }
+    answer:
+      status: 200
+      body:
+        contacts:
+          - id: 1001
+            links: [{ id: 1, linked_contact_id: 2001, link_type_id: 1, link_type_name: Spouse }]
+            addresses:
+              - country: example
+                line1: 123
+                line2: example
+                locality: Phoenix
+                region: Arizona
+                field: ADDRESS_FIELD_UNSPECIFIED
+                country_code: USA
+                postal_code: 85001
+                region_code: US-AZ
+                zip_code: 85001
+                zip_four: 1234
+            company: { id: 100, company_name: Thryv }
+            origin: { date: example, ip_address: example }
+            prefix: Dr.
+            suffix: Jr
+            website: example
+            groups: example
+            update_time: "2024-03-15T10:30:00Z"
+            create_time: "2024-01-10T08:00:00Z"
+            score_value: 85
+        next_page_token: token_2
+  - sent:
+      method: GET
+      url: "https://api.keap.com/crm/rest/v2/contacts"
+      query: { page_size: "100", page_token: token_2 }
+      headers: { authorization: "Bearer test-access-token" }
+    answer:
+      status: 200
+      body:
+        contacts:
+          - id: id_2
+            links: [{ id: 1, linked_contact_id: 2001, link_type_id: 1, link_type_name: Spouse }]
+            addresses:
+              - country: example
+                line1: 123
+                line2: example
+                locality: Phoenix
+                region: Arizona
+                field: ADDRESS_FIELD_UNSPECIFIED
+                country_code: USA
+                postal_code: 85001
+                region_code: US-AZ
+                zip_code: 85001
+                zip_four: 1234
+            company: { id: 100, company_name: Thryv }
+            origin: { date: example, ip_address: example }
+            prefix: Dr.
+            suffix: Jr
+            website: example
+            groups: example
+            update_time: "2024-03-15T10:30:00Z"
+            create_time: "2024-01-10T08:00:00Z"
+            score_value: 85
+        next_page_token: null
+result:
+  - id: 1001
+    links: [{ id: 1, linked_contact_id: 2001, link_type_id: 1, link_type_name: Spouse }]
+    addresses:
+      - country: example
+        line1: 123
+        line2: example
+        locality: Phoenix
+        region: Arizona
+        field: ADDRESS_FIELD_UNSPECIFIED
+        country_code: USA
+        postal_code: 85001
+        region_code: US-AZ
+        zip_code: 85001
+        zip_four: 1234
+    company: { id: 100, company_name: Thryv }
+    origin: { date: example, ip_address: example }
+    prefix: Dr.
+    suffix: Jr
+    website: example
+    groups: example
+    update_time: "2024-03-15T10:30:00Z"
+    create_time: "2024-01-10T08:00:00Z"
+    score_value: 85
+  - id: id_2
+    links: [{ id: 1, linked_contact_id: 2001, link_type_id: 1, link_type_name: Spouse }]
+    addresses:
+      - country: example
+        line1: 123
+        line2: example
+        locality: Phoenix
+        region: Arizona
+        field: ADDRESS_FIELD_UNSPECIFIED
+        country_code: USA
+        postal_code: 85001
+        region_code: US-AZ
+        zip_code: 85001
+        zip_four: 1234
+    company: { id: 100, company_name: Thryv }
+    origin: { date: example, ip_address: example }
+    prefix: Dr.
+    suffix: Jr
+    website: example
+    groups: example
+    update_time: "2024-03-15T10:30:00Z"
+    create_time: "2024-01-10T08:00:00Z"
+    score_value: 85

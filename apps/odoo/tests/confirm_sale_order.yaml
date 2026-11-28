@@ -1,0 +1,10 @@
+description: A quotation confirmed
+action: confirm_sale_order
+credential: { address: "https://mycompany.example.com", api_key: 6578616d706c65206b6579 }
+input: { id: 31 }
+exchanges:
+  - sent:
+      url: https://mycompany.example.com/json/2/sale.order/action_confirm
+      body: { ids: [31] }
+    answer: { body: true }
+result: { confirmed: true }

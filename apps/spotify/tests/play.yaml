@@ -1,0 +1,12 @@
+description: A playlist started on one device
+action: play
+credential: { access_token: BQ-test-token }
+input: { context_uri: "spotify:playlist:0TestList000000000001", device_id: dev-test-1 }
+exchanges:
+  - sent:
+      method: PUT
+      url: https://api.spotify.com/v1/me/player/play
+      query: { device_id: dev-test-1 }
+      body: { context_uri: "spotify:playlist:0TestList000000000001" }
+    answer: { status: 204 }
+result: { playing: true }

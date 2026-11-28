@@ -1,0 +1,9 @@
+description: A sign-in at Todoist sends its token as a bearer token
+action: create_task
+sign_in: todoist_oauth
+credential: { access_token: todoist-oauth-test }
+input: { content: Order shelf labels }
+exchanges:
+  - sent: { method: POST, url: https://api.todoist.com/api/v1/tasks, headers: { authorization: Bearer todoist-oauth-test }, body: { content: Order shelf labels } }
+    answer: { body: { id: 6Xtest0000000002, content: Order shelf labels, project_id: 6Xproj0000000001, labels: [], priority: 1, checked: false, added_at: "2026-11-27T10:00:00.000000Z" } }
+result: { id: 6Xtest0000000002, content: Order shelf labels, project_id: 6Xproj0000000001, labels: [], priority: 1, checked: false, added_at: "2026-11-27T10:00:00.000000Z" }

@@ -1,0 +1,15 @@
+description: "A task added to a To Do list since the last poll starts a run"
+trigger: new_task
+credential: { access_token: eyJ0 }
+input: { list_id: AAMkShop2 }
+seen: { items: [["AlMKXwbQ1", ""]] }
+exchanges:
+  - sent:
+      method: GET
+      url: https://graph.microsoft.com/v1.0/me/todo/lists/AAMkShop2/tasks
+    answer:
+      body:
+        value:
+          - { id: AlMKXwbQ1, title: Pack order 1042, status: notStarted }
+          - { id: AlMKXwbQ4, title: Reorder gift wrap, status: notStarted, importance: normal }
+runs: [{ id: AlMKXwbQ4, title: Reorder gift wrap, status: notStarted, importance: normal }]

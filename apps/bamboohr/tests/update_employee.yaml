@@ -1,0 +1,23 @@
+description: Only the fields given are sent
+action: update_employee
+credential:
+  company_domain: acme
+  api_key: test-key
+input:
+  employee_id: '101'
+  job_title: Area Manager
+  city: Boulder
+exchanges:
+- sent:
+    method: POST
+    url: https://acme.bamboohr.com/api/v1/employees/101
+    headers:
+      authorization: Basic dGVzdC1rZXk6eA==
+      accept: application/json
+    body:
+      jobTitle: Area Manager
+      city: Boulder
+  answer:
+    status: 200
+result:
+  updated: true

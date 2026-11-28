@@ -1,0 +1,9 @@
+description: The file requests, over two pages
+action: list_file_requests
+credential: { access_token: sl.test-token }
+exchanges:
+  - sent: { url: https://api.dropboxapi.com/2/file_requests/list_v2, body: { limit: 1000 } }
+    answer: { body: { file_requests: [{ id: oaCAVmEyrqYnkZX9955Y, title: Signed contract, file_count: 1 }], cursor: fr-c1, has_more: true } }
+  - sent: { url: https://api.dropboxapi.com/2/file_requests/list/continue, body: { cursor: fr-c1 } }
+    answer: { body: { file_requests: [{ id: BAJ7IrRGicQKGToykQdB, title: Photos of the venue, file_count: 12 }], cursor: fr-c2, has_more: false } }
+result: [{ id: oaCAVmEyrqYnkZX9955Y, title: Signed contract, file_count: 1 }, { id: BAJ7IrRGicQKGToykQdB, title: Photos of the venue, file_count: 12 }]

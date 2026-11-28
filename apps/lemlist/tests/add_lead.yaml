@@ -1,0 +1,13 @@
+description: "A person added to a campaign, their email checked"
+action: add_lead
+credential: {"api_key": "test-key"}
+input: {"campaign_id": "cam_A1", "email": "ann@example.com", "first_name": "Ann", "last_name": "Lee", "company_name": "Northwind Example", "company_domain": "northwind.example", "job_title": "Owner", "verify_email": true}
+exchanges:
+  - sent:
+      method: POST
+      url: "https://api.lemlist.com/api/campaigns/cam_A1/leads/"
+      query: {"verifyEmail": "true"}
+      headers: {"authorization": "Basic OnRlc3Qta2V5"}
+      body: {"email": "ann@example.com", "firstName": "Ann", "lastName": "Lee", "companyName": "Northwind Example", "companyDomain": "northwind.example", "jobTitle": "Owner"}
+    answer: {"status": 200, "body": {"_id": "lea_L1", "campaignId": "cam_A1", "contactId": "ctc_C1", "email": "ann@example.com", "firstName": "Ann", "lastName": "Lee", "companyName": "Northwind Example", "isPaused": false, "emailStatus": "deliverable", "campaignName": "Autumn outreach", "companyDomain": "northwind.example", "jobTitle": "Owner"}}
+result: {"_id": "lea_L1", "campaignId": "cam_A1", "contactId": "ctc_C1", "email": "ann@example.com", "firstName": "Ann", "lastName": "Lee", "companyName": "Northwind Example", "isPaused": false, "emailStatus": "deliverable", "campaignName": "Autumn outreach", "companyDomain": "northwind.example", "jobTitle": "Owner"}

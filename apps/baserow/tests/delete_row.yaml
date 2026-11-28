@@ -1,0 +1,8 @@
+description: A row removed; Baserow answers 204
+action: delete_row
+credential: { token: br-test-token }
+input: { table_id: 1203, row_id: 8 }
+exchanges:
+  - sent: { method: DELETE, url: https://api.baserow.io/api/database/rows/table/1203/8/ }
+    answer: { status: 204 }
+result: { deleted: true }

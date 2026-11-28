@@ -1,0 +1,12 @@
+description: "A lead deleted from a campaign"
+action: remove_lead
+credential: {"api_key": "test-key"}
+input: {"campaign_id": "cam_A1", "lead_id": "lea_L1", "delete": true}
+exchanges:
+  - sent:
+      method: DELETE
+      url: "https://api.lemlist.com/api/campaigns/cam_A1/leads/lea_L1"
+      query: {"action": "remove"}
+      headers: {"authorization": "Basic OnRlc3Qta2V5"}
+    answer: {"status": 200, "body": {"_id": "lea_L1", "campaignId": "cam_A1", "contactId": "ctc_C1", "email": "ann@example.com", "firstName": "Ann", "lastName": "Lee", "companyName": "Northwind Example", "isPaused": false, "emailStatus": "deliverable"}}
+result: {"_id": "lea_L1", "campaignId": "cam_A1", "contactId": "ctc_C1", "email": "ann@example.com", "firstName": "Ann", "lastName": "Lee", "companyName": "Northwind Example", "isPaused": false, "emailStatus": "deliverable"}

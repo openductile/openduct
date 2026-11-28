@@ -1,0 +1,109 @@
+name: Watch the status pages of the services you rely on
+description: >-
+  Every 15 minutes, read the status pages of the services your product depends on - payments, hosting, e-mail,
+  anything with a standard status page (/api/v2/summary.json) - from a Google Sheet (Vendors: name, status page
+  address, owner's e-mail). Only a change is told: when a service starts or stops having trouble, your ops channel in
+  Slack hears it, the service's owner gets an e-mail, and the change is added to a Status log sheet. Needs: sheets
+  (google_sheets), team (slack), mail (gmail).
+category: Engineering
+trigger:
+  schedule: { every: 15m }
+# What a test runs on: an event as this trigger gives it.
+sample:
+  scheduled_at: '2026-11-27T14:15:00Z'
+steps:
+  - name: vendors
+    google_sheets:
+      action: read_rows
+      credential: sheets
+      spreadsheet_id: your-spreadsheet-id
+      range: Vendors!A2:C60
+    retry: { attempts: 3, wait: 30s }
+  - name: listed
+    javascript: |
+      // Each row: name, the status page's address (as https://status.example.com), the owner's e-mail.
+      // Rows without a name or an https address are left out, and said in the logs.
+      const vendors = [];
+      for (const row of steps.vendors || []) {
+        const [name, page, owner] = (row || []).map((c) => String(c ?? "").trim());
+        if (!name || !/^https:\/\/[^\s/]+/.test(page)) {
+          if (name) console.log(`left out ${name}: no https address`);
+          continue;
+        }
+        const base = page.replace(/\/+$/, "").replace(/\/api\/v2\/summary\.json$/, "");
+        vendors.push({ name, url: `${base}/api/v2/summary.json`, owner });
+      }
+      return { vendors };
+  - name: pages
+    for_each:
+      items: steps.listed.vendors
+      steps:
+        - name: status
+          http:
+            url: "{{ item.url }}"
+            timeout: 20s
+            sample:
+              page: { name: Payments Co, url: "https://status.example.com" }
+              status: { indicator: minor, description: Minor Service Outage }
+              incidents:
+                - { name: Delayed card payouts, status: investigating, impact: minor, shortlink: "https://stspg.example/p1" }
+          retry: { attempts: 2, wait: 10s }
+          # A page that does not answer is a change too, not a failed run.
+          on_error: continue
+  - name: compare
+    javascript:
+      state: true
+      code: |
+        // What each service's page says now, against what it said the last time (kept in the workflow's state).
+        const last = state.last || {};
+        const now = {};
+        const changed = [];
+        (steps.listed.vendors || []).forEach((v, i) => {
+          const answer = ((steps.pages || [])[i] || {}).status || {};
+          const body = answer.body || null;
+          const indicator = body && body.status ? body.status.indicator : "unreachable";
+          const said = body && body.status ? body.status.description : "the status page did not answer";
+          const incidents = body && Array.isArray(body.incidents) ? body.incidents.map((x) => x.name) : [];
+          now[v.name] = indicator;
+          // The first look only notes where things stand.
+          if (v.name in last && last[v.name] !== indicator) {
+            changed.push({ name: v.name, owner: v.owner, was: last[v.name], now: indicator, said, incidents });
+          }
+        });
+        state.last = now;
+        return { changed, watched: Object.keys(now).length };
+  - name: tell
+    if:
+      when: size(steps.compare.changed) > 0
+      then:
+        - name: post
+          slack:
+            credential: team
+            channel: "#ops"
+            text: >-
+              Status changes: {{ steps.compare.changed.map(c, c.name + ': ' + c.was + ' -> ' + c.now + ' (' + c.said + ')').join('; ') }}
+          retry: { attempts: 3, wait: 10s }
+        - name: owners
+          for_each:
+            items: steps.compare.changed
+            steps:
+              - name: log
+                google_sheets:
+                  action: add_row
+                  credential: sheets
+                  spreadsheet_id: your-spreadsheet-id
+                  sheet: Status log
+                  values: ["{{ value.scheduled_at }}", "{{ item.name }}", "{{ item.was }}", "{{ item.now }}", "{{ item.said }}"]
+                retry: { attempts: 3, wait: 30s }
+              - name: mail_owner
+                if:
+                  when: item.owner.contains('@')
+                  then:
+                    - name: owner_mail
+                      gmail:
+                        action: send_email
+                        credential: mail
+                        to: "{{ item.owner }}"
+                        subject: "{{ item.name }} status: {{ item.now }}"
+                        text: "{{ item.name }} went from {{ item.was }} to {{ item.now }}: {{ item.said }}.\nOpen incidents: {{ size(item.incidents) > 0 ? item.incidents.join(', ') : 'none' }}."
+                      retry: { attempts: 3, wait: 10s }

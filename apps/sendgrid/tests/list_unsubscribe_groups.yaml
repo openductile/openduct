@@ -1,0 +1,12 @@
+description: The unsubscribe groups
+action: list_unsubscribe_groups
+credential: { token: SG.test-key }
+exchanges:
+  - sent: { method: GET, url: https://api.sendgrid.com/v3/asm/groups }
+    answer:
+      body:
+        - { id: 21, name: Newsletters, description: Our monthly news, is_default: true, unsubscribes: 40 }
+        - { id: 22, name: Offers, description: Sales and coupons, is_default: false, unsubscribes: 12 }
+result:
+  - { id: 21, name: Newsletters, description: Our monthly news, is_default: true, unsubscribes: 40 }
+  - { id: 22, name: Offers, description: Sales and coupons, is_default: false, unsubscribes: 12 }

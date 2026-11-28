@@ -1,0 +1,13 @@
+description: "A build by repository id, with its configuration changed for this run"
+action: trigger_build
+credential: { token: test-token }
+input: { repo: 891, config: { env: { jobs: ["SMOKE=1"] }, script: "make smoke" }, merge_mode: deep_merge }
+exchanges:
+  - sent:
+      method: POST
+      url: "https://api.travis-ci.com/repo/891/requests"
+      body: { request: { config: { env: { jobs: ["SMOKE=1"] }, script: "make smoke" }, merge_mode: deep_merge } }
+    answer:
+      status: 202
+      body: { "@type": pending, remaining_requests: 48, request: { id: 148 }, resource_type: request }
+result: { "@type": pending, remaining_requests: 48, request: { id: 148 }, resource_type: request }

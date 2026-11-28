@@ -1,0 +1,59 @@
+description: "List a list's custom fields"
+action: list_custom_fields
+credential: { api_key: test-key }
+input: { list_id: 123 }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://api.clickup.com/api/v2/list/123/field"
+      query: {}
+      headers: { authorization: test-key }
+    answer:
+      status: 200
+      body:
+        fields:
+          - id: id_1
+            name: example
+            type: example
+            type_config:
+              options:
+                - id: id_1
+                  label: example
+                  color: example
+                  name: example
+                  value: 1
+                  type: example
+                  orderindex: 1
+              default: example
+              precision: 1
+              currency_type: example
+              placeholder: example
+              end: 1
+              start: 1
+              count: 1
+              code_point: example
+              tracking: { subtasks: true, checklists: true, assigned_comments: true }
+              complete_on: 1
+            date_created: example
+            hide_from_guests: true
+            applied_objects: [{ object_type: 19, object_id: 1001 }]
+result:
+  - id: id_1
+    name: example
+    type: example
+    type_config:
+      options:
+        - { id: id_1, label: example, color: example, name: example, value: 1, type: example, orderindex: 1 }
+      default: example
+      precision: 1
+      currency_type: example
+      placeholder: example
+      end: 1
+      start: 1
+      count: 1
+      code_point: example
+      tracking: { subtasks: true, checklists: true, assigned_comments: true }
+      complete_on: 1
+    date_created: example
+    hide_from_guests: true
+    applied_objects: [{ object_type: 19, object_id: 1001 }]

@@ -1,0 +1,39 @@
+# Made by `openduct app from-openapi`: Lookup MNP.
+description: "Lookup MNP, made from the API description's schemas"
+action: lookup_portability
+credential: { api_key: test-key }
+input: { number: example }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://gateway.seven.io/api/lookup/mnp"
+      query: { number: example }
+      headers: { x-api-key: test-key }
+    answer:
+      status: 200
+      body:
+        code: 100
+        success: true
+        price: 1
+        mnp:
+          country: example
+          number: example
+          national_format: example
+          international_formatted: example
+          network: example
+          mccmnc: example
+          isPorted: true
+          network_type: example
+result:
+  code: 100
+  success: true
+  price: 1
+  mnp:
+    country: example
+    number: example
+    national_format: example
+    international_formatted: example
+    network: example
+    mccmnc: example
+    isPorted: true
+    network_type: example

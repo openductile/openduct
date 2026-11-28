@@ -1,0 +1,100 @@
+name: Start a new client with a shared folder and their brand colors
+description: >-
+  For studios and agencies: a new client fills in a form with their details and their logo. Google Cloud Vision reads
+  the logo - its main colors and any words in it - a Google Drive folder is made for the client inside your Clients
+  folder and shared with them, and they get a welcome e-mail with the folder's link and the brand colors you noted, so
+  the first call starts with the basics done. Needs: vision (header: X-goog-api-key and your Google Cloud API key),
+  drive (google_drive), mail (smtp).
+category: Operations
+trigger:
+  form:
+    title: Start your project with us
+    description: A few details and your logo, and we set up your project folder.
+    fields:
+      - { name: company, label: Company name, type: text, required: true, max_length: 120 }
+      - { name: contact_name, label: Your name, type: text, required: true, max_length: 120 }
+      - { name: email, label: Your e-mail, type: email, required: true }
+      - { name: website, label: Your website, type: text, max_length: 200 }
+      - { name: logo, label: "Your logo (PNG or JPEG)", type: file, accept: "image/png,image/jpeg", max_size: 2MB, required: true }
+      - { name: brief, label: "What should we know first?", type: long_text, max_length: 4000 }
+    thanks: Thank you - your project folder is on its way to your inbox.
+# What a test runs on: an answer as the form gives it (a tiny image as the logo).
+sample:
+  company: Brightleaf Studio
+  contact_name: Mina Okafor
+  email: mina@brightleaf.example
+  website: https://brightleaf.example
+  logo:
+    name: logo.png
+    type: image/png
+    size: 68
+    base64: iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==
+  brief: A spring campaign for our new tea range.
+steps:
+  - name: look
+    http:
+      method: POST
+      url: https://vision.googleapis.com/v1/images:annotate
+      credential: vision
+      json:
+        requests:
+          - image: { content: "{{ value.logo.base64 }}" }
+            features:
+              - { type: IMAGE_PROPERTIES }
+              - { type: TEXT_DETECTION, maxResults: 1 }
+      sample:
+        responses:
+          - imagePropertiesAnnotation:
+              dominantColors:
+                colors:
+                  - { color: { red: 46, green: 125, blue: 50 }, score: 0.62, pixelFraction: 0.31 }
+                  - { color: { red: 250, green: 248, blue: 240 }, score: 0.21, pixelFraction: 0.55 }
+                  - { color: { red: 230, green: 160, blue: 30 }, score: 0.11, pixelFraction: 0.08 }
+            textAnnotations:
+              - { description: "BRIGHTLEAF\nSTUDIO" }
+    retry: { attempts: 3, wait: 10s }
+  - name: colors
+    javascript: |
+      // Google's dominant colors, strongest first, as #rrggbb codes - the four that matter most.
+      const answer = ((steps.look.body || {}).responses || [])[0] || {};
+      const found = ((answer.imagePropertiesAnnotation || {}).dominantColors || {}).colors || [];
+      const hex = (n) => Math.max(0, Math.min(255, Math.round(n || 0))).toString(16).padStart(2, "0");
+      const codes = found
+        .slice()
+        .sort((a, b) => (b.score || 0) - (a.score || 0))
+        .slice(0, 4)
+        .map((c) => "#" + hex(c.color.red) + hex(c.color.green) + hex(c.color.blue));
+      const words = ((answer.textAnnotations || [])[0] || {}).description || "";
+      return { codes, words: words.replace(/\s+/g, " ").trim() };
+  - name: folder
+    google_drive:
+      action: make_folder
+      credential: drive
+      name: "{{ value.company }} - project"
+      # The id of your Clients folder: the end of its address in Drive.
+      parent_id: your-clients-folder-id
+    retry: { attempts: 3, wait: 10s }
+  - name: share
+    google_drive:
+      action: share_file
+      credential: drive
+      file_id: "{{ steps.folder.id }}"
+      email: "{{ value.email }}"
+      role: writer
+    retry: { attempts: 3, wait: 10s }
+  - name: welcome
+    email:
+      credential: mail
+      to: "{{ value.email }}"
+      bcc: studio@example.com
+      subject: "Welcome, {{ value.company }} - your project folder"
+      text: >-
+        Hello {{ value.contact_name }},
+
+        Your project folder is ready: https://drive.google.com/drive/folders/{{ steps.folder.id }} - drop in anything
+        we should see (brand guide, photos, copy).
+
+        From your logo we noted these colors: {{ size(steps.colors.codes) > 0 ? steps.colors.codes.join(', ') : 'none we could read' }}.
+        Tell us if your brand uses others.
+
+        We will be in touch within a working day.

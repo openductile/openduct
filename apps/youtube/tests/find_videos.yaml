@@ -1,0 +1,13 @@
+description: A channel's videos since a day, newest first, page after page
+action: find_videos
+credential: { access_token: ya29.a0 }
+input: { channel_id: UC_x5XG1OV2P6uZZ5FSM9Ttw, published_after: "2026-11-01T00:00:00Z", order: date }
+exchanges:
+  - sent:
+      url: https://www.googleapis.com/youtube/v3/search
+      query: { part: snippet, type: video, channelId: UC_x5XG1OV2P6uZZ5FSM9Ttw, publishedAfter: "2026-11-01T00:00:00Z", order: date, maxResults: "50" }
+    answer: { body: { nextPageToken: CDIQAA, items: [{ id: { kind: "youtube#video", videoId: v1 } }] } }
+  - sent:
+      query: { part: snippet, type: video, channelId: UC_x5XG1OV2P6uZZ5FSM9Ttw, publishedAfter: "2026-11-01T00:00:00Z", order: date, maxResults: "50", pageToken: CDIQAA }
+    answer: { body: { items: [{ id: { kind: "youtube#video", videoId: v2 } }] } }
+result: [{ id: { kind: "youtube#video", videoId: v1 } }, { id: { kind: "youtube#video", videoId: v2 } }]

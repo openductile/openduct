@@ -1,0 +1,14 @@
+# Made by `openduct app from-openapi`: Get message replies.
+description: "Get message replies, made from the API description's schemas"
+action: list_replies
+credential: { api_key: test-key }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://gateway.seven.io/api/journal/replies"
+      query: { limit: "100" }
+      headers: { x-api-key: test-key }
+    answer:
+      status: 200
+      body: [{ to: example, from: example, text: example, timestamp: example, price: example, id: id_1 }]
+result: [{ to: example, from: example, text: example, timestamp: example, price: example, id: id_1 }]

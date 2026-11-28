@@ -1,0 +1,39 @@
+# Made by `openduct app from-openapi`: List Active Numbers.
+description: "List Active Numbers, made from the API description's schemas"
+action: list_numbers
+credential: { api_key: test-key }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://gateway.seven.io/api/numbers/active"
+      query: {}
+      headers: { x-api-key: test-key }
+    answer:
+      status: 200
+      body:
+        activeNumbers:
+          - country: example
+            number: example
+            friendly_name: example
+            billing:
+              fees: { setup: 1, basic_charge: 1, sms_mo: 1, voice_mo: 1 }
+              payment_interval: example
+            features: { sms: true, a2p_sms: true, voice: true }
+            forward_sms_mo:
+              sms: { number: example, enabled: true }
+              email: { address: [example], enabled: true }
+              slack: { uri: example, enabled: true }
+            expires: example
+            created: example
+result:
+  - country: example
+    number: example
+    friendly_name: example
+    billing: { fees: { setup: 1, basic_charge: 1, sms_mo: 1, voice_mo: 1 }, payment_interval: example }
+    features: { sms: true, a2p_sms: true, voice: true }
+    forward_sms_mo:
+      sms: { number: example, enabled: true }
+      email: { address: [example], enabled: true }
+      slack: { uri: example, enabled: true }
+    expires: example
+    created: example

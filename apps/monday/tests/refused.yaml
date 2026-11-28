@@ -1,0 +1,23 @@
+description: A column value monday.com cannot read - refused with 200 and an errors list, in its words
+action: set_column_value
+credential:
+  token: monday-test-token
+input:
+  board_id: '1234567890'
+  item_id: '9876543210'
+  column_id: date4
+  value: next week
+exchanges:
+- answer:
+    body:
+      data:
+        change_simple_column_value: null
+      errors:
+      - message: Invalid date format
+        path:
+        - change_simple_column_value
+        extensions:
+          code: ColumnValueException
+          status_code: 200
+      account_id: 9000001
+error: Invalid date format

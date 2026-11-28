@@ -1,0 +1,7 @@
+action: reply_in_thread
+credential: { workspace: acme, user_id: uAbC123, token: rc_test_1 }
+input: { room_id: rSales1, thread_id: mSg001, text: Packed and on its way }
+exchanges:
+  - sent: { method: POST, url: https://acme.rocket.chat/api/v1/chat.sendMessage, body: { message: { rid: rSales1, tmid: mSg001, msg: Packed and on its way } } }
+    answer: { body: { message: { _id: mSg003, rid: rSales1, tmid: mSg001, msg: Packed and on its way }, success: true } }
+result: { _id: mSg003, rid: rSales1, tmid: mSg001, msg: Packed and on its way }

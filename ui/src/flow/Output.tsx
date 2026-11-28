@@ -6,6 +6,8 @@
 
 import type { Run, StepRun } from "../api";
 import { AiResult, isAi } from "../Editor";
+import { FilesIn } from "../StepsFiles"; // G6 files
+import { TestNote } from "../TestNote"; // test runs
 
 export type Status = "done" | "failed" | "stopped" | "unreached";
 
@@ -42,6 +44,8 @@ export function StepOutput(props: { run: Run | null; name: string | undefined; t
       </p>
       {part.error && <pre className="error-text">{part.error}</pre>}
       {isAi(part) ? <AiResult step={part} /> : <pre>{JSON.stringify(part.result, null, 2)}</pre>}
+      <FilesIn value={part.result} /> {/* G6 files */}
+      <TestNote step={part} /> {/* test runs */}
       {part.logs && part.logs.length > 0 && (
         <>
           <p className="hint">What it logged</p>

@@ -1,0 +1,59 @@
+# Made by `openduct app from-openapi`: List a contact's tags.
+description: "List a contact's tags, made from the API description's schemas"
+action: list_contact_tags
+credential: { access_token: test-access-token }
+input: { contact_id: contact_1 }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://api.keap.com/crm/rest/v2/contacts/contact_1/tags"
+      query: { page_size: "100" }
+      headers: { authorization: "Bearer test-access-token" }
+    answer:
+      status: 200
+      body:
+        tags:
+          - tag:
+              id: 123
+              name: example
+              description: example
+              category: { id: 123 }
+              create_time: "2024-01-10T08:00:00Z"
+              update_time: "2024-03-15T10:30:00Z"
+            applied_time: example
+        next_page_token: token_2
+  - sent:
+      method: GET
+      url: "https://api.keap.com/crm/rest/v2/contacts/contact_1/tags"
+      query: { page_size: "100", page_token: token_2 }
+      headers: { authorization: "Bearer test-access-token" }
+    answer:
+      status: 200
+      body:
+        tags:
+          - tag:
+              id: 123
+              name: example
+              description: example
+              category: { id: 123 }
+              create_time: "2024-01-10T08:00:00Z"
+              update_time: "2024-03-15T10:30:00Z"
+            applied_time: example
+        next_page_token: null
+result:
+  - tag:
+      id: 123
+      name: example
+      description: example
+      category: { id: 123 }
+      create_time: "2024-01-10T08:00:00Z"
+      update_time: "2024-03-15T10:30:00Z"
+    applied_time: example
+  - tag:
+      id: 123
+      name: example
+      description: example
+      category: { id: 123 }
+      create_time: "2024-01-10T08:00:00Z"
+      update_time: "2024-03-15T10:30:00Z"
+    applied_time: example

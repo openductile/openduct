@@ -1,0 +1,9 @@
+description: A slide copied
+action: duplicate_slide
+credential: { access_token: ya29.test }
+input: { presentation: 1CoPyOfTheTemplate0123456789abcdefg, slide_id: g2 }
+exchanges:
+  - sent:
+      body: { requests: [{ duplicateObject: { objectId: g2 } }] }
+    answer: { body: { presentationId: 1CoPyOfTheTemplate0123456789abcdefg, replies: [{ duplicateObject: { objectId: g2_copy_1 } }] } }
+result: { id: 1CoPyOfTheTemplate0123456789abcdefg, slide_id: g2_copy_1 }

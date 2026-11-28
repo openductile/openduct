@@ -1,0 +1,12 @@
+description: A text post to a community, as the person signed in
+action: submit_post
+credential: { access_token: test-reddit-token }
+input: { subreddit: smallbusiness, title: How do you price custom orders?, text: "We make tables to order. **How** do you price yours?" }
+exchanges:
+  - sent:
+      method: POST
+      url: https://oauth.reddit.com/api/submit
+      headers: { authorization: Bearer test-reddit-token, user-agent: "server:openduct-workflows:v1.0" }
+      body: { sr: smallbusiness, kind: self, title: How do you price custom orders?, text: "We make tables to order. **How** do you price yours?", api_type: json }
+    answer: { body: { json: { errors: [], data: { url: "https://www.reddit.com/r/smallbusiness/comments/1h2ab3c/how_do_you_price_custom_orders/", drafts_count: 0, id: 1h2ab3c, name: t3_1h2ab3c } } } }
+result: { url: "https://www.reddit.com/r/smallbusiness/comments/1h2ab3c/how_do_you_price_custom_orders/", drafts_count: 0, id: 1h2ab3c, name: t3_1h2ab3c }

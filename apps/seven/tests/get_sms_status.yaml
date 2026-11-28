@@ -1,0 +1,18 @@
+description: "The delivery status of two SMS"
+action: get_sms_status
+credential: { api_key: test-key }
+input: { msg_id: "77229318,77229319" }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://gateway.seven.io/api/status"
+      query: { msg_id: "77229318,77229319" }
+      headers: { x-api-key: test-key }
+    answer:
+      status: 200
+      body:
+        - { id: "77229318", status: DELIVERED, status_time: "2026-11-27 10:00:05.000" }
+        - { id: "77229319", status: BUFFERED, status_time: "2026-11-27 10:00:06.000" }
+result:
+  - { id: "77229318", status: DELIVERED, status_time: "2026-11-27 10:00:05.000" }
+  - { id: "77229319", status: BUFFERED, status_time: "2026-11-27 10:00:06.000" }

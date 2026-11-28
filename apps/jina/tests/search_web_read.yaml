@@ -1,0 +1,17 @@
+description: A web search that reads each result's page (no header asks it not to)
+action: search_web
+credential: { api_key: jina_test_0a1b2c3d4e5f }
+input: { q: best houseplants for low light }
+exchanges:
+  - sent:
+      url: "https://s.jina.ai/"
+      body: { q: best houseplants for low light }
+    answer:
+      status: 200
+      body:
+        code: 200
+        status: 20000
+        data:
+          - { title: Plants for dark rooms, url: "https://plants.example/dark-rooms", description: Ten plants that need little light., content: "# Plants for dark rooms\n\nSnake plants and ZZ plants..." }
+result:
+  - { title: Plants for dark rooms, url: "https://plants.example/dark-rooms", description: Ten plants that need little light., content: "# Plants for dark rooms\n\nSnake plants and ZZ plants..." }

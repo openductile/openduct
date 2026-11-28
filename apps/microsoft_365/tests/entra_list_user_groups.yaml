@@ -1,0 +1,25 @@
+description: The groups a user is in
+action: list_user_groups
+sign_in: microsoft_entra_admin
+credential: {access_token: eyJ0-admin}
+input: {user: 6ea91a8d-e32e-41a1-b7bd-d2d185eed0e0}
+exchanges:
+- sent:
+    method: GET
+    url: https://graph.microsoft.com/v1.0/users/6ea91a8d-e32e-41a1-b7bd-d2d185eed0e0/memberOf
+    headers: {authorization: Bearer eyJ0-admin}
+    query: {}
+  answer:
+    status: 200
+    body:
+      value:
+      - &id001
+        '@odata.type': '#microsoft.graph.group'
+        id: 45b7d2e7-b882-4a80-ba97-10b7a63b8fa4
+        displayName: Sales Team
+        mail: sales-team@contoso.example
+        mailEnabled: true
+        securityEnabled: false
+        groupTypes: [Unified]
+result:
+- *id001

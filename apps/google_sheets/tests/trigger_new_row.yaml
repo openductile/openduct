@@ -1,0 +1,16 @@
+description: Rows added under the header row run as records of its names; rows seen before do not
+trigger: new_row
+credential: { access_token: ya29.test }
+input: { spreadsheet_id: s1, sheet: Orders }
+seen: { items: [["2", ""]] }
+exchanges:
+  - sent:
+      method: GET
+      url: https://sheets.googleapis.com/v4/spreadsheets/s1/values/Orders
+      query: { majorDimension: ROWS }
+    answer:
+      body:
+        range: Orders!A1:C3
+        values: [[Order, Customer, Total], [A-1, Ann, "12"], [A-2, Bob]]
+runs:
+  - { row_number: 3, Order: A-2, Customer: Bob, Total: "" }

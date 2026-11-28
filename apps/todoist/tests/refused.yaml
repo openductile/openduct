@@ -1,0 +1,7 @@
+description: A wrong token is refused in Todoist's words
+action: get_task
+credential: { token: wrong }
+input: { task_id: 6Xtest0000000001 }
+exchanges:
+  - answer: { status: 401, body: { error_tag: UNAUTHORIZED, error_code: 477, error: Unauthorized, http_code: 401, error_extra: {} } }
+error: "Todoist answered 401: Unauthorized"

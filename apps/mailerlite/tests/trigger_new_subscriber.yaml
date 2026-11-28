@@ -1,0 +1,42 @@
+description: A new subscriber, signed with the webhook secret
+trigger: new_subscriber
+credential:
+  api_key: test-key
+  webhook_secret: ybmcD7PQ9R
+delivery:
+  headers:
+    signature: 04644e089ab4e0d79a8a496abb8f89fb0430e910d04a3a7d7e4885b8b4341aa9
+  body: '{"id":"31986843064993537","email":"pat@example.com","status":"active","source":"api","sent":3,"opens_count":2,"clicks_count":1,"open_rate":66.67,"click_rate":33.33,"ip_address":null,"subscribed_at":"2026-11-01
+    14:03:50","unsubscribed_at":null,"created_at":"2026-11-01 14:03:50","updated_at":"2026-11-02 09:00:00","fields":{"name":"Pat","last_name":"Sample","company":"Sample
+    Supplies","city":null,"country":null,"phone":null,"state":null,"z_i_p":null},"opted_in_at":null,"optin_ip":null,"deleted_at":null,"forget_at":null,"event":"subscriber.created","account_id":1}'
+  at: 1700000000
+runs:
+- id: '31986843064993537'
+  email: pat@example.com
+  status: active
+  source: api
+  sent: 3
+  opens_count: 2
+  clicks_count: 1
+  open_rate: 66.67
+  click_rate: 33.33
+  ip_address: null
+  subscribed_at: '2026-11-01 14:03:50'
+  unsubscribed_at: null
+  created_at: '2026-11-01 14:03:50'
+  updated_at: '2026-11-02 09:00:00'
+  fields:
+    name: Pat
+    last_name: Sample
+    company: Sample Supplies
+    city: null
+    country: null
+    phone: null
+    state: null
+    z_i_p: null
+  opted_in_at: null
+  optin_ip: null
+  deleted_at: null
+  forget_at: null
+  event: subscriber.created
+  account_id: 1

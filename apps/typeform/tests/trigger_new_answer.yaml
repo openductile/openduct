@@ -1,0 +1,12 @@
+description: An answer Typeform sends as the form is answered, signed with the webhook's secret
+trigger: new_answer
+workflow: wf1
+credential: { token: tfp_1, "webhook_secret@wf1": a1b2c3d4e5 }
+input: { form_id: abc123 }
+delivery:
+  headers: { typeform-signature: "sha256=iL46P9bDnkzSCpvUV+K7IgjO3YE9Sh+d604by0kDSLE=" }
+  body: '{"event_id":"01HXYZ","event_type":"form_response","form_response":{"form_id":"abc123","token":"r1","submitted_at":"2026-11-27T10:00:00Z","answers":[{"type":"email","email":"ann@example.com","field":{"ref":"email"}}]}}'
+  at: 1700000000
+runs:
+  - { form_id: abc123, token: r1, submitted_at: "2026-11-27T10:00:00Z", answers: [{ type: email, email: ann@example.com, field: { ref: email } }] }
+ids: [01HXYZ]

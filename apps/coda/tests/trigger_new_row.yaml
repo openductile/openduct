@@ -1,0 +1,19 @@
+description: A row added since the poll before starts a run; rows seen before do not
+trigger: new_row
+credential: { token: test-token }
+input: { doc_id: AbCDeFGH, table_id_or_name: grid-Orders }
+seen: { items: [["i-row1", ""]] }
+exchanges:
+  - sent:
+      method: GET
+      url: https://docs.superhuman.com/apis/v1/docs/AbCDeFGH/tables/grid-Orders/rows
+      query: { useColumnNames: "true", limit: "25" }
+      headers: { authorization: Bearer test-token }
+    answer:
+      body:
+        items:
+          - { id: i-row1, type: row, name: Order 1, index: 0, createdAt: "2026-11-26T09:00:00.000Z", updatedAt: "2026-11-26T09:00:00.000Z", values: { Customer: ann@example.com, Total: 12 } }
+          - { id: i-row2, type: row, name: Order 2, index: 1, createdAt: "2026-11-27T10:00:00.000Z", updatedAt: "2026-11-27T10:00:00.000Z", values: { Customer: bob@example.com, Total: 30 } }
+        nextPageToken: null
+runs:
+  - { id: i-row2, type: row, name: Order 2, index: 1, createdAt: "2026-11-27T10:00:00.000Z", updatedAt: "2026-11-27T10:00:00.000Z", values: { Customer: bob@example.com, Total: 30 } }

@@ -1,0 +1,14 @@
+description: A PDF read now, as plain text, waiting at most a minute
+action: read_page
+credential: { api_key: jina_test_0a1b2c3d4e5f }
+input: { url: "https://www.example.com/menu.pdf", return_format: text, no_cache: true, wait_seconds: 60 }
+exchanges:
+  - sent:
+      method: POST
+      url: "https://r.jina.ai/"
+      headers: { x-return-format: text, x-no-cache: "true", x-timeout: "60" }
+      body: { url: "https://www.example.com/menu.pdf" }
+    answer:
+      status: 200
+      body: { code: 200, status: 20000, data: { title: Menu, url: "https://www.example.com/menu.pdf", content: "Soup of the day 6.50" } }
+result: { title: Menu, url: "https://www.example.com/menu.pdf", content: "Soup of the day 6.50" }

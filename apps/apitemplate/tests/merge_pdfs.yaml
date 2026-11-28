@@ -1,0 +1,11 @@
+description: Two PDFs joined into one
+action: merge_pdfs
+credential: { api_key: at_test_key_1 }
+input: { urls: ["https://files.example.com/a.pdf", "https://files.example.com/b.pdf"] }
+exchanges:
+  - sent:
+      method: POST
+      url: "https://rest.apitemplate.io/v2/merge-pdfs"
+      body: { urls: ["https://files.example.com/a.pdf", "https://files.example.com/b.pdf"] }
+    answer: { status: 200, body: { status: success, primary_url: "https://files.example.com/joined.pdf", total_pages: 3, transaction_ref: t-merge-1 } }
+result: { status: success, primary_url: "https://files.example.com/joined.pdf", total_pages: 3, transaction_ref: t-merge-1 }

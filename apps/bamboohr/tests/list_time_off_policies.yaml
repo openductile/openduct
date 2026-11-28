@@ -1,0 +1,26 @@
+description: The time off policies
+action: list_time_off_policies
+credential:
+  company_domain: acme
+  api_key: test-key
+exchanges:
+- sent:
+    method: GET
+    url: https://acme.bamboohr.com/api/v1/meta/time_off/policies
+    headers:
+      authorization: Basic dGVzdC1rZXk6eA==
+      accept: application/json
+  answer:
+    status: 200
+    body:
+    - id: 3
+      timeOffTypeId: 78
+      name: Vacation - full time
+      effectiveDate: '2024-01-01'
+      type: accruing
+result:
+- id: 3
+  timeOffTypeId: 78
+  name: Vacation - full time
+  effectiveDate: '2024-01-01'
+  type: accruing

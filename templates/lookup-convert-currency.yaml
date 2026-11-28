@@ -3,7 +3,7 @@ description: >-
   Upload your exchange rates as /rates.csv (currency,rate: how many of each currency one of yours buys). When an
   amount comes in over a webhook ({"amount", "currency"}), convert it and keep both in the converted topic; a
   currency not in your rates goes to CatchErr.
-category: Lookups
+category: Finance
 trigger:
   webhook: {}
 # What a test runs on: an event as this trigger gives it.

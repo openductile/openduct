@@ -1,0 +1,15 @@
+description: An ad group added to a campaign
+action: change_ad_groups
+credential: { access_token: ya29.test }
+input:
+  customer_id: "1234567890"
+  operations: [{ create: { name: Garden benches, campaign: customers/1234567890/campaigns/111, status: ENABLED } }]
+  developer_token: devtok-test
+exchanges:
+  - sent:
+      method: POST
+      url: "https://googleads.googleapis.com/v26/customers/1234567890/adGroups:mutate"
+      body:
+        operations: [{ create: { name: Garden benches, campaign: customers/1234567890/campaigns/111, status: ENABLED } }]
+    answer: { status: 200, body: { results: [{ resourceName: customers/1234567890/adGroups/503 }] } }
+result: { results: [{ resourceName: customers/1234567890/adGroups/503 }] }

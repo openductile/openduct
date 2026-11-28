@@ -1,0 +1,100 @@
+description: A task given to a driver, with new notes
+action: update_task
+credential:
+  api_key: test-key
+input:
+  task_id: 11z1BbsQUZFHD1XAd~emDDeK
+  notes: 3 boxes of mugs
+  worker_id: h*wSb*apKlDkUFnuLTtjPke7
+exchanges:
+- sent:
+    method: PUT
+    url: https://onfleet.com/api/v2/tasks/11z1BbsQUZFHD1XAd~emDDeK
+    headers:
+      authorization: Basic dGVzdC1rZXk6
+    body:
+      notes: 3 boxes of mugs
+      container:
+        type: WORKER
+        worker: h*wSb*apKlDkUFnuLTtjPke7
+  answer:
+    status: 200
+    body:
+      id: 11z1BbsQUZFHD1XAd~emDDeK
+      timeCreated: 1795161600000
+      timeLastModified: 1795161600278
+      organization: yAM*fDkztrT3gUcz9mNDgNOL
+      shortId: 31aac0a5
+      trackingURL: https://onf.lt/31aac0a5
+      worker: h*wSb*apKlDkUFnuLTtjPke7
+      merchant: yAM*fDkztrT3gUcz9mNDgNOL
+      executor: yAM*fDkztrT3gUcz9mNDgNOL
+      creator: EJmsbJgHiRLPjNVE7GEIPs7*
+      dependencies: &id001 []
+      state: 1
+      completeAfter: null
+      completeBefore: null
+      pickupTask: false
+      notes: 3 boxes of mugs
+      completionDetails: &id002
+        events: []
+        time: null
+      feedback: &id003 []
+      metadata: &id004 []
+      overrides: &id005 {}
+      container:
+        type: WORKER
+        worker: h*wSb*apKlDkUFnuLTtjPke7
+      recipients: &id006
+      - id: xX87G1gSkeLvGXlHn2tn0~iB
+        organization: yAM*fDkztrT3gUcz9mNDgNOL
+        timeCreated: 1795161600000
+        timeLastModified: 1795161600000
+        name: Pat Sample
+        phone: '+14155550100'
+        notes: Ring twice
+        skipSMSNotifications: false
+        metadata: []
+      destination: &id007
+        id: pfT5L1JclTdhvRnP9GQzMFuL
+        timeCreated: 1795161600000
+        timeLastModified: 1795161600000
+        location:
+        - -122.4128901
+        - 37.787933
+        address:
+          apartment: ''
+          state: California
+          postalCode: '94109'
+          country: United States
+          city: San Francisco
+          street: Sample Street
+          number: '100'
+        notes: Green door
+        metadata: []
+result:
+  id: 11z1BbsQUZFHD1XAd~emDDeK
+  timeCreated: 1795161600000
+  timeLastModified: 1795161600278
+  organization: yAM*fDkztrT3gUcz9mNDgNOL
+  shortId: 31aac0a5
+  trackingURL: https://onf.lt/31aac0a5
+  worker: h*wSb*apKlDkUFnuLTtjPke7
+  merchant: yAM*fDkztrT3gUcz9mNDgNOL
+  executor: yAM*fDkztrT3gUcz9mNDgNOL
+  creator: EJmsbJgHiRLPjNVE7GEIPs7*
+  dependencies: *id001
+  state: 1
+  completeAfter: null
+  completeBefore: null
+  pickupTask: false
+  notes: 3 boxes of mugs
+  completionDetails: *id002
+  feedback: *id003
+  metadata: *id004
+  overrides: *id005
+  container:
+    type: WORKER
+    worker: h*wSb*apKlDkUFnuLTtjPke7
+  recipients: *id006
+  destination: *id007

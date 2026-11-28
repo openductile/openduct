@@ -1,0 +1,6 @@
+action: post_to_page
+credential: { access_token: EAAB_test }
+input: { page_id: "1029384756", message: Hello }
+exchanges:
+  - answer: { status: 400, body: { error: { message: "(#200) The user hasn't authorized the application to perform this action", type: OAuthException, code: 200 } } }
+error: "Facebook and Instagram answered 400: (#200) The user hasn't authorized the application"

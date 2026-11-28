@@ -1,0 +1,192 @@
+# Copyright 2026 Ductile AI, Inc
+# SPDX-License-Identifier: Apache-2.0
+#
+# Written from Mindee's own API v2 description (https://api-v2.mindee.net/openapi.json, fetched 2026-11-27), after
+# `openduct app from-openapi` showed the operations; the webhook signature as Mindee's MIT-licensed Python library
+# checks it.
+app: mindee
+name: Mindee
+category: documents
+description: Read invoices, receipts, IDs and other documents into fields, with the models of your Mindee account.
+docs: https://docs.mindee.com/integrations/api-overview
+hosts: [api-v2.mindee.net]
+base_url: https://api-v2.mindee.net
+sign_in:
+  - id: mindee
+    label: An API key
+    fields:
+      - { name: api_key, label: "The API key (Settings, API Keys, at app.mindee.com)", secret: true }
+      - { name: webhook_secret, label: "A model's webhook signing secret, for the trigger (Webhooks, in the model's page)", secret: true, optional: true }
+    headers: { Authorization: "{{ credential.api_key }}" }
+error: "status >= 400 ? value.detail : null"
+actions:
+  extract_document:
+    label: Read a document into fields
+    description: >-
+      Sends a document (a web address, or the file in Base64) to one of your extraction models (an invoice, a
+      receipt, a form of your own); the answer is the job, and the fields are ready a few seconds later (Get a job,
+      then Get the fields read), or sent to the model's webhook.
+    write: true
+    method: POST
+    path: /v2/products/extraction/enqueue
+    inputs: &enqueue
+      - { name: model_id, label: "The model's id (from List models, or the model's page)", required: true }
+      - { name: url, label: "The document's web address (https)" }
+      - { name: file_base64, label: "Or the file itself, in Base64" }
+      - { name: filename, label: "The file's name (with the Base64)" }
+      - { name: alias, label: "A name of your own for it, given back in the result" }
+      - { name: webhook_ids, label: "Send the result to these webhooks of the model (ids, separated by commas)" }
+      - { name: confidence, label: "With how sure the model is of each field", kind: boolean }
+      - { name: raw_text, label: "With the document's whole text", kind: boolean }
+      - { name: polygon, label: "With where each field is on the page", kind: boolean }
+      - { name: rag, label: "Use the model's own examples (retrieval) to read it", kind: boolean }
+      - { name: text_context, label: "A hint for the model, such as what kind of document it is" }
+    send:
+      model_id: "{{ input.model_id }}"
+      url: "{{ input.url }}"
+      file_base64: "{{ input.file_base64 }}"
+      filename: "{{ input.filename }}"
+      alias: "{{ input.alias }}"
+      webhook_ids: "{{ input.webhook_ids.split(',').map(w, w.trim()) }}"
+      confidence: "{{ input.confidence }}"
+      raw_text: "{{ input.raw_text }}"
+      polygon: "{{ input.polygon }}"
+      rag: "{{ input.rag }}"
+      text_context: "{{ input.text_context }}"
+    result: value.job
+    output: &job { id: text, model_id: text, filename: text, alias: text, status: text, created_at: text, completed_at: text, polling_url: text, result_url: text, error: record, webhooks: list }
+  get_job:
+    label: Get a job
+    description: A document's job, Processing, Processed or Failed; once processed, its result's address.
+    method: GET
+    path: "/v2/jobs/{{ input.job_id }}"
+    inputs:
+      - { name: job_id, label: "The job's id (from Read a document, or another send)", required: true }
+    query: { redirect: "false" }
+    result: value.job
+    output: *job
+  get_extraction:
+    label: Get the fields read
+    description: >-
+      What an extraction model read from a document: each field's value (and its confidence and place, if asked),
+      under result.fields, by the names the model gives them.
+    method: GET
+    path: "/v2/products/extraction/results/{{ input.inference_id }}"
+    inputs:
+      - { name: inference_id, label: "The result's id (the end of the job's result address)", required: true }
+    result: value.inference
+    output: &inference { id: text, job: record, model: record, file: record, active_options: record, result: record }
+  classify_document:
+    label: Sort a document
+    description: Sends a document to one of your classification models, which says what kind it is; the answer is the job.
+    write: true
+    method: POST
+    path: /v2/products/classification/enqueue
+    inputs: &utility
+      - { name: model_id, label: "The model's id", required: true }
+      - { name: url, label: "The document's web address (https)" }
+      - { name: file_base64, label: "Or the file itself, in Base64" }
+      - { name: filename, label: "The file's name (with the Base64)" }
+      - { name: alias, label: "A name of your own for it" }
+      - { name: webhook_ids, label: "Send the result to these webhooks of the model (ids, separated by commas)" }
+    send: &utility_send
+      model_id: "{{ input.model_id }}"
+      url: "{{ input.url }}"
+      file_base64: "{{ input.file_base64 }}"
+      filename: "{{ input.filename }}"
+      alias: "{{ input.alias }}"
+      webhook_ids: "{{ input.webhook_ids.split(',').map(w, w.trim()) }}"
+    result: value.job
+    output: *job
+  get_classification:
+    label: Get what kind a document is
+    description: "What a classification model said a document is."
+    method: GET
+    path: "/v2/products/classification/results/{{ input.inference_id }}"
+    inputs:
+      - { name: inference_id, label: "The result's id", required: true }
+    result: value.inference
+    output: *inference
+  split_document:
+    label: Split a file into documents
+    description: Sends a file holding several documents (a scan of many invoices) to a split model, which says where each starts and ends.
+    write: true
+    method: POST
+    path: /v2/products/split/enqueue
+    inputs: *utility
+    send: *utility_send
+    result: value.job
+    output: *job
+  get_split:
+    label: Get where each document is
+    description: "Where each document starts and ends in a file a split model read."
+    method: GET
+    path: "/v2/products/split/results/{{ input.inference_id }}"
+    inputs:
+      - { name: inference_id, label: "The result's id", required: true }
+    result: value.inference
+    output: *inference
+  crop_document:
+    label: Find the documents in a picture
+    description: Sends a picture (several receipts on a table) to a crop model, which finds each document in it.
+    write: true
+    method: POST
+    path: /v2/products/crop/enqueue
+    inputs: *utility
+    send: *utility_send
+    result: value.job
+    output: *job
+  get_crop:
+    label: Get the documents found in a picture
+    description: "Each document a crop model found in a picture, and where."
+    method: GET
+    path: "/v2/products/crop/results/{{ input.inference_id }}"
+    inputs:
+      - { name: inference_id, label: "The result's id", required: true }
+    result: value.inference
+    output: *inference
+  read_text:
+    label: Read a document's text
+    description: Sends a document to an OCR model, which reads all its text, page by page.
+    write: true
+    method: POST
+    path: /v2/products/ocr/enqueue
+    inputs: *utility
+    send: *utility_send
+    result: value.job
+    output: *job
+  get_text:
+    label: Get the text read
+    description: "All the text an OCR model read from a document, page by page."
+    method: GET
+    path: "/v2/products/ocr/results/{{ input.inference_id }}"
+    inputs:
+      - { name: inference_id, label: "The result's id", required: true }
+    result: value.inference
+    output: *inference
+  list_models:
+    label: List models
+    description: Your organisation's models (extraction, classification, split, crop, OCR), with their ids and webhooks; every page.
+    method: GET
+    path: /v2/search/models
+    inputs:
+      - { name: name, label: "Only those whose name holds this" }
+      - { name: model_type, label: "Only of this kind: extraction, classification, split, crop or ocr" }
+    query: { name: "{{ input.name }}", model_type: "{{ input.model_type }}", per_page: "100" }
+    items: value.models
+    next: "value.pagination.page < value.pagination.total_pages ? {'page': value.pagination.page + 1} : null"
+    output: { id: text, name: text, model_type: text, webhooks: list }
+triggers:
+  document_read:
+    label: A document was read
+    description: >-
+      Each result a model's webhook sends when a document sent with its id is read, signed with the webhook's
+      secret. Made in Mindee's own pages (the model's Webhooks), with this workflow's address.
+    webhook:
+      signature: { header: x-signature, signed: "{body}", encoding: hex }
+      secret: webhook_secret
+      id: value.inference.id
+      event: value.inference
+      setup: >-
+        In Mindee, open the model, then Webhooks, Add Webhook: give this address, then copy the webhook's Signing
+        Secret into the credential, and its ID into the documents you send (webhook_ids).

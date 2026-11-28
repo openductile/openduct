@@ -1,0 +1,9 @@
+description: A developer token Google has not approved for the account - 403, in Google's words
+action: list_campaigns
+credential: { access_token: ya29.test }
+input: { customer_id: "1234567890", developer_token: devtok-pending }
+exchanges:
+  - answer:
+      status: 403
+      body: { error: { code: 403, message: The caller does not have permission, status: PERMISSION_DENIED } }
+error: "Google Ads answered 403: The caller does not have permission"

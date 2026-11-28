@@ -9,6 +9,7 @@ import type { Definition, Step } from "../api";
 import { kindOf } from "../Steps";
 import type { ListPath, Part as Which, StepPath } from "./paths";
 import { keyOf } from "./paths";
+import { ROUTING, aiBranches } from "./aiBranches"; // G7 more AI steps
 
 export const NODE_W = 196;
 export const NODE_H = 46;
@@ -66,6 +67,7 @@ function branchesOf(step: Step): Branch[] {
       { part: "default", label: "default", steps: s.default ?? [] },
     ];
   }
+  if (ROUTING.includes(kind)) return aiBranches(step); // G7 more AI steps
   return [];
 }
 
@@ -87,7 +89,7 @@ function measureList(steps: Step[]): Part {
 
 function measureStep(step: Step): Part {
   const kind = kindOf(step);
-  if (kind === "if" || kind === "switch") {
+  if (kind === "if" || kind === "switch" || ROUTING.includes(kind) /* G7 */) {
     const parts = branchesOf(step).map((b) => measureList(b.steps));
     return {
       width: Math.max(NODE_W, parts.reduce((w, p) => w + p.width, 0) + GAP_X * (parts.length - 1)),
@@ -154,7 +156,7 @@ class Builder {
     this.node({ id, kind: "step", x: cx - NODE_W / 2, y, width: NODE_W, height: NODE_H, at, step });
     this.edge(from, id, at, label);
     const base: ListPath = [...at.list, at.index];
-    if (kind === "if" || kind === "switch") {
+    if (kind === "if" || kind === "switch" || ROUTING.includes(kind) /* G7 */) {
       const branches = branchesOf(step);
       const parts = branches.map((b) => measureList(b.steps));
       const total = parts.reduce((w, p) => w + p.width, 0) + GAP_X * (branches.length - 1);

@@ -1,0 +1,9 @@
+description: Text written into a text box
+action: add_text
+credential: { access_token: ya29.test }
+input: { presentation: 1CoPyOfTheTemplate0123456789abcdefg, shape_id: body_2, text: "Prices go up in May." }
+exchanges:
+  - sent:
+      body: { requests: [{ insertText: { objectId: body_2, text: "Prices go up in May." } }] }
+    answer: { body: { presentationId: 1CoPyOfTheTemplate0123456789abcdefg, replies: [{}] } }
+result: { id: 1CoPyOfTheTemplate0123456789abcdefg, written: true }

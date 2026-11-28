@@ -1,0 +1,7 @@
+description: A number no incident has gives nothing
+action: get_incident
+credential: { instance: acme, username: integration.user, password: pw-test-1 }
+input: { number: INC9999999 }
+exchanges:
+  - answer: { status: 200, body: { result: [] } }
+result: null

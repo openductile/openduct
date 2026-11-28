@@ -1,0 +1,47 @@
+description: A project archived
+action: update_project
+credential: {access_token: hv-test-token, account_id: '100200'}
+input: {project_id: '14307913', is_active: false}
+exchanges:
+- sent:
+    method: PATCH
+    url: https://api.harvestapp.com/v2/projects/14307913
+    headers: {authorization: Bearer hv-test-token, harvest-account-id: '100200', user-agent: 'OpenDuct (https://github.com/openductile/openduct)'}
+    query: {}
+    body: {is_active: false}
+  answer:
+    status: 200
+    body:
+      id: 14307913
+      client: &id001 {id: 5735776, name: Shop Example, currency: USD}
+      name: Website
+      code: WEB
+      is_active: false
+      is_billable: true
+      is_fixed_fee: false
+      bill_by: Project
+      hourly_rate: 100.0
+      budget: 200.0
+      budget_by: project
+      notes: ''
+      starts_on: '2026-11-01'
+      ends_on: null
+      created_at: '2026-11-01T09:00:00Z'
+      updated_at: '2026-11-01T09:00:00Z'
+result:
+  id: 14307913
+  client: *id001
+  name: Website
+  code: WEB
+  is_active: false
+  is_billable: true
+  is_fixed_fee: false
+  bill_by: Project
+  hourly_rate: 100.0
+  budget: 200.0
+  budget_by: project
+  notes: ''
+  starts_on: '2026-11-01'
+  ends_on: null
+  created_at: '2026-11-01T09:00:00Z'
+  updated_at: '2026-11-01T09:00:00Z'

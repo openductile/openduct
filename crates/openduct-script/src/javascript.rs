@@ -104,9 +104,28 @@ pub(crate) fn run(script: &Script) -> Result<Answer, Failure> {
                     });
                 }
             };
+            // data tables: what the script left in `state`, when it was given one.
+            let state = if script.names.contains_key(crate::STATE) {
+                let left = context
+                    .global_object()
+                    .get(JsString::from(crate::STATE), &mut context)
+                    .and_then(|v| v.to_json(&mut context));
+                match left {
+                    Ok(json) => Some(whole_numbers(json.unwrap_or(Json::Null))),
+                    Err(e) => {
+                        return Err(Failure {
+                            error: format!("state cannot be JSON: {}", shown(&e, &mut context)),
+                            logs: logs(&mut context),
+                        });
+                    }
+                }
+            } else {
+                None
+            };
             Ok(Answer {
                 result,
                 logs: logs(&mut context),
+                state,
             })
         }
         Err(e) => Err(Failure {

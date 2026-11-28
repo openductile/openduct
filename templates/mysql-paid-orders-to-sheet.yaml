@@ -1,0 +1,25 @@
+name: New paid orders in MySQL, added to a Google Sheet
+description: >-
+  Every minute, asks your MySQL or MariaDB database for the paid orders added since it last asked, and adds each one
+  to a Google Sheet as a row: its number, customer, e-mail, total and when it was placed. The first time, it only notes
+  where the orders table is: only orders that come after the workflow is turned on are added, each once. The
+  database's user needs only to read the orders table.
+category: Finance
+trigger:
+  mysql: { credential: shop-db, table: orders, cursor: id, where: "status = 'paid'", every: 1m, max_rows: 50 }
+# What a test runs on: an order as this trigger gives it - a row of the table, by its column names.
+sample:
+  id: 1042
+  customer: Ada Lovelace
+  email: ada@example.com
+  total: 54.9
+  status: paid
+  placed_at: "2026-11-27 09:30:05"
+steps:
+  - name: row
+    google_sheets:
+      credential: sheets
+      action: add_row
+      spreadsheet_id: 1AbCdEfGhIjKlMnOpQrStUvWxYz0123456789abcdef
+      sheet: Orders
+      values: ["{{ value.id }}", "{{ value.customer }}", "{{ value.email }}", "{{ value.total }}", "{{ value.placed_at }}"]

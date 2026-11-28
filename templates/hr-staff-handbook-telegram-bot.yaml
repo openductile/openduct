@@ -1,0 +1,56 @@
+name: A Telegram bot that answers from the staff handbook
+description: >-
+  Staff ask your Telegram bot about leave, pay days, shifts or expenses, and an AI agent answers from your staff
+  handbook only - searched by meaning in PostgreSQL with pgvector - naming the section each answer comes from, and
+  saying plainly when the handbook does not cover it, so people ask HR instead of getting a guess. Each chat keeps its
+  conversation. Load the handbook first with the template "Keep documents for answers", with team set to hr. Only the
+  chats you list may ask. Needs: staff_bot (telegram), model (ai, with an embedding model), docs-db (postgres).
+category: HR
+trigger:
+  telegram: { when: message, credential: staff_bot }
+# What a test runs on: a message as this trigger gives it.
+sample:
+  message_id: 940
+  date: 1795770000
+  chat: { id: 351822907, type: private }
+  from: { id: 351822907, first_name: Maya }
+  text: How many days of leave can I carry over to next year?
+steps:
+  # Your staff's chats (or your staff group's id): the bot answers nobody else.
+  - where: value.chat.id in [351822907, 351822908] && value.text != null && value.text != ''
+  - name: helper
+    agent:
+      credential: model
+      instructions: >-
+        You answer staff questions about the company's rules, kindly and in at most four sentences. Always search the
+        handbook with handbook first and answer only from what it gives, naming the section in brackets, as
+        [Leave]. If the handbook does not answer the question, say so and suggest asking HR at hr@example.com.
+        Never give legal or medical advice, and never guess numbers.
+      input: "{{ value.text }}"
+      tools:
+        - name: handbook
+          description: Answers a question from the staff handbook, with the passages it used.
+          parameters:
+            type: object
+            properties:
+              question: { type: string, description: "The question, as a full sentence" }
+            required: [question]
+          ask_documents:
+            credential: docs-db
+            table: doc_pieces
+            embed_with: model
+            question: "{{ args.question }}"
+            filter: { team: hr }
+            top_k: 4
+            min_score: 0.3
+            max_tokens: 400
+      allow: [handbook]
+      memory: { key: "{{ value.chat.id }}", window: 8, clear: "value.text == '/start'", forget_after: 7d }
+      max_turns: 4
+      max_tool_calls: 3
+  - name: reply
+    telegram:
+      credential: staff_bot
+      chat_id: "{{ value.chat.id }}"
+      text: "{{ steps.helper.text }}"
+    retry: { attempts: 3, wait: 5s }

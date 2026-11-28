@@ -1,0 +1,47 @@
+description: "Book an appointment"
+action: create_appointment
+credential: { token: test-token }
+input:
+  calendar_id: CVokAlI8fgw4WYWoCtQz
+  location_id: C2QujeCh8ZnC7al2InWR
+  contact_id: "0007BWpSzSwfiuSl0tR2"
+  start_time: example
+exchanges:
+  - sent:
+      method: POST
+      url: "https://services.leadconnectorhq.com/calendars/events/appointments"
+      query: {}
+      headers: { authorization: "Bearer test-token", version: "2021-04-15" }
+      body:
+        calendarId: CVokAlI8fgw4WYWoCtQz
+        locationId: C2QujeCh8ZnC7al2InWR
+        contactId: "0007BWpSzSwfiuSl0tR2"
+        startTime: example
+    answer:
+      status: 200
+      body:
+        calendarId: CVokAlI8fgw4WYWoCtQz
+        locationId: C2QujeCh8ZnC7al2InWR
+        contactId: "0007BWpSzSwfiuSl0tR2"
+        startTime: example
+        endTime: example
+        title: example
+        meetingLocationType: custom
+        appointmentStatus: new
+        assignedUserId: "0007BWpSzSwfiuSl0tR2"
+        address: Zoom
+        isRecurring: "true"
+        rrule: example
+result:
+  calendarId: CVokAlI8fgw4WYWoCtQz
+  locationId: C2QujeCh8ZnC7al2InWR
+  contactId: "0007BWpSzSwfiuSl0tR2"
+  startTime: example
+  endTime: example
+  title: example
+  meetingLocationType: custom
+  appointmentStatus: new
+  assignedUserId: "0007BWpSzSwfiuSl0tR2"
+  address: Zoom
+  isRecurring: "true"
+  rrule: example

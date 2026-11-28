@@ -1,0 +1,7 @@
+action: list_show_episodes
+credential: { access_token: BQ-test-token }
+input: { show: "spotify:show:0TestShow0000000000001" }
+exchanges:
+  - sent: { url: https://api.spotify.com/v1/shows/0TestShow0000000000001/episodes, query: { limit: "50" } }
+    answer: { body: { items: [{ id: 0TestEpisode0000000001, name: Episode 12, duration_ms: 1800000, release_date: "2026-11-25" }], next: null } }
+result: [{ id: 0TestEpisode0000000001, name: Episode 12, duration_ms: 1800000, release_date: "2026-11-25" }]

@@ -1,0 +1,8 @@
+description: The orders linked to a customer
+action: list_linked_records
+credential: { api_token: test-nocodb-token }
+input: { base_id: pexample0001, table_id: mexample0001, link_field_id: cexample0001, record_id: "1" }
+exchanges:
+  - sent: { method: GET, url: https://app.nocodb.com/api/v3/data/pexample0001/mexample0001/links/cexample0001/1, query: { pageSize: "100" } }
+    answer: { body: { records: [{ id: 31, fields: { Order: A-1031 } }], next: null } }
+result: [{ id: 31, fields: { Order: A-1031 } }]

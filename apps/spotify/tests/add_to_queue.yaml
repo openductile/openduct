@@ -1,0 +1,7 @@
+action: add_to_queue
+credential: { access_token: BQ-test-token }
+input: { uri: "spotify:track:0TestTrack000000000002" }
+exchanges:
+  - sent: { method: POST, url: https://api.spotify.com/v1/me/player/queue, query: { uri: "spotify:track:0TestTrack000000000002" } }
+    answer: { status: 204 }
+result: { queued: true }

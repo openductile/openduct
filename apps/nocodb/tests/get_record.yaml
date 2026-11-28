@@ -1,0 +1,8 @@
+description: One record, only the fields asked for
+action: get_record
+credential: { api_token: test-nocodb-token }
+input: { base_id: pexample0001, table_id: mexample0001, record_id: "1", fields: "Name,Email" }
+exchanges:
+  - sent: { method: GET, url: https://app.nocodb.com/api/v3/data/pexample0001/mexample0001/records/1, query: { fields: "Name,Email" } }
+    answer: { body: { id: 1, fields: { Name: Ann Example, Email: ann@example.com } } }
+result: { id: 1, fields: { Name: Ann Example, Email: ann@example.com } }

@@ -1,0 +1,286 @@
+# Copyright 2026 Ductile AI, Inc
+# SPDX-License-Identifier: Apache-2.0
+# Onfleet: written by hand from Onfleet's API reference, https://docs.onfleet.com/reference/introduction
+# (its pages as markdown, read 2026-11-27).
+app: onfleet
+name: Onfleet
+category: delivery
+description: "Delivery tasks, drivers, teams and recipients in Onfleet."
+docs: https://docs.onfleet.com/reference/introduction
+hosts: [onfleet.com]
+base_url: https://onfleet.com/api/v2
+sign_in:
+  - id: onfleet
+    label: An API key
+    fields:
+      - { name: api_key, label: The API key, secret: true }
+    # Onfleet takes the key as the user name of HTTP basic sign-in, with no password.
+    basic: { username: "{{ credential.api_key }}", password: "" }
+# Onfleet's refusals: a code, and a message record with the message and its cause.
+error: >-
+  status < 400 ? null
+  : (has(value.message) && has(value.message.message)
+    ? value.message.message + (has(value.message.cause) && value.message.cause != null && value.message.cause != '' ? ' ' + string(value.message.cause) : '')
+    : (has(value.code) ? value.code : null))
+actions:
+  create_task:
+    label: Add a delivery task
+    description: "A task to deliver (or pick up) at an address, for a recipient, given to a team or driver, or to the nearest driver."
+    write: true
+    method: POST
+    path: /tasks
+    inputs:
+      - { name: address, label: "The address, in one line (such as 2829 Vallejo St, San Francisco, CA, USA)", required: true }
+      - { name: address_notes, label: "Notes for finding the place (a door code ...)" }
+      - { name: recipient_name, label: "The recipient's name" }
+      - { name: recipient_phone, label: "The recipient's phone" }
+      - { name: recipient_notes, label: Notes about the recipient }
+      - { name: notes, label: "The task's notes (what to deliver)" }
+      - { name: complete_after, label: "Not before (such as 2026-12-01T15:00:00Z)" }
+      - { name: complete_before, label: "Not after (such as 2026-12-01T17:00:00Z)" }
+      - { name: pickup, label: "A pickup, not a drop-off", kind: boolean }
+      - { name: team_id, label: "Give it to this team (its ID)" }
+      - { name: worker_id, label: "Give it to this driver (their ID)" }
+      - { name: auto_assign, label: "Give it to the nearest driver on duty", kind: boolean }
+      - { name: quantity, label: "How many units are dropped off", kind: number }
+      - { name: service_time, label: "Minutes spent on arrival", kind: number }
+    send:
+      destination:
+        address: { unparsed: "{{ input.address }}" }
+        notes: "{{ input.address_notes }}"
+      recipients: >-
+        {{ has(input.recipient_name) && input.recipient_name != null
+          ? [{'name': input.recipient_name, 'phone': has(input.recipient_phone) ? input.recipient_phone : null,
+              'notes': has(input.recipient_notes) ? input.recipient_notes : null}]
+          : null }}
+      notes: "{{ input.notes }}"
+      completeAfter: "{{ has(input.complete_after) && input.complete_after != null ? int(timestamp(input.complete_after)) * 1000 : null }}"
+      completeBefore: "{{ has(input.complete_before) && input.complete_before != null ? int(timestamp(input.complete_before)) * 1000 : null }}"
+      pickupTask: "{{ input.pickup }}"
+      container: >-
+        {{ has(input.worker_id) && input.worker_id != null ? {'type': 'WORKER', 'worker': input.worker_id}
+          : (has(input.team_id) && input.team_id != null ? {'type': 'TEAM', 'team': input.team_id} : null) }}
+      autoAssign: "{{ has(input.auto_assign) && input.auto_assign == true ? {'mode': 'distance'} : null }}"
+      quantity: "{{ input.quantity }}"
+      serviceTime: "{{ input.service_time }}"
+    output: &task
+      id: text
+      shortId: text
+      trackingURL: text
+      state: number
+      worker: text
+      notes: text
+      pickupTask: boolean
+      completeAfter: number
+      completeBefore: number
+      timeCreated: number
+      timeLastModified: number
+      container: record
+      recipients: list
+      destination: record
+      completionDetails: record
+      metadata: list
+  get_task:
+    label: Get a task
+    description: "One task: its state (0 waiting, 1 assigned, 2 under way, 3 done), driver, destination, recipient and how it ended."
+    method: GET
+    path: "/tasks/{{ input.task_id }}"
+    inputs:
+      - { name: task_id, label: "The task's ID", required: true }
+    output: *task
+  get_task_by_short_id:
+    label: Get a task by its short ID
+    description: "One task by the short ID shown in the dashboard and its tracking link."
+    method: GET
+    path: "/tasks/shortId/{{ input.short_id }}"
+    inputs:
+      - { name: short_id, label: "The task's short ID (such as 8f983639)", required: true }
+    output: *task
+  list_tasks:
+    label: List tasks
+    description: "Tasks made (or, for those done, completed) since a time, of some states or one driver; every page."
+    method: GET
+    path: /tasks/all
+    inputs:
+      - { name: from, label: "Since (such as 2026-11-01T00:00:00Z)", required: true }
+      - { name: to, label: "Until (now by default)" }
+      - { name: state, label: "Only these states, with commas: 0 waiting, 1 assigned, 2 under way, 3 done" }
+      - { name: worker_id, label: "Only this driver's (their ID)" }
+    query:
+      from: "{{ string(int(timestamp(input.from)) * 1000) }}"
+      to: "{{ has(input.to) && input.to != null ? string(int(timestamp(input.to)) * 1000) : null }}"
+      state: "{{ input.state }}"
+      worker: "{{ input.worker_id }}"
+    items: value.tasks
+    next: "has(value.lastId) && value.lastId != null ? {'lastId': value.lastId} : null"
+    output: *task
+  update_task:
+    label: Change a task
+    description: "A waiting or assigned task's notes, time window, or its team or driver (a task under way takes only notes)."
+    write: true
+    method: PUT
+    path: "/tasks/{{ input.task_id }}"
+    inputs:
+      - { name: task_id, label: "The task's ID", required: true }
+      - { name: notes, label: "The task's notes" }
+      - { name: complete_after, label: "Not before (such as 2026-12-01T15:00:00Z)" }
+      - { name: complete_before, label: "Not after" }
+      - { name: team_id, label: "Give it to this team (its ID)" }
+      - { name: worker_id, label: "Give it to this driver (their ID)" }
+    send:
+      notes: "{{ input.notes }}"
+      completeAfter: "{{ has(input.complete_after) && input.complete_after != null ? int(timestamp(input.complete_after)) * 1000 : null }}"
+      completeBefore: "{{ has(input.complete_before) && input.complete_before != null ? int(timestamp(input.complete_before)) * 1000 : null }}"
+      container: >-
+        {{ has(input.worker_id) && input.worker_id != null ? {'type': 'WORKER', 'worker': input.worker_id}
+          : (has(input.team_id) && input.team_id != null ? {'type': 'TEAM', 'team': input.team_id} : null) }}
+    output: *task
+  complete_task:
+    label: Mark a task done
+    description: "Completes a task under way from the office, as delivered or as failed, with a note."
+    write: true
+    method: POST
+    path: "/tasks/{{ input.task_id }}/complete"
+    inputs:
+      - { name: task_id, label: "The task's ID", required: true }
+      - { name: failed, label: "It failed (by default it succeeded)", kind: boolean }
+      - { name: notes, label: A note }
+    send:
+      completionDetails:
+        success: "{{ !(has(input.failed) && input.failed == true) }}"
+        notes: "{{ input.notes }}"
+    result: "{'completed': true}"
+    output: { completed: boolean }
+  clone_task:
+    label: Copy a task
+    description: "A new task with the details of another, its notes changed if given."
+    write: true
+    method: POST
+    path: "/tasks/{{ input.task_id }}/clone"
+    inputs:
+      - { name: task_id, label: "The task to copy (its ID)", required: true }
+      - { name: notes, label: "Other notes for the copy" }
+    send:
+      options:
+        includeMetadata: true
+        overrides: { notes: "{{ input.notes }}" }
+    output: *task
+  delete_task:
+    label: Delete a task
+    description: "Deletes a task that is not under way or done."
+    write: true
+    method: DELETE
+    path: "/tasks/{{ input.task_id }}"
+    inputs:
+      - { name: task_id, label: "The task's ID", required: true }
+    result: "{'deleted': true}"
+    output: { deleted: boolean }
+  list_workers:
+    label: List drivers
+    description: "The organization's drivers, or those of teams, states (0 off duty, 1 free, 2 on a task) or phones."
+    method: GET
+    path: /workers
+    inputs:
+      - { name: teams, label: "Only in these teams (their IDs, with commas)" }
+      - { name: states, label: "Only these, with commas: 0 off duty, 1 on duty and free, 2 on a task" }
+      - { name: phones, label: "Only these phones, with commas" }
+    query: { teams: "{{ input.teams }}", states: "{{ input.states }}", phones: "{{ input.phones }}" }
+    items: value
+    output: &worker
+      id: text
+      name: text
+      displayName: text
+      phone: text
+      onDuty: boolean
+      activeTask: text
+      tasks: list
+      teams: list
+      capacity: number
+      timeLastSeen: number
+      location: list
+      vehicle: record
+      accountStatus: text
+  get_worker:
+    label: Get a driver
+    description: "One driver: whether on duty, where, their tasks and vehicle."
+    method: GET
+    path: "/workers/{{ input.worker_id }}"
+    inputs:
+      - { name: worker_id, label: "The driver's ID", required: true }
+    output: *worker
+  list_teams:
+    label: List teams
+    description: "The organization's teams, with their drivers, managers and tasks."
+    method: GET
+    path: /teams
+    items: value
+    output: { id: text, name: text, workers: list, managers: list, hub: text, tasks: list, timeCreated: number }
+  create_recipient:
+    label: Add a recipient
+    description: "A person deliveries go to, known by their phone number, with notes and whether they get texts."
+    write: true
+    method: POST
+    path: /recipients
+    inputs:
+      - { name: name, label: Name, required: true }
+      - { name: phone, label: "Phone (with + and the country code, or a number of the organization's country)", required: true }
+      - { name: notes, label: "Notes about them (for every delivery)" }
+      - { name: skip_sms, label: "They asked for no text messages", kind: boolean }
+    send:
+      name: "{{ input.name }}"
+      phone: "{{ input.phone }}"
+      notes: "{{ input.notes }}"
+      skipSMSNotifications: "{{ input.skip_sms }}"
+    output: &recipient { id: text, name: text, phone: text, notes: text, skipSMSNotifications: boolean, timeCreated: number, metadata: list }
+  find_recipient:
+    label: Find a recipient
+    description: "A recipient by their exact phone number or name."
+    method: GET
+    path: "/recipients/{{ has(input.phone) && input.phone != null ? 'phone/' + input.phone : 'name/' + input.name }}"
+    inputs:
+      - { name: phone, label: "Their phone" }
+      - { name: name, label: "Or their whole name" }
+    output: *recipient
+  update_recipient:
+    label: Change a recipient
+    description: "A recipient's name, notes, or whether they get texts (their phone cannot change)."
+    write: true
+    method: PUT
+    path: "/recipients/{{ input.recipient_id }}"
+    inputs:
+      - { name: recipient_id, label: "The recipient's ID", required: true }
+      - { name: name, label: Name }
+      - { name: notes, label: Notes about them }
+      - { name: skip_sms, label: "They asked for no text messages", kind: boolean }
+    send:
+      name: "{{ input.name }}"
+      notes: "{{ input.notes }}"
+      skipSMSNotifications: "{{ input.skip_sms }}"
+    output: *recipient
+  get_organization:
+    label: "Get the organization's details"
+    description: "The organization's name, email, country and time zone."
+    method: GET
+    path: /organization
+    output: { id: text, name: text, email: text, country: text, timezone: text, delegatees: list }
+triggers:
+  new_task:
+    label: A new task
+    description: "Each task made, asked for every few minutes (what was made in the week before each poll)."
+    poll:
+      method: GET
+      path: /tasks/all
+      query: { from: "{{ string((int(timestamp(input.now)) - 604800) * 1000) }}" }
+      items: value.tasks
+      next: "has(value.lastId) && value.lastId != null ? {'lastId': value.lastId} : null"
+      id: item.id
+  task_done:
+    label: A task done
+    description: "Each task completed (delivered or failed), asked for every few minutes (what was completed in the week before each poll)."
+    poll:
+      method: GET
+      path: /tasks/all
+      query: { from: "{{ string((int(timestamp(input.now)) - 604800) * 1000) }}", state: "3" }
+      items: value.tasks
+      next: "has(value.lastId) && value.lastId != null ? {'lastId': value.lastId} : null"
+      id: item.id

@@ -1,0 +1,24 @@
+name: Open a GitHub issue for an error report
+description: >-
+  When your site or app reports an error over a webhook ({"message", "page", "count"}), open an issue in your GitHub
+  repository with what happened, labelled bug, so it is fixed rather than forgotten. Set the owner and repository to
+  your own.
+category: Engineering
+trigger:
+  webhook: {}
+# What a test runs on: an event as this trigger gives it.
+sample:
+  message: The checkout button does nothing
+  page: /checkout
+  count: 3
+steps:
+  - name: issue
+    github:
+      credential: repo
+      action: open_issue
+      owner: your-company
+      repo: website
+      title: "{{ value.message }} on {{ value.page }}"
+      body: "Reported {{ value.count }} times on {{ value.page }}."
+      labels: [bug]
+    retry: { attempts: 3, wait: 10s }

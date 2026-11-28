@@ -1,0 +1,52 @@
+description: A task in a project, given to someone, due on a day, with two tags
+action: create_task
+credential: { token: "2/1200000000000001/1209999999999999:0a1b2c3d4e5f" }
+input:
+  name: Send the March invoices
+  project: "1201000000000001"
+  notes: All clients on the retainer list.
+  assignee: ann@example.com
+  due_on: "2026-12-01"
+  tags: "1203000000000001, 1203000000000002"
+exchanges:
+  - sent:
+      method: POST
+      url: https://app.asana.com/api/1.0/tasks
+      headers: { authorization: "Bearer 2/1200000000000001/1209999999999999:0a1b2c3d4e5f" }
+      body:
+        data:
+          name: Send the March invoices
+          projects: ["1201000000000001"]
+          notes: All clients on the retainer list.
+          assignee: ann@example.com
+          due_on: "2026-12-01"
+          tags: ["1203000000000001", "1203000000000002"]
+    answer:
+      status: 201
+      body:
+        data:
+          gid: "1204000000000001"
+          resource_type: task
+          name: Send the March invoices
+          notes: All clients on the retainer list.
+          completed: false
+          due_on: "2026-12-01"
+          assignee: { gid: "1200000000000002", name: Ann Example, resource_type: user }
+          projects: [{ gid: "1201000000000001", name: Billing, resource_type: project }]
+          tags: [{ gid: "1203000000000001", name: Finance }, { gid: "1203000000000002", name: Monthly }]
+          created_at: "2026-11-27T09:00:00.000Z"
+          modified_at: "2026-11-27T09:00:00.000Z"
+          permalink_url: "https://app.asana.com/0/1201000000000001/1204000000000001"
+result:
+  gid: "1204000000000001"
+  resource_type: task
+  name: Send the March invoices
+  notes: All clients on the retainer list.
+  completed: false
+  due_on: "2026-12-01"
+  assignee: { gid: "1200000000000002", name: Ann Example, resource_type: user }
+  projects: [{ gid: "1201000000000001", name: Billing, resource_type: project }]
+  tags: [{ gid: "1203000000000001", name: Finance }, { gid: "1203000000000002", name: Monthly }]
+  created_at: "2026-11-27T09:00:00.000Z"
+  modified_at: "2026-11-27T09:00:00.000Z"
+  permalink_url: "https://app.asana.com/0/1201000000000001/1204000000000001"

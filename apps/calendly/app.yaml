@@ -12,6 +12,7 @@ sign_in:
     label: A personal access token
     fields:
       - { name: token, label: The personal access token, secret: true }
+      - { name: webhook_secret, label: "A webhook subscription's signing key, for one made elsewhere", secret: true, optional: true }
     headers:
       Authorization: "Bearer {{ credential.token }}"
 error: value.message
@@ -41,3 +42,33 @@ actions:
     query: { count: "100" }
     items: value.collection
     next: value.pagination.next_page
+triggers:
+  new_booking:
+    label: A new booking (or one cancelled)
+    description: >-
+      Each booking made with you (or cancelled), as Calendly sends it, signed. Turning the workflow on subscribes its
+      address to your bookings, and turning it off ends the subscription.
+    inputs:
+      - { name: events, label: "Which, separated by commas: invitee.created (a booking), invitee.canceled", description: "invitee.created when empty" }
+    webhook:
+      signature: { header: calendly-webhook-signature, pairs: { signature: v1, time: t }, signed: "{time}.{body}" }
+      secret: webhook_secret
+      id: "value.payload.uri + '#' + value.event"
+      only: "(input.events == null ? ['invitee.created'] : input.events.split(',').map(e, e.trim())).exists(e, e == value.event)"
+      event: "{'event': value.event, 'invitee': value.payload}"
+      register:
+        - { method: GET, path: /users/me }
+        - method: POST
+          path: /webhook_subscriptions
+          send:
+            url: "{{ input.address }}"
+            events: "{{ input.events == null ? ['invitee.created'] : input.events.split(',').map(e, e.trim()) }}"
+            organization: "{{ input.previous.resource.current_organization }}"
+            user: "{{ input.previous.resource.uri }}"
+            scope: user
+            signing_key: "{{ input.secret }}"
+      keep:
+        webhook_secret: input.secret
+        webhook_id: "value.resource.uri.split('/')[size(value.resource.uri.split('/')) - 1]"
+      unregister:
+        - { method: DELETE, path: "/webhook_subscriptions/{{ input.registered.webhook_id }}" }

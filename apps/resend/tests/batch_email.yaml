@@ -1,0 +1,12 @@
+# Made by `openduct app from-openapi`: Trigger up to 100 batch emails at once.
+description: "Trigger up to 100 batch emails at once, made from the API description's schemas"
+action: batch_email
+credential: { token: test-token }
+exchanges:
+  - sent:
+      method: POST
+      url: "https://api.resend.com/emails/batch"
+      query: {}
+      headers: { authorization: "Bearer test-token" }
+    answer: { status: 200, body: { data: [{ id: id_1 }] } }
+result: { data: [{ id: id_1 }] }

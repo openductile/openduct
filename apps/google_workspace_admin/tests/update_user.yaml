@@ -1,0 +1,8 @@
+description: A leaver suspended and moved; only what is given is sent
+action: update_user
+credential: { access_token: ya29.test }
+input: { user: bob@example.com, suspended: true, org_unit_path: /Leavers }
+exchanges:
+  - sent: { method: PATCH, url: https://admin.googleapis.com/admin/directory/v1/users/bob@example.com, body: { orgUnitPath: /Leavers, suspended: true } }
+    answer: { body: { id: "100000000000000000002", primaryEmail: bob@example.com, suspended: true, orgUnitPath: /Leavers } }
+result: { id: "100000000000000000002", primaryEmail: bob@example.com, suspended: true, orgUnitPath: /Leavers }

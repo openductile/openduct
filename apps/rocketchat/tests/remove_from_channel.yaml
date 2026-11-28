@@ -1,0 +1,7 @@
+action: remove_from_channel
+credential: { workspace: acme, user_id: uAbC123, token: rc_test_1 }
+input: { room_id: rSupp1, user_id: uBob9 }
+exchanges:
+  - sent: { method: POST, url: https://acme.rocket.chat/api/v1/channels.kick, body: { roomId: rSupp1, userId: uBob9 } }
+    answer: { body: { channel: { _id: rSupp1, name: support }, success: true } }
+result: { _id: rSupp1, name: support }

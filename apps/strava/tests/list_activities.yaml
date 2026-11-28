@@ -1,0 +1,13 @@
+description: Activities after a time; a page of fewer than 200 is the last
+action: list_activities
+credential: { access_token: st_test_1 }
+input: { after: 1795651200 }
+exchanges:
+  - sent: { method: GET, url: https://www.strava.com/api/v3/athlete/activities, query: { after: "1795651200", per_page: "200" } }
+    answer:
+      body:
+        - { id: 99001, name: Morning Run, sport_type: Run, start_date: "2026-11-27T07:30:00Z", distance: 8012.4, moving_time: 2580, kudos_count: 4 }
+        - { id: 99000, name: Evening Ride, sport_type: Ride, start_date: "2026-11-26T17:10:00Z", distance: 30120.0, moving_time: 4020, kudos_count: 2 }
+result:
+  - { id: 99001, name: Morning Run, sport_type: Run, start_date: "2026-11-27T07:30:00Z", distance: 8012.4, moving_time: 2580, kudos_count: 4 }
+  - { id: 99000, name: Evening Ride, sport_type: Ride, start_date: "2026-11-26T17:10:00Z", distance: 30120.0, moving_time: 4020, kudos_count: 2 }

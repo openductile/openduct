@@ -1,0 +1,74 @@
+description: "A task's comments: a full page of 25, then those older than its last, by the last one's date and id"
+action: list_task_comments
+credential: { api_key: pk_1_TEST }
+input: { task_id: 86a1b2c3d }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://api.clickup.com/api/v2/task/86a1b2c3d/comment"
+      query: {}
+    answer:
+      status: 200
+      body:
+        comments:
+          - { id: "9025", comment_text: Note 25, date: "1764235000025" }
+          - { id: "9024", comment_text: Note 24, date: "1764235000024" }
+          - { id: "9023", comment_text: Note 23, date: "1764235000023" }
+          - { id: "9022", comment_text: Note 22, date: "1764235000022" }
+          - { id: "9021", comment_text: Note 21, date: "1764235000021" }
+          - { id: "9020", comment_text: Note 20, date: "1764235000020" }
+          - { id: "9019", comment_text: Note 19, date: "1764235000019" }
+          - { id: "9018", comment_text: Note 18, date: "1764235000018" }
+          - { id: "9017", comment_text: Note 17, date: "1764235000017" }
+          - { id: "9016", comment_text: Note 16, date: "1764235000016" }
+          - { id: "9015", comment_text: Note 15, date: "1764235000015" }
+          - { id: "9014", comment_text: Note 14, date: "1764235000014" }
+          - { id: "9013", comment_text: Note 13, date: "1764235000013" }
+          - { id: "9012", comment_text: Note 12, date: "1764235000012" }
+          - { id: "9011", comment_text: Note 11, date: "1764235000011" }
+          - { id: "9010", comment_text: Note 10, date: "1764235000010" }
+          - { id: "9009", comment_text: Note 9, date: "1764235000009" }
+          - { id: "9008", comment_text: Note 8, date: "1764235000008" }
+          - { id: "9007", comment_text: Note 7, date: "1764235000007" }
+          - { id: "9006", comment_text: Note 6, date: "1764235000006" }
+          - { id: "9005", comment_text: Note 5, date: "1764235000005" }
+          - { id: "9004", comment_text: Note 4, date: "1764235000004" }
+          - { id: "9003", comment_text: Note 3, date: "1764235000003" }
+          - { id: "9002", comment_text: Note 2, date: "1764235000002" }
+          - { id: "9001", comment_text: Note 1, date: "1764235000001" }
+  - sent:
+      method: GET
+      url: "https://api.clickup.com/api/v2/task/86a1b2c3d/comment"
+      query: { start: "1764235000001", start_id: "9001" }
+    answer:
+      status: 200
+      body:
+        comments:
+          - { id: "9000", comment_text: The first note, date: "1764235000000" }
+result:
+  - { id: "9025", comment_text: Note 25, date: "1764235000025" }
+  - { id: "9024", comment_text: Note 24, date: "1764235000024" }
+  - { id: "9023", comment_text: Note 23, date: "1764235000023" }
+  - { id: "9022", comment_text: Note 22, date: "1764235000022" }
+  - { id: "9021", comment_text: Note 21, date: "1764235000021" }
+  - { id: "9020", comment_text: Note 20, date: "1764235000020" }
+  - { id: "9019", comment_text: Note 19, date: "1764235000019" }
+  - { id: "9018", comment_text: Note 18, date: "1764235000018" }
+  - { id: "9017", comment_text: Note 17, date: "1764235000017" }
+  - { id: "9016", comment_text: Note 16, date: "1764235000016" }
+  - { id: "9015", comment_text: Note 15, date: "1764235000015" }
+  - { id: "9014", comment_text: Note 14, date: "1764235000014" }
+  - { id: "9013", comment_text: Note 13, date: "1764235000013" }
+  - { id: "9012", comment_text: Note 12, date: "1764235000012" }
+  - { id: "9011", comment_text: Note 11, date: "1764235000011" }
+  - { id: "9010", comment_text: Note 10, date: "1764235000010" }
+  - { id: "9009", comment_text: Note 9, date: "1764235000009" }
+  - { id: "9008", comment_text: Note 8, date: "1764235000008" }
+  - { id: "9007", comment_text: Note 7, date: "1764235000007" }
+  - { id: "9006", comment_text: Note 6, date: "1764235000006" }
+  - { id: "9005", comment_text: Note 5, date: "1764235000005" }
+  - { id: "9004", comment_text: Note 4, date: "1764235000004" }
+  - { id: "9003", comment_text: Note 3, date: "1764235000003" }
+  - { id: "9002", comment_text: Note 2, date: "1764235000002" }
+  - { id: "9001", comment_text: Note 1, date: "1764235000001" }
+  - { id: "9000", comment_text: The first note, date: "1764235000000" }

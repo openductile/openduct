@@ -1,0 +1,31 @@
+description: A translation with both texts in Latin letters
+action: transliterate
+credential:
+  api_key: test-key
+input:
+  text: Good morning
+  from: en_GB
+  to: ru_RU
+exchanges:
+- sent:
+    method: POST
+    url: https://api-b2b.backenster.com/b1/api/v3/translate
+    headers:
+      authorization: test-key
+    body:
+      platform: api
+      from: en_GB
+      to: ru_RU
+      data: Good morning
+      enableTransliteration: true
+  answer:
+    status: 200
+    body:
+      err: null
+      result: Доброе утро
+      sourceTransliteration: Good morning
+      targetTransliteration: Dobroye utro
+result:
+  text: Доброе утро
+  source_transliteration: Good morning
+  target_transliteration: Dobroye utro

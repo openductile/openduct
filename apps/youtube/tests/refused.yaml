@@ -1,0 +1,6 @@
+action: update_video
+credential: { access_token: ya29.a0 }
+input: { video_id: v1, title: New title, category_id: "999" }
+exchanges:
+  - answer: { status: 400, body: { error: { code: 400, message: "The request metadata specifies an invalid video category.", errors: [{ reason: invalidCategoryId }] } } }
+error: "YouTube answered 400: The request metadata specifies an invalid video category."

@@ -1,0 +1,11 @@
+description: A room joined by its address - the address's # is sent encoded
+action: join_room
+credential: { homeserver: "https://matrix.example.org", token: syt_test_token }
+input: { room: "#support:example.org" }
+exchanges:
+  - sent:
+      method: POST
+      url: "https://matrix.example.org/_matrix/client/v3/join/%23support:example.org"
+      body: {}
+    answer: { status: 200, body: { room_id: "!abc123:example.org" } }
+result: { room_id: "!abc123:example.org" }

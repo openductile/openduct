@@ -1,0 +1,7 @@
+action: remove_from_library
+credential: { access_token: BQ-test-token }
+input: { uris: "spotify:track:0TestTrack000000000001" }
+exchanges:
+  - sent: { method: DELETE, url: https://api.spotify.com/v1/me/library, query: { uris: "spotify:track:0TestTrack000000000001" } }
+    answer: { status: 200 }
+result: { removed: true }

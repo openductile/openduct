@@ -1,0 +1,17 @@
+description: Two coins' prices in two currencies, with the change over 24 hours
+action: get_price
+credential: { api_key: CG-test1 }
+input: { ids: "bitcoin,ethereum", vs_currencies: "usd,eur", include_24hr_change: true }
+exchanges:
+  - sent:
+      method: GET
+      url: https://api.coingecko.com/api/v3/simple/price
+      query: { ids: "bitcoin,ethereum", vs_currencies: "usd,eur", include_24hr_change: "true" }
+      headers: { x-cg-demo-api-key: CG-test1 }
+    answer:
+      body:
+        bitcoin: { usd: 76975, usd_24h_change: -1.41, eur: 71020, eur_24h_change: -1.38 }
+        ethereum: { usd: 2950.5, usd_24h_change: 0.82, eur: 2722.1, eur_24h_change: 0.85 }
+result:
+  bitcoin: { usd: 76975, usd_24h_change: -1.41, eur: 71020, eur_24h_change: -1.38 }
+  ethereum: { usd: 2950.5, usd_24h_change: 0.82, eur: 2722.1, eur_24h_change: 0.85 }

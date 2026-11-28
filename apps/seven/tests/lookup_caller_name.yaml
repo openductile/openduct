@@ -1,0 +1,13 @@
+# Made by `openduct app from-openapi`: Lookup Caller Name.
+description: "Lookup Caller Name, made from the API description's schemas"
+action: lookup_caller_name
+credential: { api_key: test-key }
+input: { number: example }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://gateway.seven.io/api/lookup/cnam"
+      query: { number: example }
+      headers: { x-api-key: test-key }
+    answer: { status: 200, body: { code: 1, success: "true", name: example, number: example } }
+result: { code: 1, success: "true", name: example, number: example }

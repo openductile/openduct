@@ -1,0 +1,11 @@
+description: A record of a table by its sys_id
+action: get_record
+credential: { instance: acme, username: integration.user, password: pw-test-1 }
+input: { table: sys_user, sys_id: 6816f79cc0a8016401c5a33be04be441, fields: "user_name,email" }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://acme.service-now.com/api/now/table/sys_user/6816f79cc0a8016401c5a33be04be441"
+      query: { sysparm_fields: "user_name,email", sysparm_exclude_reference_link: "true" }
+    answer: { status: 200, body: { result: { user_name: ann.example, email: ann@example.com } } }
+result: { user_name: ann.example, email: ann@example.com }

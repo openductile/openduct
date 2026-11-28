@@ -1,0 +1,12 @@
+description: Turning the workflow on subscribes its address to every public team's issues, with a secret of its own
+trigger: event
+register: true
+workflow: wf1
+address: https://studio.example/hooks/h1
+credential: { api_key: lin_api_test1 }
+exchanges:
+  - sent:
+      method: POST
+      url: https://api.linear.app/graphql
+      headers: { authorization: lin_api_test1 }
+    answer: { body: { data: { webhookCreate: { success: true, webhook: { id: wh-test-1, enabled: true } } } } }

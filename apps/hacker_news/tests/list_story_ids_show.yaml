@@ -1,0 +1,9 @@
+description: The Show HN list
+action: list_story_ids
+credential: {}
+input: { list: show }
+exchanges:
+  - sent:
+      url: "https://hacker-news.firebaseio.com/v0/showstories.json"
+    answer: { status: 200, body: [46100001] }
+result: [46100001]

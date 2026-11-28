@@ -1,0 +1,11 @@
+description: "An unsubscribe removed"
+action: delete_unsubscribe
+credential: {"api_key": "key-test", "domain": "mg.example.com"}
+input: {"address": "yan@example.com"}
+exchanges:
+  - sent:
+      method: DELETE
+      url: "https://api.mailgun.net/v3/mg.example.com/unsubscribes/yan@example.com"
+      headers: {"authorization": "Basic YXBpOmtleS10ZXN0"}
+    answer: {"status": 200, "body": {"message": "Unsubscribe event has been removed", "address": "yan@example.com"}}
+result: {"message": "Unsubscribe event has been removed", "address": "yan@example.com"}

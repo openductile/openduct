@@ -1,0 +1,7 @@
+description: "An article that does not exist: the step fails in Wikipedia's words"
+action: get_article
+credential: { contact: ops@example.com }
+input: { title: No_such_article_example }
+exchanges:
+  - answer: { status: 404, body: { messageTranslations: { en: The specified page (No_such_article_example) does not exist }, httpCode: 404, httpReason: Not Found, errorKey: rest-nonexistent-title } }
+error: "Wikipedia answered 404: The specified page (No_such_article_example) does not exist"

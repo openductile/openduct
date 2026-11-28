@@ -1,0 +1,6 @@
+description: A key Ghost does not take, in its words
+action: list_posts
+credential: { site: acme, content_key: wrong }
+exchanges:
+  - answer: { status: 401, body: { errors: [{ message: Unknown Content API Key, errorType: UnauthorizedError }] } }
+error: "Ghost answered 401: Unknown Content API Key"

@@ -1,0 +1,18 @@
+description: "Usage by day over a week"
+action: analytics_by_date
+credential: { api_key: test-key }
+input: { start: "2026-11-20", end: "2026-11-26" }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://gateway.seven.io/api/analytics/date"
+      query: { start: "2026-11-20", end: "2026-11-26" }
+      headers: { x-api-key: test-key }
+    answer:
+      status: 200
+      body:
+        - { sms: 12, rcs: 0, voice: 1, hlr: 0, mnp: 0, inbound: 3, usage_eur: 0.95, date: "2026-11-25" }
+        - { sms: 8, rcs: 0, voice: 0, hlr: 2, mnp: 0, inbound: 1, usage_eur: 0.62, date: "2026-11-26" }
+result:
+  - { sms: 12, rcs: 0, voice: 1, hlr: 0, mnp: 0, inbound: 3, usage_eur: 0.95, date: "2026-11-25" }
+  - { sms: 8, rcs: 0, voice: 0, hlr: 2, mnp: 0, inbound: 1, usage_eur: 0.62, date: "2026-11-26" }

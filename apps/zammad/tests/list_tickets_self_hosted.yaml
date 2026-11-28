@@ -1,0 +1,13 @@
+description: Your own Zammad's address, from the credential
+action: list_tickets
+sign_in: zammad_self_hosted
+credential: { url: "https://support.example.com", token: zm_test_2 }
+input: { expand: true }
+exchanges:
+  - sent:
+      method: GET
+      url: https://support.example.com/api/v1/tickets
+      query: { expand: "true", per_page: "100" }
+      headers: { authorization: Token token=zm_test_2 }
+    answer: { body: [{ id: 41, number: "31041", title: Where is my order?, state: open, group: Users, owner: agent@example.com }] }
+result: [{ id: 41, number: "31041", title: Where is my order?, state: open, group: Users, owner: agent@example.com }]

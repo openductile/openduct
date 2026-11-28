@@ -1,0 +1,75 @@
+description: "List people"
+action: list_persons
+credential: { api_key: test-key }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://api.pipedrive.com/api/v2/persons"
+      query: { limit: "100" }
+      headers: { x-api-token: test-key }
+    answer:
+      status: 200
+      body:
+        success: true
+        data:
+          - id: 1
+            name: example
+            first_name: example
+            last_name: example
+            owner_id: 1
+            org_id: 1
+            add_time: example
+            update_time: example
+            emails: [{ value: example, primary: true, label: example }]
+            phones: [{ value: example, primary: true, label: example }]
+            is_deleted: true
+            visible_to: 1
+        additional_data: { next_cursor: token_2 }
+  - sent:
+      method: GET
+      url: "https://api.pipedrive.com/api/v2/persons"
+      query: { limit: "100", cursor: token_2 }
+      headers: { x-api-token: test-key }
+    answer:
+      status: 200
+      body:
+        success: true
+        data:
+          - id: id_2
+            name: example
+            first_name: example
+            last_name: example
+            owner_id: 1
+            org_id: 1
+            add_time: example
+            update_time: example
+            emails: [{ value: example, primary: true, label: example }]
+            phones: [{ value: example, primary: true, label: example }]
+            is_deleted: true
+            visible_to: 1
+        additional_data: { next_cursor: null }
+result:
+  - id: 1
+    name: example
+    first_name: example
+    last_name: example
+    owner_id: 1
+    org_id: 1
+    add_time: example
+    update_time: example
+    emails: [{ value: example, primary: true, label: example }]
+    phones: [{ value: example, primary: true, label: example }]
+    is_deleted: true
+    visible_to: 1
+  - id: id_2
+    name: example
+    first_name: example
+    last_name: example
+    owner_id: 1
+    org_id: 1
+    add_time: example
+    update_time: example
+    emails: [{ value: example, primary: true, label: example }]
+    phones: [{ value: example, primary: true, label: example }]
+    is_deleted: true
+    visible_to: 1

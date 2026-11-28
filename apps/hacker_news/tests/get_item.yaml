@@ -1,0 +1,12 @@
+description: A story looked up by its id
+action: get_item
+credential: {}
+input: { id: 46100001 }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://hacker-news.firebaseio.com/v0/item/46100001.json"
+    answer:
+      status: 200
+      body: { id: 46100001, type: story, by: ann_example, time: 1795600000, title: "Show HN: A plant watering timer", url: "https://plants.example/timer", score: 120, descendants: 2, kids: [46100002, 46100003] }
+result: { id: 46100001, type: story, by: ann_example, time: 1795600000, title: "Show HN: A plant watering timer", url: "https://plants.example/timer", score: 120, descendants: 2, kids: [46100002, 46100003] }

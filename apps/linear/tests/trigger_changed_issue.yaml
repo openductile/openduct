@@ -1,0 +1,8 @@
+description: An issue seen before whose updatedAt moved on runs again
+trigger: changed_issue
+credential: { api_key: lin_api_test1 }
+seen: { cursor: null, items: [["0b1e6a52-0000-4000-8000-000000000002", "x"]] }
+exchanges:
+  - sent: { url: https://api.linear.app/graphql }
+    answer: { body: { data: { issues: { nodes: [{ id: 0b1e6a52-0000-4000-8000-000000000002, identifier: ENG-102, title: Typo on the pricing page, priority: 4, priorityLabel: Low, url: "https://linear.app/example/issue/ENG-102", updatedAt: "2026-11-27T10:00:00.000Z", team: { id: tm-1, key: ENG } }], pageInfo: { hasNextPage: false } } } } }
+runs: [{ id: 0b1e6a52-0000-4000-8000-000000000002, identifier: ENG-102, title: Typo on the pricing page, priority: 4, priorityLabel: Low, url: "https://linear.app/example/issue/ENG-102", updatedAt: "2026-11-27T10:00:00.000Z", team: { id: tm-1, key: ENG } }]

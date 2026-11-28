@@ -1,0 +1,51 @@
+description: Items found by the email in a column
+action: find_items
+credential:
+  token: monday-test-token
+input:
+  board_id: '1234567890'
+  column_id: email
+  values: ann@example.com
+exchanges:
+- sent:
+    body:
+      query: 'query ($board: ID!, $columns: [ItemsPageByColumnValuesQuery!]) { items_page_by_column_values(board_id: $board,
+        columns: $columns, limit: 500) { cursor items { id name state created_at updated_at url creator_id group { id title
+        } board { id name } column_values { id type text value } } } }'
+      variables:
+        board: '1234567890'
+        columns:
+        - column_id: email
+          column_values:
+          - ann@example.com
+  answer:
+    body:
+      data:
+        items_page_by_column_values:
+          cursor: null
+          items:
+          - &id001
+            id: '9876543210'
+            name: Order 1042
+            state: active
+            created_at: '2026-11-27T09:00:00Z'
+            updated_at: '2026-11-27T09:00:00Z'
+            url: https://example-co.monday.com/boards/1234567890/pulses/9876543210
+            creator_id: '55500001'
+            group:
+              id: topics
+              title: New orders
+            board:
+              id: '1234567890'
+              name: Orders
+            column_values:
+            - id: status
+              type: status
+              text: Working on it
+              value: '{"index":0}'
+            - id: date4
+              type: date
+              text: '2026-12-01'
+              value: '{"date":"2026-12-01"}'
+result:
+- *id001

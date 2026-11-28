@@ -1,0 +1,13 @@
+# Made by `openduct app from-openapi`: Update a single email.
+description: "Update a single email, made from the API description's schemas"
+action: update_email
+credential: { token: test-token }
+input: { email_id: email_1 }
+exchanges:
+  - sent:
+      method: PATCH
+      url: "https://api.resend.com/emails/email_1"
+      query: {}
+      headers: { authorization: "Bearer test-token" }
+    answer: { status: 200, body: { scheduled_at: example } }
+result: { scheduled_at: example }

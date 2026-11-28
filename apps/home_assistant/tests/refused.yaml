@@ -1,0 +1,7 @@
+description: An entity the installation does not have - 404
+action: get_state
+credential: { url: "http://home.example:8123", token: ha-test-token }
+input: { entity_id: sensor.not_there }
+exchanges:
+  - answer: { status: 404, body: { message: Entity not found. } }
+error: "Home Assistant answered 404: Entity not found."

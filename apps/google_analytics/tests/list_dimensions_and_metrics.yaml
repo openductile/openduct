@@ -1,0 +1,19 @@
+action: list_dimensions_and_metrics
+credential: { access_token: ya29.a0 }
+input: { property_id: "123456789" }
+exchanges:
+  - sent: { method: GET, url: "https://analyticsdata.googleapis.com/v1beta/properties/123456789/metadata" }
+    answer:
+      body:
+        name: properties/123456789/metadata
+        dimensions:
+          - { apiName: country, uiName: Country, description: The country from which the user activity originated., category: Geography }
+          - { apiName: "customEvent:plan", uiName: Plan, description: An event scoped custom dimension., category: Custom, customDefinition: true }
+        metrics:
+          - { apiName: sessions, uiName: Sessions, description: The number of sessions that began on your site or app., type: TYPE_INTEGER, category: Session }
+result:
+  dimensions:
+    - { name: country, label: Country, group: Geography, custom: false }
+    - { name: "customEvent:plan", label: Plan, group: Custom, custom: true }
+  metrics:
+    - { name: sessions, label: Sessions, group: Session, type: TYPE_INTEGER, custom: false }

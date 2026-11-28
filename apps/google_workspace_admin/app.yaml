@@ -1,0 +1,365 @@
+# Copyright 2026 Ductile AI, Inc
+# SPDX-License-Identifier: Apache-2.0
+#
+# Written from Google's own description of the Admin SDK Directory API (its discovery document,
+# https://admin.googleapis.com/$discovery/rest?version=directory_v1, revision 20261117, fetched 2026-11-27).
+app: google_workspace_admin
+name: Google Workspace Admin
+category: it_admin
+description: The people, groups and organisational units of a Google Workspace account, as its admin manages them.
+docs: https://developers.google.com/workspace/admin/directory/reference/rest
+hosts: [admin.googleapis.com]
+base_url: https://admin.googleapis.com/admin/directory/v1
+sign_in:
+  - id: google_workspace_admin
+    label: Sign in with Google (a Workspace admin)
+    oauth2:
+      authorize: https://accounts.google.com/o/oauth2/v2/auth
+      token: https://oauth2.googleapis.com/token
+      scopes:
+        - https://www.googleapis.com/auth/admin.directory.user
+        - https://www.googleapis.com/auth/admin.directory.group
+        - https://www.googleapis.com/auth/admin.directory.group.member
+        - https://www.googleapis.com/auth/admin.directory.orgunit
+        - https://www.googleapis.com/auth/admin.directory.user.security
+        - https://www.googleapis.com/auth/admin.directory.domain.readonly
+      extra: { access_type: offline, prompt: consent }
+    headers:
+      Authorization: "Bearer {{ credential.access_token }}"
+error: value.error.message
+actions:
+  list_users:
+    label: Find people
+    description: >-
+      The account's people (all its domains, or one), matching a search if given (such as name:Ann*,
+      orgUnitPath=/Sales, isSuspended=false); every page up to the most.
+    method: GET
+    path: /users
+    inputs:
+      - { name: query, label: "Only those matching this search (such as email:ann*, orgUnitPath=/Sales, isSuspended=true)" }
+      - { name: domain, label: "Only of this domain (all the account's when empty)" }
+      - { name: order_by, label: "In order of email, givenName or familyName" }
+      - { name: show_deleted, label: "The people deleted in the last 20 days instead", kind: boolean }
+    query:
+      customer: "{{ has(input.domain) && input.domain != null ? '' : 'my_customer' }}"
+      domain: "{{ input.domain }}"
+      query: "{{ input.query }}"
+      orderBy: "{{ input.order_by }}"
+      showDeleted: "{{ input.show_deleted }}"
+      maxResults: "500"
+    items: value.users
+    next: "has(value.nextPageToken) ? {'pageToken': value.nextPageToken} : null"
+    output: &user
+      id: text
+      primaryEmail: text
+      name: record
+      isAdmin: boolean
+      isDelegatedAdmin: boolean
+      suspended: boolean
+      archived: boolean
+      orgUnitPath: text
+      lastLoginTime: text
+      creationTime: text
+      isEnrolledIn2Sv: boolean
+      aliases: list
+      recoveryEmail: text
+      changePasswordAtNextLogin: boolean
+  get_user:
+    label: Get a person
+    description: One person's account, by email address, alias or id.
+    method: GET
+    path: "/users/{{ input.user }}"
+    inputs:
+      - { name: user, label: "Their email address (or id)", required: true }
+      - { name: projection, label: "basic (the default), custom or full: with custom fields" }
+    query: { projection: "{{ input.projection }}" }
+    output: *user
+  create_user:
+    label: Add a person
+    description: Makes a new account (a mailbox, a calendar, Drive) for someone joining, with a first password.
+    write: true
+    method: POST
+    path: /users
+    inputs:
+      - { name: primary_email, label: "Their email address (on one of the account's domains)", required: true }
+      - { name: given_name, label: First name, required: true }
+      - { name: family_name, label: Last name, required: true }
+      - { name: password, label: "A first password (8 to 100 characters)", required: true }
+      - { name: change_password_at_next_login, label: "Ask for a new password at the first sign-in", kind: boolean }
+      - { name: org_unit_path, label: "In this organisational unit (such as /Sales; / by default)" }
+      - { name: recovery_email, label: "A recovery email address" }
+      - { name: recovery_phone, label: "A recovery phone number (such as +15555550100)" }
+    send:
+      primaryEmail: "{{ input.primary_email }}"
+      name: { givenName: "{{ input.given_name }}", familyName: "{{ input.family_name }}" }
+      password: "{{ input.password }}"
+      changePasswordAtNextLogin: "{{ input.change_password_at_next_login }}"
+      orgUnitPath: "{{ input.org_unit_path }}"
+      recoveryEmail: "{{ input.recovery_email }}"
+      recoveryPhone: "{{ input.recovery_phone }}"
+    output: *user
+  update_user:
+    label: Change a person
+    description: >-
+      Their name, organisational unit, recovery details or password; suspends or restores them; or renames the
+      address (the old one stays as an alias).
+    write: true
+    method: PATCH
+    path: "/users/{{ input.user }}"
+    inputs:
+      - { name: user, label: "Their email address (or id)", required: true }
+      - { name: given_name, label: First name }
+      - { name: family_name, label: Last name }
+      - { name: org_unit_path, label: "Move to this organisational unit (such as /Sales)" }
+      - { name: suspended, label: "Suspended (true) or restored (false)", kind: boolean }
+      - { name: primary_email, label: "A new email address" }
+      - { name: password, label: "A new password" }
+      - { name: change_password_at_next_login, label: "Ask for a new password at the next sign-in", kind: boolean }
+      - { name: recovery_email, label: "A recovery email address" }
+      - { name: recovery_phone, label: "A recovery phone number" }
+    send:
+      name: { givenName: "{{ input.given_name }}", familyName: "{{ input.family_name }}" }
+      orgUnitPath: "{{ input.org_unit_path }}"
+      suspended: "{{ input.suspended }}"
+      primaryEmail: "{{ input.primary_email }}"
+      password: "{{ input.password }}"
+      changePasswordAtNextLogin: "{{ input.change_password_at_next_login }}"
+      recoveryEmail: "{{ input.recovery_email }}"
+      recoveryPhone: "{{ input.recovery_phone }}"
+    output: *user
+  delete_user:
+    label: Remove a person
+    description: Deletes the account; for 20 days it can be restored (Restore a person), then it is gone with its data.
+    write: true
+    method: DELETE
+    path: "/users/{{ input.user }}"
+    inputs:
+      - { name: user, label: "Their email address (or id)", required: true }
+    result: "{'deleted': status < 300}"
+    output: { deleted: boolean }
+  undelete_user:
+    label: Restore a person
+    description: Brings back an account deleted in the last 20 days (by its id, from Find people with the deleted shown).
+    write: true
+    method: POST
+    path: "/users/{{ input.id }}/undelete"
+    inputs:
+      - { name: id, label: "The deleted person's id", required: true }
+      - { name: org_unit_path, label: "Into this organisational unit (/ by default)" }
+    send: { orgUnitPath: "{{ has(input.org_unit_path) && input.org_unit_path != null ? input.org_unit_path : '/' }}" }
+    result: "{'restored': status < 300}"
+    output: { restored: boolean }
+  make_admin:
+    label: Make a person a super admin (or not)
+    description: "Makes a person a super admin of the account, or takes it away."
+    write: true
+    method: POST
+    path: "/users/{{ input.user }}/makeAdmin"
+    inputs:
+      - { name: user, label: "Their email address (or id)", required: true }
+      - { name: status, label: "Super admin (true) or not (false)", required: true, kind: boolean }
+    send: { status: "{{ input.status }}" }
+    result: "{'changed': status < 300}"
+    output: { changed: boolean }
+  sign_out_user:
+    label: Sign a person out everywhere
+    description: Ends their sessions on every browser and device (a lost phone, a leaver); they must sign in again.
+    write: true
+    method: POST
+    path: "/users/{{ input.user }}/signOut"
+    inputs:
+      - { name: user, label: "Their email address (or id)", required: true }
+    body: none
+    result: "{'signed_out': status < 300}"
+    output: { signed_out: boolean }
+  add_user_alias:
+    label: Give a person another address
+    description: An alias, another address on the account's domains whose mail reaches them.
+    write: true
+    method: POST
+    path: "/users/{{ input.user }}/aliases"
+    inputs:
+      - { name: user, label: "Their email address (or id)", required: true }
+      - { name: alias, label: "The other address (such as sales@example.com)", required: true }
+    send: { alias: "{{ input.alias }}" }
+    output: { id: text, primaryEmail: text, alias: text }
+  list_groups:
+    label: List groups
+    description: The account's groups (or one person's, or one domain's), matching a search if given; every page.
+    method: GET
+    path: /groups
+    inputs:
+      - { name: user, label: "Only the groups this person is in (their email address)" }
+      - { name: domain, label: "Only of this domain" }
+      - { name: query, label: "Only those matching this search (such as email:sales*)" }
+    query:
+      customer: "{{ (has(input.domain) && input.domain != null) || (has(input.user) && input.user != null) ? '' : 'my_customer' }}"
+      userKey: "{{ input.user }}"
+      domain: "{{ input.domain }}"
+      query: "{{ input.query }}"
+      maxResults: "200"
+    items: value.groups
+    next: "has(value.nextPageToken) ? {'pageToken': value.nextPageToken} : null"
+    output: &group { id: text, email: text, name: text, description: text, directMembersCount: text, adminCreated: boolean, aliases: list }
+  get_group:
+    label: Get a group
+    description: "One group: its address, name, description and how many members it has."
+    method: GET
+    path: "/groups/{{ input.group }}"
+    inputs:
+      - { name: group, label: "The group's email address (or id)", required: true }
+    output: *group
+  create_group:
+    label: Make a group
+    description: A group with its own address (such as sales@), whose mail reaches its members.
+    write: true
+    method: POST
+    path: /groups
+    inputs:
+      - { name: email, label: "Its address", required: true }
+      - { name: name, label: Its name }
+      - { name: description, label: "What it is for" }
+    send: { email: "{{ input.email }}", name: "{{ input.name }}", description: "{{ input.description }}" }
+    output: *group
+  update_group:
+    label: Change a group
+    description: "A group's name, description or address."
+    write: true
+    method: PATCH
+    path: "/groups/{{ input.group }}"
+    inputs:
+      - { name: group, label: "The group's email address (or id)", required: true }
+      - { name: name, label: Its name }
+      - { name: description, label: "What it is for" }
+      - { name: email, label: "A new address" }
+    send: { name: "{{ input.name }}", description: "{{ input.description }}", email: "{{ input.email }}" }
+    output: *group
+  delete_group:
+    label: Remove a group
+    description: "Deletes a group and its address; its members keep their own accounts."
+    write: true
+    method: DELETE
+    path: "/groups/{{ input.group }}"
+    inputs:
+      - { name: group, label: "The group's email address (or id)", required: true }
+    result: "{'deleted': status < 300}"
+    output: { deleted: boolean }
+  list_members:
+    label: A group's members
+    description: "The people and groups in a group, with their roles; every page."
+    method: GET
+    path: "/groups/{{ input.group }}/members"
+    inputs:
+      - { name: group, label: "The group's email address (or id)", required: true }
+      - { name: roles, label: "Only of these roles (separated by commas: OWNER, MANAGER, MEMBER)" }
+      - { name: include_derived_membership, label: "With the members of groups inside it", kind: boolean }
+    query: { roles: "{{ input.roles }}", includeDerivedMembership: "{{ input.include_derived_membership }}", maxResults: "200" }
+    items: value.members
+    next: "has(value.nextPageToken) ? {'pageToken': value.nextPageToken} : null"
+    output: &member { id: text, email: text, role: text, type: text, status: text, delivery_settings: text }
+  add_member:
+    label: Add someone to a group
+    description: "Adds a person, a group, or an outside address to a group, as member, manager or owner."
+    write: true
+    method: POST
+    path: "/groups/{{ input.group }}/members"
+    inputs:
+      - { name: group, label: "The group's email address (or id)", required: true }
+      - { name: email, label: "Their email address (a person, a group, or someone outside)", required: true }
+      - { name: role, label: "MEMBER (the default), MANAGER or OWNER" }
+    send: { email: "{{ input.email }}", role: "{{ has(input.role) && input.role != null ? input.role : 'MEMBER' }}" }
+    output: *member
+  update_member:
+    label: Change a member's role
+    description: "Makes a member a manager or an owner of the group, or a plain member again."
+    write: true
+    method: PATCH
+    path: "/groups/{{ input.group }}/members/{{ input.member }}"
+    inputs:
+      - { name: group, label: "The group's email address (or id)", required: true }
+      - { name: member, label: "The member's email address (or id)", required: true }
+      - { name: role, label: "MEMBER, MANAGER or OWNER", required: true }
+    send: { role: "{{ input.role }}" }
+    output: *member
+  remove_member:
+    label: Take someone out of a group
+    description: "Takes a person or group out of a group."
+    write: true
+    method: DELETE
+    path: "/groups/{{ input.group }}/members/{{ input.member }}"
+    inputs:
+      - { name: group, label: "The group's email address (or id)", required: true }
+      - { name: member, label: "The member's email address (or id)", required: true }
+    result: "{'removed': status < 300}"
+    output: { removed: boolean }
+  is_member:
+    label: Is someone in a group
+    description: Whether a person (or group) is in a group, directly or through a group inside it.
+    method: GET
+    path: "/groups/{{ input.group }}/hasMember/{{ input.member }}"
+    inputs:
+      - { name: group, label: "The group's email address (or id)", required: true }
+      - { name: member, label: "Their email address (or id)", required: true }
+    output: { isMember: boolean }
+  list_org_units:
+    label: List organisational units
+    description: The account's organisational units (each with its own settings), all of them or those under one.
+    method: GET
+    path: /customer/my_customer/orgunits
+    inputs:
+      - { name: org_unit_path, label: "Only under this unit (such as /Sales)" }
+      - { name: type, label: "all (the default), children, or allIncludingParent" }
+    query: { orgUnitPath: "{{ input.org_unit_path }}", type: "{{ has(input.type) && input.type != null ? input.type : 'all' }}" }
+    items: value.organizationUnits
+    output: &orgunit { orgUnitId: text, name: text, orgUnitPath: text, parentOrgUnitPath: text, description: text, blockInheritance: boolean }
+  create_org_unit:
+    label: Make an organisational unit
+    description: "A new organisational unit, to give a set of people settings of their own."
+    write: true
+    method: POST
+    path: /customer/my_customer/orgunits
+    inputs:
+      - { name: name, label: Name, required: true }
+      - { name: parent_org_unit_path, label: "Under this unit (such as /; / by default)" }
+      - { name: description, label: "What it is for" }
+    send:
+      name: "{{ input.name }}"
+      parentOrgUnitPath: "{{ has(input.parent_org_unit_path) && input.parent_org_unit_path != null ? input.parent_org_unit_path : '/' }}"
+      description: "{{ input.description }}"
+    output: *orgunit
+  list_domains:
+    label: List domains
+    description: The account's domains, which is the primary, and which are verified.
+    method: GET
+    path: /customer/my_customer/domains
+    items: value.domains
+    output: { domainName: text, isPrimary: boolean, verified: boolean, creationTime: text, domainAliases: list }
+triggers:
+  new_user:
+    label: A person added
+    description: Each new account in the Workspace, asked for every few minutes (for an account of up to 5,000 people).
+    inputs:
+      - { name: domain, label: "Only of this domain" }
+    poll:
+      method: GET
+      path: /users
+      query:
+        customer: "{{ input.domain == null ? 'my_customer' : '' }}"
+        domain: "{{ input.domain }}"
+        maxResults: "500"
+      items: value.users
+      next: "has(value.nextPageToken) ? {'pageToken': value.nextPageToken} : null"
+      id: item.id
+      every: 15m
+  new_group_member:
+    label: Someone joined a group
+    description: Each new member of a group, asked for every few minutes.
+    inputs:
+      - { name: group, label: "The group's email address", required: true }
+    poll:
+      method: GET
+      path: "/groups/{{ input.group }}/members"
+      query: { maxResults: "200" }
+      items: value.members
+      next: "has(value.nextPageToken) ? {'pageToken': value.nextPageToken} : null"
+      id: item.id

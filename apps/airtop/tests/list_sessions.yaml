@@ -1,0 +1,63 @@
+description: "List browser sessions"
+action: list_sessions
+credential: { token: test-token }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://api.airtop.ai/api/v1/sessions"
+      query: {}
+      headers: { authorization: "Bearer test-token" }
+    answer:
+      status: 200
+      body:
+        data:
+          pagination:
+            currentLimit: 1
+            currentPage: 1
+            finalCount: 1
+            hasMore: true
+            initialCount: 1
+            nextOffset: 1
+            numberOfPages: 1
+            totalItems: 1
+          sessions:
+            - cdpUrl: example
+              cdpWsUrl: example
+              chromedriverUrl: example
+              configuration: {}
+              currentUsage: 1
+              dateCreated: "2026-01-15T09:30:00Z"
+              id: "00000000-0000-4000-8000-000000000001"
+              lastActivity: "2026-01-15T09:30:00Z"
+              profileId: profile_1
+              status: example
+              viceUrl: example
+        errors: [{ code: example, details: {}, message: example, reason: example }]
+        meta: { requestId: request_1 }
+        warnings: [{ code: example, details: {}, message: example, reason: example }]
+result:
+  data:
+    pagination:
+      currentLimit: 1
+      currentPage: 1
+      finalCount: 1
+      hasMore: true
+      initialCount: 1
+      nextOffset: 1
+      numberOfPages: 1
+      totalItems: 1
+    sessions:
+      - cdpUrl: example
+        cdpWsUrl: example
+        chromedriverUrl: example
+        configuration: {}
+        currentUsage: 1
+        dateCreated: "2026-01-15T09:30:00Z"
+        id: "00000000-0000-4000-8000-000000000001"
+        lastActivity: "2026-01-15T09:30:00Z"
+        profileId: profile_1
+        status: example
+        viceUrl: example
+  errors: [{ code: example, details: {}, message: example, reason: example }]
+  meta: { requestId: request_1 }
+  warnings: [{ code: example, details: {}, message: example, reason: example }]

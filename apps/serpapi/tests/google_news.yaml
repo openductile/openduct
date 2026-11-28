@@ -1,0 +1,16 @@
+description: News about a subject, the newest first
+action: google_news
+credential: { api_key: serp_test_key_1 }
+input: { q: coffee prices, newest_first: true }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://serpapi.com/search"
+      query: { api_key: serp_test_key_1, engine: google_news, q: coffee prices, so: "1" }
+    answer:
+      status: 200
+      body:
+        news_results:
+          - { position: 1, title: Coffee prices rise again, link: "https://news.example/coffee", source: { name: Example News, authors: [Ann Example] }, date: "11/27/2026, 08:00 AM, +0000 UTC", iso_date: "2026-11-27T08:00:00Z" }
+result:
+  - { position: 1, title: Coffee prices rise again, link: "https://news.example/coffee", source: { name: Example News, authors: [Ann Example] }, date: "11/27/2026, 08:00 AM, +0000 UTC", iso_date: "2026-11-27T08:00:00Z" }

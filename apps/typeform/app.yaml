@@ -12,6 +12,7 @@ sign_in:
     label: A personal access token
     fields:
       - { name: token, label: The personal access token, secret: true }
+      - { name: webhook_secret, label: "A webhook's secret, for one added in Typeform by hand", secret: true, optional: true }
     headers:
       Authorization: "Bearer {{ credential.token }}"
 error: value.description
@@ -34,3 +35,24 @@ actions:
     items: value.items
     # Newest first; the next page is those given before the last one here.
     next: "size(value.items) < 1000 ? null : {'before': value.items[size(value.items) - 1].token}"
+triggers:
+  new_answer:
+    label: A form answered
+    description: >-
+      Each answer given to the form, as Typeform sends it, signed. Turning the workflow on adds a webhook to the form,
+      and turning it off deletes it.
+    inputs:
+      - { name: form_id, label: "The form's id (in its address)", required: true }
+    webhook:
+      signature: { header: typeform-signature, prefix: "sha256=", encoding: base64 }
+      secret: webhook_secret
+      id: value.event_id
+      only: "value.event_type == 'form_response'"
+      event: value.form_response
+      register:
+        - method: PUT
+          path: "/forms/{{ input.form_id }}/webhooks/openduct-{{ input.workflow }}"
+          send: { url: "{{ input.address }}", enabled: true, secret: "{{ input.secret }}", verify_ssl: true }
+      keep: { webhook_secret: input.secret }
+      unregister:
+        - { method: DELETE, path: "/forms/{{ input.form_id }}/webhooks/openduct-{{ input.workflow }}" }

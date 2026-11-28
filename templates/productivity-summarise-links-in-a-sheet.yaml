@@ -1,0 +1,84 @@
+name: Summarise every link in a sheet
+description: >-
+  For anyone collecting articles, competitors' pages or reading for later in a Google Sheet: put the links in column A
+  of a Links sheet (and a note of your own in B, if you like), press Run, and each page is fetched, read as text and
+  summed up by a model in two sentences, with a topic of a word or two - written beside it in columns C and D. Rows that
+  already have a summary are left as they are, so run it again whenever you add links. Needs: a Google Sheets sign-in
+  called sheets, and an AI credential called model.
+category: Productivity
+trigger: manual
+# What a test runs on: what the run is given (nothing: the settings are in the first step).
+sample: {}
+steps:
+  - name: settings
+    set:
+      # Change this to your own spreadsheet.
+      spreadsheet: "'your-spreadsheet-id'"
+  - name: links
+    google_sheets:
+      credential: sheets
+      action: read_rows
+      spreadsheet_id: "{{ steps.settings.spreadsheet }}"
+      range: Links!A2:D
+    retry: { attempts: 3, wait: 10s }
+  - name: each_link
+    for_each:
+      items: steps.links
+      steps:
+        - name: to_do
+          if:
+            # A link with no summary yet beside it.
+            when: size(item) > 0 && string(item[0]).trim() != '' && (size(item) < 3 || string(item[2]).trim() == '')
+            then:
+              - name: page
+                http:
+                  method: GET
+                  url: "{{ string(item[0]).trim() }}"
+                  headers: { Accept: "text/html" }
+                  response: file
+                  timeout: 20s
+                  fail_on_status: true
+                  sample: |-
+                    <html><head><title>Five ways to cut delivery costs</title></head><body>
+                    <p>Batching orders by postcode cut our courier bill by a fifth.</p>
+                    <p>Smaller boxes meant lower dimensional weight charges.</p></body></html>
+                retry: { attempts: 2, wait: 5s }
+                on_error: continue
+              - name: readable
+                if:
+                  when: has(steps.page.body)
+                  then:
+                    - name: text
+                      extract_file: { file: steps.page.body, format: html }
+                    - name: gist
+                      ai:
+                        credential: model
+                        system: >-
+                          You sum up a web page for someone deciding whether to read it: two plain sentences, and its
+                          topic in one or two words. Answer as JSON.
+                        prompt: "{{ steps.text.title }}\n\n{{ steps.text.text.substring(0, math.least(size(steps.text.text), 20000)) }}"
+                        schema:
+                          type: object
+                          properties:
+                            summary: { type: string }
+                            topic: { type: string }
+                          required: [summary, topic]
+                        max_tokens: 250
+                    - name: write
+                      google_sheets:
+                        credential: sheets
+                        action: set_rows
+                        spreadsheet_id: "{{ steps.settings.spreadsheet }}"
+                        # The row the link is on: the first link is on row 2.
+                        range: "Links!C{{ index + 2 }}:D{{ index + 2 }}"
+                        rows: "[[has(steps.gist.json) ? steps.gist.json.summary : '', has(steps.gist.json) ? steps.gist.json.topic : '']]"
+                      retry: { attempts: 3, wait: 10s }
+                  else:
+                    - name: note
+                      google_sheets:
+                        credential: sheets
+                        action: set_rows
+                        spreadsheet_id: "{{ steps.settings.spreadsheet }}"
+                        range: "Links!C{{ index + 2 }}:D{{ index + 2 }}"
+                        rows: "[['(the page could not be read)', '']]"
+                      retry: { attempts: 3, wait: 10s }

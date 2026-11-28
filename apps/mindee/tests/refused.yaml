@@ -1,0 +1,6 @@
+description: A key Mindee does not take, in its words
+action: list_models
+credential: { api_key: wrong }
+exchanges:
+  - answer: { status: 401, body: { status: 401, title: Unauthorized, detail: "Invalid API key provided.", code: 401-001 } }
+error: "Mindee answered 401: Invalid API key provided."

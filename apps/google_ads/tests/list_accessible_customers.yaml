@@ -1,0 +1,11 @@
+description: The accounts the signed-in person reaches, with the developer token in its header
+action: list_accessible_customers
+credential: { access_token: ya29.test }
+input: { developer_token: devtok-test }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://googleads.googleapis.com/v26/customers:listAccessibleCustomers"
+      headers: { authorization: Bearer ya29.test, developer-token: devtok-test }
+    answer: { status: 200, body: { resourceNames: [customers/1234567890, customers/9876543210] } }
+result: { resourceNames: [customers/1234567890, customers/9876543210] }

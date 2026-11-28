@@ -1,0 +1,27 @@
+description: Who the token acts as
+action: get_me
+credential: {access_token: hv-test-token, account_id: '100200'}
+exchanges:
+- sent:
+    method: GET
+    url: https://api.harvestapp.com/v2/users/me
+    headers: {authorization: Bearer hv-test-token, harvest-account-id: '100200', user-agent: 'OpenDuct (https://github.com/openductile/openduct)'}
+    query: {}
+  answer:
+    status: 200
+    body: &id001
+      id: 1782959
+      first_name: Dana
+      last_name: Example
+      email: dana@shop.example
+      timezone: Eastern Time (US & Canada)
+      is_contractor: false
+      is_active: true
+      weekly_capacity: 126000
+      default_hourly_rate: 100.0
+      cost_rate: 50.0
+      roles: [Design]
+      access_roles: [administrator]
+      created_at: '2026-01-05T09:00:00Z'
+      updated_at: '2026-11-01T09:00:00Z'
+result: *id001

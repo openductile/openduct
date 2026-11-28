@@ -1,0 +1,111 @@
+# Made by `openduct app from-openapi`: List members.
+description: "List members, made from the API description's schemas"
+action: list_members
+credential: { token: test-token }
+input: { organization_id_or_slug: example }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://us.sentry.io/api/0/organizations/example/members/"
+      query: {}
+      headers: { authorization: "Bearer test-token" }
+    answer:
+      status: 200
+      body:
+        - externalUsers:
+            - externalId: external_1
+              userId: user_1
+              teamId: team_1
+              id: id_1
+              provider: example
+              externalName: example
+              integrationId: integration_1
+          id: id_1
+          email: "ann@example.com"
+          name: example
+          user:
+            identities:
+              - id: id_1
+                name: example
+                organization: {}
+                provider: {}
+                dateVerified: "2026-01-15T09:30:00Z"
+                dateSynced: "2026-01-15T09:30:00Z"
+            avatar: { avatarType: letter_avatar, avatarUuid: avatar_uuid_1, avatarUrl: example }
+            authenticators:
+              - id: id_1
+                type: example
+                name: example
+                dateCreated: "2026-01-15T09:30:00Z"
+                dateUsed: "2026-01-15T09:30:00Z"
+            canReset2fa: true
+            id: id_1
+            name: example
+            username: example
+            email: "ann@example.com"
+            avatarUrl: example
+            isActive: true
+            isSuspended: true
+            hasPasswordAuth: true
+          orgRole: example
+          pending: true
+          expired: true
+          flags:
+            "idp:provisioned": true
+            "idp:role-restricted": true
+            "sso:linked": true
+            "sso:invalid": true
+            "member-limit:restricted": true
+            "partnership:restricted": true
+          dateCreated: "2026-01-15T09:30:00Z"
+          inviteStatus: approved
+          inviterName: example
+result:
+  - externalUsers:
+      - externalId: external_1
+        userId: user_1
+        teamId: team_1
+        id: id_1
+        provider: example
+        externalName: example
+        integrationId: integration_1
+    id: id_1
+    email: "ann@example.com"
+    name: example
+    user:
+      identities:
+        - id: id_1
+          name: example
+          organization: {}
+          provider: {}
+          dateVerified: "2026-01-15T09:30:00Z"
+          dateSynced: "2026-01-15T09:30:00Z"
+      avatar: { avatarType: letter_avatar, avatarUuid: avatar_uuid_1, avatarUrl: example }
+      authenticators:
+        - id: id_1
+          type: example
+          name: example
+          dateCreated: "2026-01-15T09:30:00Z"
+          dateUsed: "2026-01-15T09:30:00Z"
+      canReset2fa: true
+      id: id_1
+      name: example
+      username: example
+      email: "ann@example.com"
+      avatarUrl: example
+      isActive: true
+      isSuspended: true
+      hasPasswordAuth: true
+    orgRole: example
+    pending: true
+    expired: true
+    flags:
+      "idp:provisioned": true
+      "idp:role-restricted": true
+      "sso:linked": true
+      "sso:invalid": true
+      "member-limit:restricted": true
+      "partnership:restricted": true
+    dateCreated: "2026-01-15T09:30:00Z"
+    inviteStatus: approved
+    inviterName: example

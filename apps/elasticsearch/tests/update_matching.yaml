@@ -1,0 +1,35 @@
+description: Shipped orders marked archived by a script
+action: update_matching
+credential: {url: 'https://search.example.com:9200', api_key: VnVhQ2ZHY0JDZGJrUW0tZTVhT3g6dWkybHAyYXhUTm1zeWFrdzl0dk5udw==}
+input:
+  index: orders
+  q: status:shipped
+  script: {source: ctx._source.status = 'archived'}
+exchanges:
+- sent:
+    method: POST
+    url: https://search.example.com:9200/orders/_update_by_query
+    query: {q: 'status:shipped'}
+    headers: {authorization: ApiKey VnVhQ2ZHY0JDZGJrUW0tZTVhT3g6dWkybHAyYXhUTm1zeWFrdzl0dk5udw==}
+    body:
+      script: {source: ctx._source.status = 'archived'}
+  answer:
+    status: 200
+    body:
+      took: 41
+      timed_out: false
+      total: 2
+      batches: 1
+      version_conflicts: 0
+      noops: 0
+      failures: &id001 []
+      updated: 2
+result:
+  took: 41
+  timed_out: false
+  total: 2
+  batches: 1
+  version_conflicts: 0
+  noops: 0
+  failures: *id001
+  updated: 2

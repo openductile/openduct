@@ -1,0 +1,6 @@
+action: list_authors
+credential: { site: acme, content_key: 22444f78447824223cefc48aaa }
+exchanges:
+  - sent: { method: GET, url: https://acme.ghost.io/ghost/api/content/authors/, query: { key: 22444f78447824223cefc48aaa, limit: "100" } }
+    answer: { body: { authors: [{ id: 6744a1b2c3d4e5f600000040, name: Ann Lee, slug: ann }], meta: { pagination: { page: 1, limit: 100, pages: 1, total: 1, next: null, prev: null } } } }
+result: [{ id: 6744a1b2c3d4e5f600000040, name: Ann Lee, slug: ann }]

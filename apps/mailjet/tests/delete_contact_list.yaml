@@ -1,0 +1,17 @@
+description: A list deleted
+action: delete_contact_list
+credential:
+  api_key: test-key
+  secret_key: test-secret
+input:
+  list_id: '55'
+exchanges:
+- sent:
+    method: DELETE
+    url: https://api.mailjet.com/v3/REST/contactslist/55
+    headers:
+      authorization: Basic dGVzdC1rZXk6dGVzdC1zZWNyZXQ=
+  answer:
+    status: 204
+result:
+  deleted: true

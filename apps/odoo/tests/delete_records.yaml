@@ -1,0 +1,10 @@
+description: A record removed
+action: delete_records
+credential: { address: "https://mycompany.example.com", api_key: 6578616d706c65206b6579 }
+input: { model: res.partner, ids: "26" }
+exchanges:
+  - sent:
+      url: https://mycompany.example.com/json/2/res.partner/unlink
+      body: { ids: [26] }
+    answer: { body: true }
+result: { deleted: true }

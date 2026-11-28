@@ -1,0 +1,7 @@
+action: classify_document
+credential: { api_key: md_test_1 }
+input: { model_id: 3e5a7c9b-0000-4000-8000-0000000000c2, url: "https://files.example.com/scan-7.pdf" }
+exchanges:
+  - sent: { method: POST, url: https://api-v2.mindee.net/v2/products/classification/enqueue, body: { model_id: 3e5a7c9b-0000-4000-8000-0000000000c2, url: "https://files.example.com/scan-7.pdf" } }
+    answer: { status: 202, body: { job: { id: 3d9a5e4f-0000-4000-8000-0000000000b3, status: Processing } } }
+result: { id: 3d9a5e4f-0000-4000-8000-0000000000b3, status: Processing }

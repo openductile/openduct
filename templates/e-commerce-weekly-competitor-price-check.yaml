@@ -1,0 +1,97 @@
+name: A weekly check of competitors' prices
+description: >-
+  Every Monday at 7:00 Berlin time, read the price of each competitor product you watch from its shop's public product
+  data (stores on Shopify publish it at the product's address with .json added), keep each price in a Google Sheet,
+  and e-mail you a table: their price against yours, the gap, and what changed since last week. List the products in
+  the first step. Needs: Google Sheets (sheets) and your own mail server (mail).
+category: E-commerce
+trigger:
+  schedule: { every: week, on: [monday], at: "07:00", timezone: Europe/Berlin }
+# What a test runs on: an event as this trigger gives it.
+sample:
+  scheduled_at: '2026-11-30T06:00:00Z'
+steps:
+  - name: watch
+    set:
+      # Each product of yours, your price, and the competitor's product page.
+      list: >-
+        [{'ours': 'Canvas tote, green', 'price': 32.0, 'url': 'https://shop.competitor-one.example/products/canvas-tote'},
+         {'ours': 'Canvas tote, green', 'price': 32.0, 'url': 'https://www.competitor-two.example/products/everyday-tote-forest'},
+         {'ours': 'Wool cap', 'price': 24.0, 'url': 'https://shop.competitor-one.example/products/merino-beanie'}]
+  - name: theirs
+    for_each:
+      items: steps.watch.list
+      steps:
+        - name: page
+          http:
+            url: "{{ item.url }}.json"
+            headers: { Accept: application/json }
+            # A product gone from their shop is not a failure: it shows as gone.
+            fail_on_status: false
+            sample:
+              product:
+                title: Everyday Tote
+                vendor: Competitor One
+                variants:
+                  - { title: Forest, price: "29.00", compare_at_price: "34.00", available: true }
+          retry: { attempts: 3, wait: 20s }
+  # Last week's prices: the sheet's rows are day, product, url, their price, our price.
+  - name: before
+    google_sheets:
+      action: read_rows
+      credential: sheets
+      spreadsheet_id: your-sheet-id
+      range: Prices!A:E
+    retry: { attempts: 3, wait: 30s }
+  - name: compare
+    javascript: |
+      // The last price seen for each address, from the sheet (its rows: day, product, url, theirs, ours).
+      const last = {};
+      for (const r of (steps.before || []).slice(1)) {
+        if (r.length >= 4 && !isNaN(parseFloat(r[3]))) last[r[2]] = parseFloat(r[3]);
+      }
+      const day = value.scheduled_at.slice(0, 10);
+      const money = n => (n == null ? "-" : n.toFixed(2));
+      const lines = steps.watch.list.map((w, i) => {
+        const body = (steps.theirs[i] || {}).page || {};
+        const p = body.status < 300 && body.body && body.body.product ? body.body.product : null;
+        // The lowest price of a variant still for sale, in the shop's own currency.
+        const prices = p ? (p.variants || []).filter(v => v.available !== false).map(v => parseFloat(v.price)).filter(n => !isNaN(n)) : [];
+        const theirs = prices.length ? Math.min(...prices) : null;
+        const was = last[w.url] != null ? last[w.url] : null;
+        return {
+          ours: w.ours, url: w.url, title: p ? p.title : "(gone from their shop)",
+          theirs, mine: w.price, gap: theirs == null ? null : Math.round((theirs - w.price) * 100) / 100,
+          changed: theirs != null && was != null && theirs !== was, was,
+        };
+      });
+      const esc = s => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;");
+      const rows = lines.map(l => `<tr><td>${esc(l.ours)}</td><td><a href="${esc(l.url)}">${esc(l.title)}</a></td>` +
+        `<td>${money(l.theirs)}</td><td>${money(l.mine)}</td><td>${l.gap == null ? "-" : (l.gap > 0 ? "+" : "") + money(l.gap)}</td>` +
+        `<td>${l.changed ? "was " + money(l.was) : ""}</td></tr>`).join("");
+      const html = `<p>Competitors' prices on ${day}. A gap below zero means they are cheaper.</p>` +
+        `<table border="1" cellpadding="4" cellspacing="0"><tr><th>Ours</th><th>Theirs</th><th>Their price</th>` +
+        `<th>Our price</th><th>Gap</th><th>Since last week</th></tr>${rows}</table>`;
+      return {
+        day, html, changed: lines.filter(l => l.changed).length,
+        cheaper: lines.filter(l => l.gap != null && l.gap < 0).length,
+        rows: lines.map(l => [day, l.ours, l.url, l.theirs == null ? "" : l.theirs, l.mine]),
+      };
+  - name: keep
+    for_each:
+      items: steps.compare.rows
+      steps:
+        - name: row
+          google_sheets:
+            action: add_row
+            credential: sheets
+            spreadsheet_id: your-sheet-id
+            sheet: Prices
+            values: "{{ item }}"
+          retry: { attempts: 3, wait: 30s }
+  - name: send
+    email:
+      credential: mail
+      to: owner@example.com
+      subject: "Competitors' prices: {{ steps.compare.cheaper }} cheaper than us, {{ steps.compare.changed }} changed"
+      html: "{{ steps.compare.html }}"

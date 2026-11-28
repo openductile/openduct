@@ -1,0 +1,12 @@
+description: A public thread started in a channel, not under a message
+action: start_thread
+sign_in: discord_bot
+credential: { bot_token: test-bot-token }
+input: { channel_id: "910000000000000001", name: "Returns this week" }
+exchanges:
+  - sent:
+      method: POST
+      url: https://discord.com/api/v10/channels/910000000000000001/threads
+      body: { name: "Returns this week", type: 11 }
+    answer: { status: 201, body: { id: "960000000000000002", name: "Returns this week", parent_id: "910000000000000001", type: 11 } }
+result: { id: "960000000000000002", name: "Returns this week", parent_id: "910000000000000001", type: 11 }

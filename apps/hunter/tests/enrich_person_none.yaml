@@ -1,0 +1,7 @@
+description: Nobody known behind an address - Hunter answers 404
+action: enrich_person
+credential: { api_key: hunter-test-key }
+input: { email: nobody@example.com }
+exchanges:
+  - answer: { status: 404, body: { errors: [{ id: not_found, code: 404, details: "No person was found for this email" }] } }
+error: "Hunter answered 404: No person was found for this email"

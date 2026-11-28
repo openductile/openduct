@@ -2,7 +2,7 @@ name: Tell Teams when a service is down
 description: >-
   When your monitoring sends a status change over a webhook ({"service", "status", "message"}), post the outages to
   a Microsoft Teams channel, and keep every change in the status topic.
-category: Monitoring
+category: Engineering
 trigger:
   webhook: {}
 # What a test runs on: an event as this trigger gives it.

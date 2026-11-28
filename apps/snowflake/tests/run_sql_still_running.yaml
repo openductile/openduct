@@ -1,0 +1,27 @@
+description: A long statement run in the background - Snowflake answers 202 with its handle and no rows yet
+action: run_sql
+credential: { account: exampleorg-example1, token: pat-test-1 }
+input: { statement: "select count(*) from events", run_in_background: true }
+exchanges:
+  - sent:
+      method: POST
+      url: https://exampleorg-example1.snowflakecomputing.com/api/v2/statements
+      query: { async: "true" }
+      body: { statement: "select count(*) from events" }
+    answer:
+      status: 202
+      body:
+        code: "333334"
+        sqlState: "00000"
+        message: Asynchronous execution in progress. Use provided query id to perform query monitoring and management.
+        statementHandle: 01b2c3d4-0000-4000-8000-000000000003
+        statementStatusUrl: /api/v2/statements/01b2c3d4-0000-4000-8000-000000000003
+result:
+  statement_handle: 01b2c3d4-0000-4000-8000-000000000003
+  code: "333334"
+  message: Asynchronous execution in progress. Use provided query id to perform query monitoring and management.
+  columns: []
+  rows: []
+  row_count: 0
+  partitions: 0
+  stats: null

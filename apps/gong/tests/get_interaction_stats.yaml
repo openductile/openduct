@@ -1,0 +1,28 @@
+description: How users talked on calls in November
+action: get_interaction_stats
+credential: {access_key: ann, access_key_secret: test-password, api_url: 'https://us-12345.api.gong.io/'}
+input: {from_date: '2026-11-01', to_date: '2026-12-01'}
+exchanges:
+- sent:
+    method: POST
+    url: https://us-12345.api.gong.io/v2/stats/interaction
+    headers: {authorization: Basic YW5uOnRlc3QtcGFzc3dvcmQ=}
+    body:
+      filter: {fromDate: '2026-11-01', toDate: '2026-12-01'}
+  answer:
+    status: 200
+    body:
+      requestId: 4al018gzaztcr8nbukw
+      records: {totalRecords: 1, currentPageSize: 1, currentPageNumber: 0}
+      peopleInteractionStats:
+      - &id001
+        userId: '234599484848423'
+        userEmailAddress: dana@shop.example
+        personInteractionStats:
+        - {name: Talk Ratio, value: 0.46}
+        - {name: Longest Monologue, value: 95}
+      fromDateTime: '2026-11-01T00:00:00-05:00'
+      toDateTime: '2026-12-01T00:00:00-05:00'
+      timeZone: America/New_York
+result:
+- *id001

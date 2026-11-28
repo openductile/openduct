@@ -1,0 +1,76 @@
+name: Each new pull request, summed up for reviewers in Slack
+description: >-
+  Point a GitHub repository's webhook (pull requests, as JSON) at this workflow's address, with its token added. When
+  a pull request is opened or marked ready for review, its changes are read through GitHub's API and a model writes
+  what it changes, why it may matter, and what a reviewer should look at first; the summary is posted to your team's
+  Slack channel with the link. Drafts wait until they are ready; a very large change is posted without a summary.
+  Needs: github (a bearer
+  credential: a fine-grained token that may read the repository's pull requests), model (an AI credential), slack.
+category: Engineering
+trigger:
+  # Left empty here: each workflow made from the template is given a token of its own (add it to the address).
+  webhook: { token: "" }
+# What a test runs on: an event as this trigger gives it.
+sample:
+  action: opened
+  number: 214
+  pull_request:
+    title: Round prices once, at checkout
+    html_url: https://github.com/your-company/shop/pull/214
+    draft: false
+    additions: 42
+    deletions: 17
+    changed_files: 3
+    user: { login: ana-dev }
+    body: Prices were rounded in two places, so some totals were a cent off.
+  repository:
+    full_name: your-company/shop
+steps:
+  - where: (value.action == 'opened' || value.action == 'ready_for_review') && value.pull_request.draft == false
+  - name: diff
+    http:
+      url: "https://api.github.com/repos/{{ value.repository.full_name }}/pulls/{{ value.number }}"
+      credential: github
+      headers:
+        Accept: application/vnd.github.diff
+        X-GitHub-Api-Version: "2022-11-28"
+      response: text
+      timeout: 30s
+      sample: |-
+        diff --git a/checkout/price.js b/checkout/price.js
+        --- a/checkout/price.js
+        +++ b/checkout/price.js
+        @@ -10,7 +10,6 @@ export function lineTotal(qty, price) {
+        -  return Math.round(qty * price * 100) / 100;
+        +  return qty * price;
+         }
+    retry: { attempts: 3, wait: 15s }
+  - name: size
+    set:
+      large: size(steps.diff.body) > 60000
+  - name: summary
+    if:
+      when: "!steps.size.large"
+      then:
+        - name: written
+          ai:
+            credential: model
+            system: >-
+              You help a team review code. From a pull request's description and its diff, write at most six short
+              lines for Slack: what it changes, why it may matter to users, and the one or two places a reviewer
+              should look at first (a file and what to check). No praise, no greeting.
+            prompt: >-
+              {{ value.pull_request.title }} by {{ value.pull_request.user.login }}:
+              {{ value.pull_request.body }}
+
+              The diff:
+              {{ steps.diff.body }}
+            max_tokens: 500
+  - name: post
+    slack:
+      credential: slack
+      channel: "#code-review"
+      text: |-
+        <{{ value.pull_request.html_url }}|#{{ value.number }} {{ value.pull_request.title }}> by {{ value.pull_request.user.login }} (+{{ value.pull_request.additions }} -{{ value.pull_request.deletions }}, {{ value.pull_request.changed_files }} files)
+        {{ steps.size.large ? 'Too large to sum up here: please read it in GitHub.' : steps.written.text }}
+    retry: { attempts: 3, wait: 10s }

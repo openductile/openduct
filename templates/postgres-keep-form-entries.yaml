@@ -3,7 +3,7 @@ description: >-
   When a form is sent over a webhook ({"name", "email", "message"}), keep it as a row of your database's
   form_entries table and e-mail your team. Make the table once: CREATE TABLE form_entries (id bigserial PRIMARY KEY,
   name text, email text, message text, at timestamptz DEFAULT now()).
-category: Databases
+category: Data
 trigger:
   webhook: {}
 # What a test runs on: an event as this trigger gives it.

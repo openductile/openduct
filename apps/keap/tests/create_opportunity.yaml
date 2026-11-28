@@ -1,0 +1,66 @@
+# Made by `openduct app from-openapi`: Create an opportunity.
+description: "Create an opportunity, made from the API description's schemas"
+action: create_opportunity
+credential: { access_token: test-access-token }
+input: { opportunity_title: example, contact_id: "1001", stage_id: "2" }
+exchanges:
+  - sent:
+      method: POST
+      url: "https://api.keap.com/crm/rest/v2/opportunities"
+      query: {}
+      headers: { authorization: "Bearer test-access-token" }
+      body: { opportunity_title: example, contact_id: "1001", stage_id: "2" }
+    answer:
+      status: 201
+      body:
+        id: 123
+        contact:
+          id: 1001
+          email: "ann@example.com"
+          city: Chandler
+          state: AZ
+          first_name: Ann
+          last_name: Example
+          company_name: example
+          job_title: example
+          phone_number: 5551234567
+        stage:
+          id: 1
+          name: Qualified
+          details: { probability: 50, stage_order: 2, target_num_days: 14, checklist_items: [{}] }
+          reasons: [example]
+        user: { id: 456, first_name: Dana, last_name: Example }
+        opportunity_title: example
+        next_action_time: "2024-03-20T10:00:00Z"
+        next_action_notes: example
+        opportunity_notes: example
+        estimated_close_time: "2024-04-15T00:00:00Z"
+        include_in_forecast: true
+        projected_revenue_low: 5000
+        projected_revenue_high: 10000
+result:
+  id: 123
+  contact:
+    id: 1001
+    email: "ann@example.com"
+    city: Chandler
+    state: AZ
+    first_name: Ann
+    last_name: Example
+    company_name: example
+    job_title: example
+    phone_number: 5551234567
+  stage:
+    id: 1
+    name: Qualified
+    details: { probability: 50, stage_order: 2, target_num_days: 14, checklist_items: [{}] }
+    reasons: [example]
+  user: { id: 456, first_name: Dana, last_name: Example }
+  opportunity_title: example
+  next_action_time: "2024-03-20T10:00:00Z"
+  next_action_notes: example
+  opportunity_notes: example
+  estimated_close_time: "2024-04-15T00:00:00Z"
+  include_in_forecast: true
+  projected_revenue_low: 5000
+  projected_revenue_high: 10000

@@ -228,9 +228,27 @@ pub(crate) fn run(script: &Script) -> Result<Answer, Failure> {
                 }
             },
         };
+        // data tables: what the script left in `state`, when it was given one.
+        let state = if script.names.contains_key(crate::STATE) {
+            match scope.globals.get_item_opt(crate::STATE, vm).ok().flatten() {
+                None => Some(Json::Null),
+                Some(object) => match serde_json::to_value(py_serde::PyObjectSerializer::new(vm, &object)) {
+                    Ok(json) => Some(json),
+                    Err(e) => {
+                        return Err(Failure {
+                            error: format!("state cannot be JSON: {e}"),
+                            logs: logs(vm, out),
+                        });
+                    }
+                },
+            }
+        } else {
+            None
+        };
         Ok(Answer {
             result: json,
             logs: logs(vm, out),
+            state,
         })
     })
 }

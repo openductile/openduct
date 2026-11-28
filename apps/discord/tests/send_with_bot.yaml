@@ -1,0 +1,13 @@
+description: The same message posted by a bot, to the channel given
+action: send
+sign_in: discord_bot
+credential: { bot_token: test-bot-token }
+input: { text: Shipped, channel_id: "910000000000000001" }
+exchanges:
+  - sent:
+      method: POST
+      url: https://discord.com/api/v10/channels/910000000000000001/messages
+      headers: { authorization: Bot test-bot-token }
+      body: { content: Shipped }
+    answer: { body: { id: "950000000000000001", channel_id: "910000000000000001", content: Shipped } }
+result: { sent: true, answer: { id: "950000000000000001", channel_id: "910000000000000001", content: Shipped } }

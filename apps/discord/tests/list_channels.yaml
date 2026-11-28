@@ -1,0 +1,16 @@
+description: A server's channels, Discord's whole list in one answer
+action: list_channels
+sign_in: discord_bot
+credential: { bot_token: test-bot-token }
+input: { guild_id: "900000000000000001" }
+exchanges:
+  - sent:
+      method: GET
+      url: https://discord.com/api/v10/guilds/900000000000000001/channels
+    answer:
+      body:
+        - { id: "910000000000000001", name: orders, type: 0, position: 1, parent_id: null }
+        - { id: "910000000000000002", name: support, type: 0, position: 2, parent_id: null }
+result:
+  - { id: "910000000000000001", name: orders, type: 0, position: 1, parent_id: null }
+  - { id: "910000000000000002", name: support, type: 0, position: 2, parent_id: null }

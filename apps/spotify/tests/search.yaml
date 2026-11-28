@@ -1,0 +1,12 @@
+description: Tracks by an artist, the kinds given with spaces sent without
+action: search
+credential: { access_token: BQ-test-token }
+input: { q: "artist:Example Band", type: "track, album", limit: 2 }
+exchanges:
+  - sent:
+      method: GET
+      url: https://api.spotify.com/v1/search
+      query: { q: "artist:Example Band", type: "track,album", limit: "2" }
+      headers: { authorization: Bearer BQ-test-token }
+    answer: { body: { tracks: { items: [{ id: 0TestTrack000000000001, name: Example Song, uri: "spotify:track:0TestTrack000000000001", duration_ms: 201000, explicit: false, popularity: 41, artists: [{ id: 0TestArtist00000000001, name: Example Band }], album: { id: 0TestAlbum000000000001, name: Example Album } }], next: null, total: 1 }, albums: { items: [], next: null, total: 0 } } }
+result: { tracks: { items: [{ id: 0TestTrack000000000001, name: Example Song, uri: "spotify:track:0TestTrack000000000001", duration_ms: 201000, explicit: false, popularity: 41, artists: [{ id: 0TestArtist00000000001, name: Example Band }], album: { id: 0TestAlbum000000000001, name: Example Album } }], next: null, total: 1 }, albums: { items: [], next: null, total: 0 } }

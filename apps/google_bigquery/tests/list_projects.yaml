@@ -1,0 +1,6 @@
+action: list_projects
+credential: { access_token: ya29.bq-test }
+exchanges:
+  - sent: { method: GET, url: https://bigquery.googleapis.com/bigquery/v2/projects, query: { maxResults: "50" } }
+    answer: { body: { kind: bigquery#projectList, projects: [{ id: example-shop-1, numericId: "1000000000001", projectReference: { projectId: example-shop-1 }, friendlyName: Example Shop }], totalItems: 1 } }
+result: [{ id: example-shop-1, name: Example Shop }]

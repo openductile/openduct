@@ -1,0 +1,26 @@
+description: A comment on an alert
+action: comment_on_alert
+credential:
+  url: https://thehive.example.com
+  api_key: test-key
+input:
+  alert_id: ~4096
+  message: Sender blocked.
+exchanges:
+- sent:
+    method: POST
+    url: https://thehive.example.com/api/v1/alert/~4096/comment
+    headers:
+      authorization: Bearer test-key
+    body:
+      message: Sender blocked.
+  answer:
+    status: 201
+    body: &id001
+      _id: ~24576
+      _type: Comment
+      createdBy: analyst@example.com
+      createdAt: 1795161700000
+      message: Sender blocked.
+      isEdited: false
+result: *id001

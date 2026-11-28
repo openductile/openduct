@@ -1,0 +1,11 @@
+description: A video started from an animation template
+action: create_animation
+credential: { api_key: bb_ak_v5_test }
+input: { template: atpl_V1, objects: [{ name: title, text: Winter sale }] }
+exchanges:
+  - sent:
+      method: POST
+      url: "https://api.bannerbear.com/v5/animations"
+      body: { template: atpl_V1, modifications: { objects: [{ name: title, text: Winter sale }] } }
+    answer: { status: 202, body: { uid: ani_3, status: pending, template: atpl_V1, files: {}, progress: 0 } }
+result: { uid: ani_3, status: pending, template: atpl_V1, files: {}, progress: 0 }

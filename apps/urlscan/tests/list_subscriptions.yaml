@@ -1,0 +1,6 @@
+action: list_subscriptions
+credential: { api_key: us_test_1 }
+exchanges:
+  - sent: { method: GET, url: https://urlscan.io/api/v1/user/subscriptions/ }
+    answer: { body: { subscriptions: [{ _id: sub-1, name: Daily brand report, searchIds: [s-1], frequency: daily, emailAddresses: [security@example.com], isActive: true }] } }
+result: [{ _id: sub-1, name: Daily brand report, searchIds: [s-1], frequency: daily, emailAddresses: [security@example.com], isActive: true }]

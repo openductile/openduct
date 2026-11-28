@@ -1,0 +1,10 @@
+description: Rows of a table on a Baserow of one's own
+action: list_rows
+credential: { token: br-test-token, address: "https://baserow.example.com" }
+input: { table_id: 12, order_by: "-Due date", view_id: 40 }
+exchanges:
+  - sent:
+      url: https://baserow.example.com/api/database/rows/table/12/
+      query: { user_field_names: "true", order_by: "-Due date", view_id: "40", size: "200" }
+    answer: { body: { count: 1, next: null, previous: null, results: [{ id: 3, order: "3.00000000000000000000", Task: Call the printer }] } }
+result: [{ id: 3, order: "3.00000000000000000000", Task: Call the printer }]

@@ -1,0 +1,7 @@
+action: get_segment
+credential: { access_token: st_test_1 }
+input: { id: "6001" }
+exchanges:
+  - sent: { method: GET, url: https://www.strava.com/api/v3/segments/6001 }
+    answer: { body: { id: 6001, name: Hill climb, activity_type: Run, distance: 820.0, maximum_grade: 11.4, starred: true } }
+result: { id: 6001, name: Hill climb, activity_type: Run, distance: 820.0, maximum_grade: 11.4, starred: true }

@@ -1,0 +1,55 @@
+name: A morning briefing on your inbox, by an AI agent
+description: >-
+  For owners and managers whose inbox fills up overnight: every weekday at 7:45, an AI agent reads the mail that came
+  since yesterday morning (Gmail), sorts what needs you today from what can wait, logs each email that needs an answer
+  in an Inbox log sheet (who, about what, what they want, by when), and emails you one short briefing - the few that
+  matter first. It only reads and logs: it answers and deletes nothing. Needs: a Gmail sign-in called gmail, a Google
+  Sheets sign-in called sheets, and an AI credential called model.
+category: Productivity
+trigger:
+  schedule: { every: weekday, at: "07:45", timezone: Europe/London }
+# What a test runs on: an event as this trigger gives it.
+sample:
+  scheduled_at: "2026-11-27T07:45:00Z"
+steps:
+  - name: settings
+    set:
+      # Change these to your own.
+      spreadsheet: "'your-spreadsheet-id'"
+      me: "'me@example.com'"
+  - name: assistant
+    agent:
+      credential: model
+      instructions: >-
+        You are a careful assistant preparing a busy person's morning. Find the mail of the last day in the inbox
+        (search: in:inbox newer_than:1d -category:promotions -category:social), read the ones that may need the person,
+        and for each that needs an answer or an action, add a row to the log: from, subject, what they want, by when
+        (or blank). Then write the briefing: first what needs doing today, then what needs an answer this week, then
+        one line on the rest. At most 15 lines. Do not quote more than a sentence of any email.
+      input: "Prepare this morning's briefing ({{ value.scheduled_at }})."
+      tools:
+        - name: find_emails
+          description: Finds emails by a Gmail search; gives their ids.
+          gmail: { credential: gmail, action: find_emails }
+        - name: read_email
+          description: Reads one email in full by its id.
+          gmail: { credential: gmail, action: read_email }
+        - name: log_email
+          description: "Adds a row to the Inbox log sheet: [from, subject, what they want, by when]."
+          google_sheets:
+            credential: sheets
+            action: add_row
+            spreadsheet_id: "{{ steps.settings.spreadsheet }}"
+            sheet: Inbox log
+      allow: [find_emails, read_email, log_email]
+      max_turns: 20
+      max_tool_calls: 40
+      timeout: 10m
+  - name: send
+    gmail:
+      credential: gmail
+      action: send_email
+      to: "{{ steps.settings.me }}"
+      subject: "Your inbox this morning"
+      text: "{{ steps.assistant.text }}"
+    retry: { attempts: 3, wait: 30s }

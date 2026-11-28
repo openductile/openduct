@@ -1,0 +1,9 @@
+description: The signed-in account's own channel
+action: get_channel
+credential: { access_token: ya29.a0 }
+exchanges:
+  - sent:
+      url: https://www.googleapis.com/youtube/v3/channels
+      query: { part: "snippet,statistics,contentDetails", mine: "true" }
+    answer: { body: { items: [{ id: UC1, statistics: { subscriberCount: "120" }, contentDetails: { relatedPlaylists: { uploads: UU1 } } }] } }
+result: { id: UC1, statistics: { subscriberCount: "120" }, contentDetails: { relatedPlaylists: { uploads: UU1 } } }

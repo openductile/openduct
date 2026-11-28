@@ -1,0 +1,39 @@
+# Made by `openduct app from-openapi`: Create or Update a company.
+description: "Create or Update a company, made from the API description's schemas"
+action: create_company
+credential: { token: test-token }
+exchanges:
+  - sent:
+      method: POST
+      url: "https://api.intercom.io/companies"
+      query: {}
+      headers: { authorization: "Bearer test-token" }
+      body: {}
+    answer:
+      status: 200
+      body:
+        type: company
+        id: "531ee472cce572a6ec000006"
+        name: example
+        app_id: ecahpwf5
+        plan: { type: plan, id: "269315", name: Pro }
+        company_id: "6"
+        remote_created_at: 1663597223
+        created_at: 1663597223
+        updated_at: 1663597223
+        last_request_at: 1663597223
+        size: 100
+        website: example
+result:
+  type: company
+  id: "531ee472cce572a6ec000006"
+  name: example
+  app_id: ecahpwf5
+  plan: { type: plan, id: "269315", name: Pro }
+  company_id: "6"
+  remote_created_at: 1663597223
+  created_at: 1663597223
+  updated_at: 1663597223
+  last_request_at: 1663597223
+  size: 100
+  website: example

@@ -1,0 +1,11 @@
+description: A notice with HTML formatting - the plain text goes beside it
+action: send_message
+credential: { homeserver: "https://matrix.example.org", token: syt_test_token }
+input: { room_id: "!abc123:example.org", text: "Stock low: mugs", html: "<b>Stock low:</b> mugs", kind: m.notice, transaction_id: run-7f3b }
+exchanges:
+  - sent:
+      method: PUT
+      url: "https://matrix.example.org/_matrix/client/v3/rooms/!abc123:example.org/send/m.room.message/run-7f3b"
+      body: { msgtype: m.notice, body: "Stock low: mugs", format: org.matrix.custom.html, formatted_body: "<b>Stock low:</b> mugs" }
+    answer: { status: 200, body: { event_id: "$ev4" } }
+result: { event_id: "$ev4" }

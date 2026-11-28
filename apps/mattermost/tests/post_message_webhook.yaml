@@ -1,0 +1,12 @@
+description: A message through an incoming webhook, to another channel; the webhook answers ok as plain text
+action: post_message
+sign_in: mattermost_webhook
+credential: { url: "https://chat.example.com/hooks/xx1generatedkey00000000000" }
+input: { message: The order shipped., channel: orders }
+exchanges:
+  - sent:
+      method: POST
+      url: "https://chat.example.com/hooks/xx1generatedkey00000000000"
+      body: { text: The order shipped., channel: orders }
+    answer: { status: 200, body: ok }
+result: { sent: true }

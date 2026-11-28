@@ -1,0 +1,36 @@
+description: The weather now, in metric when no units are given
+action: current_weather
+credential: { api_key: test-owm-key-1 }
+input: { lat: 39.799, lon: -89.644 }
+exchanges:
+  - sent:
+      method: GET
+      url: https://api.openweathermap.org/data/2.5/weather
+      query: { appid: test-owm-key-1, lat: "39.799", lon: "-89.644", units: metric }
+    answer:
+      body:
+        coord: { lon: -89.644, lat: 39.799 }
+        weather: [{ id: 803, main: Clouds, description: broken clouds, icon: 04d }]
+        main: { temp: 7.4, feels_like: 4.9, temp_min: 6.1, temp_max: 8.3, pressure: 1018, humidity: 71 }
+        visibility: 10000
+        wind: { speed: 4.6, deg: 250 }
+        clouds: { all: 75 }
+        dt: 1795770000
+        sys: { country: US, sunrise: 1795739700, sunset: 1795775400 }
+        timezone: -21600
+        id: 1000001
+        name: Springfield
+        cod: 200
+result:
+  coord: { lon: -89.644, lat: 39.799 }
+  weather: [{ id: 803, main: Clouds, description: broken clouds, icon: 04d }]
+  main: { temp: 7.4, feels_like: 4.9, temp_min: 6.1, temp_max: 8.3, pressure: 1018, humidity: 71 }
+  visibility: 10000
+  wind: { speed: 4.6, deg: 250 }
+  clouds: { all: 75 }
+  dt: 1795770000
+  sys: { country: US, sunrise: 1795739700, sunset: 1795775400 }
+  timezone: -21600
+  id: 1000001
+  name: Springfield
+  cod: 200

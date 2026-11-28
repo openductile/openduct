@@ -1,0 +1,9 @@
+description: WooCommerce checks a new webhook's address with an unsigned ping - answered, nothing runs
+trigger: new_order
+workflow: wf1
+credential: { store_url: https://shop.example.com, consumer_key: ck_1, consumer_secret: cs_1, "webhook_secret@wf1": wc_secret_1 }
+delivery:
+  content_type: application/x-www-form-urlencoded
+  body: webhook_id=12
+  at: 1700000000
+passed: true

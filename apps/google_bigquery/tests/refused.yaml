@@ -1,0 +1,7 @@
+description: A query BigQuery cannot read is refused in its words
+action: run_query
+credential: { access_token: ya29.bq-test }
+input: { project_id: example-shop-1, query: "SELEC 1" }
+exchanges:
+  - answer: { status: 400, body: { error: { code: 400, message: "Syntax error: Unexpected identifier \"SELEC\" at [1:1]", status: INVALID_ARGUMENT } } }
+error: "Google BigQuery answered 400: Syntax error: Unexpected identifier"

@@ -1,0 +1,10 @@
+description: A note in a lead's chatter, seen inside the company only
+action: post_message
+credential: { address: "https://mycompany.example.com", api_key: 6578616d706c65206b6579 }
+input: { model: crm.lead, id: 12, text: "Called back: wants a quote by Friday." }
+exchanges:
+  - sent:
+      url: https://mycompany.example.com/json/2/crm.lead/message_post
+      body: { ids: [12], body: "Called back: wants a quote by Friday.", message_type: comment, subtype_xmlid: mail.mt_note }
+    answer: { body: [881] }
+result: { message_id: 881 }

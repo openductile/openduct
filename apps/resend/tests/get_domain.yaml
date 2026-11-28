@@ -1,0 +1,45 @@
+# Made by `openduct app from-openapi`: Retrieve a single domain.
+description: "Retrieve a single domain, made from the API description's schemas"
+action: get_domain
+credential: { token: test-token }
+input: { domain_id: domain_1 }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://api.resend.com/domains/domain_1"
+      query: {}
+      headers: { authorization: "Bearer test-token" }
+    answer:
+      status: 200
+      body:
+        object: domain
+        id: d91cd9bd-1176-453e-8fc1-35364d380206
+        name: example.com
+        status: pending
+        created_at: example
+        region: us-east-1
+        open_tracking: true
+        click_tracking: true
+        tracking_subdomain: example
+        capabilities: { sending: enabled, receiving: enabled }
+        records:
+          - record: SPF
+            name: example
+            type: MX
+            ttl: example
+            status: pending
+            value: example
+            priority: 1
+result:
+  object: domain
+  id: d91cd9bd-1176-453e-8fc1-35364d380206
+  name: example.com
+  status: pending
+  created_at: example
+  region: us-east-1
+  open_tracking: true
+  click_tracking: true
+  tracking_subdomain: example
+  capabilities: { sending: enabled, receiving: enabled }
+  records:
+    - { record: SPF, name: example, type: MX, ttl: example, status: pending, value: example, priority: 1 }

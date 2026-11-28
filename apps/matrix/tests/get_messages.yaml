@@ -1,0 +1,11 @@
+description: A room's two newest messages, newest first, messages only
+action: get_messages
+credential: { homeserver: "https://matrix.example.org", token: syt_test_token }
+input: { room_id: "!abc123:example.org", limit: 2, messages_only: true }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://matrix.example.org/_matrix/client/v3/rooms/!abc123:example.org/messages"
+      query: { dir: b, limit: "2", filter: '{"types":["m.room.message"]}' }
+    answer: { status: 200, body: { chunk: [{ event_id: "$ev2", type: m.room.message, sender: "@bo:example.org", content: { msgtype: m.text, body: Thanks! }, origin_server_ts: 1764230460000, room_id: "!abc123:example.org" }, { event_id: "$ev1", type: m.room.message, sender: "@ann:example.org", content: { msgtype: m.text, body: Order A-1042 shipped }, origin_server_ts: 1764230400000, room_id: "!abc123:example.org" }], start: t47-1, end: t45-1 } }
+result: { chunk: [{ event_id: "$ev2", type: m.room.message, sender: "@bo:example.org", content: { msgtype: m.text, body: Thanks! }, origin_server_ts: 1764230460000, room_id: "!abc123:example.org" }, { event_id: "$ev1", type: m.room.message, sender: "@ann:example.org", content: { msgtype: m.text, body: Order A-1042 shipped }, origin_server_ts: 1764230400000, room_id: "!abc123:example.org" }], start: t47-1, end: t45-1 }

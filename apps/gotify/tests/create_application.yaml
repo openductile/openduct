@@ -1,0 +1,13 @@
+description: "An application added; its token comes back"
+action: create_application
+sign_in: gotify_client
+credential: { base_url: "https://gotify.example.com", token: CzyoeNS.D4iJLVb }
+input: { name: Backups, description: Nightly backup reports, default_priority: 3 }
+exchanges:
+  - sent:
+      method: POST
+      url: "https://gotify.example.com/application"
+      body: { name: Backups, description: Nightly backup reports, defaultPriority: 3 }
+    answer:
+      body: { id: 6, name: Backups, description: Nightly backup reports, token: AbcdeNS.F4iJLVc, defaultPriority: 3, internal: false, image: image/image.jpeg, sortKey: a1, createdAt: "2026-11-27T12:00:00Z" }
+result: { id: 6, name: Backups, description: Nightly backup reports, token: AbcdeNS.F4iJLVc, defaultPriority: 3, internal: false, image: image/image.jpeg, sortKey: a1, createdAt: "2026-11-27T12:00:00Z" }

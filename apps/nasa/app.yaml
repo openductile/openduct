@@ -1,0 +1,177 @@
+# Copyright 2026 Ductile AI, Inc
+# SPDX-License-Identifier: Apache-2.0
+# NASA: written by hand from NASA's open API pages, https://api.nasa.gov (source github.com/nasa/api-docs, gh-pages at
+# e05c7649a269, a US Government work), the APOD feed and API guide linked there (assets/files/apod/), and the field
+# names of NeoWs' own client (github.com/SpaceRocks/neows-ruby at b81655f31357, MIT).
+app: nasa
+name: NASA
+category: data
+description: NASA's open data - the astronomy picture of the day, asteroids passing Earth, space weather and pictures of the whole Earth.
+docs: "https://api.nasa.gov"
+hosts: [api.nasa.gov, science.nasa.gov]
+base_url: "https://api.nasa.gov"
+sign_in:
+  - id: nasa
+    label: "An api.nasa.gov key"
+    fields:
+      - { name: api_key, label: "The key from api.nasa.gov (DEMO_KEY tries it out, a few calls an hour)", secret: true }
+    query: { api_key: "{{ credential.api_key }}" }
+error: "type(value) == map && has(value.error) && type(value.error) == map ? value.error.message : null"
+actions:
+  picture_of_the_day:
+    label: "Astronomy picture of the day"
+    description: "The picture (or video) of one day, with its title, explanation, credit and image address."
+    method: GET
+    path: "/wp-json/wp/v2/apod-basic/{{ input.date.replace('-', '').substring(2) }}"
+    by:
+      nasa: { url: "https://science.nasa.gov/wp-json/wp/v2/apod-basic/{{ input.date.replace('-', '').substring(2) }}" }
+    inputs:
+      - { name: date, label: "The day, such as 2026-11-27", required: true }
+    output:
+      date: text
+      post_id: number
+      title: text
+      permalink: text
+      media_type: text
+      explanation: text
+      credit: text
+      copyright: text
+      alt: text
+      url: text
+      hdurl: text
+      basic_html: text
+      basic_html_url: text
+  list_pictures:
+    label: "Astronomy pictures between two days"
+    description: "Every picture of the day from one day to another, page after page."
+    method: GET
+    path: "/wp-json/wp/v2/apod-basic"
+    by:
+      nasa: { url: "https://science.nasa.gov/wp-json/wp/v2/apod-basic" }
+    inputs:
+      - { name: from, label: "From the day, such as 2026-11-01", required: true }
+      - { name: to, label: "To the day, such as 2026-11-27", required: true }
+    query:
+      date_from: "{{ input.from.replace('-', '').substring(2) }}"
+      date_to: "{{ input.to.replace('-', '').substring(2) }}"
+      per_page: "25"
+    items: value
+    # The guide says nothing of a last page: a full page of 25 means there may be another.
+    next: "size(value) < 25 ? null : {'page': (page == null ? 1 : int(page.page)) + 1}"
+    max_pages: 20
+    output:
+      date: text
+      post_id: number
+      title: text
+      permalink: text
+      media_type: text
+      explanation: text
+      credit: text
+      copyright: text
+      alt: text
+      url: text
+      hdurl: text
+      basic_html: text
+      basic_html_url: text
+  asteroids_by_date:
+    label: "Asteroids passing Earth"
+    description: >-
+      The asteroids that come closest to Earth between two days (at most 7 apart): how many, and each day's list
+      with size, speed, miss distance and whether it is potentially hazardous.
+    method: GET
+    path: "/neo/rest/v1/feed"
+    inputs:
+      - { name: start_date, label: "From the day, such as 2026-11-27", required: true }
+      - { name: end_date, label: "To the day (7 days after the start if left out)" }
+    query: { start_date: "{{ input.start_date }}", end_date: "{{ input.end_date }}" }
+    output: { element_count: number, near_earth_objects: record, links: record }
+  get_asteroid:
+    label: "Look up an asteroid"
+    description: "One asteroid by its JPL small-body id (SPK-ID): size, orbit and every close approach."
+    method: GET
+    path: "/neo/rest/v1/neo/{{ input.asteroid_id }}"
+    inputs:
+      - { name: asteroid_id, label: "The asteroid's id (SPK-ID), such as 3542519", required: true }
+    output:
+      neo_reference_id: text
+      name: text
+      nasa_jpl_url: text
+      absolute_magnitude_h: number
+      estimated_diameter: record
+      is_potentially_hazardous_asteroid: boolean
+      close_approach_data: list
+      orbital_data: record
+      links: record
+  browse_asteroids:
+    label: "Browse asteroids"
+    description: "One page of the whole asteroid data set, with how many pages there are."
+    method: GET
+    path: "/neo/rest/v1/neo/browse"
+    inputs:
+      - { name: page, label: "Which page, from 0", kind: number }
+    query: { page: "{{ input.page }}" }
+    output: { near_earth_objects: list, page: record, links: record }
+  space_weather_events:
+    label: "Space weather events"
+    description: >-
+      Space weather recorded in NASA's DONKI between two days (at most 30 days back by default), of one kind: solar
+      flares, coronal mass ejections, geomagnetic storms and the others.
+    method: GET
+    path: "/DONKI/{{ input.kind }}"
+    inputs:
+      - name: kind
+        label: "FLR (solar flares), CME, CMEAnalysis, GST (geomagnetic storms), IPS, SEP, MPC, RBE, HSS or WSAEnlilSimulations"
+        required: true
+      - { name: start_date, label: "From the day, such as 2026-11-01 (30 days ago if left out)" }
+      - { name: end_date, label: "To the day (today if left out)" }
+    query: { startDate: "{{ input.start_date }}", endDate: "{{ input.end_date }}" }
+    items: value
+  space_weather_notifications:
+    label: "Space weather notifications"
+    description: "The notices NASA's space weather office sent between two days (at most 30 days), of one kind or all."
+    method: GET
+    path: "/DONKI/notifications"
+    inputs:
+      - { name: start_date, label: "From the day, such as 2026-11-20 (7 days ago if left out)" }
+      - { name: end_date, label: "To the day (today if left out)" }
+      - { name: type, label: "Which: all (the default), FLR, SEP, CME, IPS, MPC, GST, RBE or report" }
+    query: { startDate: "{{ input.start_date }}", endDate: "{{ input.end_date }}", type: "{{ input.type }}" }
+    items: value
+  earth_pictures:
+    label: "Pictures of the whole Earth"
+    description: >-
+      The pictures DSCOVR's EPIC camera took of the sunlit Earth on a day (the latest day if none is given), each with
+      its time, caption and where the camera, Moon and Sun were.
+    method: GET
+    path: "/EPIC/api/{{ has(input.collection) && input.collection != null ? input.collection : 'natural' }}{{ has(input.date) && input.date != null ? '/date/' + input.date : '/images' }}"
+    inputs:
+      - { name: collection, label: "natural (true color, the default) or enhanced" }
+      - { name: date, label: "The day, such as 2026-11-26 (the latest if left out)" }
+    items: value
+    output:
+      image: text
+      caption: text
+      date: text
+      centroid_coordinates: record
+      dscovr_j2000_position: record
+      lunar_j2000_position: record
+      sun_j2000_position: record
+      attitude_quaternions: record
+triggers:
+  new_picture:
+    label: A new astronomy picture of the day
+    description: >-
+      Each new picture of the day as NASA publishes it, asked for every hour: its title, explanation, credit and image
+      address.
+    poll:
+      method: GET
+      path: "/wp-json/wp/v2/apod-basic"
+      by:
+        nasa: { url: "https://science.nasa.gov/wp-json/wp/v2/apod-basic" }
+      # Only the last three days are asked for: what is new is among them.
+      query:
+        date_from: "{{ string(timestamp(input.now) - duration('72h')).substring(2, 10).replace('-', '') }}"
+        per_page: "25"
+      items: value
+      id: string(item.post_id)
+      every: 1h

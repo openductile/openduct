@@ -1,0 +1,13 @@
+# Made by `openduct app from-openapi`: Push a button.
+description: "Push a button, made from the API description's schemas"
+action: push_button
+credential: { token: test-token }
+input: { doc_id: doc_1, table_id_or_name: example, row_id_or_name: example, column_id_or_name: example }
+exchanges:
+  - sent:
+      method: POST
+      url: "https://docs.superhuman.com/apis/v1/docs/doc_1/tables/example/rows/example/buttons/example"
+      query: {}
+      headers: { authorization: "Bearer test-token" }
+    answer: { status: 202, body: { requestId: abc-123-def-456, rowId: i-tuVwxYz, columnId: i-tuVwxYz } }
+result: { requestId: abc-123-def-456, rowId: i-tuVwxYz, columnId: i-tuVwxYz }

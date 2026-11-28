@@ -1,0 +1,105 @@
+name: Brief a blog post to a writer, with a reminder before it is due
+description: >-
+  An editor fills in a form - title, the brief, keywords, the writer and the due date: a model drafts an outline, a
+  Google Drive folder for the post is made and shared with the writer, a draft item is made in your Webflow blog
+  collection, and the writer gets the brief, the outline and the folder by e-mail. The day before it is due, the run
+  looks at the Webflow item again and, if it is still a draft, reminds the writer. For content teams with
+  freelance writers. Needs: model, google_drive, webflow (a site token, sent as a bearer token), mail.
+category: Marketing
+trigger:
+  form:
+    title: Brief a blog post
+    fields:
+      - { name: title, label: Working title, type: text, required: true, max_length: 120 }
+      - { name: brief, label: "What it should say, and for whom", type: long_text, required: true, max_length: 4000 }
+      - { name: keywords, label: Keywords, type: text, max_length: 200, placeholder: "meal prep, small kitchens" }
+      - { name: writer, label: "The writer's e-mail", type: email, required: true }
+      - { name: due, label: Due on, type: date, required: true }
+    thanks: Thank you - the writer has the brief.
+# What a test runs on: an answer as the form gives it.
+sample:
+  title: Meal prep for tiny kitchens
+  brief: For renters with one counter and two burners. Practical, warm, no gadgets they must buy. About 1,200 words.
+  keywords: meal prep, small kitchens, batch cooking
+  writer: amara.writes@example.com
+  due: "2026-12-10"
+steps:
+  - name: outline
+    ai:
+      credential: model
+      system: >-
+        You are a blog editor. Write an outline for a writer: a one-line angle, five to seven section headings each
+        with one line on what it covers, and three questions the post must answer. Plain text, no markdown tables.
+      prompt: "Title: {{ value.title }}\nBrief: {{ value.brief }}\nKeywords: {{ value.keywords }}"
+      max_tokens: 600
+  - name: folder
+    google_drive:
+      action: make_folder
+      credential: google_drive
+      name: "Post - {{ value.title }}"
+      # The blog's folder in Drive (its id); left empty, the folder is made in My Drive.
+      parent_id: your-blog-folder-id
+    retry: { attempts: 3, wait: 10s }
+  - name: share
+    google_drive:
+      action: share_file
+      credential: google_drive
+      file_id: "{{ steps.folder.id }}"
+      email: "{{ value.writer }}"
+      role: writer
+    retry: { attempts: 3, wait: 10s }
+  - name: draft
+    http:
+      method: POST
+      # Your blog collection's id: Webflow's CMS settings show it.
+      url: https://api.webflow.com/v2/collections/your-collection-id/items
+      credential: webflow
+      json:
+        isArchived: false
+        isDraft: true
+        fieldData:
+          name: "{{ value.title }}"
+          slug: "{{ regex.replace(value.title.lowerAscii().trim(), '[^a-z0-9]+', '-') }}"
+      sample: { id: 6747c0ffee1234567890abcd, isDraft: true, fieldData: { name: Meal prep for tiny kitchens, slug: meal-prep-for-tiny-kitchens } }
+    retry: { attempts: 3, wait: 15s }
+  - name: brief_writer
+    email:
+      credential: mail
+      to: "{{ value.writer }}"
+      subject: "Brief: {{ value.title }} (due {{ value.due }})"
+      text: >-
+        Hello! Here is your next post, due {{ value.due }}.
+
+
+        Brief: {{ value.brief }}
+
+        Keywords: {{ value.keywords }}
+
+
+        Outline to start from:
+
+        {{ steps.outline.text }}
+
+
+        Your folder for drafts and images: https://drive.google.com/drive/folders/{{ steps.folder.id }}
+  # Waits until 9:00 UTC the day before the due date (or goes on at once when that has passed).
+  - name: day_before
+    wait: { until: "string(timestamp(value.due + 'T09:00:00Z') - duration('24h'))" }
+  - name: item
+    http:
+      url: "https://api.webflow.com/v2/collections/your-collection-id/items/{{ steps.draft.body.id }}"
+      credential: webflow
+      sample: { id: 6747c0ffee1234567890abcd, isDraft: true }
+    retry: { attempts: 3, wait: 15s }
+  - name: still_draft
+    if:
+      when: steps.item.body.isDraft == true
+      then:
+        - name: remind
+          email:
+            credential: mail
+            to: "{{ value.writer }}"
+            subject: "Tomorrow: {{ value.title }}"
+            text: >-
+              A friendly reminder that "{{ value.title }}" is due tomorrow, {{ value.due }}. Your folder:
+              https://drive.google.com/drive/folders/{{ steps.folder.id }} - reply if you need more time.

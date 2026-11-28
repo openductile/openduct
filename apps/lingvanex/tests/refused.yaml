@@ -1,0 +1,14 @@
+description: Lingvanex refuses a key it does not know
+action: translate_text
+credential:
+  api_key: test-key
+input:
+  text: Hello
+  to: de_DE
+exchanges:
+- answer:
+    status: 403
+    body:
+      err: Authorization error
+      result: null
+error: 'Lingvanex answered 403: Authorization error'

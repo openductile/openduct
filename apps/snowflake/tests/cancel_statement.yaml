@@ -1,0 +1,23 @@
+description: A running statement cancelled
+action: cancel_statement
+credential: { account: exampleorg-example1, token: pat-test-1 }
+input: { statement_handle: 01b2c3d4-0000-4000-8000-000000000003 }
+exchanges:
+  - sent:
+      method: POST
+      url: https://exampleorg-example1.snowflakecomputing.com/api/v2/statements/01b2c3d4-0000-4000-8000-000000000003/cancel
+      headers: { authorization: Bearer pat-test-1 }
+    answer:
+      status: 200
+      body:
+        code: "000000"
+        sqlState: "00000"
+        message: successfully canceled
+        statementHandle: 01b2c3d4-0000-4000-8000-000000000003
+        statementStatusUrl: /api/v2/statements/01b2c3d4-0000-4000-8000-000000000003
+result:
+  code: "000000"
+  sqlState: "00000"
+  message: successfully canceled
+  statementHandle: 01b2c3d4-0000-4000-8000-000000000003
+  statementStatusUrl: /api/v2/statements/01b2c3d4-0000-4000-8000-000000000003

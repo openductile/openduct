@@ -1,0 +1,29 @@
+description: Turning the workflow on adds a webhook for the event to the workspace, and keeps its token
+trigger: event
+register: true
+workflow: wf1
+address: https://studio.example/hooks/h1
+credential: { api_key: test-key }
+input: { workspace_id: "64a687e29ae1f428e7ebe303", event: NEW_TIME_ENTRY }
+exchanges:
+  - sent:
+      method: POST
+      url: "https://api.clockify.me/api/v1/workspaces/64a687e29ae1f428e7ebe303/webhooks"
+      headers: { x-api-key: test-key }
+      body:
+        name: OpenDuct wf1
+        url: https://studio.example/hooks/h1
+        triggerSource: ["64a687e29ae1f428e7ebe303"]
+        triggerSourceType: WORKSPACE_ID
+        webhookEvent: NEW_TIME_ENTRY
+    answer:
+      status: 201
+      body:
+        id: "76a687e29ae1f428e7ebe101"
+        name: OpenDuct wf1
+        url: https://studio.example/hooks/h1
+        authToken: tok.example.wf1
+        webhookEvent: NEW_TIME_ENTRY
+        triggerSourceType: WORKSPACE_ID
+        triggerSource: ["64a687e29ae1f428e7ebe303"]
+kept: { webhook_secret: tok.example.wf1, webhook_id: "76a687e29ae1f428e7ebe101" }

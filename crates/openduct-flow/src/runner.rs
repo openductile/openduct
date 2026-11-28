@@ -17,7 +17,7 @@ use std::time::Duration;
 use bytes::Bytes;
 use kafka_protocol::records::RecordBatchDecoder;
 use openduct_broker::client::{
-    ClientError, EARLIEST, Fetched, GroupState, LATEST, Membership, Outgoing, Routed, Shared, records,
+    ClientError, EARLIEST, Fetched, GroupState, Membership, Outgoing, Routed, Shared, records,
 };
 use openduct_expr::Value;
 use serde_json::{Value as Json, json};
@@ -27,6 +27,13 @@ use tokio::time::MissedTickBehavior;
 
 use crate::model::{Trigger, Workflow};
 use crate::run::{Effects, Event, Outcome, run};
+
+mod feed_poll; // web
+mod messaging; // messaging
+mod polling; // G3 app triggers
+mod resume;
+mod rows; // sql databases
+mod storage_poll; // storage
 
 /// The prefix of every topic and group a workflow has.
 pub const PREFIX: &str = "__openduct.flow.";
@@ -152,7 +159,7 @@ fn turn_for(now: i64, partitions: i32) -> i32 {
 const CLAIM_WINDOW: i64 = 64;
 
 /// Queues the scheduled run due at `due` (milliseconds since 1970).
-async fn queue_scheduled(client: &mut Routed, id: &str, due: i64) -> Result<(), String> {
+pub(crate) async fn queue_scheduled(client: &mut Routed, id: &str, due: i64) -> Result<(), String> {
     let topics = Topics::of(id);
     let at = iso(due);
     let message = Outgoing {
@@ -385,6 +392,8 @@ struct Runner {
     running: JoinSet<Finished>,
     /// Keys (in a partition) with a run going: the next record with one waits for it.
     busy: HashSet<(i32, Bytes)>,
+    /// Records past the committed place that already have their run (runner/resume.rs).
+    done: HashSet<(i32, i64)>,
 }
 
 impl Runner {
@@ -438,6 +447,7 @@ impl Runner {
             held: VecDeque::new(),
             running: JoinSet::new(),
             busy: HashSet::new(),
+            done: HashSet::new(),
         };
         runner.read_positions().await?;
         Ok(runner)
@@ -450,7 +460,7 @@ impl Runner {
     /// Where to read each of its partitions from, as the group last committed.
     async fn read_positions(&mut self) -> Result<(), String> {
         let mut client = self.shared.lend().await.map_err(|e| self.fail(&e))?;
-        let next = positions(
+        let next = resume::positions(
             &mut client,
             &self.topics.group,
             &self.source,
@@ -463,6 +473,7 @@ impl Runner {
                 .last_slot
                 .max(slot_before(&mut client, &self.source, &next).await);
         }
+        self.done = resume::already_run(&mut client, &self.topics.runs, &next).await;
         self.progress = Progress::new(next);
         Ok(())
     }
@@ -510,6 +521,11 @@ impl Runner {
     }
 
     fn take(&mut self, partition: i32, record: &kafka_protocol::records::Record) {
+        // G3 app triggers: what a workflow's polls have seen is kept beside its events, not run.
+        // Its run is already in the history (a runner died before its place was committed): passed by.
+        if polling::is_seen(record) || self.done.remove(&(partition, record.offset)) {
+            return;
+        }
         let mut event = event_of(
             record,
             (self.source.as_str(), partition, record.offset),
@@ -580,17 +596,108 @@ impl Runner {
     }
 
     fn launch(&mut self, item: Item) {
+        // sql databases: a claimed time of a workflow a table's rows start is a poll of the table, not a run.
+        if item.claimed
+            && let Some(job) = rows::tick(
+                &self.workflow,
+                &self.shared,
+                &self.effects,
+                &self.member,
+                &self.topics,
+                &item.event,
+            )
+        {
+            self.running.spawn(async move {
+                job.await;
+                (item.partition, item.offset, item.key, Ok(()))
+            });
+            return;
+        }
+        // web: a claimed time of a workflow a feed's new items start is a poll of the feed, not a run.
+        let Some(item) = feed_poll::launch(self, item) else {
+            return;
+        };
+        // storage: a claimed time of a workflow a folder's poll starts is a poll, not a run.
+        if item.claimed
+            && storage_poll::polls(&self.workflow).is_some()
+            && let Some(slot) = slot_of(&item.event)
+        {
+            let (shared, topics) = (Arc::clone(&self.shared), Arc::clone(&self.topics));
+            let job = storage_poll::tick(
+                Arc::clone(&self.workflow),
+                shared,
+                Arc::clone(&self.effects),
+                self.member.clone(),
+                topics,
+                slot,
+            );
+            self.running.spawn(async move {
+                job.await;
+                (item.partition, item.offset, item.key, Ok(()))
+            });
+            return;
+        }
+        // G3 app triggers: a claimed time of a workflow an app's poll starts is a poll, not a run.
+        if item.claimed
+            && polling::polls(&self.workflow).is_some()
+            && let Some(slot) = slot_of(&item.event)
+        {
+            let (shared, topics) = (Arc::clone(&self.shared), Arc::clone(&self.topics));
+            let job = polling::tick(
+                Arc::clone(&self.workflow),
+                shared,
+                Arc::clone(&self.effects),
+                self.member.clone(),
+                topics,
+                slot,
+            );
+            self.running.spawn(async move {
+                job.await;
+                (item.partition, item.offset, item.key, Ok(()))
+            });
+            return;
+        }
+        // messaging: a claimed time of a workflow a mailbox's poll starts is a poll; of an app webhook whose
+        // registration runs out, a renewal - neither is a run.
+        if item.claimed
+            && let Some(job) = messaging::tick(
+                &self.workflow,
+                &self.shared,
+                &self.effects,
+                &self.member,
+                &self.topics,
+                &item.event,
+            )
+        {
+            self.running.spawn(async move {
+                job.await;
+                (item.partition, item.offset, item.key, Ok(()))
+            });
+            return;
+        }
         let workflow = Arc::clone(&self.workflow);
         let effects = Arc::clone(&self.effects);
         let shared = Arc::clone(&self.shared);
         let topics = Arc::clone(&self.topics);
         self.running.spawn(async move {
+            // forms-and-resume: a workflow with steps that wait, and a run taken up again, are run by `waits`.
+            if crate::waits::takes(&workflow, &item.event) {
+                let taken = crate::waits::Taken {
+                    id: format!("{}-{}", item.partition, item.offset),
+                    event: &item.event,
+                    original: item.original.as_ref(),
+                    hops: item.hops,
+                };
+                let kept = crate::waits::launch(&workflow, &shared, &topics, effects.as_ref(), taken).await;
+                return (item.partition, item.offset, item.key, kept);
+            }
             let outcome = run(&workflow, &item.event, effects.as_ref()).await;
             crate::meters::run(
                 match outcome.outcome {
                     Outcome::Done => crate::meters::Ended::Done,
                     Outcome::Skipped { .. } => crate::meters::Ended::Skipped,
-                    Outcome::Failed { .. } => crate::meters::Ended::Failed,
+                    // forms-and-resume: a run of a workflow without steps that wait never waits.
+                    Outcome::Failed { .. } | Outcome::Waiting { .. } => crate::meters::Ended::Failed,
                 },
                 std::time::Duration::from_millis(outcome.ms),
             );
@@ -647,7 +754,12 @@ impl Runner {
             return Ok(GroupState::Stable);
         }
         match self.commit().await {
-            Ok(state) => Ok(state),
+            Ok(GroupState::Stable) => Ok(GroupState::Stable),
+            // Refused: the times are not this member's - the member that holds the partition next runs them.
+            Ok(state) => {
+                self.held.retain(|item| !item.claimed);
+                Ok(state)
+            }
             Err(e) => {
                 self.held.retain(|item| !item.claimed);
                 Err(e)
@@ -681,7 +793,10 @@ impl Runner {
             .commit_member(&self.member, &due)
             .await
             .map_err(|e| self.fail(&e))?;
-        self.progress.committed.extend(due);
+        // A commit the group refused (members came or went) stored nothing: it is made again, or the runs repeat.
+        if state == GroupState::Stable {
+            self.progress.committed.extend(due);
+        }
         Ok(state)
     }
 
@@ -716,34 +831,6 @@ impl Runner {
     }
 }
 
-/// Where to read each partition from: the group's last commit, or the start (or the end) for one never read.
-async fn positions(
-    client: &mut Routed,
-    group: &str,
-    source: &str,
-    member: &Membership,
-    earliest: bool,
-) -> Result<BTreeMap<i32, i64>, String> {
-    let committed: BTreeMap<i32, i64> = client
-        .committed(group, source, &member.partitions)
-        .await
-        .map_err(|e| e.to_string())?
-        .into_iter()
-        .collect();
-    let mut out = BTreeMap::new();
-    for &p in &member.partitions {
-        let offset = match committed.get(&p) {
-            Some(o) if *o >= 0 => *o,
-            _ => client
-                .list_offset(source, p, if earliest { EARLIEST } else { LATEST })
-                .await
-                .map_err(|e| e.to_string())?,
-        };
-        out.insert(p, offset);
-    }
-    Ok(out)
-}
-
 fn event_of(
     record: &kafka_protocol::records::Record,
     (topic, partition, offset): (&str, i32, i64),
@@ -772,7 +859,8 @@ fn event_of(
 }
 
 /// The run in the history; the event set aside when the run failed.
-async fn keep(
+// forms-and-resume: also kept by `waits`.
+pub(crate) async fn keep(
     shared: &Shared,
     topics: &Topics,
     id: &str,

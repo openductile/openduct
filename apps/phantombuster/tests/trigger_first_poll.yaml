@@ -1,0 +1,7 @@
+description: The first poll notes the launches there are and runs none
+trigger: launch_finished
+credential: { api_key: pb_test_key_1 }
+input: { agent_id: "7345678901234567" }
+exchanges:
+  - answer: { body: { containers: [{ id: "4512345678901233", status: finished, endType: finished }] } }
+runs: []

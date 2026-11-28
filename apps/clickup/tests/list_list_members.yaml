@@ -1,0 +1,43 @@
+description: "List who can reach a list"
+action: list_list_members
+credential: { api_key: test-key }
+input: { list_id: 123 }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://api.clickup.com/api/v2/list/123/member"
+      query: {}
+      headers: { authorization: test-key }
+    answer:
+      status: 200
+      body:
+        members:
+          - id: 1
+            username: example
+            email: "ann@example.com"
+            color: example
+            initials: example
+            profilePicture: example
+            profileInfo:
+              display_profile: example
+              verified_ambassador: example
+              verified_consultant: example
+              top_tier_user: example
+              viewed_verified_ambassador: example
+              viewed_verified_consultant: example
+              viewed_top_tier_user: example
+result:
+  - id: 1
+    username: example
+    email: "ann@example.com"
+    color: example
+    initials: example
+    profilePicture: example
+    profileInfo:
+      display_profile: example
+      verified_ambassador: example
+      verified_consultant: example
+      top_tier_user: example
+      viewed_verified_ambassador: example
+      viewed_verified_consultant: example
+      viewed_top_tier_user: example

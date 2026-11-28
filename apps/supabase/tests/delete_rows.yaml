@@ -1,0 +1,10 @@
+action: delete_rows
+credential: { project_url: "https://abcdefgh.supabase.co", api_key: sb_secret_test1 }
+input: { table: contacts, match: { email: ann@example.com }, where: "created_at.lt.2026-01-01" }
+exchanges:
+  - sent:
+      method: DELETE
+      url: https://abcdefgh.supabase.co/rest/v1/contacts
+      query: { and: '(email.eq."ann@example.com",created_at.lt.2026-01-01)' }
+    answer: { body: [{ id: 7, email: ann@example.com }] }
+result: [{ id: 7, email: ann@example.com }]

@@ -1,0 +1,17 @@
+description: The contacts done so far, while the rest are still in progress
+action: get_results
+credential: { api_key: dc_test_key_1 }
+input: { request_id: abcdefghijklmno, done_so_far: true }
+exchanges:
+  - sent:
+      url: "https://api.dropcontact.com/v1/enrich/all/abcdefghijklmno"
+      query: { forceResults: "true" }
+    answer:
+      status: 200
+      body:
+        error: false
+        success: true
+        status: in_progress
+        credits_left: 1247
+        data: [{ first_name: Ann, email: [{ email: ann@coffee.example, qualification: nominative@pro }], status: ready }, { status: in_progress }]
+result: [{ first_name: Ann, email: [{ email: ann@coffee.example, qualification: nominative@pro }], status: ready }, { status: in_progress }]

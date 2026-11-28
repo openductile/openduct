@@ -1,0 +1,67 @@
+name: What is overdue in an Asana project, posted to Slack
+description: >-
+  Run it by hand - or let an AI assistant run it, as a tool of this workspace - with an Asana project's id: the
+  project's open tasks are read through Asana's API, the overdue ones grouped by who owns them, oldest first, and the
+  list posted to your team's Slack channel with a link to each task. It answers with the same list, so an assistant
+  can say it too. Needs: asana (a bearer credential with an Asana personal access token), slack.
+category: Operations
+trigger: manual
+# Offered to AI assistants through the workspace's MCP server too.
+tool:
+  name: overdue_in_project
+  description: The overdue tasks of an Asana project, by who owns them; the list is also posted to the team's Slack channel.
+  input:
+    project: { type: string, description: "The Asana project's id (the number in its address)", required: true }
+# What a test runs on: what you give it when you press Run.
+sample:
+  project: "1208000000000001"
+steps:
+  - name: today
+    datetime: { timezone: America/New_York }
+  - name: tasks
+    http:
+      url: https://app.asana.com/api/1.0/tasks
+      credential: asana
+      query:
+        project: "{{ value.project }}"
+        # Only the tasks not done yet.
+        completed_since: now
+        opt_fields: name,due_on,assignee.name,permalink_url
+        limit: "100"
+      sample:
+        data:
+          - { gid: "1208000000000101", name: Send the winter price list, due_on: "2026-11-20", assignee: { name: Dana Kim }, permalink_url: "https://app.asana.com/0/0/1208000000000101" }
+          - { gid: "1208000000000102", name: Book the van for the fair, due_on: "2026-11-25", assignee: { name: Dana Kim }, permalink_url: "https://app.asana.com/0/0/1208000000000102" }
+          - { gid: "1208000000000103", name: Check the stock count, due_on: "2026-11-26", assignee: null, permalink_url: "https://app.asana.com/0/0/1208000000000103" }
+          - { gid: "1208000000000104", name: Plan the January sale, due_on: "2026-12-15", assignee: { name: Leo Park }, permalink_url: "https://app.asana.com/0/0/1208000000000104" }
+    retry: { attempts: 3, wait: 15s }
+  # Overdue: due before today. Grouped by owner, the most overdue first.
+  - name: overdue
+    javascript: |
+      const today = steps.today.date;
+      const late = ((steps.tasks.body && steps.tasks.body.data) || [])
+        .filter((t) => t.due_on && t.due_on < today)
+        .sort((a, b) => a.due_on.localeCompare(b.due_on));
+      const days = (d) => {
+        const n = Math.round((Date.parse(today) - Date.parse(d)) / 86400000);
+        return n === 1 ? "1 day" : `${n} days`;
+      };
+      const by = {};
+      for (const t of late) {
+        const who = (t.assignee && t.assignee.name) || "No owner";
+        (by[who] = by[who] || []).push(`  <${t.permalink_url}|${t.name}> - ${days(t.due_on)} late`);
+      }
+      const text = late.length === 0
+        ? "Nothing is overdue in the project. Well done."
+        : `${late.length} overdue tasks:\n` + Object.entries(by).map(([who, lines]) => `${who}\n${lines.join("\n")}`).join("\n");
+      return { count: late.length, text };
+  - name: post
+    slack:
+      credential: slack
+      channel: "#projects"
+      text: "{{ steps.overdue.text }}"
+    retry: { attempts: 3, wait: 10s }
+  - name: answer
+    set:
+      overdue: steps.overdue.count
+      list: steps.overdue.text

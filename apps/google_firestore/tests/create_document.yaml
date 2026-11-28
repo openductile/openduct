@@ -1,0 +1,41 @@
+description: A document with an ID of our own
+action: create_document
+credential:
+  access_token: ya29.test
+input:
+  project_id: sample-shop
+  collection: orders
+  document_id: A-100
+  fields: &id001
+    customer:
+      stringValue: Pat Sample
+    total:
+      doubleValue: 42.5
+    items:
+      integerValue: '3'
+    paid:
+      booleanValue: true
+    status:
+      stringValue: new
+exchanges:
+- sent:
+    method: POST
+    url: https://firestore.googleapis.com/v1/projects/sample-shop/databases/(default)/documents/orders
+    query:
+      documentId: A-100
+    headers:
+      authorization: Bearer ya29.test
+    body:
+      fields: *id001
+  answer:
+    status: 200
+    body:
+      name: projects/sample-shop/databases/(default)/documents/orders/A-100
+      fields: *id001
+      createTime: '2026-11-20T10:00:00.000000Z'
+      updateTime: '2026-11-20T10:00:00.000000Z'
+result:
+  name: projects/sample-shop/databases/(default)/documents/orders/A-100
+  fields: *id001
+  createTime: '2026-11-20T10:00:00.000000Z'
+  updateTime: '2026-11-20T10:00:00.000000Z'

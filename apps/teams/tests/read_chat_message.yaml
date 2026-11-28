@@ -1,0 +1,11 @@
+description: A chat's message read in full
+action: read_message
+sign_in: teams
+credential: { access_token: eyJ0.teams }
+input: { chat_id: "19:8ea0e38b-efb3-4757-924a-5f94061cf8c2_97f62344-57dc-409c-88ad-c4af14158ff5@unq.gbl.spaces", message_id: "1612289992105" }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://graph.microsoft.com/v1.0/chats/19:8ea0e38b-efb3-4757-924a-5f94061cf8c2_97f62344-57dc-409c-88ad-c4af14158ff5@unq.gbl.spaces/messages/1612289992105"
+    answer: { body: { id: "1612289992105", chatId: "19:8ea0e38b-efb3-4757-924a-5f94061cf8c2_97f62344-57dc-409c-88ad-c4af14158ff5@unq.gbl.spaces", body: { contentType: text, content: test } } }
+result: { id: "1612289992105", chatId: "19:8ea0e38b-efb3-4757-924a-5f94061cf8c2_97f62344-57dc-409c-88ad-c4af14158ff5@unq.gbl.spaces", body: { contentType: text, content: test } }

@@ -1,0 +1,56 @@
+description: 'At the standard level: the carrier too'
+action: lookup_number
+credential:
+  api_key: abcd1234
+  api_secret: test-secret
+input:
+  number: '14155550100'
+  level: standard
+exchanges:
+- sent:
+    method: GET
+    url: https://api.nexmo.com/ni/standard/json
+    query:
+      number: '14155550100'
+    headers:
+      authorization: Basic YWJjZDEyMzQ6dGVzdC1zZWNyZXQ=
+  answer:
+    status: 200
+    body:
+      status: 0
+      status_message: Success
+      request_id: aaaaaaaa-bbbb-cccc-dddd-0123456789ac
+      international_format_number: '14155550100'
+      country_code: US
+      request_price: '0.00500000'
+      remaining_balance: '9.99500000'
+      current_carrier:
+        network_code: '310090'
+        name: Sample Wireless
+        country: US
+        network_type: mobile
+      original_carrier:
+        network_code: '310090'
+        name: Sample Wireless
+        country: US
+        network_type: mobile
+      ported: not_ported
+result:
+  status: 0
+  status_message: Success
+  request_id: aaaaaaaa-bbbb-cccc-dddd-0123456789ac
+  international_format_number: '14155550100'
+  country_code: US
+  request_price: '0.00500000'
+  remaining_balance: '9.99500000'
+  current_carrier:
+    network_code: '310090'
+    name: Sample Wireless
+    country: US
+    network_type: mobile
+  original_carrier:
+    network_code: '310090'
+    name: Sample Wireless
+    country: US
+    network_type: mobile
+  ported: not_ported

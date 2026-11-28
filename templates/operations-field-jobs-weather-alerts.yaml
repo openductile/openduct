@@ -1,0 +1,80 @@
+name: Weather warnings for today's jobs on site
+description: >-
+  Each weekday at 6:00, Denver time, read today's jobs from the Jobs sheet of your Google Sheets spreadsheet, ask the
+  US National Weather Service's free API for the warnings in force at each site, and e-mail the dispatcher the day's
+  jobs with any warning beside them. When a site has one, the crews' Slack channel is told too, so nobody drives out to
+  a roof in a storm. The sheet's first row names its columns: Date, Job, Crew, Address, Latitude, Longitude. Needs:
+  google_sheets, mail (your mail server), slack.
+category: Operations
+trigger:
+  schedule: { every: weekday, at: "06:00", timezone: America/Denver }
+# What a test runs on: an event as this trigger gives it.
+sample:
+  scheduled_at: '2026-11-30T13:00:00Z'
+steps:
+  - name: today
+    datetime: { value: value.scheduled_at, timezone: America/Denver }
+  - name: sheet
+    google_sheets:
+      action: read_rows
+      credential: google_sheets
+      spreadsheet_id: your-spreadsheet-id
+      range: Jobs!A1:F500
+  # Today's jobs as records, by the names in the first row.
+  - name: jobs
+    javascript: |
+      const rows = steps.sheet || [];
+      const head = (rows[0] || []).map((h) => String(h).trim().toLowerCase());
+      const at = (r, name) => r[head.indexOf(name)];
+      const jobs = rows.slice(1)
+        .filter((r) => String(at(r, "date") || "").startsWith(steps.today.date))
+        .map((r) => ({ job: at(r, "job"), crew: at(r, "crew"), address: at(r, "address"),
+                       lat: Number(at(r, "latitude")), lon: Number(at(r, "longitude")) }))
+        .filter((j) => j.job && !isNaN(j.lat) && !isNaN(j.lon));
+      return { jobs };
+  - where: size(steps.jobs.jobs) > 0
+  - name: each
+    for_each:
+      items: steps.jobs.jobs
+      steps:
+        - name: alerts
+          http:
+            url: https://api.weather.gov/alerts/active
+            query: { point: "{{ string(item.lat) }},{{ string(item.lon) }}" }
+            # The Weather Service asks every program to say who it is and how to reach its owner.
+            headers: { User-Agent: "(field-jobs-weather, dispatch@example.com)", Accept: application/geo+json }
+            timeout: 20s
+            sample:
+              features:
+                - properties: { event: Winter Storm Warning, severity: Severe, headline: "Winter Storm Warning until 5 PM MST", instruction: "Travel could be very difficult." }
+          retry: { attempts: 3, wait: 20s }
+  - name: report
+    javascript: |
+      const lines = [];
+      const warned = [];
+      steps.jobs.jobs.forEach((j, i) => {
+        const found = ((steps.each[i] && steps.each[i].alerts.body && steps.each[i].alerts.body.features) || [])
+          .map((f) => f.properties)
+          .filter((p) => p && ["Extreme", "Severe", "Moderate"].includes(p.severity));
+        const note = found.length ? " - WARNING: " + found.map((p) => p.event).join(", ") : "";
+        lines.push(`${j.job} (${j.crew}), ${j.address}${note}`);
+        if (found.length) warned.push(`${j.job} (${j.crew}): ${found.map((p) => p.headline).join("; ")}`);
+      });
+      const n = steps.jobs.jobs.length;
+      const subject = `${n} job${n === 1 ? "" : "s"} today` +
+        (warned.length ? ` - ${warned.length} with a weather warning` : ", no weather warnings");
+      return { text: lines.join("\n"), warned, subject };
+  - name: dispatcher
+    email:
+      credential: mail
+      to: dispatch@example.com
+      subject: "{{ steps.report.subject }}"
+      text: "Jobs for {{ steps.today.date }}:\n\n{{ steps.report.text }}\n\nWarnings from the National Weather Service, weather.gov."
+  - name: crews
+    if:
+      when: size(steps.report.warned) > 0
+      then:
+        - slack:
+            credential: slack
+            channel: "#crews"
+            text: "Weather warnings at today's sites - check with dispatch before you leave:\n{{ steps.report.warned.join('\\n') }}"

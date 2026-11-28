@@ -1,0 +1,18 @@
+description: A job done, with its result's address (asked not to be sent on to it)
+action: get_job
+credential: { api_key: md_test_1 }
+input: { job_id: 1b7e3c2d-0000-4000-8000-0000000000b1 }
+exchanges:
+  - sent: { method: GET, url: https://api-v2.mindee.net/v2/jobs/1b7e3c2d-0000-4000-8000-0000000000b1, query: { redirect: "false" } }
+    answer:
+      body:
+        job:
+          id: 1b7e3c2d-0000-4000-8000-0000000000b1
+          status: Processed
+          completed_at: "2026-11-27T10:00:06Z"
+          result_url: https://api-v2.mindee.net/v2/products/extraction/results/6c2f2a8e-0000-4000-8000-0000000000a1
+result:
+  id: 1b7e3c2d-0000-4000-8000-0000000000b1
+  status: Processed
+  completed_at: "2026-11-27T10:00:06Z"
+  result_url: https://api-v2.mindee.net/v2/products/extraction/results/6c2f2a8e-0000-4000-8000-0000000000a1

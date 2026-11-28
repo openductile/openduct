@@ -1,0 +1,11 @@
+description: A message Telegram sends to the address, with the secret it was given
+trigger: message
+workflow: wf1
+credential: { bot_token: "123:abc", "webhook_secret@wf1": s3cr3t }
+delivery:
+  headers: { x-telegram-bot-api-secret-token: s3cr3t }
+  body: '{"update_id": 900, "message": {"message_id": 5, "chat": {"id": 42}, "text": "hi"}}'
+  at: 1700000000
+runs:
+  - { message_id: 5, chat: { id: 42 }, text: hi }
+ids: ["900"]

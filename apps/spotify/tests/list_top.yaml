@@ -1,0 +1,7 @@
+action: list_top
+credential: { access_token: BQ-test-token }
+input: { type: artists, time_range: short_term }
+exchanges:
+  - sent: { url: https://api.spotify.com/v1/me/top/artists, query: { time_range: short_term, limit: "50" } }
+    answer: { body: { items: [{ id: 0TestArtist00000000001, name: Example Band, popularity: 38 }], next: null, total: 1 } }
+result: [{ id: 0TestArtist00000000001, name: Example Band, popularity: 38 }]

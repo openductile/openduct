@@ -1,0 +1,10 @@
+description: A delivery without the workflow's secret is refused, and runs nothing
+trigger: record_event
+workflow: wf1
+credential: { api_token: test-nocodb-token, "webhook_secret@wf1": s3cret-token-1 }
+input: { base_id: pexample0001, table_id: mexample0001 }
+delivery:
+  headers: { x-webhook-token: not-the-secret }
+  body: '{"type":"records.after.insert","id":"0698517a-0000-4e72-bf7a-000000000002","version":"v3","data":{"table_id":"mexample0001","rows":[{"Id":3}]}}'
+  at: 1764235200
+refused: token is wrong

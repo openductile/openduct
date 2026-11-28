@@ -1,0 +1,63 @@
+description: Numbers for priority and status are sent as they are
+action: create_ticket
+credential:
+  domain: acme
+  api_key: test-key
+input:
+  email: pat@example.com
+  subject: Cracked lid
+  description: The lid of my mug is cracked.
+  priority: '4'
+  status: 3
+exchanges:
+- sent:
+    method: POST
+    url: https://acme.freshdesk.com/api/v2/tickets
+    headers:
+      authorization: Basic dGVzdC1rZXk6WA==
+    body:
+      email: pat@example.com
+      subject: Cracked lid
+      description: The lid of my mug is cracked.
+      priority: 4
+      status: 3
+  answer:
+    status: 201
+    body:
+      id: 20
+      subject: Cracked lid
+      description_text: The lid of my mug is cracked.
+      status: 3
+      priority: 4
+      source: 2
+      type: null
+      requester_id: 5001
+      responder_id: null
+      group_id: null
+      company_id: null
+      tags: &id001 []
+      cc_emails: &id002 []
+      custom_fields: &id003 {}
+      due_by: '2026-11-20T11:30:00Z'
+      fr_due_by: '2026-11-18T11:30:00Z'
+      created_at: '2026-11-17T12:02:50Z'
+      updated_at: '2026-11-17T12:02:51Z'
+result:
+  id: 20
+  subject: Cracked lid
+  description_text: The lid of my mug is cracked.
+  status: 3
+  priority: 4
+  source: 2
+  type: null
+  requester_id: 5001
+  responder_id: null
+  group_id: null
+  company_id: null
+  tags: *id001
+  cc_emails: *id002
+  custom_fields: *id003
+  due_by: '2026-11-20T11:30:00Z'
+  fr_due_by: '2026-11-18T11:30:00Z'
+  created_at: '2026-11-17T12:02:50Z'
+  updated_at: '2026-11-17T12:02:51Z'

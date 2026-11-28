@@ -1,0 +1,6 @@
+action: list_countries
+credential: { api_key: us_test_1 }
+exchanges:
+  - sent: { method: GET, url: https://urlscan.io/api/v1/availableCountries }
+    answer: { body: { countries: [de, us, jp] } }
+result: [{ country: de }, { country: us }, { country: jp }]

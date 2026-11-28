@@ -1,0 +1,363 @@
+# Copyright 2026 Ductile AI, Inc
+# SPDX-License-Identifier: Apache-2.0
+# Raindrop.io: written by hand from its API reference, https://developer.raindrop.io (read 2026-11-27).
+app: raindrop
+name: Raindrop.io
+category: productivity
+description: Bookmarks in Raindrop.io - saved, found, tagged and sorted into collections.
+docs: https://developer.raindrop.io
+hosts: [api.raindrop.io]
+base_url: https://api.raindrop.io/rest/v1
+sign_in:
+  - id: raindrop
+    label: An app's test token
+    fields:
+      - { name: token, label: "The test token of an app you made in Raindrop.io (Settings → Integrations)", secret: true }
+    headers: { Authorization: "Bearer {{ credential.token }}" }
+error: "status >= 400 || value.result == false ? (has(value.errorMessage) ? value.errorMessage : value.error) : null"
+actions:
+  list_bookmarks:
+    label: List bookmarks
+    description: The bookmarks of a collection - or of all of them - the newest first unless sorted otherwise, or those matching a search; every page.
+    method: GET
+    path: "/raindrops/{{ has(input.collection_id) && input.collection_id != null ? input.collection_id : 0 }}"
+    inputs:
+      - { name: collection_id, label: "The collection's id: 0 for all (the default), -1 Unsorted, -99 Trash", kind: number }
+      - { name: search, label: "Only bookmarks that match this search, such as #invoice or site.example" }
+      - { name: sort, label: "Order: -created (the default), created, title, -title, domain, -domain, -sort, score" }
+      - { name: nested, label: "Take in the bookmarks of collections inside it", kind: boolean }
+    query: { search: "{{ input.search }}", sort: "{{ input.sort }}", nested: "{{ input.nested }}", perpage: "50" }
+    items: value.items
+    next: "size(value.items) == 50 ? {'page': string((page == null ? 0 : int(page.page)) + 1)} : null"
+    max_pages: 20
+    output:
+      _id: number
+      link: text
+      title: text
+      excerpt: text
+      note: text
+      type: text
+      tags: list
+      important: boolean
+      cover: text
+      domain: text
+      created: text
+      lastUpdate: text
+      collection: record
+      broken: boolean
+      highlights: list
+  get_bookmark:
+    label: Get a bookmark
+    description: One bookmark, by its id.
+    method: GET
+    path: "/raindrop/{{ input.bookmark_id }}"
+    inputs:
+      - { name: bookmark_id, label: "The bookmark's id", required: true, kind: number }
+    result: value.item
+    output:
+      _id: number
+      link: text
+      title: text
+      excerpt: text
+      note: text
+      type: text
+      tags: list
+      important: boolean
+      cover: text
+      domain: text
+      created: text
+      lastUpdate: text
+      collection: record
+      broken: boolean
+      highlights: list
+  add_bookmark:
+    label: Save a bookmark
+    description: Saves a link - with a title, a description, a note and tags if given - in a collection, or in Unsorted.
+    write: true
+    method: POST
+    path: /raindrop
+    inputs:
+      - { name: link, label: "The link", required: true }
+      - { name: title, label: Title }
+      - { name: excerpt, label: "A description" }
+      - { name: note, label: "A note" }
+      - { name: tags, label: "Tags", kind: list }
+      - { name: important, label: "A favourite", kind: boolean }
+      - { name: collection_id, label: "The collection's id (Unsorted if not given)", kind: number }
+    send:
+      link: "{{ input.link }}"
+      title: "{{ input.title }}"
+      excerpt: "{{ input.excerpt }}"
+      note: "{{ input.note }}"
+      tags: "{{ input.tags }}"
+      important: "{{ input.important }}"
+      collection: { $id: "{{ input.collection_id }}" }
+    result: value.item
+    output:
+      _id: number
+      link: text
+      title: text
+      excerpt: text
+      note: text
+      type: text
+      tags: list
+      important: boolean
+      cover: text
+      domain: text
+      created: text
+      lastUpdate: text
+      collection: record
+      broken: boolean
+      highlights: list
+  add_bookmarks:
+    label: Save many bookmarks
+    description: Saves up to 100 links at once, each a record with link and, if wanted, title, excerpt, note, tags and collection.
+    write: true
+    method: POST
+    path: /raindrops
+    inputs:
+      - { name: items, label: "The bookmarks (as JSON): [{\"link\": \"https://site.example\", \"tags\": [\"read\"]}, ...]", required: true, kind: list }
+    send: { items: "{{ input.items }}" }
+    items: value.items
+    output:
+      _id: number
+      link: text
+      title: text
+      excerpt: text
+      note: text
+      type: text
+      tags: list
+      important: boolean
+      cover: text
+      domain: text
+      created: text
+      lastUpdate: text
+      collection: record
+      broken: boolean
+      highlights: list
+  update_bookmark:
+    label: Change a bookmark
+    description: Changes a bookmark's link, title, description, note, tags, favourite mark or collection; what is not given stays.
+    write: true
+    method: PUT
+    path: "/raindrop/{{ input.bookmark_id }}"
+    inputs:
+      - { name: bookmark_id, label: "The bookmark's id", required: true, kind: number }
+      - { name: link, label: "The link" }
+      - { name: title, label: Title }
+      - { name: excerpt, label: "A description" }
+      - { name: note, label: "A note" }
+      - { name: tags, label: "Tags (they take the place of its tags)", kind: list }
+      - { name: important, label: "A favourite", kind: boolean }
+      - { name: collection_id, label: "Move it to this collection", kind: number }
+    send:
+      link: "{{ input.link }}"
+      title: "{{ input.title }}"
+      excerpt: "{{ input.excerpt }}"
+      note: "{{ input.note }}"
+      tags: "{{ input.tags }}"
+      important: "{{ input.important }}"
+      collection: { $id: "{{ input.collection_id }}" }
+    result: value.item
+    output:
+      _id: number
+      link: text
+      title: text
+      excerpt: text
+      note: text
+      type: text
+      tags: list
+      important: boolean
+      cover: text
+      domain: text
+      created: text
+      lastUpdate: text
+      collection: record
+      broken: boolean
+      highlights: list
+  delete_bookmark:
+    label: Remove a bookmark
+    description: Moves a bookmark to the Trash; one already in the Trash is removed for good.
+    write: true
+    method: DELETE
+    path: "/raindrop/{{ input.bookmark_id }}"
+    inputs:
+      - { name: bookmark_id, label: "The bookmark's id", required: true, kind: number }
+    result: "{'removed': value.result == true}"
+    output: { removed: boolean }
+  list_collections:
+    label: List collections
+    description: The collections at the top level, each with how many bookmarks it holds.
+    method: GET
+    path: /collections
+    items: value.items
+    output:
+      _id: number
+      title: text
+      count: number
+      public: boolean
+      view: text
+      expanded: boolean
+      sort: number
+      cover: list
+      parent: record
+      created: text
+      lastUpdate: text
+  list_child_collections:
+    label: List the collections inside others
+    description: The collections that sit inside another collection.
+    method: GET
+    path: /collections/childrens
+    items: value.items
+    output:
+      _id: number
+      title: text
+      count: number
+      public: boolean
+      view: text
+      expanded: boolean
+      sort: number
+      cover: list
+      parent: record
+      created: text
+      lastUpdate: text
+  get_collection:
+    label: Get a collection
+    description: One collection, by its id.
+    method: GET
+    path: "/collection/{{ input.collection_id }}"
+    inputs:
+      - { name: collection_id, label: "The collection's id", required: true, kind: number }
+    result: value.item
+    output:
+      _id: number
+      title: text
+      count: number
+      public: boolean
+      view: text
+      expanded: boolean
+      sort: number
+      cover: list
+      parent: record
+      created: text
+      lastUpdate: text
+  create_collection:
+    label: Add a collection
+    description: Makes a new collection, at the top level or inside another.
+    write: true
+    method: POST
+    path: /collection
+    inputs:
+      - { name: title, label: "Its name", required: true }
+      - { name: parent_id, label: "The collection to put it in (the top level if not given)", kind: number }
+      - { name: public, label: "Anyone with its link may see it", kind: boolean }
+      - { name: view, label: "How it shows: list, simple, grid or masonry" }
+    send:
+      title: "{{ input.title }}"
+      parent: { $id: "{{ input.parent_id }}" }
+      public: "{{ input.public }}"
+      view: "{{ input.view }}"
+    result: value.item
+    output:
+      _id: number
+      title: text
+      count: number
+      public: boolean
+      view: text
+      expanded: boolean
+      sort: number
+      cover: list
+      parent: record
+      created: text
+      lastUpdate: text
+  update_collection:
+    label: Change a collection
+    description: Renames a collection, moves it, or changes who may see it and how it shows.
+    write: true
+    method: PUT
+    path: "/collection/{{ input.collection_id }}"
+    inputs:
+      - { name: collection_id, label: "The collection's id", required: true, kind: number }
+      - { name: title, label: "Its name" }
+      - { name: parent_id, label: "Move it inside this collection", kind: number }
+      - { name: public, label: "Anyone with its link may see it", kind: boolean }
+      - { name: view, label: "How it shows: list, simple, grid or masonry" }
+    send:
+      title: "{{ input.title }}"
+      parent: { $id: "{{ input.parent_id }}" }
+      public: "{{ input.public }}"
+      view: "{{ input.view }}"
+    result: value.item
+    output:
+      _id: number
+      title: text
+      count: number
+      public: boolean
+      view: text
+      expanded: boolean
+      sort: number
+      cover: list
+      parent: record
+      created: text
+      lastUpdate: text
+  delete_collection:
+    label: Remove a collection
+    description: Removes a collection and those inside it; their bookmarks go to the Trash.
+    write: true
+    method: DELETE
+    path: "/collection/{{ input.collection_id }}"
+    inputs:
+      - { name: collection_id, label: "The collection's id", required: true, kind: number }
+    result: "{'removed': value.result == true}"
+    output: { removed: boolean }
+  list_tags:
+    label: List tags
+    description: The tags in use, each with how many bookmarks have it - in one collection, or in all.
+    method: GET
+    path: "/tags{{ has(input.collection_id) && input.collection_id != null ? '/' + string(input.collection_id) : '' }}"
+    inputs:
+      - { name: collection_id, label: "Only this collection's tags", kind: number }
+    items: value.items
+    output: { _id: text, count: number }
+  rename_tag:
+    label: Rename tags
+    description: Gives one tag a new name - or, given several, merges them into one - on every bookmark.
+    write: true
+    method: PUT
+    path: /tags
+    inputs:
+      - { name: tags, label: "The tag, or the tags to merge", required: true, kind: list }
+      - { name: new_name, label: "The new name", required: true }
+    send: { tags: "{{ input.tags }}", replace: "{{ input.new_name }}" }
+    result: "{'renamed': value.result == true}"
+    output: { renamed: boolean }
+  remove_tags:
+    label: Remove tags
+    description: Takes tags off every bookmark that has them.
+    write: true
+    method: DELETE
+    path: /tags
+    inputs:
+      - { name: tags, label: "The tags", required: true, kind: list }
+    send: { tags: "{{ input.tags }}" }
+    result: "{'removed': value.result == true}"
+    output: { removed: boolean }
+  get_user:
+    label: Get the signed-in user
+    description: The account the token belongs to - its name, whether it is Pro, and its groups of collections.
+    method: GET
+    path: /user
+    result: value.user
+    output: { _id: number, fullName: text, email: text, pro: boolean, registered: text, groups: list }
+triggers:
+  new_bookmark:
+    label: A new bookmark
+    description: Each bookmark saved - in one collection, or in any - the newest asked for every few minutes.
+    inputs:
+      - { name: collection_id, label: "Only this collection (all by default)", kind: number }
+    poll:
+      action: list_bookmarks
+      input: { collection_id: "{{ input.collection_id }}" }
+      id: string(item._id)
+      newest_first: true
+      every: 5m

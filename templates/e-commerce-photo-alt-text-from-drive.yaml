@@ -1,0 +1,71 @@
+name: Alt text and descriptions for product photos in Drive
+description: >-
+  Run it by hand after a photo shoot: it finds the images in your product photos folder in Google Drive, has a vision
+  model look at each one and write alt text and a two-sentence description, and adds a row per photo to a Google
+  Sheet for your team to check before they go on the shop. The folder must be shared so anyone with the link can view
+  it (the model fetches each photo by its link), as photos for a public shop usually are. Needs: Google Drive (drive),
+  Google Sheets (sheets) and an OpenAI API key as a bearer credential (openai).
+category: E-commerce
+trigger: manual
+# What a test runs on: the input a run by hand is given.
+sample:
+  shoot: November catalogue
+steps:
+  - name: photos
+    google_drive:
+      action: find_files
+      credential: drive
+      # Your folder's id: the end of its address in Drive.
+      q: "'your-photos-folder-id' in parents and mimeType contains 'image/' and trashed = false"
+    retry: { attempts: 3, wait: 30s }
+  # At most 50 a run, so a big folder is done in a few runs and none is cut off half way.
+  - name: some
+    list: { items: steps.photos, limit: 50 }
+  - name: each
+    for_each:
+      items: steps.some
+      steps:
+        - name: look
+          http:
+            method: POST
+            credential: openai
+            url: https://api.openai.com/v1/chat/completions
+            json:
+              model: gpt-4o-mini
+              response_format: { type: json_object }
+              max_tokens: 300
+              messages:
+                - role: system
+                  content: >-
+                    You describe product photos for an online shop. Answer with JSON only:
+                    {"alt": "alt text, at most 120 characters, saying what is in the photo",
+                    "description": "two short sentences a shopper would find useful: what it is, its colour and material"}.
+                    Describe only what you can see; never guess a brand or a size.
+                - role: user
+                  content:
+                    - { type: text, text: "The photo's file name: {{ item.name }}" }
+                    - { type: image_url, image_url: { url: "https://drive.google.com/thumbnail?id={{ item.id }}&sz=w1024" } }
+            # What a test answers with, sending nothing: an answer shaped like the API's.
+            sample:
+              choices:
+                - message:
+                    role: assistant
+                    content: '{"alt": "Green canvas tote bag with leather handles on a white table", "description": "A roomy canvas tote in forest green. Its leather handles are stitched on for daily use."}'
+          retry: { attempts: 3, wait: 20s }
+        - name: said
+          set:
+            words: json.decode(steps.look.body.choices[0].message.content)
+        - name: row
+          google_sheets:
+            action: add_row
+            credential: sheets
+            spreadsheet_id: your-sheet-id
+            sheet: Photos
+            values:
+              - "{{ item.name }}"
+              - "{{ steps.said.words.alt }}"
+              - "{{ steps.said.words.description }}"
+              - "{{ has(item.webViewLink) ? item.webViewLink : '' }}"
+              - "{{ value.shoot }}"
+              - to check
+          retry: { attempts: 3, wait: 30s }

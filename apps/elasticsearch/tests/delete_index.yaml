@@ -1,0 +1,14 @@
+description: An index removed
+action: delete_index
+credential: {url: 'https://search.example.com:9200', api_key: VnVhQ2ZHY0JDZGJrUW0tZTVhT3g6dWkybHAyYXhUTm1zeWFrdzl0dk5udw==}
+input: {index: orders-2025}
+exchanges:
+- sent:
+    method: DELETE
+    url: https://search.example.com:9200/orders-2025
+    query: {}
+    headers: {authorization: ApiKey VnVhQ2ZHY0JDZGJrUW0tZTVhT3g6dWkybHAyYXhUTm1zeWFrdzl0dk5udw==}
+  answer:
+    status: 200
+    body: {acknowledged: true}
+result: {acknowledged: true}

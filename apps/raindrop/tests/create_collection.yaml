@@ -1,0 +1,12 @@
+description: "A collection made inside another"
+action: create_collection
+credential: { token: test-token }
+input: { title: Packaging, parent_id: 77 }
+exchanges:
+  - sent:
+      method: POST
+      url: https://api.raindrop.io/rest/v1/collection
+      body: { title: Packaging, parent: { $id: 77 } }
+    answer:
+      body: { result: true, item: { _id: 78, title: Packaging, count: 0, parent: { $id: 77 }, view: list, public: false } }
+result: { _id: 78, title: Packaging, count: 0, parent: { $id: 77 }, view: list, public: false }

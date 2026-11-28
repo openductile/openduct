@@ -1,0 +1,80 @@
+name: Country figures from the World Bank, as a workbook
+description: >-
+  For sizing a market: press Run with the countries (as US;CA;MX), a World Bank indicator (GDP per person, population,
+  internet users...) and the years. The figures come from the World Bank's open API, are laid out a country a row and a
+  year a column with the growth per year worked out, saved as an Excel workbook in your exports folder and e-mailed to
+  you. Needs: mail (smtp); the exports folder given to OpenDuct when it starts (--files-root exports=...).
+category: Data
+trigger: manual
+# What a test runs on: what a person gives when they press Run.
+sample:
+  countries: US;CA;MX
+  indicator: NY.GDP.PCAP.CD
+  years: "2019:2024"
+  send_to: analyst@example.com
+steps:
+  - name: figures
+    http:
+      url: "https://api.worldbank.org/v2/country/{{ value.countries }}/indicator/{{ value.indicator }}"
+      query: { format: json, date: "{{ value.years }}", per_page: "1000" }
+      sample:
+        - { page: 1, pages: 1, per_page: 1000, total: 6 }
+        - - { indicator: { id: NY.GDP.PCAP.CD, value: "GDP per capita (current US$)" }, country: { id: US, value: United States }, date: "2024", value: 85810.2 }
+          - { indicator: { id: NY.GDP.PCAP.CD, value: "GDP per capita (current US$)" }, country: { id: US, value: United States }, date: "2019", value: 65120.4 }
+          - { indicator: { id: NY.GDP.PCAP.CD, value: "GDP per capita (current US$)" }, country: { id: CA, value: Canada }, date: "2024", value: 53430.7 }
+          - { indicator: { id: NY.GDP.PCAP.CD, value: "GDP per capita (current US$)" }, country: { id: CA, value: Canada }, date: "2019", value: 46350.1 }
+          - { indicator: { id: NY.GDP.PCAP.CD, value: "GDP per capita (current US$)" }, country: { id: MX, value: Mexico }, date: "2024", value: 14150.9 }
+          - { indicator: { id: NY.GDP.PCAP.CD, value: "GDP per capita (current US$)" }, country: { id: MX, value: Mexico }, date: "2019", value: 10140.5 }
+    retry: { attempts: 3, wait: 20s }
+  - name: table
+    javascript: |
+      // The API answers [paging, records] - or [{message: [...]}] when an indicator or a country is wrong.
+      const body = steps.figures.body || [];
+      if (!Array.isArray(body) || !Array.isArray(body[1])) {
+        const said = body[0] && body[0].message ? JSON.stringify(body[0].message) : "no figures";
+        throw new Error(`the World Bank answered: ${said}`);
+      }
+      const records = body[1].filter((r) => r.value !== null && r.value !== undefined);
+      const years = [...new Set(records.map((r) => r.date))].sort();
+      const byCountry = {};
+      for (const r of records) {
+        const c = (byCountry[r.country.id] = byCountry[r.country.id] || { name: r.country.value, values: {} });
+        c.values[r.date] = r.value;
+      }
+      const title = records.length ? records[0].indicator.value : "";
+      // One row a country: its name, a column a year, and the growth per year from its first year to its last.
+      const header = ["Country", ...years, "Growth per year %"];
+      const rows = [header];
+      for (const id of Object.keys(byCountry).sort()) {
+        const c = byCountry[id];
+        const known = years.filter((y) => c.values[y] !== undefined);
+        let growth = "";
+        if (known.length >= 2) {
+          const first = c.values[known[0]], last = c.values[known[known.length - 1]];
+          const span = Number(known[known.length - 1]) - Number(known[0]);
+          if (first > 0 && span > 0) growth = Math.round((Math.pow(last / first, 1 / span) - 1) * 10000) / 100;
+        }
+        rows.push([c.name, ...years.map((y) => (c.values[y] === undefined ? "" : Math.round(c.values[y] * 100) / 100)), growth]);
+      }
+      return { title, rows, countries: rows.length - 1 };
+  - name: book
+    convert:
+      format: xlsx
+      rows: steps.table.rows
+      header: false
+      sheet: Figures
+      name: "{{ value.indicator }}-{{ value.years.replace(':', '-') }}.xlsx"
+  - name: keep
+    storage:
+      action: write
+      root: exports
+      path: "world-bank/{{ value.indicator }}-{{ value.years.replace(':', '-') }}.xlsx"
+      file: steps.book
+      overwrite: true
+  - name: send
+    email:
+      credential: mail
+      to: "{{ value.send_to }}"
+      subject: "{{ steps.table.title }}: {{ steps.table.countries }} countries, {{ value.years }}"
+      text: "The figures are in the workbook attached, and in the exports folder as world-bank/{{ steps.book.name }}. Source: World Bank Open Data."
+      attachments: steps.book

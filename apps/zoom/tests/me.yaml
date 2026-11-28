@@ -1,0 +1,6 @@
+action: me
+credential: { access_token: zoom-test-token }
+exchanges:
+  - sent: { method: GET, url: https://api.zoom.us/v2/users/me }
+    answer: { body: { id: host-test-1, first_name: Sam, last_name: Owner, display_name: Sam Owner, timezone: America/New_York, pmi: 1000000001, type: 2, account_id: acct-test-1, status: active } }
+result: { id: host-test-1, first_name: Sam, last_name: Owner, display_name: Sam Owner, timezone: America/New_York, pmi: 1000000001, type: 2, account_id: acct-test-1, status: active }

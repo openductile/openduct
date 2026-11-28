@@ -1,0 +1,58 @@
+description: A number compared, the highest first
+action: find_documents
+credential:
+  access_token: ya29.test
+input:
+  project_id: sample-shop
+  collection: orders
+  field: total
+  value: '40'
+  value_kind: double
+  operator: GREATER_THAN
+  order_by: total
+  descending: true
+exchanges:
+- sent:
+    method: POST
+    url: https://firestore.googleapis.com/v1/projects/sample-shop/databases/(default)/documents:runQuery
+    headers:
+      authorization: Bearer ya29.test
+    body:
+      structuredQuery:
+        from:
+        - collectionId: orders
+        where:
+          fieldFilter:
+            field:
+              fieldPath: total
+            op: GREATER_THAN
+            value:
+              doubleValue: 40
+        orderBy:
+        - field:
+            fieldPath: total
+          direction: DESCENDING
+  answer:
+    status: 200
+    body:
+    - document:
+        name: projects/sample-shop/databases/(default)/documents/orders/A-100
+        fields: &id001
+          customer:
+            stringValue: Pat Sample
+          total:
+            doubleValue: 42.5
+          items:
+            integerValue: '3'
+          paid:
+            booleanValue: true
+          status:
+            stringValue: new
+        createTime: '2026-11-20T10:00:00.000000Z'
+        updateTime: '2026-11-20T10:00:00.000000Z'
+      readTime: '2026-11-21T08:00:00.000000Z'
+result:
+- name: projects/sample-shop/databases/(default)/documents/orders/A-100
+  fields: *id001
+  createTime: '2026-11-20T10:00:00.000000Z'
+  updateTime: '2026-11-20T10:00:00.000000Z'

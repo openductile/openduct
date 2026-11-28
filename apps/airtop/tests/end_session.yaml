@@ -1,0 +1,12 @@
+description: "End a browser session"
+action: end_session
+credential: { token: test-token }
+input: { id: id_1 }
+exchanges:
+  - sent:
+      method: DELETE
+      url: "https://api.airtop.ai/api/v1/sessions/id_1"
+      query: {}
+      headers: { authorization: "Bearer test-token" }
+    answer: { status: 200 }
+result: { ended: true }

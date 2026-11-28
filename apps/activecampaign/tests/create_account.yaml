@@ -1,0 +1,28 @@
+description: An account (a company) added
+action: create_account
+credential:
+  account: shopexample
+  api_key: test-key
+input:
+  name: Example Bakery
+  website: https://bakery.example
+exchanges:
+- sent:
+    method: POST
+    url: https://shopexample.api-us1.com/api/3/accounts
+    headers:
+      api-token: test-key
+    body:
+      account:
+        name: Example Bakery
+        accountUrl: https://bakery.example
+  answer:
+    status: 201
+    body:
+      account: &id001
+        id: '3'
+        name: Example Bakery
+        accountUrl: https://bakery.example
+        createdTimestamp: '2026-11-27 10:40:00'
+        fields: []
+result: *id001

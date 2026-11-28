@@ -1,0 +1,10 @@
+description: Two rows added, sent by Baserow with the webhook's token - each a run
+trigger: rows_created
+credential: { token: br-test-token, webhook_secret: wh-token-5f2c }
+delivery:
+  headers: { x-openduct-token: wh-token-5f2c }
+  at: 1700000000
+  body: '{"table_id": 1203, "database_id": 262, "workspace_id": 165, "event_id": "6d5f8b9e-1c2a-4b3d-9e8f-7a6b5c4d3e2f", "event_type": "rows.created", "items": [{"id": 12, "order": "12.00000000000000000000", "Name": "Ed"}, {"id": 13, "order": "13.00000000000000000000", "Name": "Flo"}]}'
+runs:
+  - { table_id: 1203, row: { id: 12, order: "12.00000000000000000000", Name: Ed } }
+  - { table_id: 1203, row: { id: 13, order: "13.00000000000000000000", Name: Flo } }

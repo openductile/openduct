@@ -1,0 +1,13 @@
+description: A file changed since the poll before runs again
+trigger: changed_file
+credential: { access_token: ya29.test }
+seen: { items: [] }
+exchanges:
+  - sent:
+      query:
+        q: trashed = false
+        orderBy: modifiedTime desc
+        pageSize: "50"
+        fields: "nextPageToken, files(id, name, mimeType, createdTime, modifiedTime, webViewLink, parents, size)"
+    answer: { body: { files: [{ id: d1, name: plan.doc, modifiedTime: "2026-11-27T11:00:00Z" }] } }
+ids: [d1]

@@ -1,0 +1,7 @@
+action: list_completed_tasks
+credential: { token: todoist-test-token }
+input: { since: "2026-11-01T00:00:00Z", until: "2026-12-01T00:00:00Z" }
+exchanges:
+  - sent: { method: GET, url: https://api.todoist.com/api/v1/tasks/completed/by_completion_date, query: { since: "2026-11-01T00:00:00Z", until: "2026-12-01T00:00:00Z", limit: "200" } }
+    answer: { body: { items: [{ id: 6Xtest0000000001, content: Call the supplier, checked: true, completed_at: "2026-11-27T11:00:00.000000Z" }] } }
+result: [{ id: 6Xtest0000000001, content: Call the supplier, checked: true, completed_at: "2026-11-27T11:00:00.000000Z" }]

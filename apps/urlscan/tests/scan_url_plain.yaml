@@ -1,0 +1,8 @@
+description: Only the address; what is not given is not sent
+action: scan_url
+credential: { api_key: us_test_1 }
+input: { url: "https://www.example.com/" }
+exchanges:
+  - sent: { method: POST, url: https://urlscan.io/api/v1/scan, body: { url: "https://www.example.com/" } }
+    answer: { body: { uuid: 5b1e2a90-0000-4000-8000-000000000001, visibility: public, url: "https://www.example.com/", country: us } }
+result: { uuid: 5b1e2a90-0000-4000-8000-000000000001, visibility: public, url: "https://www.example.com/", country: us }

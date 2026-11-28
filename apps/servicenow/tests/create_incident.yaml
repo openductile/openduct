@@ -1,0 +1,38 @@
+description: An incident opened with its urgency and group, signed in with a user name and password
+action: create_incident
+credential: { instance: acme, username: integration.user, password: pw-test-1 }
+input:
+  short_description: Unable to connect to office wifi
+  urgency: "2"
+  impact: "2"
+  assignment_group: 287ebd7da9fe198100f92cc8d1d2154e
+exchanges:
+  - sent:
+      method: POST
+      url: "https://acme.service-now.com/api/now/table/incident"
+      query: { sysparm_exclude_reference_link: "true" }
+      headers: { authorization: "Basic aW50ZWdyYXRpb24udXNlcjpwdy10ZXN0LTE=" }
+      body: { short_description: Unable to connect to office wifi, urgency: "2", impact: "2", assignment_group: 287ebd7da9fe198100f92cc8d1d2154e }
+    answer:
+      status: 201
+      body:
+        result:
+          sys_id: c537bae64f411200adf9f8e18110c76e
+          number: INC0010002
+          short_description: Unable to connect to office wifi
+          state: "1"
+          urgency: "2"
+          impact: "2"
+          priority: "3"
+          assignment_group: 287ebd7da9fe198100f92cc8d1d2154e
+          sys_created_on: "2026-11-27 09:00:00"
+result:
+  sys_id: c537bae64f411200adf9f8e18110c76e
+  number: INC0010002
+  short_description: Unable to connect to office wifi
+  state: "1"
+  urgency: "2"
+  impact: "2"
+  priority: "3"
+  assignment_group: 287ebd7da9fe198100f92cc8d1d2154e
+  sys_created_on: "2026-11-27 09:00:00"

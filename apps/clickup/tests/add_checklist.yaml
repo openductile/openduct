@@ -1,0 +1,16 @@
+description: "Add a checklist to a task: the checklist, out of ClickUp's wrapping"
+action: add_checklist
+credential: { api_key: pk_1_TEST }
+input: { task_id: "9hz", name: Before shipping }
+exchanges:
+  - sent:
+      method: POST
+      url: "https://api.clickup.com/api/v2/task/9hz/checklist"
+      query: {}
+      headers: { authorization: pk_1_TEST }
+      body: { name: Before shipping }
+    answer:
+      status: 200
+      body:
+        checklist: { id: b955c4dc-1111-4d2a-9a6b-000000000001, task_id: "9hz", name: Before shipping, orderindex: 0, resolved: 0, unresolved: 0, items: [] }
+result: { id: b955c4dc-1111-4d2a-9a6b-000000000001, task_id: "9hz", name: Before shipping, orderindex: 0, resolved: 0, unresolved: 0, items: [] }

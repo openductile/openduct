@@ -1,0 +1,7 @@
+action: get_split
+credential: { api_key: md_test_1 }
+input: { inference_id: 8e4b4caf-0000-4000-8000-0000000000a3 }
+exchanges:
+  - sent: { method: GET, url: https://api-v2.mindee.net/v2/products/split/results/8e4b4caf-0000-4000-8000-0000000000a3 }
+    answer: { body: { inference: { id: 8e4b4caf-0000-4000-8000-0000000000a3, file: { name: batch.pdf, page_count: 4 }, result: { splits: [{ page_range: [0, 1], document_type: invoice }, { page_range: [2, 3], document_type: invoice }] } } } }
+result: { id: 8e4b4caf-0000-4000-8000-0000000000a3, file: { name: batch.pdf, page_count: 4 }, result: { splits: [{ page_range: [0, 1], document_type: invoice }, { page_range: [2, 3], document_type: invoice }] } }

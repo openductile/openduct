@@ -1,0 +1,22 @@
+name: Welcome a new sign-up by e-mail with Resend
+description: >-
+  When your site sends a new sign-up over a webhook ({"email", "name"}), send a welcome e-mail through Resend, from an
+  address of a domain you verified there. The Resend app was made from Resend's own API description by OpenDuct's app
+  generator. Set the sender to your own.
+category: Marketing
+trigger:
+  webhook: {}
+# What a test runs on: an event as this trigger gives it.
+sample:
+  email: ann@example.com
+  name: Ann
+steps:
+  - name: welcome
+    resend:
+      credential: mail
+      action: create_email
+      from: "Welcome <hello@example.com>"
+      to: "{{ value.email }}"
+      subject: "Welcome, {{ value.name }}"
+      html: "<p>Hello {{ value.name }}, and welcome. Reply to this e-mail with any question.</p>"
+    retry: { attempts: 3, wait: 10s }

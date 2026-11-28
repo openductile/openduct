@@ -1,0 +1,74 @@
+description: 'A campaign sent now: instant by default, no schedule sent'
+action: schedule_campaign
+credential:
+  api_key: test-key
+input:
+  campaign_id: '61706700654118200'
+exchanges:
+- sent:
+    method: POST
+    url: https://connect.mailerlite.com/api/campaigns/61706700654118200/schedule
+    headers:
+      authorization: Bearer test-key
+      accept: application/json
+    body:
+      delivery: instant
+  answer:
+    status: 200
+    body:
+      data:
+        id: '61706700654118200'
+        account_id: '1'
+        name: December news
+        type: regular
+        status: ready
+        missing_data: &id001 []
+        settings: &id002
+          track_opens: true
+          use_google_analytics: false
+          ecommerce_tracking: false
+        filter: &id003
+        - - operator: in_any
+            args:
+            - groups
+            - - '42'
+        filter_for_humans: &id004
+        - - 'In any group: Newsletter'
+        delivery_schedule: instant
+        language_id: '4'
+        created_at: '2026-11-20 15:07:52'
+        updated_at: '2026-11-20 15:07:52'
+        scheduled_for: null
+        queued_at: null
+        started_at: null
+        finished_at: null
+        stopped_at: null
+        default_email_id: '61706700654118223'
+        emails: &id005
+        - id: '61706700654118223'
+          subject: Our December news
+          from_name: Sample Shop
+          from: news@example.com
+          reply_to: null
+          is_designed: true
+result:
+  id: '61706700654118200'
+  account_id: '1'
+  name: December news
+  type: regular
+  status: ready
+  missing_data: *id001
+  settings: *id002
+  filter: *id003
+  filter_for_humans: *id004
+  delivery_schedule: instant
+  language_id: '4'
+  created_at: '2026-11-20 15:07:52'
+  updated_at: '2026-11-20 15:07:52'
+  scheduled_for: null
+  queued_at: null
+  started_at: null
+  finished_at: null
+  stopped_at: null
+  default_email_id: '61706700654118223'
+  emails: *id005

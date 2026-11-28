@@ -1,0 +1,19 @@
+description: A chart drawn now - QuickChart answers with the image as Base64 text
+action: chart_image
+credential: { api_key: "" }
+input:
+  chart: { type: line, data: { labels: [Q1, Q2], datasets: [{ label: Visits, data: [40, 65] }] } }
+  height: 200
+exchanges:
+  - sent:
+      method: POST
+      url: https://quickchart.io/chart
+      body:
+        chart: { type: line, data: { labels: [Q1, Q2], datasets: [{ label: Visits, data: [40, 65] }] } }
+        height: 200
+        format: base64
+    answer:
+      status: 200
+      headers: { content-type: text/plain }
+      body: "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=="
+result: { image_base64: "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==" }

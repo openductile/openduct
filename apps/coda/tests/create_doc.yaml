@@ -1,0 +1,53 @@
+# Made by `openduct app from-openapi`: Create a doc.
+description: "Create a doc, made from the API description's schemas"
+action: create_doc
+credential: { token: test-token }
+exchanges:
+  - sent:
+      method: POST
+      url: "https://docs.superhuman.com/apis/v1/docs"
+      query: {}
+      headers: { authorization: "Bearer test-token" }
+      body: {}
+    answer:
+      status: 201
+      body:
+        id: AbCDeFGH
+        type: doc
+        href: "https://example.com/1"
+        browserLink: "https://example.com/1"
+        icon: { name: example, type: example, browserLink: "https://example.com/1" }
+        name: example
+        owner: "ann@example.com"
+        ownerName: example
+        docSize:
+          totalRowCount: 31337
+          tableAndViewCount: 42
+          baseTableCount: 42
+          pageCount: 10
+          overApiSizeLimit: false
+        sourceDoc:
+          id: AbCDeFGH
+          type: doc
+          href: "https://example.com/1"
+          browserLink: "https://example.com/1"
+        createdAt: "2018-04-11T00:18:57.946Z"
+        updatedAt: "2018-04-11T00:18:57.946Z"
+result:
+  id: AbCDeFGH
+  type: doc
+  href: "https://example.com/1"
+  browserLink: "https://example.com/1"
+  icon: { name: example, type: example, browserLink: "https://example.com/1" }
+  name: example
+  owner: "ann@example.com"
+  ownerName: example
+  docSize:
+    totalRowCount: 31337
+    tableAndViewCount: 42
+    baseTableCount: 42
+    pageCount: 10
+    overApiSizeLimit: false
+  sourceDoc: { id: AbCDeFGH, type: doc, href: "https://example.com/1", browserLink: "https://example.com/1" }
+  createdAt: "2018-04-11T00:18:57.946Z"
+  updatedAt: "2018-04-11T00:18:57.946Z"

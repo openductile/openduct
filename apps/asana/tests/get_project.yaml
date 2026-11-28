@@ -1,0 +1,8 @@
+description: A project by its id
+action: get_project
+credential: { token: "2/1200000000000001/1209999999999999:0a1b2c3d4e5f" }
+input: { project_id: "1201000000000001" }
+exchanges:
+  - sent: { method: GET, url: https://app.asana.com/api/1.0/projects/1201000000000001 }
+    answer: { body: { data: { gid: "1201000000000001", name: Billing, archived: false, owner: { gid: "1200000000000002", name: Ann Example }, permalink_url: "https://app.asana.com/0/1201000000000001/list" } } }
+result: { gid: "1201000000000001", name: Billing, archived: false, owner: { gid: "1200000000000002", name: Ann Example }, permalink_url: "https://app.asana.com/0/1201000000000001/list" }

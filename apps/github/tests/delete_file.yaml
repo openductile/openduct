@@ -1,0 +1,10 @@
+action: delete_file
+credential: { token: test-token-1 }
+input: { owner: example-shop, repo: website, path: docs/old.md, sha: a1, message: Remove the old page }
+exchanges:
+  - sent:
+      method: DELETE
+      url: https://api.github.com/repos/example-shop/website/contents/docs/old.md
+      body: { message: Remove the old page, sha: a1 }
+    answer: { body: { content: null, commit: { sha: c3 } } }
+result: { commit: c3 }

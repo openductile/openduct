@@ -1,0 +1,9 @@
+description: The account's rooms
+action: list_joined_rooms
+credential: { homeserver: "https://matrix.example.org", token: syt_test_token }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://matrix.example.org/_matrix/client/v3/joined_rooms"
+    answer: { status: 200, body: { joined_rooms: ["!abc123:example.org", "!new456:example.org"] } }
+result: { joined_rooms: ["!abc123:example.org", "!new456:example.org"] }

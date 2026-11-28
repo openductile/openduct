@@ -1,0 +1,8 @@
+description: Turning the workflow off deletes its webhook
+trigger: new_contact
+unregister: true
+workflow: wf1
+credential: {"site_url": "https://mautic.example.com", "username": "admin", "password": "pw-test", "webhook_secret@wf1": "mautic-hook-secret-1", "webhook_id@wf1": "7"}
+exchanges:
+  - sent: { method: DELETE, url: https://mautic.example.com/api/hooks/7/delete }
+    answer: { status: 200, body: { hook: { id: 7 } } }

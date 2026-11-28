@@ -1,0 +1,7 @@
+action: place_at
+credential: { api_key: test-owm-key-1 }
+input: { lat: 51.5098, lon: -0.118 }
+exchanges:
+  - sent: { method: GET, url: https://api.openweathermap.org/geo/1.0/reverse, query: { appid: test-owm-key-1, lat: "51.5098", lon: "-0.118", limit: "5" } }
+    answer: { body: [{ name: City of Westminster, lat: 51.5100, lon: -0.1190, country: GB, state: England }] }
+result: [{ name: City of Westminster, lat: 51.5100, lon: -0.1190, country: GB, state: England }]

@@ -1,0 +1,21 @@
+description: A conversation created, as Help Scout sends it, signed with the webhook's secret (HMAC-SHA1 of the body, Base64)
+trigger: conversation_event
+workflow: wf1
+credential: {access_token: hs-test-token, webhook_secret@wf1: a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4}
+delivery:
+  headers: {x-helpscout-event: convo.created, x-helpscout-signature: SQqend6KhnzA9FxeI6pJ+8nfYPI=}
+  body: '{"id":3443157477,"number":1042,"type":"email","status":"active","subject":"Where is my order?","mailboxId":85,"createdAt":"2026-11-27T10:00:00Z","primaryCustomer":{"id":29418,"first":"Ann","last":"Example","email":"ann@example.com"},"preview":"I
+    ordered last week and"}'
+  at: 1764237600
+runs:
+- event: convo.created
+  conversation:
+    id: 3443157477
+    number: 1042
+    type: email
+    status: active
+    subject: Where is my order?
+    mailboxId: 85
+    createdAt: '2026-11-27T10:00:00Z'
+    primaryCustomer: {id: 29418, first: Ann, last: Example, email: ann@example.com}
+    preview: I ordered last week and

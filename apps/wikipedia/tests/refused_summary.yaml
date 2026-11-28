@@ -1,0 +1,7 @@
+description: "The summary of an article that does not exist: the Wikimedia REST API's words"
+action: get_summary
+credential: { contact: ops@example.com }
+input: { title: No_such_article_example }
+exchanges:
+  - answer: { status: 404, body: { type: "https://mediawiki.org/wiki/HyperSwitch/errors/not_found", title: Not found., method: get, detail: Page or revision not found., uri: /en.wikipedia.org/v1/page/summary/No_such_article_example } }
+error: "Wikipedia answered 404: Page or revision not found."

@@ -1,0 +1,7 @@
+action: create_section
+credential: { token: todoist-test-token }
+input: { project_id: 6Xproj0000000001, name: Waiting }
+exchanges:
+  - sent: { method: POST, url: https://api.todoist.com/api/v1/sections, body: { project_id: 6Xproj0000000001, name: Waiting } }
+    answer: { body: { id: 6Xsect0000000001, project_id: 6Xproj0000000001, name: Waiting, section_order: 1 } }
+result: { id: 6Xsect0000000001, project_id: 6Xproj0000000001, name: Waiting, section_order: 1 }

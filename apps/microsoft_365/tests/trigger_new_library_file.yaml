@@ -1,0 +1,13 @@
+description: A file put in a folder of a library; a folder put there starts nothing
+trigger: new_library_file
+credential: { access_token: eyJ0 }
+input: { site_id: "example.sharepoint.com,da60e844-ba1d-49bc-b4d4-d5e36bae9019,712a596e-90a1-49e3-9b48-bfa80bee8740", folder: Invoices }
+seen: { items: [] }
+exchanges:
+  - sent: { method: GET, url: "https://graph.microsoft.com/v1.0/sites/example.sharepoint.com,da60e844-ba1d-49bc-b4d4-d5e36bae9019,712a596e-90a1-49e3-9b48-bfa80bee8740/drive/root:/Invoices:/children" }
+    answer:
+      body:
+        value:
+          - { id: 01BYE5RZ1, name: November, folder: { childCount: 0 } }
+          - { id: 01BYE5RZ2, name: INV-1042.pdf, file: { mimeType: application/pdf }, size: 48211 }
+runs: [{ id: 01BYE5RZ2, name: INV-1042.pdf, file: { mimeType: application/pdf }, size: 48211 }]

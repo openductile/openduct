@@ -1,0 +1,7 @@
+description: A message to a room that does not exist, refused in Rocket.Chat's words
+action: send_message
+credential: { workspace: acme, user_id: uAbC123, token: rc_test_1 }
+input: { channel: "#nowhere", text: Hello }
+exchanges:
+  - answer: { status: 400, body: { success: false, error: "The channel does not exist [error-invalid-channel]", errorType: error-invalid-channel } }
+error: "Rocket.Chat answered 400: The channel does not exist [error-invalid-channel]"

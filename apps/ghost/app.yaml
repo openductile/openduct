@@ -1,0 +1,173 @@
+# Copyright 2026 Ductile AI, Inc
+# SPDX-License-Identifier: Apache-2.0
+#
+# Written by hand from Ghost's Content API and webhook documentation (github.com/TryGhost/docs at 6eb8d8ca8fb4:
+# content-api*, webhooks.mdx) and, for the webhook signature, Ghost's own MIT-licensed source
+# (github.com/TryGhost/Ghost at 4131364b9648, ghost/core/server/services/webhooks/webhook-trigger.js).
+app: ghost
+name: Ghost
+category: publishing
+description: The published posts, pages, tags, authors and tiers of a Ghost site, and its events (a post published, a member added).
+docs: https://ghost.org/docs/content-api/
+hosts: ["*.ghost.io"]
+base_url: "https://{{ credential.site }}.ghost.io/ghost/api/content"
+base_url_field: url
+sign_in:
+  - id: ghost
+    label: A Content API key (Ghost(Pro))
+    fields:
+      - { name: site, label: "Your site's Ghost(Pro) name: the acme of acme.ghost.io" }
+      - { name: content_key, label: "The Content API key (a custom integration, in Settings, Integrations)", secret: true }
+      - { name: webhook_secret, label: "The webhooks' secret, for the trigger (set on each webhook of the integration)", secret: true, optional: true }
+    query: { key: "{{ credential.content_key }}" }
+    headers: { Accept-Version: v6.0 }
+  - id: ghost_self_hosted
+    label: A Content API key (your own Ghost)
+    fields:
+      - { name: url, label: "Your Ghost's Content API address: your admin address and /ghost/api/content (such as https://blog.example.com/ghost/api/content)" }
+      - { name: content_key, label: "The Content API key (a custom integration, in Settings, Integrations)", secret: true }
+      - { name: webhook_secret, label: "The webhooks' secret, for the trigger", secret: true, optional: true }
+    query: { key: "{{ credential.content_key }}" }
+    headers: { Accept-Version: v6.0 }
+error: value.errors[0].message
+actions:
+  list_posts:
+    label: List posts
+    description: >-
+      The site's published posts, the newest first (or as ordered), with their authors and tags if asked; of a tag,
+      an author or a filter (such as featured:true); every page up to the most.
+    method: GET
+    path: /posts/
+    inputs:
+      - { name: filter, label: "Only those matching (such as tag:news, author:ann, featured:true)" }
+      - { name: include, label: "With authors, tags (separated by commas)" }
+      - { name: order, label: "In this order (such as published_at desc, the default)" }
+      - { name: formats, label: "html (the default), plaintext, or both (html,plaintext)" }
+      - { name: fields, label: "Only these fields (such as title,url)" }
+    query: { filter: "{{ input.filter }}", include: "{{ input.include }}", order: "{{ input.order }}", formats: "{{ input.formats }}", fields: "{{ input.fields }}", limit: "100" }
+    items: value.posts
+    next: "value.meta.pagination.next == null ? null : {'page': value.meta.pagination.next}"
+    output: &post { id: text, uuid: text, title: text, slug: text, html: text, plaintext: text, excerpt: text, custom_excerpt: text, feature_image: text, featured: boolean, visibility: text, url: text, published_at: text, updated_at: text, created_at: text, reading_time: number, authors: list, primary_author: record, tags: list, primary_tag: record }
+  get_post:
+    label: Get a post
+    description: One published post, by its id or its slug.
+    method: GET
+    path: "{{ has(input.slug) && input.slug != null ? '/posts/slug/' + input.slug + '/' : '/posts/' + input.id + '/' }}"
+    inputs:
+      - { name: id, label: "The post's id" }
+      - { name: slug, label: "Or its slug (the end of its address)" }
+      - { name: include, label: "With authors, tags (separated by commas)" }
+      - { name: formats, label: "html (the default), plaintext, or both" }
+    query: { include: "{{ input.include }}", formats: "{{ input.formats }}" }
+    result: value.posts[0]
+    output: *post
+  list_pages:
+    label: List pages
+    description: The site's published pages (About, Contact...), by title; every page up to the most.
+    method: GET
+    path: /pages/
+    inputs:
+      - { name: filter, label: "Only those matching (such as featured:true)" }
+      - { name: include, label: "With authors, tags (separated by commas)" }
+    query: { filter: "{{ input.filter }}", include: "{{ input.include }}", limit: "100" }
+    items: value.pages
+    next: "value.meta.pagination.next == null ? null : {'page': value.meta.pagination.next}"
+    output: *post
+  get_page:
+    label: Get a page
+    description: One published page, by its id or its slug.
+    method: GET
+    path: "{{ has(input.slug) && input.slug != null ? '/pages/slug/' + input.slug + '/' : '/pages/' + input.id + '/' }}"
+    inputs:
+      - { name: id, label: "The page's id" }
+      - { name: slug, label: "Or its slug" }
+      - { name: formats, label: "html (the default), plaintext, or both" }
+    query: { formats: "{{ input.formats }}" }
+    result: value.pages[0]
+    output: *post
+  list_tags:
+    label: List tags
+    description: The site's public tags, by name, with how many posts each has if asked; every page.
+    method: GET
+    path: /tags/
+    inputs:
+      - { name: with_counts, label: "With each tag's number of posts", kind: boolean }
+    query: { include: "{{ input.with_counts == true ? 'count.posts' : '' }}", limit: "100" }
+    items: value.tags
+    next: "value.meta.pagination.next == null ? null : {'page': value.meta.pagination.next}"
+    output: &tag { id: text, name: text, slug: text, description: text, feature_image: text, visibility: text, url: text, count: record }
+  get_tag:
+    label: Get a tag
+    description: One tag, by its id or its slug.
+    method: GET
+    path: "{{ has(input.slug) && input.slug != null ? '/tags/slug/' + input.slug + '/' : '/tags/' + input.id + '/' }}"
+    inputs:
+      - { name: id, label: "The tag's id" }
+      - { name: slug, label: "Or its slug" }
+    result: value.tags[0]
+    output: *tag
+  list_authors:
+    label: List authors
+    description: The site's authors (those with published posts), by name; every page.
+    method: GET
+    path: /authors/
+    inputs:
+      - { name: with_counts, label: "With each author's number of posts", kind: boolean }
+    query: { include: "{{ input.with_counts == true ? 'count.posts' : '' }}", limit: "100" }
+    items: value.authors
+    next: "value.meta.pagination.next == null ? null : {'page': value.meta.pagination.next}"
+    output: &author { id: text, name: text, slug: text, profile_image: text, bio: text, website: text, location: text, url: text, count: record }
+  get_author:
+    label: Get an author
+    description: One author, by their id or slug.
+    method: GET
+    path: "{{ has(input.slug) && input.slug != null ? '/authors/slug/' + input.slug + '/' : '/authors/' + input.id + '/' }}"
+    inputs:
+      - { name: id, label: "The author's id" }
+      - { name: slug, label: "Or their slug" }
+    result: value.authors[0]
+    output: *author
+  list_tiers:
+    label: List membership tiers
+    description: The site's membership tiers (free and paid), with their prices and benefits.
+    method: GET
+    path: /tiers/
+    query: { include: "monthly_price,yearly_price,benefits", limit: "100" }
+    items: value.tiers
+    next: "value.meta.pagination.next == null ? null : {'page': value.meta.pagination.next}"
+    output: { id: text, name: text, slug: text, description: text, type: text, active: boolean, visibility: text, currency: text, monthly_price: number, yearly_price: number, benefits: list }
+  get_settings:
+    label: The site's settings
+    description: Its title, description, logo, address, language, time zone and navigation.
+    method: GET
+    path: /settings/
+    result: value.settings
+    output: { title: text, description: text, logo: text, icon: text, cover_image: text, url: text, locale: text, timezone: text, navigation: list, secondary_navigation: list, members_support_address: text }
+triggers:
+  site_event:
+    label: Something happened on the site (a post published, a member added)
+    description: >-
+      Each event a webhook of the site's custom integration sends, signed with its secret: a post published or
+      changed, a page, a tag, a member added, changed or deleted.
+    inputs:
+      - name: events
+        label: "Only these events (separated by commas; all those the webhooks send when empty)"
+        description: "post.published, post.published.edited, post.added, post.deleted, page.published, member.added, member.edited, member.deleted, tag.added..."
+    webhook:
+      signature: { header: x-ghost-signature, pairs: { signature: sha256, time: t }, signed: "{body}{time}", encoding: hex, time_unit: milliseconds }
+      secret: webhook_secret
+      id: "headers['x-ghost-signature']"
+      only: "input.events == null || input.events.split(',').map(e, e.trim()).exists(e, e == value.event)"
+      setup: >-
+        In Ghost Admin, Settings, Integrations, open (or add) a custom integration, then Add webhook for each event
+        wanted: give this address as the target URL and the same secret on each, the one in the credential.
+  new_post:
+    label: A new post published
+    description: Each post published on the site, the newest asked for every few minutes.
+    inputs:
+      - { name: filter, label: "Only those matching (such as tag:news)" }
+    poll:
+      action: list_posts
+      input: { filter: "{{ input.filter }}", include: "authors,tags" }
+      newest_first: true
+      id: item.id

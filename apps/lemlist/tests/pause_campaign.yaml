@@ -1,0 +1,11 @@
+description: "A campaign paused"
+action: pause_campaign
+credential: {"api_key": "test-key"}
+input: {"campaign_id": "cam_A1"}
+exchanges:
+  - sent:
+      method: POST
+      url: "https://api.lemlist.com/api/campaigns/cam_A1/pause"
+      headers: {"authorization": "Basic OnRlc3Qta2V5"}
+    answer: {"status": 200, "body": {"_id": "cam_A1", "state": "paused"}}
+result: {"_id": "cam_A1", "state": "paused"}

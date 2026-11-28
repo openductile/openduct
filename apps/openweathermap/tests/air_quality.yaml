@@ -1,0 +1,7 @@
+action: air_quality
+credential: { api_key: test-owm-key-1 }
+input: { lat: 50, lon: 50 }
+exchanges:
+  - sent: { method: GET, url: https://api.openweathermap.org/data/2.5/air_pollution, query: { appid: test-owm-key-1, lat: "50", lon: "50" } }
+    answer: { body: { coord: [50.0, 50.0], list: [{ dt: 1795770000, main: { aqi: 2 }, components: { co: 201.9, no: 0.0, no2: 0.8, o3: 68.7, so2: 0.6, pm2_5: 4.2, pm10: 6.1, nh3: 0.1 } }] } }
+result: { aqi: 2, dt: 1795770000, components: { co: 201.9, no: 0.0, no2: 0.8, o3: 68.7, so2: 0.6, pm2_5: 4.2, pm10: 6.1, nh3: 0.1 } }

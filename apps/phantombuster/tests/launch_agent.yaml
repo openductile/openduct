@@ -1,0 +1,16 @@
+description: A Phantom launched with other settings for this launch only
+action: launch_agent
+credential: { api_key: pb_test_key_1 }
+input:
+  id: "7345678901234567"
+  bonus_argument: { search: "coffee roasters in Portland", numberOfResultsPerLaunch: 20 }
+exchanges:
+  - sent:
+      method: POST
+      url: "https://api.phantombuster.com/api/v2/agents/launch"
+      headers: { x-phantombuster-key: pb_test_key_1 }
+      body:
+        id: "7345678901234567"
+        bonusArgument: { search: "coffee roasters in Portland", numberOfResultsPerLaunch: 20 }
+    answer: { status: 200, body: { containerId: "4512345678901234" } }
+result: { containerId: "4512345678901234" }

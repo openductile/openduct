@@ -1,0 +1,42 @@
+description: "Look up a file"
+action: get_file
+credential: { token: test-token }
+input: { id: id_1 }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://api.airtop.ai/api/v1/files/id_1"
+      query: {}
+      headers: { authorization: "Bearer test-token" }
+    answer:
+      status: 200
+      body:
+        data:
+          downloadUrl: example
+          expiryTime: "2026-01-15T09:30:00Z"
+          fileBytes: 1
+          fileName: example
+          fileType: browser_download
+          id: "00000000-0000-4000-8000-000000000001"
+          orgId: org_1
+          sessionIds: [example]
+          status: available
+          uploadStartTime: "2026-01-15T09:30:00Z"
+        errors: [{ code: example, details: {}, message: example, reason: example }]
+        meta: { requestId: request_1 }
+        warnings: [{ code: example, details: {}, message: example, reason: example }]
+result:
+  data:
+    downloadUrl: example
+    expiryTime: "2026-01-15T09:30:00Z"
+    fileBytes: 1
+    fileName: example
+    fileType: browser_download
+    id: "00000000-0000-4000-8000-000000000001"
+    orgId: org_1
+    sessionIds: [example]
+    status: available
+    uploadStartTime: "2026-01-15T09:30:00Z"
+  errors: [{ code: example, details: {}, message: example, reason: example }]
+  meta: { requestId: request_1 }
+  warnings: [{ code: example, details: {}, message: example, reason: example }]

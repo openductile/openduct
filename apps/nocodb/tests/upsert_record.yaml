@@ -1,0 +1,11 @@
+description: A record matched on its email and changed, or added
+action: upsert_record
+credential: { api_token: test-nocodb-token }
+input: { base_id: pexample0001, table_id: mexample0001, match_on: [Email], fields: { Email: ann@example.com, Status: Won } }
+exchanges:
+  - sent:
+      method: POST
+      url: https://app.nocodb.com/api/v3/data/pexample0001/mexample0001/records/upsert
+      body: { fieldsToMergeOn: [Email], records: { fields: { Email: ann@example.com, Status: Won } } }
+    answer: { body: { records: [{ id: 1, fields: { Email: ann@example.com, Status: Won }, status: updated }] } }
+result: { id: 1, fields: { Email: ann@example.com, Status: Won }, status: updated }

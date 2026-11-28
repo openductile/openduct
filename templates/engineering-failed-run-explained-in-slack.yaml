@@ -1,0 +1,52 @@
+name: When a workflow fails, say why in Slack in plain words
+description: >-
+  Watches one of your workflows - a nightly sync, an order import: each time a run of it fails, a model explains the
+  error in two plain sentences with the likely fix, and your ops channel in Slack hears it with the run's id. The
+  same error again within 30 minutes is counted, not posted again, so one outage is one message. Put the id of the
+  workflow to watch in the trigger. The failed record stays in CatchErr, to run again once fixed. Needs: model (ai),
+  team (slack).
+category: Engineering
+trigger:
+  # The id of the workflow to watch (in its address in the studio).
+  failed: { workflow: nightly-orders-sync }
+# What a test runs on: the record of a run that failed, as it came to the watched workflow.
+sample:
+  order_id: A-1042
+  store: north
+  total: 76.5
+steps:
+  # Where and why it failed come with the trigger; a script is given only the run's value and steps.
+  - name: failure
+    set:
+      error: trigger.error
+      workflow: trigger.workflow
+      run: trigger.run
+  - name: seen
+    javascript:
+      state: true
+      code: |
+        // One message per error in 30 minutes: the error's first line, with numbers taken out, is its key.
+        const error = String(steps.failure.error || "the run failed (no reason given)");
+        const key = error.split("\n")[0].replace(/\d+/g, "#").slice(0, 200);
+        const now = Date.now();
+        const last = state.last || {};
+        for (const k of Object.keys(last)) if (now - last[k].at > 30 * 60 * 1000) delete last[k];
+        const repeat = key in last;
+        last[key] = { at: repeat ? last[key].at : now, count: (repeat ? last[key].count : 0) + 1 };
+        state.last = last;
+        return { post: !repeat, count: last[key].count, error: error.slice(0, 2000), fields: Object.keys(value || {}).join(', ') };
+  - where: steps.seen.post == true
+  - name: explain
+    ai:
+      credential: model
+      system: >-
+        You explain a failed automation run to the people who look after it, in two plain sentences: what went wrong,
+        and the most likely fix. No jargon you do not explain; never invent details the error does not give.
+      prompt: "The workflow {{ steps.failure.workflow }} failed with: {{ steps.seen.error }}\nThe record it was working on had the fields: {{ steps.seen.fields }}"
+      max_tokens: 200
+  - name: post
+    slack:
+      credential: team
+      channel: "#ops-alerts"
+      text: "{{ steps.failure.workflow }} failed (run {{ steps.failure.run }}): {{ steps.explain.text }}\nError: {{ steps.seen.error.substring(0, math.least(size(steps.seen.error), 300)) }}\nThe record is in CatchErr, to run again once fixed."
+    retry: { attempts: 3, wait: 10s }

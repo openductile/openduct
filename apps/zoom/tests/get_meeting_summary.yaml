@@ -1,0 +1,7 @@
+action: get_meeting_summary
+credential: { access_token: zoom-test-token }
+input: { meeting_id: "85700000001" }
+exchanges:
+  - sent: { method: GET, url: https://api.zoom.us/v2/meetings/85700000001/meeting_summary }
+    answer: { body: { meeting_id: 85700000001, meeting_uuid: "aBcDeFgHiJkLmNoPqRsT0w==", meeting_topic: Monthly supplier call, meeting_start_time: "2026-12-01T20:00:00Z", meeting_end_time: "2026-12-01T20:44:00Z", summary_content: "## Prices\nThe supplier holds prices until March.", next_steps: [Send the new order by Friday.] } }
+result: { meeting_id: 85700000001, meeting_uuid: "aBcDeFgHiJkLmNoPqRsT0w==", meeting_topic: Monthly supplier call, meeting_start_time: "2026-12-01T20:00:00Z", meeting_end_time: "2026-12-01T20:44:00Z", summary_content: "## Prices\nThe supplier holds prices until March.", next_steps: [Send the new order by Friday.] }

@@ -1,0 +1,11 @@
+description: "What was found"
+action: get_enrichment
+credential: {"api_key": "test-key"}
+input: {"enrich_id": "enr_E1"}
+exchanges:
+  - sent:
+      method: GET
+      url: "https://api.lemlist.com/api/enrich/enr_E1"
+      headers: {"authorization": "Basic OnRlc3Qta2V5"}
+    answer: {"status": 200, "body": {"enrichmentId": "enr_E1", "enrichmentStatus": "done", "input": {"firstName": "Ann", "lastName": "Lee"}, "data": {"find_email": {"email": "ann@example.com", "status": "deliverable"}}}}
+result: {"enrichmentId": "enr_E1", "enrichmentStatus": "done", "input": {"firstName": "Ann", "lastName": "Lee"}, "data": {"find_email": {"email": "ann@example.com", "status": "deliverable"}}}

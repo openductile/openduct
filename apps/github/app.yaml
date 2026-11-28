@@ -1,0 +1,192 @@
+# Copyright 2026 Ductile AI, Inc
+# SPDX-License-Identifier: Apache-2.0
+app: github
+name: GitHub
+category: development
+description: Issues, comments and files of GitHub repositories.
+docs: https://docs.github.com/en/rest
+hosts: [api.github.com]
+base_url: https://api.github.com
+sign_in:
+  - id: github
+    label: A personal access token
+    fields:
+      - { name: token, label: "A fine-grained or classic personal access token", secret: true }
+    headers: { Authorization: "Bearer {{ credential.token }}" }
+  - id: github_oauth
+    label: Sign in with GitHub
+    oauth2:
+      authorize: https://github.com/login/oauth/authorize
+      token: https://github.com/login/oauth/access_token
+      scopes: [repo]
+    headers: { Authorization: "Bearer {{ credential.access_token }}" }
+error: "status >= 400 ? value.message : null"
+default_action: open_issue
+actions:
+  open_issue:
+    label: Open an issue
+    write: true
+    method: POST
+    path: "/repos/{{ input.owner }}/{{ input.repo }}/issues"
+    headers: { Accept: application/vnd.github+json, X-GitHub-Api-Version: "2026-03-10" }
+    inputs:
+      - { name: owner, label: "Whose repository: the user or organization", required: true }
+      - { name: repo, label: "The repository's name", required: true }
+      - { name: title, label: Title, required: true }
+      - { name: body, label: "What it is about (Markdown)" }
+      - { name: labels, label: "Labels: a list of their names", kind: list }
+      - { name: assignees, label: "Who it is for: a list of their user names", kind: list }
+    send:
+      title: "{{ input.title }}"
+      body: "{{ input.body }}"
+      labels: "{{ input.labels }}"
+      assignees: "{{ input.assignees }}"
+  update_issue:
+    label: Change an issue
+    description: Its title, text or labels, or close it. Labels and assignees given take the place of those it had.
+    write: true
+    method: PATCH
+    path: "/repos/{{ input.owner }}/{{ input.repo }}/issues/{{ input.number }}"
+    headers: { Accept: application/vnd.github+json, X-GitHub-Api-Version: "2026-03-10" }
+    inputs:
+      - { name: owner, label: "Whose repository: the user or organization", required: true }
+      - { name: repo, label: "The repository's name", required: true }
+      - { name: number, label: "The issue's number", required: true }
+      - { name: title, label: Title }
+      - { name: body, label: "What it is about (Markdown)" }
+      - { name: state, label: "open or closed" }
+      - { name: state_reason, label: "Why it was closed: completed, not_planned or duplicate" }
+      - { name: labels, label: "Labels: a list of their names", kind: list }
+      - { name: assignees, label: "Who it is for: a list of their user names", kind: list }
+    send:
+      title: "{{ input.title }}"
+      body: "{{ input.body }}"
+      state: "{{ input.state }}"
+      state_reason: "{{ input.state_reason }}"
+      labels: "{{ input.labels }}"
+      assignees: "{{ input.assignees }}"
+  comment_on_issue:
+    label: Comment on an issue or pull request
+    write: true
+    method: POST
+    path: "/repos/{{ input.owner }}/{{ input.repo }}/issues/{{ input.number }}/comments"
+    headers: { Accept: application/vnd.github+json, X-GitHub-Api-Version: "2026-03-10" }
+    inputs:
+      - { name: owner, label: "Whose repository: the user or organization", required: true }
+      - { name: repo, label: "The repository's name", required: true }
+      - { name: number, label: "The issue's or pull request's number", required: true }
+      - { name: body, label: "The comment (Markdown)", required: true }
+    send: { body: "{{ input.body }}" }
+  get_issue:
+    label: Look up an issue
+    method: GET
+    path: "/repos/{{ input.owner }}/{{ input.repo }}/issues/{{ input.number }}"
+    headers: { Accept: application/vnd.github+json, X-GitHub-Api-Version: "2026-03-10" }
+    inputs:
+      - { name: owner, label: "Whose repository: the user or organization", required: true }
+      - { name: repo, label: "The repository's name", required: true }
+      - { name: number, label: "The issue's number", required: true }
+  list_issues:
+    label: List issues
+    description: A repository's issues (pull requests among them, with a pull_request field); every page, up to 1,000.
+    method: GET
+    path: "/repos/{{ input.owner }}/{{ input.repo }}/issues"
+    headers: { Accept: application/vnd.github+json, X-GitHub-Api-Version: "2026-03-10" }
+    inputs:
+      - { name: owner, label: "Whose repository: the user or organization", required: true }
+      - { name: repo, label: "The repository's name", required: true }
+      - { name: state, label: "open (the default), closed or all" }
+      - { name: labels, label: "With these labels: their names, with commas" }
+      - { name: since, label: "Changed since (2026-11-01T00:00:00Z)" }
+    query: { state: "{{ input.state }}", labels: "{{ input.labels }}", since: "{{ input.since }}", per_page: "100" }
+    items: value
+    next: links.next
+  read_file:
+    label: Read a file
+    description: A text file of a repository, with its sha (needed to change it).
+    method: GET
+    path: "/repos/{{ input.owner }}/{{ input.repo }}/contents/{{ input.path }}"
+    headers: { Accept: application/vnd.github+json, X-GitHub-Api-Version: "2026-03-10" }
+    inputs:
+      - { name: owner, label: "Whose repository: the user or organization", required: true }
+      - { name: repo, label: "The repository's name", required: true }
+      - { name: path, label: "The file, such as docs/prices.md", required: true }
+      - { name: ref, label: "From this branch, tag or commit (the default branch when empty)" }
+    query: { ref: "{{ input.ref }}" }
+    # Base64 in lines of 60: the text, as long as the file is under 1 MB (larger ones come without content).
+    result: >-
+      {'path': value.path, 'sha': value.sha, 'size': value.size, 'url': value.html_url,
+       'text': value.encoding == 'base64' ? string(base64.decode(value.content.replace('\n', ''))) : null}
+  list_files:
+    label: List a folder's files
+    method: GET
+    path: "/repos/{{ input.owner }}/{{ input.repo }}/contents/{{ has(input.folder) && input.folder != null ? input.folder : '' }}"
+    headers: { Accept: application/vnd.github+json, X-GitHub-Api-Version: "2026-03-10" }
+    inputs:
+      - { name: owner, label: "Whose repository: the user or organization", required: true }
+      - { name: repo, label: "The repository's name", required: true }
+      - { name: folder, label: "The folder, such as docs (the top when empty)" }
+      - { name: ref, label: "On this branch, tag or commit" }
+    query: { ref: "{{ input.ref }}" }
+    items: "value.map(f, {'name': f.name, 'path': f.path, 'type': f.type, 'size': f.size, 'sha': f.sha})"
+  save_file:
+    label: Save a file
+    description: >-
+      Writes a text file to a repository as a commit: a new file, or a new version of one (give the sha Read a file
+      gave).
+    write: true
+    method: PUT
+    path: "/repos/{{ input.owner }}/{{ input.repo }}/contents/{{ input.path }}"
+    headers: { Accept: application/vnd.github+json, X-GitHub-Api-Version: "2026-03-10" }
+    inputs:
+      - { name: owner, label: "Whose repository: the user or organization", required: true }
+      - { name: repo, label: "The repository's name", required: true }
+      - { name: path, label: "The file, such as docs/prices.md", required: true }
+      - { name: text, label: "What the file holds", required: true }
+      - { name: message, label: "The commit's message", required: true }
+      - { name: sha, label: "To change a file that is there: its sha (from Read a file)" }
+      - { name: branch, label: "On this branch (the default branch when empty)" }
+    send:
+      message: "{{ input.message }}"
+      content: "{{ base64.encode(bytes(input.text)) }}"
+      sha: "{{ input.sha }}"
+      branch: "{{ input.branch }}"
+    result: "{'path': value.content.path, 'sha': value.content.sha, 'url': value.content.html_url, 'commit': value.commit.sha}"
+  delete_file:
+    label: Remove a file
+    write: true
+    method: DELETE
+    path: "/repos/{{ input.owner }}/{{ input.repo }}/contents/{{ input.path }}"
+    headers: { Accept: application/vnd.github+json, X-GitHub-Api-Version: "2026-03-10" }
+    inputs:
+      - { name: owner, label: "Whose repository: the user or organization", required: true }
+      - { name: repo, label: "The repository's name", required: true }
+      - { name: path, label: "The file", required: true }
+      - { name: sha, label: "Its sha (from Read a file)", required: true }
+      - { name: message, label: "The commit's message", required: true }
+      - { name: branch, label: "On this branch (the default branch when empty)" }
+    send: { message: "{{ input.message }}", sha: "{{ input.sha }}", branch: "{{ input.branch }}" }
+    result: "{'commit': value.commit.sha}"
+  list_pull_requests:
+    label: List pull requests
+    method: GET
+    path: "/repos/{{ input.owner }}/{{ input.repo }}/pulls"
+    headers: { Accept: application/vnd.github+json, X-GitHub-Api-Version: "2026-03-10" }
+    inputs:
+      - { name: owner, label: "Whose repository: the user or organization", required: true }
+      - { name: repo, label: "The repository's name", required: true }
+      - { name: state, label: "open (the default), closed or all" }
+    query: { state: "{{ input.state }}", per_page: "100" }
+    items: value
+    next: links.next
+  list_releases:
+    label: List releases
+    method: GET
+    path: "/repos/{{ input.owner }}/{{ input.repo }}/releases"
+    headers: { Accept: application/vnd.github+json, X-GitHub-Api-Version: "2026-03-10" }
+    inputs:
+      - { name: owner, label: "Whose repository: the user or organization", required: true }
+      - { name: repo, label: "The repository's name", required: true }
+    query: { per_page: "100" }
+    items: value
+    next: links.next

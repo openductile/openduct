@@ -1,0 +1,9 @@
+action: list_transitions
+credential: { site: examplecorp, email: ann@example.com, api_token: ATATT_test }
+input: { issue: SUP-13 }
+exchanges:
+  - sent:
+      method: GET
+      url: https://examplecorp.atlassian.net/rest/api/3/issue/SUP-13/transitions
+    answer: { body: { transitions: [{ id: "21", name: In Progress }, { id: "31", name: Done }] } }
+result: [{ id: "21", name: In Progress }, { id: "31", name: Done }]

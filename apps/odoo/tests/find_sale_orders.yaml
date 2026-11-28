@@ -1,0 +1,14 @@
+description: Confirmed sales orders
+action: find_sale_orders
+credential: { address: "https://mycompany.example.com", api_key: 6578616d706c65206b6579 }
+input: { state: sale }
+exchanges:
+  - sent:
+      url: https://mycompany.example.com/json/2/sale.order/search_read
+      body:
+        domain: [[state, "=", sale]]
+        fields: [name, partner_id, date_order, state, amount_untaxed, amount_tax, amount_total, currency_id, user_id, invoice_status, create_date, write_date]
+        order: date_order desc
+        limit: 100
+    answer: { body: [{ id: 31, name: S00031, partner_id: [25, Example Deco], state: sale, amount_total: 2760, invoice_status: to invoice }] }
+result: [{ id: 31, name: S00031, partner_id: [25, Example Deco], state: sale, amount_total: 2760, invoice_status: to invoice }]

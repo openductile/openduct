@@ -1,0 +1,35 @@
+name: Your price list, as a tool for AI assistants
+description: >-
+  Upload your price list as /prices.csv (sku,name,price), turn this on, and make a token on the Settings page: AI
+  assistants that speak MCP can then ask this workspace for an item's price, for a quantity, and get its name and the
+  line's total. An unknown sku is answered as an error the assistant can read.
+category: AI
+trigger: manual
+# Offered to AI assistants through the workspace's MCP server: what a model reads to choose it, and what it takes.
+tool:
+  name: price_an_item
+  description: The price of an item from the price list, for a quantity, with the item's name and the line's total.
+  input:
+    sku: { type: string, description: "The item's code, as TOTE", required: true }
+    qty: { type: integer, description: How many, required: true }
+# What a test runs on: the arguments an assistant sends.
+sample:
+  sku: TOTE
+  qty: 3
+steps:
+  - name: item
+    lookup:
+      file: /prices.csv
+      where:
+        sku: "{{ value.sku }}"
+  - name: known
+    if:
+      when: steps.item == null
+      then:
+        - stop: { error: "no price for sku {{ value.sku }}" }
+  - name: line
+    set:
+      sku: value.sku
+      name: steps.item.name
+      qty: double(value.qty)
+      total: round(double(value.qty) * double(steps.item.price), 2)

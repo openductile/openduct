@@ -1,0 +1,12 @@
+description: A reply in a thread by its name, signed in
+action: reply_in_thread
+sign_in: google_chat
+credential: { access_token: ya29.chat }
+input: { text: Thanks, thread: spaces/AAA/threads/t1, space: spaces/AAA }
+exchanges:
+  - sent:
+      url: https://chat.googleapis.com/v1/spaces/AAA/messages
+      query: { messageReplyOption: REPLY_MESSAGE_FALLBACK_TO_NEW_THREAD }
+      body: { text: Thanks, thread: { name: spaces/AAA/threads/t1 } }
+    answer: { body: { name: spaces/AAA/messages/m3, text: Thanks, thread: { name: spaces/AAA/threads/t1 } } }
+result: { name: spaces/AAA/messages/m3, text: Thanks, thread: { name: spaces/AAA/threads/t1 } }

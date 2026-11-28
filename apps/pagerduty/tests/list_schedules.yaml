@@ -1,0 +1,6 @@
+action: list_schedules
+credential: { api_key: pd_test_1 }
+exchanges:
+  - sent: { method: GET, url: https://api.pagerduty.com/schedules, query: { limit: "100" } }
+    answer: { body: { offset: 0, limit: 100, more: false, schedules: [{ id: PSCH001, name: Weekdays, time_zone: Europe/London }] } }
+result: [{ id: PSCH001, name: Weekdays, time_zone: Europe/London }]

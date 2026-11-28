@@ -1,0 +1,7 @@
+action: get_coin_chart
+credential: { api_key: CG-test1 }
+input: { id: bitcoin, vs_currency: usd, days: "7", interval: daily }
+exchanges:
+  - sent: { method: GET, url: https://api.coingecko.com/api/v3/coins/bitcoin/market_chart, query: { vs_currency: usd, days: "7", interval: daily } }
+    answer: { body: { prices: [[1795651200000, 77953.8], [1795737600000, 76975.0]], market_caps: [[1795651200000, 1560631481361], [1795737600000, 1542226908349]], total_volumes: [[1795651200000, 18688431751], [1795737600000, 29096603418]] } }
+result: { prices: [[1795651200000, 77953.8], [1795737600000, 76975.0]], market_caps: [[1795651200000, 1560631481361], [1795737600000, 1542226908349]], total_volumes: [[1795651200000, 18688431751], [1795737600000, 29096603418]] }

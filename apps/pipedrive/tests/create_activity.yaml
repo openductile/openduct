@@ -1,0 +1,29 @@
+description: "Add an activity"
+action: create_activity
+credential: { api_key: test-key }
+exchanges:
+  - sent:
+      method: POST
+      url: "https://api.pipedrive.com/api/v2/activities"
+      query: {}
+      headers: { x-api-token: test-key }
+      body: {}
+    answer:
+      status: 200
+      body:
+        success: true
+        data:
+          id: 1
+          subject: example
+          type: example
+          owner_id: 1
+          creator_user_id: 1
+          is_deleted: true
+          add_time: example
+          update_time: example
+          deal_id: 1
+          lead_id: lead_1
+          person_id: 1
+          org_id: 1
+result: {id: 1, subject: example, type: example, owner_id: 1, creator_user_id: 1, is_deleted: true, add_time: example, update_time: example,
+  deal_id: 1, lead_id: lead_1, person_id: 1, org_id: 1}

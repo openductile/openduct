@@ -1,0 +1,7 @@
+action: delete_contact
+credential: { api_key: xkeysib-test-1 }
+input: { contact: kim@example.com }
+exchanges:
+  - sent: { method: DELETE, url: https://api.brevo.com/v3/contacts/kim@example.com }
+    answer: { status: 204 }
+result: { deleted: true }

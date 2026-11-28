@@ -1,0 +1,28 @@
+description: Microsoft 365 groups, by a filter
+action: list_groups
+sign_in: microsoft_entra_admin
+credential: {access_token: eyJ0-admin}
+input: {filter: 'groupTypes/any(c:c eq ''Unified'')'}
+exchanges:
+- sent:
+    method: GET
+    url: https://graph.microsoft.com/v1.0/groups
+    headers: {authorization: Bearer eyJ0-admin}
+    query: {$filter: 'groupTypes/any(c:c eq ''Unified'')', $top: '999'}
+  answer:
+    status: 200
+    body:
+      value:
+      - &id001
+        id: 45b7d2e7-b882-4a80-ba97-10b7a63b8fa4
+        displayName: Sales Team
+        description: Everyone in sales
+        mail: sales-team@contoso.example
+        mailEnabled: true
+        mailNickname: sales-team
+        securityEnabled: false
+        groupTypes: [Unified]
+        visibility: Private
+        createdDateTime: '2026-11-27T10:00:00Z'
+result:
+- *id001

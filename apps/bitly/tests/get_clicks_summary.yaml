@@ -1,0 +1,13 @@
+# Made by `openduct app from-openapi`: Get a Clicks Summary for a Bitlink.
+description: "Get a Clicks Summary for a Bitlink, made from the API description's schemas"
+action: get_clicks_summary
+credential: { token: test-token }
+input: { bitlink: example }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://api-ssl.bitly.com/v4/bitlinks/example/clicks/summary"
+      query: { unit: day, units: "-1" }
+      headers: { authorization: "Bearer test-token" }
+    answer: { status: 200, body: { total_clicks: 1, units: 1, unit: minute, unit_reference: example } }
+result: { total_clicks: 1, units: 1, unit: minute, unit_reference: example }

@@ -1,0 +1,19 @@
+# Made by `openduct app from-openapi`: Change a meeting.
+description: "Change a meeting, made from the API description's schemas"
+action: update_meeting
+credential: { access_key: ann, access_key_secret: test-password }
+input:
+  meeting_id: 1
+  start_time: example
+  end_time: example
+  invitees: [{}]
+  organizer_email: "ann@example.com"
+exchanges:
+  - sent:
+      method: PUT
+      url: "https://api.gong.io/v2/meetings/1"
+      query: {}
+      headers: { authorization: "Basic YW5uOnRlc3QtcGFzc3dvcmQ=" }
+      body: { startTime: example, endTime: example, invitees: [{}], organizerEmail: "ann@example.com" }
+    answer: { status: 200, body: { requestId: "4al018gzaztcr8nbukw", meetingId: "7782342274025937895" } }
+result: { requestId: "4al018gzaztcr8nbukw", meetingId: "7782342274025937895" }

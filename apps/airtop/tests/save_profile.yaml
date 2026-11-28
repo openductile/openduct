@@ -1,0 +1,12 @@
+description: "Keep the session's profile when it ends"
+action: save_profile
+credential: { token: test-token }
+input: { session_id: session_1, profile_name: example }
+exchanges:
+  - sent:
+      method: PUT
+      url: "https://api.airtop.ai/api/v1/sessions/session_1/save-profile-on-termination/example"
+      query: {}
+      headers: { authorization: "Bearer test-token" }
+    answer: { status: 200 }
+result: { saved: true }

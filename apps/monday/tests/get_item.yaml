@@ -1,0 +1,45 @@
+description: An item with its columns
+action: get_item
+sign_in: monday_oauth
+credential:
+  access_token: monday-oauth-token
+input:
+  item_id: '9876543210'
+exchanges:
+- sent:
+    headers:
+      authorization: monday-oauth-token
+    body:
+      query: 'query ($ids: [ID!]) { items(ids: $ids) { id name state created_at updated_at url creator_id group { id title
+        } board { id name } column_values { id type text value } } }'
+      variables:
+        ids:
+        - '9876543210'
+  answer:
+    body:
+      data:
+        items:
+        - &id001
+          id: '9876543210'
+          name: Order 1042
+          state: active
+          created_at: '2026-11-27T09:00:00Z'
+          updated_at: '2026-11-27T09:00:00Z'
+          url: https://example-co.monday.com/boards/1234567890/pulses/9876543210
+          creator_id: '55500001'
+          group:
+            id: topics
+            title: New orders
+          board:
+            id: '1234567890'
+            name: Orders
+          column_values:
+          - id: status
+            type: status
+            text: Working on it
+            value: '{"index":0}'
+          - id: date4
+            type: date
+            text: '2026-12-01'
+            value: '{"date":"2026-12-01"}'
+result: *id001

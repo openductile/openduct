@@ -14,6 +14,11 @@ export function remember(app: AppInfo) {
   CATALOG[app.id] = app;
 }
 
+/** Every app this page makes forms for. */ // G3 app triggers
+export function catalogApps(): AppInfo[] {
+  return Object.values(CATALOG);
+}
+
 /** The app a kind of step is, when its form is made from its definition. */
 export function catalogApp(kind: string): AppInfo | undefined {
   return CATALOG[kind];

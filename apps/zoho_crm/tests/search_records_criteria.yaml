@@ -1,0 +1,8 @@
+description: Leads meeting criteria, none found (204)
+action: search_records
+credential: { access_token: 1000.test.token }
+input: { module: Leads, criteria: "((Lead_Source:equals:Web)and(City:equals:Austin))", fields: "Last_Name, Email" }
+exchanges:
+  - sent: { url: https://www.zohoapis.com/crm/v8/Leads/search, query: { criteria: "((Lead_Source:equals:Web)and(City:equals:Austin))", fields: "Last_Name,Email", per_page: "200" } }
+    answer: { status: 204 }
+result: []

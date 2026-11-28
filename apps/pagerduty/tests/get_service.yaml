@@ -1,0 +1,7 @@
+action: get_service
+credential: { api_key: pd_test_1 }
+input: { id: PSVC001 }
+exchanges:
+  - sent: { method: GET, url: https://api.pagerduty.com/services/PSVC001 }
+    answer: { body: { service: { id: PSVC001, name: Shop, status: critical, last_incident_timestamp: "2026-11-27T10:00:00Z" } } }
+result: { id: PSVC001, name: Shop, status: critical, last_incident_timestamp: "2026-11-27T10:00:00Z" }

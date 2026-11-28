@@ -1,0 +1,122 @@
+name: Expense claims with a photo of the receipt, checked first
+description: >-
+  Staff claim an expense on a form the studio serves, with a photo of the receipt. An AI agent reads the receipt's
+  text with Google Cloud Vision, compares its total with the claim and checks your spending rules; a claim that
+  matches and is within the rules is approved at once, and any other goes to finance with a one-time link to approve
+  or reject it (three days to answer, no answer counting as a no). The person who claimed hears the outcome from
+  your Gmail. Needs: model (an AI credential), google_vision (a header credential: X-Goog-Api-Key and your API key),
+  gmail.
+category: Finance
+trigger:
+  form:
+    title: Claim an expense
+    description: Add a clear photo of the whole receipt. Most claims are answered at once.
+    fields:
+      - { name: name, label: Your name, type: text, required: true, max_length: 120 }
+      - { name: email, label: Your work e-mail, type: email, required: true }
+      - { name: category, label: The kind of expense, type: dropdown, options: [Meals, Travel, Office supplies, Software, Other], required: true }
+      - { name: amount, label: The amount you paid, type: number, min: 0.01, max: 5000, required: true }
+      - { name: receipt, label: "A photo of the receipt", type: file, accept: "image/*", required: true }
+      - { name: why, label: "What it was for, in a few words", type: text, required: true, max_length: 200 }
+    thanks: Thank you - you get an answer by e-mail.
+# What a test runs on: an answer as the form gives it (the photo is a tiny image here, in Base64).
+sample:
+  name: Omar Haddad
+  email: omar@example.com
+  category: Meals
+  amount: 46.80
+  why: Lunch with a customer, Lakeside Foods
+  receipt:
+    name: receipt.png
+    type: image/png
+    size: 68
+    base64: iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=
+steps:
+  - name: check
+    agent:
+      credential: model
+      instructions: >-
+        You check one staff expense claim before anyone pays it. First read the receipt's text, then find its total
+        and the business it is from. Then check the spending rules for the claim. Approve only when the receipt's
+        total is within 1.00 of the amount claimed AND the rules allow it; otherwise say check, with the reason in
+        one sentence a person understands. Never approve when the receipt cannot be read.
+      input: >-
+        {{ value.name }} claims {{ value.amount }} for {{ value.category }}: {{ value.why }}.
+      tools:
+        - name: read_receipt
+          description: The text printed on the receipt in the claim's photo, read by Google Cloud Vision.
+          http:
+            method: POST
+            url: https://vision.googleapis.com/v1/images:annotate
+            credential: google_vision
+            json:
+              requests:
+                - image: { content: "{{ value.receipt.base64 }}" }
+                  features: [{ type: DOCUMENT_TEXT_DETECTION }]
+        - name: spending_rules
+          description: Whether an amount is within the company's rules for a kind of expense, and the limit.
+          parameters:
+            type: object
+            properties:
+              category: { type: string, enum: [Meals, Travel, Office supplies, Software, Other] }
+              amount: { type: number, minimum: 0 }
+            required: [category, amount]
+          javascript: |
+            // Your own rules: the most one claim may be, without a manager's yes.
+            const limits = { Meals: 75, Travel: 400, "Office supplies": 150, Software: 100, Other: 50 };
+            const limit = limits[args.category] ?? 0;
+            return { limit, within: args.amount <= limit };
+      allow: [read_receipt, spending_rules]
+      output:
+        schema:
+          type: object
+          properties:
+            receipt_total: { type: [number, "null"] }
+            vendor: { type: [string, "null"] }
+            decision: { type: string, enum: [approve, check] }
+            reason: { type: string }
+          required: [receipt_total, vendor, decision, reason]
+      max_turns: 5
+      max_tool_calls: 4
+  - name: outcome
+    if:
+      when: steps.check.json.decision == 'approve'
+      then:
+        - name: approved_at_once
+          gmail:
+            action: send_email
+            credential: gmail
+            to: "{{ value.email }}"
+            subject: "Your claim of {{ value.amount }} is approved"
+            text: "Hello {{ value.name }}, your claim for {{ value.why }} ({{ value.amount }}) is approved and will be paid with the next payroll."
+      else:
+        - name: ask_finance
+          gmail:
+            action: send_email
+            credential: gmail
+            to: finance@example.com
+            subject: "Expense claim to check: {{ value.name }}, {{ value.amount }}"
+            text: >-
+              {{ value.name }} ({{ value.email }}) claims {{ value.amount }} for {{ value.category }}: {{ value.why }}.
+              The check says: {{ steps.check.json.reason }} (receipt total: {{ steps.check.json.receipt_total }},
+              from {{ steps.check.json.vendor }}). Approve or reject it here - the link works once: {{ links.finance }}
+        - name: finance
+          approval:
+            title: "Pay {{ value.name }} {{ value.amount }} for {{ value.category }}?"
+            description: "{{ value.why }}. The check said: {{ steps.check.json.reason }}"
+            comment: true
+            approve: Approve the claim
+            reject: Reject it
+            timeout: 3d
+            on_timeout: continue
+        - name: answered
+          gmail:
+            action: send_email
+            credential: gmail
+            to: "{{ value.email }}"
+            subject: "Your claim of {{ value.amount }}: {{ steps.finance.approved ? 'approved' : 'not approved' }}"
+            text: >-
+              Hello {{ value.name }}, finance {{ steps.finance.approved ? 'approved' : 'did not approve' }} your claim
+              for {{ value.why }} ({{ value.amount }}).{{ steps.finance.comment == null || steps.finance.comment == ''
+              ? '' : ' They add: ' + steps.finance.comment }}{{ steps.finance.decision == 'timed_out' ? ' Nobody
+              answered in three days: please ask finance.' : '' }}

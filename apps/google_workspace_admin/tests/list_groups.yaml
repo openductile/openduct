@@ -1,0 +1,6 @@
+action: list_groups
+credential: { access_token: ya29.test }
+exchanges:
+  - sent: { method: GET, url: https://admin.googleapis.com/admin/directory/v1/groups, query: { customer: my_customer, maxResults: "200" } }
+    answer: { body: { groups: [{ id: 03abc0001, email: sales@example.com, name: Sales, directMembersCount: "4" }] } }
+result: [{ id: 03abc0001, email: sales@example.com, name: Sales, directMembersCount: "4" }]

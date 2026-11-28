@@ -1,0 +1,82 @@
+{{/*
+Copyright 2026 Ductile AI, Inc
+SPDX-License-Identifier: Apache-2.0
+*/}}
+# The nodes find each other, and Kafka clients find each node, by name: <release>-0.<release>, <release>-1 ...
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "openduct.name" . }}
+  labels:
+    {{- include "openduct.labels" . | nindent 4 }}
+spec:
+  clusterIP: None
+  # A cluster forms before its nodes are ready: they must reach each other first.
+  publishNotReadyAddresses: true
+  selector:
+    {{- include "openduct.selector" . | nindent 4 }}
+  ports:
+    - { name: kafka, port: 9092 }
+    - { name: replication, port: 9093 }
+    - { name: studio, port: 5480 }
+---
+# The studio (and webhooks), on any node that is ready: put an ingress with TLS in front of it.
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "openduct.name" . }}-studio
+  labels:
+    {{- include "openduct.labels" . | nindent 4 }}
+spec:
+  selector:
+    {{- include "openduct.selector" . | nindent 4 }}
+  ports:
+    - { name: studio, port: {{ .Values.service.port }}, targetPort: studio }
+{{- if include "openduct.cluster" . }}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "openduct.name" . }}
+  labels:
+    {{- include "openduct.labels" . | nindent 4 }}
+spec:
+  # Most of the nodes keep every partition writable: one at a time goes down.
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      {{- include "openduct.selector" . | nindent 6 }}
+{{- end }}
+{{- if .Values.ingress.enabled }}
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "openduct.name" . }}
+  labels:
+    {{- include "openduct.labels" . | nindent 4 }}
+  {{- with .Values.ingress.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  {{- with .Values.ingress.className }}
+  ingressClassName: {{ . }}
+  {{- end }}
+  {{- with .Values.ingress.tlsSecret }}
+  tls:
+    - hosts: [{{ first $.Values.studio.hosts | quote }}]
+      secretName: {{ . }}
+  {{- end }}
+  rules:
+    - host: {{ first .Values.studio.hosts | quote }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "openduct.name" . }}-studio
+                port:
+                  name: studio
+{{- end }}

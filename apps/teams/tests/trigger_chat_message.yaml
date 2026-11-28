@@ -1,0 +1,10 @@
+description: A new chat message
+trigger: new_message
+workflow: wf2
+sign_in: teams
+credential: { access_token: eyJ0.teams, "client_state@wf2": s3cr3t }
+input: { chat_id: "19:8ea0e38b-efb3-4757-924a-5f94061cf8c2_97f62344-57dc-409c-88ad-c4af14158ff5@unq.gbl.spaces" }
+delivery:
+  body: '{"value":[{"subscriptionId":"10493aa0-4d29-4df5-bc0c-ef742cc6cd7f","changeType":"created","clientState":"s3cr3t","resource":"chats(''19:8ea0e38b-efb3-4757-924a-5f94061cf8c2_97f62344-57dc-409c-88ad-c4af14158ff5@unq.gbl.spaces'')/messages(''1612289765949'')","resourceData":{"id":"1612289765949"},"tenantId":"84bd8158-6d4d-4958-8b9f-9d6445542f95"}]}'
+  at: 1700000000
+ids: ["10493aa0-4d29-4df5-bc0c-ef742cc6cd7f:chats('19:8ea0e38b-efb3-4757-924a-5f94061cf8c2_97f62344-57dc-409c-88ad-c4af14158ff5@unq.gbl.spaces')/messages('1612289765949')"]

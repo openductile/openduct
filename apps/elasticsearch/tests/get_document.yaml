@@ -1,0 +1,21 @@
+description: One order by its id, two of its fields
+action: get_document
+credential: {url: 'https://search.example.com:9200', api_key: VnVhQ2ZHY0JDZGJrUW0tZTVhT3g6dWkybHAyYXhUTm1zeWFrdzl0dk5udw==}
+input: {index: orders, id: o-1001, fields: 'order,total'}
+exchanges:
+- sent:
+    method: GET
+    url: https://search.example.com:9200/orders/_doc/o-1001
+    query: {_source_includes: 'order,total'}
+    headers: {authorization: ApiKey VnVhQ2ZHY0JDZGJrUW0tZTVhT3g6dWkybHAyYXhUTm1zeWFrdzl0dk5udw==}
+  answer:
+    status: 200
+    body: &id001
+      _index: orders
+      _id: o-1001
+      _version: 1
+      _seq_no: 0
+      _primary_term: 1
+      found: true
+      _source: {order: '1001', total: 25}
+result: *id001

@@ -1,0 +1,14 @@
+description: Channels, page after page by Slack's cursor
+action: list_channels
+credential: { bot_token: xoxb-1 }
+input: { types: "public_channel,private_channel" }
+exchanges:
+  - sent:
+      method: GET
+      url: https://slack.com/api/conversations.list
+      query: { types: "public_channel,private_channel", exclude_archived: "true", limit: "200" }
+    answer: { body: { ok: true, channels: [{ id: C012AB3CD, name: general, is_private: false }], response_metadata: { next_cursor: "dGVhbTpDMDYxRkE1UEI=" } } }
+  - sent:
+      query: { types: "public_channel,private_channel", exclude_archived: "true", limit: "200", cursor: "dGVhbTpDMDYxRkE1UEI=" }
+    answer: { body: { ok: true, channels: [{ id: C061EG9T2, name: random, is_private: false }], response_metadata: { next_cursor: "" } } }
+result: [{ id: C012AB3CD, name: general, is_private: false }, { id: C061EG9T2, name: random, is_private: false }]

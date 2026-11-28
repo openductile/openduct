@@ -1,0 +1,14 @@
+# Made by `openduct app from-openapi`: Add or update rows.
+description: "Add or update rows, made from the API description's schemas"
+action: upsert_rows
+credential: { token: test-token }
+input: { doc_id: doc_1, table_id_or_name: example, rows: [{ cells: [{ column: c-tuVwxYz, value: null }] }] }
+exchanges:
+  - sent:
+      method: POST
+      url: "https://docs.superhuman.com/apis/v1/docs/doc_1/tables/example/rows"
+      query: {}
+      headers: { authorization: "Bearer test-token" }
+      body: { rows: [{ cells: [{ column: c-tuVwxYz }] }] }
+    answer: { status: 202, body: { requestId: abc-123-def-456, addedRowIds: [example] } }
+result: { requestId: abc-123-def-456, addedRowIds: [example] }

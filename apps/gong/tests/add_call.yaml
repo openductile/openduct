@@ -1,0 +1,24 @@
+# Made by `openduct app from-openapi`: Add a call.
+description: "Add a call, made from the API description's schemas"
+action: add_call
+credential: { access_key: ann, access_key_secret: test-password }
+input:
+  client_unique_id: "123abc"
+  actual_start: example
+  parties: [{}]
+  direction: Inbound
+  primary_user: "234599484848423"
+exchanges:
+  - sent:
+      method: POST
+      url: "https://api.gong.io/v2/calls"
+      query: {}
+      headers: { authorization: "Basic YW5uOnRlc3QtcGFzc3dvcmQ=" }
+      body:
+        clientUniqueId: "123abc"
+        actualStart: example
+        parties: [{}]
+        direction: Inbound
+        primaryUser: "234599484848423"
+    answer: { status: 200, body: { requestId: "4al018gzaztcr8nbukw", callId: "7782342274025937895" } }
+result: { requestId: "4al018gzaztcr8nbukw", callId: "7782342274025937895" }

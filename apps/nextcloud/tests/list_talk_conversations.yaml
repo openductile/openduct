@@ -1,0 +1,11 @@
+description: The Talk conversations
+action: list_talk_conversations
+credential: { url: "https://cloud.example.com", username: ann, password: app-pass-1 }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://cloud.example.com/ocs/v2.php/apps/spreed/api/v4/room"
+    answer:
+      status: 200
+      body: { ocs: { meta: { status: ok, statuscode: 200 }, data: [{ id: 7, token: a1b2c3d4, type: 2, name: orders, displayName: Orders, unreadMessages: 3, lastActivity: 1795600000 }] } }
+result: [{ id: 7, token: a1b2c3d4, type: 2, name: orders, displayName: Orders, unreadMessages: 3, lastActivity: 1795600000 }]

@@ -1,0 +1,62 @@
+name: What needs an answer in your inbox, each morning
+description: >-
+  Each weekday at 7:30, Berlin time, read the unread mail of the last day in your Gmail inbox (up to 25), have a model
+  sort it into what needs your answer today, what can wait and what is only for your information, and e-mail you the
+  list - who wrote, about what, and the one thing each needs - before you open your inbox. Promotions and social mail
+  are left out. Set your own address below. Needs: gmail (it reads and sends), model (an AI credential).
+category: AI
+trigger:
+  schedule: { every: weekday, at: "07:30", timezone: Europe/Berlin }
+# What a test runs on: an event as this trigger gives it.
+sample:
+  scheduled_at: '2026-11-30T06:30:00Z'
+steps:
+  - name: unread
+    gmail:
+      action: find_emails
+      credential: gmail
+      q: "in:inbox is:unread newer_than:1d -category:promotions -category:social"
+    retry: { attempts: 3, wait: 30s }
+  - name: newest
+    list: { items: steps.unread, limit: 25 }
+  - where: size(steps.newest) > 0
+  - name: each
+    for_each:
+      items: steps.newest
+      steps:
+        - name: mail
+          gmail:
+            action: read_email
+            credential: gmail
+            message_id: "{{ item.id }}"
+          retry: { attempts: 3, wait: 10s }
+  # One short line a mail: who, the subject, and the start of the text (Gmail's snippet).
+  - name: lines
+    javascript: |
+      const header = (m, name) => {
+        const h = ((m.payload && m.payload.headers) || []).find((x) => String(x.name).toLowerCase() === name);
+        return h ? h.value : "";
+      };
+      const lines = (steps.each || []).map((r, i) => {
+        const m = r.mail || {};
+        return `${i + 1}. From ${header(m, "from") || "?"} - ${header(m, "subject") || "(no subject)"}: ${m.snippet || ""}`;
+      });
+      return { text: lines.join("\n"), count: lines.length };
+  - name: sorted
+    ai:
+      credential: model
+      system: >-
+        You help a busy person start the day. Sort these unread e-mails into three groups: Answer today, Can wait,
+        For your information. Under each, one line a mail: who, what about, and the one thing it needs from them.
+        Plain words, no greeting, nothing made up.
+      prompt: "{{ steps.lines.text }}"
+      max_tokens: 800
+  - name: send
+    gmail:
+      action: send_email
+      credential: gmail
+      # Your own address.
+      to: me@example.com
+      subject: "Your inbox this morning: {{ steps.lines.count }} unread"
+      text: "{{ steps.sorted.text }}"
+    retry: { attempts: 3, wait: 10s }

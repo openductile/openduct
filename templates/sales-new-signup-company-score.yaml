@@ -1,0 +1,90 @@
+name: Score each new sign-up from its company
+description: >-
+  Each new row in your Signups sheet (Name, Email, Company, Website) is looked up with People Data Labs' company
+  enrichment - industry, size, country - checked against your customers table in PostgreSQL, and scored by rules you
+  can read and change in one short script: company size, an industry you sell to, a country you serve, a work e-mail,
+  not a customer already. The score, its grade and its reasons are written into the row's columns E to H. Needs: sheets
+  (google_sheets), crm_db (postgres), pdl (header: X-Api-Key and your People Data Labs key).
+category: Sales
+trigger:
+  google_sheets: { when: new_row, credential: sheets, spreadsheet_id: your-spreadsheet-id, sheet: Signups, every: 5m }
+# What a test runs on: a row as this trigger gives it.
+sample:
+  row_number: 42
+  Name: Dana Reyes
+  Email: dana.reyes@tidewater-logistics.example
+  Company: Tidewater Logistics
+  Website: https://www.tidewater-logistics.example/
+steps:
+  - name: site
+    set:
+      domain: >-
+        value.Website != null && value.Website != ''
+        ? regex.replace(regex.replace(value.Website.trim().lowerAscii(), r'^https?://(www\.)?', ''), r'[/?#].*$', '')
+        : (value.Email.contains('@') ? value.Email.substring(value.Email.indexOf('@') + 1).lowerAscii() : '')
+  - where: steps.site.domain != ''
+  - name: customer
+    postgres:
+      credential: crm_db
+      sql: SELECT count(*) AS accounts FROM customers WHERE lower(domain) = $1
+      params: [steps.site.domain]
+      read_only: true
+    retry: { attempts: 3, wait: 10s }
+  - name: company
+    http:
+      url: https://api.peopledatalabs.com/v5/company/enrich
+      credential: pdl
+      query: { website: "{{ steps.site.domain }}" }
+      sample:
+        status: 200
+        name: tidewater logistics
+        website: tidewater-logistics.example
+        industry: transportation/trucking/railroad
+        size: 51-200
+        employee_count: 140
+        location: { country: united states, locality: savannah }
+        founded: 2009
+      # 404 is "not found": scored on what is known, not a failed run.
+      fail_on_status: false
+    retry: { attempts: 3, wait: 20s }
+  - name: score
+    javascript: |
+      // Your rules: change the lists and the points to fit who you sell to.
+      const INDUSTRIES = ["transportation", "logistics", "warehousing", "wholesale", "retail", "manufacturing"];
+      const COUNTRIES = ["united states", "canada", "united kingdom", "ireland", "australia"];
+      const FREE_MAIL = ["gmail.com", "yahoo.com", "outlook.com", "hotmail.com", "icloud.com", "aol.com", "proton.me"];
+
+      const found = steps.company.status === 200 && steps.company.body ? steps.company.body : {};
+      const email = String(value.Email || "").trim().toLowerCase();
+      const mailDomain = email.includes("@") ? email.split("@").pop() : "";
+      const rows = (steps.customer && steps.customer.rows) || [];
+      const isCustomer = rows.length > 0 && Number(rows[0].accounts) > 0;
+
+      let score = 0;
+      const reasons = [];
+      const people = Number(found.employee_count || 0);
+      if (people >= 50 && people <= 1000) { score += 30; reasons.push(`${people} people`); }
+      else if (people > 1000) { score += 15; reasons.push("large company"); }
+      else if (people > 0) { score += 5; reasons.push("small team"); }
+      const industry = String(found.industry || "");
+      if (INDUSTRIES.some((w) => industry.includes(w))) { score += 25; reasons.push(industry); }
+      const country = found.location ? String(found.location.country || "") : "";
+      if (COUNTRIES.includes(country)) { score += 15; reasons.push(country); }
+      if (mailDomain && !FREE_MAIL.includes(mailDomain)) { score += 20; reasons.push("work e-mail"); }
+      if (mailDomain && found.website && mailDomain === String(found.website).replace(/^www\./, "")) {
+        score += 10;
+        reasons.push("e-mail matches the website");
+      }
+      if (isCustomer) { score = Math.min(score, 20); reasons.push("already a customer"); }
+      if (!found.name) reasons.push("company not found");
+
+      const grade = score >= 70 ? "A" : score >= 45 ? "B" : score >= 25 ? "C" : "D";
+      return { score, grade, reasons: reasons.join("; "), industry, size: found.size || "" };
+  - name: write
+    google_sheets:
+      action: set_rows
+      credential: sheets
+      spreadsheet_id: your-spreadsheet-id
+      range: "Signups!E{{ value.row_number }}:H{{ value.row_number }}"
+      rows: [["{{ steps.score.industry }}", "{{ steps.score.size }}", "{{ steps.score.score }}", "{{ steps.score.grade }}: {{ steps.score.reasons }}"]]
+    retry: { attempts: 3, wait: 30s }

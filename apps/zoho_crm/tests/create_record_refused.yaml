@@ -1,0 +1,9 @@
+description: A record Zoho refuses comes back in its place in data, and fails the step in Zoho's words
+action: create_record
+credential: { access_token: 1000.test.token }
+input: { module: Leads, record: { Email: ann@example.com } }
+exchanges:
+  - answer:
+      status: 400
+      body: { data: [{ code: MANDATORY_NOT_FOUND, status: error, message: required field not found, details: { api_name: Last_Name, json_path: "$.data[0].Last_Name" } }] }
+error: "Zoho CRM answered 400: MANDATORY_NOT_FOUND: required field not found"

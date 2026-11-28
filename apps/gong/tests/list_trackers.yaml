@@ -1,0 +1,60 @@
+# Made by `openduct app from-openapi`: List trackers.
+description: "List trackers, made from the API description's schemas"
+action: list_trackers
+credential: { access_key: ann, access_key_secret: test-password }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://api.gong.io/v2/settings/trackers"
+      query: {}
+      headers: { authorization: "Basic YW5uOnRlc3QtcGFzc3dvcmQ=" }
+    answer:
+      status: 200
+      body:
+        requestId: "4al018gzaztcr8nbukw"
+        keywordTrackers:
+          - trackerId: "6840000929075400007"
+            trackerName: Competitors
+            workspaceId: "623457276584334"
+            languageKeywords: [{}]
+            affiliation: NonCompany
+            partOfQuestion: false
+            saidAt: Anytime
+            saidAtInterval: 1
+            saidAtUnit: minutes
+            saidInTopics: [example]
+            filterQuery: example
+            created: example
+        smartTrackers:
+          - trackerId: "6840000929075400007"
+            trackerName: Competitors
+            workspaceId: "623457276584334"
+            type: UDC
+            description: example
+            creatorUserId: "234599484848423"
+            partnerName: example
+            status: PUBLISHED
+result:
+  requestId: "4al018gzaztcr8nbukw"
+  keywordTrackers:
+    - trackerId: "6840000929075400007"
+      trackerName: Competitors
+      workspaceId: "623457276584334"
+      languageKeywords: [{}]
+      affiliation: NonCompany
+      partOfQuestion: false
+      saidAt: Anytime
+      saidAtInterval: 1
+      saidAtUnit: minutes
+      saidInTopics: [example]
+      filterQuery: example
+      created: example
+  smartTrackers:
+    - trackerId: "6840000929075400007"
+      trackerName: Competitors
+      workspaceId: "623457276584334"
+      type: UDC
+      description: example
+      creatorUserId: "234599484848423"
+      partnerName: example
+      status: PUBLISHED

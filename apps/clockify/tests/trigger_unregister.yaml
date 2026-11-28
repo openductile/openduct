@@ -1,0 +1,10 @@
+description: Turning the workflow off removes its webhook
+trigger: event
+unregister: true
+workflow: wf1
+credential: { api_key: test-key, "webhook_secret@wf1": tok.example.wf1, "webhook_id@wf1": "76a687e29ae1f428e7ebe101" }
+input: { workspace_id: "64a687e29ae1f428e7ebe303", event: NEW_TIME_ENTRY }
+exchanges:
+  - sent: { method: DELETE, url: "https://api.clockify.me/api/v1/workspaces/64a687e29ae1f428e7ebe303/webhooks/76a687e29ae1f428e7ebe101" }
+    answer: { status: 200, body: { id: "76a687e29ae1f428e7ebe101" } }
+kept: { webhook_secret: "", webhook_id: "" }

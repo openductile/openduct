@@ -1,0 +1,84 @@
+name: A monthly scan of local businesses on Google Maps
+description: >-
+  On the first of each month at 6:00 (Chicago time), Apify's Google Maps scraper lists the businesses of one kind in
+  one area - coffee roasters in Austin, say - with their rating, reviews and website. A short script cleans the names
+  and drops repeats, a data table remembers every place already seen, and only the new ones are added to your Places
+  sheet: a growing list for market research or prospecting. Make the table places under Tables (place_id, name,
+  first_seen). Needs: apify, sheets (google_sheets).
+category: Data
+trigger:
+  schedule: { every: month, on: [1], at: "06:00", timezone: America/Chicago }
+# What a test runs on: an event as this trigger gives it.
+sample:
+  scheduled_at: '2026-12-01T12:00:00Z'
+steps:
+  - name: scrape
+    apify:
+      action: run_and_get_items
+      credential: apify
+      actor: compass/crawler-google-places
+      input:
+        searchStringsArray: [coffee roaster]
+        locationQuery: Austin, Texas, USA
+        maxCrawledPlacesPerSearch: 80
+        language: en
+      limit: 100
+      # Each run spends Apify credit: at most this much.
+      max_total_charge_usd: 5
+    retry: { attempts: 2, wait: 1m }
+  - name: places
+    javascript: |
+      // One record a place, with the fields that matter, and each place once (by its id, else its name and address).
+      const seen = new Set();
+      const places = [];
+      for (const p of steps.scrape || []) {
+        const name = String(p.title || p.name || "").replace(/\s+/g, " ").trim();
+        if (!name) continue;
+        const address = String(p.address || "").trim();
+        const id = String(p.placeId || p.cid || `${name}|${address}`.toLowerCase());
+        if (seen.has(id)) continue;
+        seen.add(id);
+        places.push({
+          place_id: id,
+          name,
+          address,
+          category: p.categoryName || "",
+          rating: typeof p.totalScore === "number" ? p.totalScore : "",
+          reviews: typeof p.reviewsCount === "number" ? p.reviewsCount : 0,
+          website: p.website || "",
+          maps: p.url || "",
+        });
+      }
+      console.log(`${places.length} places from ${(steps.scrape || []).length} records`);
+      return { places };
+  - name: each
+    for_each:
+      items: steps.places.places
+      steps:
+        - name: known
+          table: { name: places, action: get, where: { place_id: "{{ item.place_id }}" }, limit: 1 }
+        - name: new_one
+          if:
+            when: size(steps.known) == 0
+            then:
+              - name: remember
+                table:
+                  name: places
+                  action: insert
+                  row: { place_id: "{{ item.place_id }}", name: "{{ item.name }}", first_seen: "{{ value.scheduled_at }}" }
+              - name: add
+                google_sheets:
+                  action: add_row
+                  credential: sheets
+                  spreadsheet_id: your-spreadsheet-id
+                  sheet: Places
+                  values:
+                    - "{{ value.scheduled_at.substring(0, 10) }}"
+                    - "{{ item.name }}"
+                    - "{{ item.category }}"
+                    - "{{ item.address }}"
+                    - "{{ item.rating }}"
+                    - "{{ item.reviews }}"
+                    - "{{ item.website }}"
+                    - "{{ item.maps }}"
+                retry: { attempts: 3, wait: 30s }

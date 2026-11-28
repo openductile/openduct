@@ -1,0 +1,12 @@
+description: A post kept as a draft (the default), signed in with an application password
+action: add_post
+credential: { site_url: "https://blog.example.com", username: ann, application_password: "abcd efgh ijkl mnop" }
+input: { title: Winter opening hours, content: "<p>We open at nine.</p>", categories: [3] }
+exchanges:
+  - sent:
+      method: POST
+      url: https://blog.example.com/wp-json/wp/v2/posts
+      headers: { authorization: "Basic YW5uOmFiY2QgZWZnaCBpamtsIG1ub3A=" }
+      body: { title: Winter opening hours, content: "<p>We open at nine.</p>", status: draft, categories: [3] }
+    answer: { status: 201, body: { id: 42, status: draft, link: "https://blog.example.com/?p=42", title: { rendered: Winter opening hours } } }
+result: { id: 42, status: draft, link: "https://blog.example.com/?p=42", title: { rendered: Winter opening hours } }

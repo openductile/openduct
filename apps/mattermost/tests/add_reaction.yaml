@@ -1,0 +1,12 @@
+description: A thumbs up on a post
+action: add_reaction
+credential: { server_url: "https://chat.example.com", token: testmmtoken0000000000000000 }
+input: { user_id: u1aaaaaaaaaaaaaaaaaaaaaaaa, post_id: p2aaaaaaaaaaaaaaaaaaaaaaaa, emoji_name: thumbsup }
+exchanges:
+  - sent:
+      method: POST
+      url: https://chat.example.com/api/v4/reactions
+      headers: { authorization: Bearer testmmtoken0000000000000000 }
+      body: { user_id: u1aaaaaaaaaaaaaaaaaaaaaaaa, post_id: p2aaaaaaaaaaaaaaaaaaaaaaaa, emoji_name: thumbsup }
+    answer: { status: 201, body: { user_id: u1aaaaaaaaaaaaaaaaaaaaaaaa, post_id: p2aaaaaaaaaaaaaaaaaaaaaaaa, emoji_name: thumbsup, create_at: 1764237700000 } }
+result: { user_id: u1aaaaaaaaaaaaaaaaaaaaaaaa, post_id: p2aaaaaaaaaaaaaaaaaaaaaaaa, emoji_name: thumbsup, create_at: 1764237700000 }

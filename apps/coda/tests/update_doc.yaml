@@ -1,0 +1,14 @@
+# Made by `openduct app from-openapi`: Rename a doc.
+description: "Rename a doc, made from the API description's schemas"
+action: update_doc
+credential: { token: test-token }
+input: { doc_id: doc_1 }
+exchanges:
+  - sent:
+      method: PATCH
+      url: "https://docs.superhuman.com/apis/v1/docs/doc_1"
+      query: {}
+      headers: { authorization: "Bearer test-token" }
+      body: {}
+    answer: { status: 200, body: {} }
+result: {}

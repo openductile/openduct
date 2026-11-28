@@ -1,0 +1,62 @@
+description: An item added since the poll before; one seen is not run again
+trigger: new_item
+credential:
+  token: monday-test-token
+input:
+  board_id: '1234567890'
+seen:
+  items:
+  - - '9876543210'
+    - ''
+exchanges:
+- sent:
+    method: POST
+    url: https://api.monday.com/v2
+    body:
+      query: 'query ($board: [ID!]) { boards(ids: $board) { items_page(limit: 100) { cursor items { id name state created_at
+        updated_at url creator_id group { id title } board { id name } column_values { id type text value } } } } }'
+      variables:
+        board:
+        - '1234567890'
+  answer:
+    body:
+      data:
+        boards:
+        - items_page:
+            cursor: null
+            items:
+            - id: '9876543210'
+              name: Order 1042
+              state: active
+              created_at: '2026-11-27T09:00:00Z'
+              updated_at: '2026-11-27T09:00:00Z'
+              url: https://example-co.monday.com/boards/1234567890/pulses/9876543210
+              creator_id: '55500001'
+              group: &id001
+                id: topics
+                title: New orders
+              board: &id002
+                id: '1234567890'
+                name: Orders
+              column_values: &id003
+              - id: status
+                type: status
+                text: Working on it
+                value: '{"index":0}'
+              - id: date4
+                type: date
+                text: '2026-12-01'
+                value: '{"date":"2026-12-01"}'
+            - &id004
+              id: '9876543211'
+              name: Order 1043
+              state: active
+              created_at: '2026-11-27T09:00:00Z'
+              updated_at: '2026-11-27T10:00:00Z'
+              url: https://example-co.monday.com/boards/1234567890/pulses/9876543211
+              creator_id: '55500001'
+              group: *id001
+              board: *id002
+              column_values: *id003
+runs:
+- *id004

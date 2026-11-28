@@ -1,0 +1,11 @@
+description: "Mautic refuses a contact that is not there, in its words"
+action: get_contact
+credential: {"site_url": "https://mautic.example.com", "username": "admin", "password": "pw-test"}
+input: {"contact_id": 999}
+exchanges:
+  - sent:
+      method: GET
+      url: "https://mautic.example.com/api/contacts/999"
+      headers: {"authorization": "Basic YWRtaW46cHctdGVzdA=="}
+    answer: {"status": 404, "body": {"errors": [{"code": 404, "message": "Item was not found.", "details": []}]}}
+error: "Item was not found."

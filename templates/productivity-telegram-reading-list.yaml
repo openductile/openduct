@@ -1,0 +1,69 @@
+name: A reading list you fill from Telegram
+description: >-
+  Send your Telegram bot a link to an article: the page is fetched and read as text, a model sums it up in
+  three points, and it is added to the Reading list sheet with its title, the minutes it takes to read and the summary.
+  The bot answers with the summary, so you know at once whether to read it now or later. Needs: bot (telegram), model
+  (ai), sheets (google_sheets).
+category: Productivity
+trigger:
+  telegram: { when: message, credential: bot }
+# What a test runs on: a message as this trigger gives it.
+sample:
+  message_id: 512
+  date: 1795770000
+  chat: { id: 409117256, type: private }
+  from: { id: 409117256, first_name: Kai }
+  text: worth a read https://blog.example.com/posts/pricing-pages-that-work
+steps:
+  - name: link
+    set:
+      url: "value.text == null ? null : regex.extract(value.text, r'https?://[^\\s<>]+')"
+  - name: no_link
+    if:
+      when: steps.link.url == null
+      then:
+        - name: ask
+          telegram:
+            credential: bot
+            chat_id: "{{ value.chat.id }}"
+            text: Send me a link to an article and I add it to your reading list.
+        - stop: {}
+  - name: page
+    http:
+      url: "{{ steps.link.url }}"
+      # Kept as a file, then read as a web page: its text and its title, without the markup.
+      response: file
+      timeout: 30s
+      sample: >-
+        <html><head><title>Pricing pages that work</title></head><body><h1>Pricing pages that work</h1>
+        <p>Most visitors decide in seconds. Lead with the plan most people choose, and say who each plan is for.</p>
+        <p>Show the yearly saving as money, not a percent. Put answers to the three questions sales hears most right
+        under the plans.</p></body></html>
+    retry: { attempts: 2, wait: 5s }
+  - name: text
+    extract_file: { file: steps.page.body, format: html }
+  - name: gist
+    ai:
+      credential: model
+      system: You sum up an article in three short bullet points for someone deciding whether to read it. Plain words.
+      prompt: "{{ steps.text.text.substring(0, math.least(size(steps.text.text), 40000)) }}"
+      max_tokens: 250
+  - name: facts
+    set:
+      title: "has(steps.text.title) && steps.text.title != '' ? steps.text.title : steps.link.url"
+      # About 230 words a minute.
+      minutes: "math.ceil(double(size(steps.text.text.split(' '))) / 230.0)"
+  - name: save
+    google_sheets:
+      action: add_row
+      credential: sheets
+      spreadsheet_id: your-spreadsheet-id
+      sheet: Reading list
+      values: ["{{ string(timestamp(value.date)).substring(0, 10) }}", "{{ steps.facts.title }}", "{{ steps.link.url }}", "{{ steps.facts.minutes }}", "{{ steps.gist.text }}"]
+    retry: { attempts: 3, wait: 30s }
+  - name: reply
+    telegram:
+      credential: bot
+      chat_id: "{{ value.chat.id }}"
+      text: "Added: {{ steps.facts.title }} ({{ steps.facts.minutes }} min)\n{{ steps.gist.text }}"
+    retry: { attempts: 3, wait: 5s }

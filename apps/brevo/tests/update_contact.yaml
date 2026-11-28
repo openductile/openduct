@@ -1,0 +1,10 @@
+action: update_contact
+credential: { api_key: xkeysib-test-1 }
+input: { contact: ann@example.com, attributes: { LASTNAME: Lee }, remove_list_ids: "5" }
+exchanges:
+  - sent:
+      method: PUT
+      url: https://api.brevo.com/v3/contacts/ann@example.com
+      body: { attributes: { LASTNAME: Lee }, unlinkListIds: [5] }
+    answer: { status: 204 }
+result: { changed: true }

@@ -1,0 +1,81 @@
+# Made by `openduct app from-openapi`: Create a company.
+description: "Create a company, made from the API description's schemas"
+action: create_company
+credential: { access_token: test-access-token }
+exchanges:
+  - sent:
+      method: POST
+      url: "https://api.keap.com/crm/rest/v2/companies"
+      query: {}
+      headers: { authorization: "Bearer test-access-token" }
+      body: {}
+    answer:
+      status: 201
+      body:
+        id: 123
+        address:
+          country: example
+          line1: 123
+          line2: example
+          locality: Phoenix
+          region: Arizona
+          field: ADDRESS_FIELD_UNSPECIFIED
+          country_code: USA
+          postal_code: 85001
+          region_code: US-AZ
+          zip_code: 85001
+          zip_four: 1234
+        notes: example
+        website: example
+        suffix: Jr
+        title: Dr.
+        groups: example
+        company_name: Thryv
+        custom_fields: [{ id: id_1, content: example }]
+        email_address:
+          email: "ann@example.com"
+          field: EMAIL_FIELD_UNSPECIFIED
+          opt_in_reason: example
+          is_opt_in: true
+          email_opt_status: UNENGAGED_MARKETABLE
+        fax_number: { number: 5551234568, type: Work, field: FAX_NUMBER_FIELD_UNSPECIFIED }
+        phone_number:
+          extension: 101
+          number: 5551234567
+          type: Work
+          field: PHONE_NUMBER_FIELD_UNSPECIFIED
+          number_e164: example
+result:
+  id: 123
+  address:
+    country: example
+    line1: 123
+    line2: example
+    locality: Phoenix
+    region: Arizona
+    field: ADDRESS_FIELD_UNSPECIFIED
+    country_code: USA
+    postal_code: 85001
+    region_code: US-AZ
+    zip_code: 85001
+    zip_four: 1234
+  notes: example
+  website: example
+  suffix: Jr
+  title: Dr.
+  groups: example
+  company_name: Thryv
+  custom_fields: [{ id: id_1, content: example }]
+  email_address:
+    email: "ann@example.com"
+    field: EMAIL_FIELD_UNSPECIFIED
+    opt_in_reason: example
+    is_opt_in: true
+    email_opt_status: UNENGAGED_MARKETABLE
+  fax_number: { number: 5551234568, type: Work, field: FAX_NUMBER_FIELD_UNSPECIFIED }
+  phone_number:
+    extension: 101
+    number: 5551234567
+    type: Work
+    field: PHONE_NUMBER_FIELD_UNSPECIFIED
+    number_e164: example

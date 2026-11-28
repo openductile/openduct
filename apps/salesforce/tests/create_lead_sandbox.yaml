@@ -1,0 +1,13 @@
+description: The same, from a sandbox signed in at test.salesforce.com
+action: create_lead
+sign_in: salesforce_sandbox
+credential: { access_token: "00D000000000002!AQ.test", instance: examplecorp--uat.sandbox.my.salesforce.com }
+input: { last_name: Lee, company: Example Co }
+exchanges:
+  - sent:
+      method: POST
+      url: https://examplecorp--uat.sandbox.my.salesforce.com/services/data/v67.0/sobjects/Lead/
+      headers: { authorization: Bearer 00D000000000002!AQ.test }
+      body: { LastName: Lee, Company: Example Co }
+    answer: { status: 201, body: { id: 00Q5e000001AbcDGAZ, success: true, errors: [] } }
+result: { id: 00Q5e000001AbcDGAZ, success: true, errors: [] }

@@ -1,0 +1,12 @@
+description: Two rows added at once
+action: create_rows
+credential: { token: br-test-token }
+input: { table_id: 1203, rows: [{ Name: Cy }, { Name: Di }] }
+exchanges:
+  - sent:
+      method: POST
+      url: https://api.baserow.io/api/database/rows/table/1203/batch/
+      query: { user_field_names: "true" }
+      body: { items: [{ Name: Cy }, { Name: Di }] }
+    answer: { body: { items: [{ id: 10, order: "10.00000000000000000000", Name: Cy }, { id: 11, order: "11.00000000000000000000", Name: Di }] } }
+result: [{ id: 10, order: "10.00000000000000000000", Name: Cy }, { id: 11, order: "11.00000000000000000000", Name: Di }]

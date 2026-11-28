@@ -1,0 +1,7 @@
+action: list_schedule_users
+credential: { api_key: pd_test_1 }
+input: { id: PSCH001, since: "2026-11-27T00:00:00Z", until: "2026-11-28T00:00:00Z" }
+exchanges:
+  - sent: { method: GET, url: https://api.pagerduty.com/schedules/PSCH001/users, query: { since: "2026-11-27T00:00:00Z", until: "2026-11-28T00:00:00Z" } }
+    answer: { body: { users: [{ id: PUSER02, name: Bob Ray, email: bob@example.com }] } }
+result: [{ id: PUSER02, name: Bob Ray, email: bob@example.com }]

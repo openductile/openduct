@@ -1,0 +1,11 @@
+description: "The contact groups"
+action: list_groups
+credential: {"access_token": "ya29.test"}
+exchanges:
+  - sent:
+      method: GET
+      url: "https://people.googleapis.com/v1/contactGroups"
+      query: {"pageSize": "1000"}
+      headers: {"authorization": "Bearer ya29.test"}
+    answer: {"status": 200, "body": {"contactGroups": [{"resourceName": "contactGroups/myContacts", "etag": "e1", "name": "myContacts", "formattedName": "My Contacts", "groupType": "SYSTEM_CONTACT_GROUP", "memberCount": 2}, {"resourceName": "contactGroups/7a2b", "etag": "e2", "name": "Suppliers", "formattedName": "Suppliers", "groupType": "USER_CONTACT_GROUP", "memberCount": 1}], "totalItems": 2}}
+result: [{"resourceName": "contactGroups/myContacts", "etag": "e1", "name": "myContacts", "formattedName": "My Contacts", "groupType": "SYSTEM_CONTACT_GROUP", "memberCount": 2}, {"resourceName": "contactGroups/7a2b", "etag": "e2", "name": "Suppliers", "formattedName": "Suppliers", "groupType": "USER_CONTACT_GROUP", "memberCount": 1}]

@@ -1,0 +1,78 @@
+name: A Telegram bot that tells guests if their tour will run
+description: >-
+  For tour, boat, outdoor-class and event operators: guests write to your Telegram bot ("Is the kayak tour on Saturday
+  still on?"), and an AI agent answers from the week's forecast for your meeting points (Open-Meteo, free, no key) and
+  your own weather rules - what you cancel for, what to bring - remembering each chat's earlier messages. It never
+  confirms a booking it cannot see; it says what the forecast says and when you decide. Needs: a Telegram bot credential
+  called bot, and an AI credential called model.
+category: Support
+trigger:
+  # Turning the workflow on gives Telegram this workflow's address; turning it off takes it away.
+  telegram: { when: message, credential: bot }
+# What a test runs on: an event as this trigger gives it (the message).
+sample:
+  message_id: 311
+  chat: { id: 555000111, type: private }
+  from: { first_name: Alex }
+  date: 1795780000
+  text: Is the kayak tour on Saturday morning still on? And do I need a jacket?
+steps:
+  - where: has(value.text) && value.text != null && value.text.trim() != ''
+  - name: today
+    datetime: { timezone: Europe/Lisbon }
+  - name: guide
+    agent:
+      credential: model
+      # Change the meeting points and the rules to your own.
+      instructions: >-
+        You answer guests of a small outdoor tour company, kindly, in at most four sentences, in the guest's language.
+        Today is {{ steps.today.weekday }} {{ steps.today.date }}. Our tours start from Cascais Marina (kayak) and
+        Sintra (hiking). Our rules: kayak tours are cancelled when wind is over 35 km/h or there is thunder; hikes
+        when rain is over 80% likely or there is thunder; we decide by 18:00 the day before and send a message. Look
+        up the forecast before you say anything about the weather. Say it is a forecast, not a promise. You cannot see
+        or change bookings: for those, ask them to reply to their booking email.
+      input: "{{ value.text }}"
+      tools:
+        - name: find_place
+          description: The latitude and longitude of a place, by its name.
+          parameters:
+            type: object
+            properties:
+              name: { type: string, description: "The place, as Cascais" }
+            required: [name]
+          http:
+            method: GET
+            url: https://geocoding-api.open-meteo.com/v1/search
+            query: { name: "{{ args.name }}", count: "3", language: en, format: json }
+        - name: forecast
+          description: >-
+            The next seven days' forecast at a place: for each day the weather code, highest and lowest temperature
+            (C), how likely rain is (%) and the strongest wind (km/h).
+          parameters:
+            type: object
+            properties:
+              latitude: { type: number, minimum: -90, maximum: 90 }
+              longitude: { type: number, minimum: -180, maximum: 180 }
+            required: [latitude, longitude]
+          http:
+            method: GET
+            url: https://api.open-meteo.com/v1/forecast
+            query:
+              latitude: "{{ args.latitude }}"
+              longitude: "{{ args.longitude }}"
+              daily: weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,wind_speed_10m_max
+              timezone: auto
+              forecast_days: "7"
+      allow: [find_place, forecast]
+      memory:
+        key: "{{ value.chat.id }}"
+        window: 10
+        clear: "value.text == '/start'"
+      max_turns: 6
+      max_tool_calls: 6
+  - name: reply
+    telegram:
+      credential: bot
+      chat_id: "{{ value.chat.id }}"
+      text: "{{ steps.guide.text }}"
+    retry: { attempts: 3, wait: 5s }

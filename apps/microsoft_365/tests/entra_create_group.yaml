@@ -1,0 +1,33 @@
+description: A Microsoft 365 group made
+action: create_group
+sign_in: microsoft_entra_admin
+credential: {access_token: eyJ0-admin}
+input: {display_name: Sales Team, mail_nickname: sales-team, description: Everyone in sales, visibility: Private}
+exchanges:
+- sent:
+    method: POST
+    url: https://graph.microsoft.com/v1.0/groups
+    headers: {authorization: Bearer eyJ0-admin}
+    query: {}
+    body:
+      displayName: Sales Team
+      mailNickname: sales-team
+      description: Everyone in sales
+      groupTypes: [Unified]
+      mailEnabled: true
+      securityEnabled: false
+      visibility: Private
+  answer:
+    status: 201
+    body: &id001
+      id: 45b7d2e7-b882-4a80-ba97-10b7a63b8fa4
+      displayName: Sales Team
+      description: Everyone in sales
+      mail: sales-team@contoso.example
+      mailEnabled: true
+      mailNickname: sales-team
+      securityEnabled: false
+      groupTypes: [Unified]
+      visibility: Private
+      createdDateTime: '2026-11-27T10:00:00Z'
+result: *id001

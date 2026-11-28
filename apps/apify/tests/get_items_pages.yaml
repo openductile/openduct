@@ -1,0 +1,17 @@
+description: A dataset read page after page, as its headers say how many records it holds in all
+action: get_items
+credential: { api_token: apify_api_test1 }
+input: { dataset_id: wmKPijuyDnPZAPRMk, fields: "url,title" }
+exchanges:
+  - sent:
+      url: https://api.apify.com/v2/datasets/wmKPijuyDnPZAPRMk/items
+      query: { format: json, clean: "true", limit: "1000", fields: "url,title" }
+    answer:
+      headers: { X-Apify-Pagination-Offset: "0", X-Apify-Pagination-Limit: "1000", X-Apify-Pagination-Total: "1500" }
+      body: [{ url: "https://example.com/1", title: One }]
+  - sent:
+      query: { format: json, clean: "true", limit: "1000", fields: "url,title", offset: "1000" }
+    answer:
+      headers: { X-Apify-Pagination-Offset: "1000", X-Apify-Pagination-Limit: "1000", X-Apify-Pagination-Total: "1500" }
+      body: [{ url: "https://example.com/1001", title: Two }]
+result: [{ url: "https://example.com/1", title: One }, { url: "https://example.com/1001", title: Two }]

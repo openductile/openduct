@@ -1,0 +1,43 @@
+# Made by `openduct app from-openapi`: Scroll over all companies.
+description: "Scroll over all companies, made from the API description's schemas"
+action: list_scroll
+credential: { token: test-token }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://api.intercom.io/companies/scroll"
+      query: {}
+      headers: { authorization: "Bearer test-token" }
+    answer:
+      status: 200
+      body:
+        type: list
+        data:
+          - type: company
+            id: "531ee472cce572a6ec000006"
+            name: example
+            app_id: ecahpwf5
+            plan: { type: plan, id: "269315", name: Pro }
+            company_id: "6"
+            remote_created_at: 1663597223
+            created_at: 1663597223
+            updated_at: 1663597223
+            last_request_at: 1663597223
+            size: 100
+            website: example
+        pages: {}
+        total_count: 1
+        scroll_param: "25b649f7-4d33-4ef6-88f5-60e5b8244309"
+result:
+  - type: company
+    id: "531ee472cce572a6ec000006"
+    name: example
+    app_id: ecahpwf5
+    plan: { type: plan, id: "269315", name: Pro }
+    company_id: "6"
+    remote_created_at: 1663597223
+    created_at: 1663597223
+    updated_at: 1663597223
+    last_request_at: 1663597223
+    size: 100
+    website: example

@@ -1,0 +1,7 @@
+action: create_label
+credential: { token: todoist-test-token }
+input: { name: phone, color: charcoal }
+exchanges:
+  - sent: { method: POST, url: https://api.todoist.com/api/v1/labels, body: { name: phone, color: charcoal } }
+    answer: { body: { id: "2100000001", name: phone, color: charcoal, order: 1, is_favorite: false } }
+result: { id: "2100000001", name: phone, color: charcoal, order: 1, is_favorite: false }

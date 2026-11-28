@@ -1,0 +1,27 @@
+description: Revenue by status, in ES|QL
+action: esql_query
+credential: {url: 'https://search.example.com:9200', api_key: VnVhQ2ZHY0JDZGJrUW0tZTVhT3g6dWkybHAyYXhUTm1zeWFrdzl0dk5udw==}
+input:
+  query: FROM orders | WHERE total > ? | STATS sum(total) BY status
+  params: [10]
+exchanges:
+- sent:
+    method: POST
+    url: https://search.example.com:9200/_query
+    query: {format: json}
+    headers: {authorization: ApiKey VnVhQ2ZHY0JDZGJrUW0tZTVhT3g6dWkybHAyYXhUTm1zeWFrdzl0dk5udw==}
+    body:
+      query: FROM orders | WHERE total > ? | STATS sum(total) BY status
+      params: [10]
+  answer:
+    status: 200
+    body: &id001
+      took: 12
+      is_partial: false
+      columns:
+      - {name: sum(total), type: double}
+      - {name: status, type: keyword}
+      values:
+      - [65.0, paid]
+      - [12.0, refunded]
+result: *id001

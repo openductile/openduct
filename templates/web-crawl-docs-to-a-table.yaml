@@ -1,0 +1,39 @@
+name: A documentation site, crawled into a table
+description: >-
+  Every Monday morning, read up to 50 pages of a documentation site - two links deep from its guide, honouring its
+  robots.txt, one page a second - and keep each page's address, title and text (as Markdown) in the docs data table,
+  to search or to answer from. Make the table once, under Tables: docs, with the text columns url, title, text and
+  crawled. Change the address and the pattern to your own site's.
+category: Documents
+trigger:
+  schedule: { every: week, on: [monday], at: "06:00", timezone: Europe/London }
+# What a test runs on: an event as this trigger gives it.
+sample:
+  scheduled_at: '2026-11-30T06:00:00Z'
+steps:
+  - name: site
+    web:
+      action: crawl
+      url: https://docs.example.com/guide/
+      depth: 2
+      max_pages: 50
+      include: ["https://docs.example.com/guide/*"]
+      max_chars: 20000
+  - name: keep
+    for_each:
+      items: steps.site.pages
+      steps:
+        - name: page
+          table:
+            name: docs
+            action: upsert
+            key: url
+            row:
+              url: "{{ item.url }}"
+              title: "{{ item.title }}"
+              text: "{{ item.text }}"
+              crawled: "{{ value.scheduled_at }}"
+  - name: counted
+    set:
+      pages: steps.site.count
+      passed_by: size(steps.site.skipped)

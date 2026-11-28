@@ -1,0 +1,33 @@
+description: "A finished job and its report"
+action: get_job_report
+credential: { base_url: "https://cortex.example.com:9001", api_key: test-key }
+input: { job_id: AWNei4vH3rJ8unegCPB9 }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://cortex.example.com:9001/api/job/AWNei4vH3rJ8unegCPB9/report"
+    answer:
+      body:
+        id: AWNei4vH3rJ8unegCPB9
+        analyzerName: Abuse_Finder_3_0
+        status: Success
+        data: 203.0.113.7
+        dataType: ip
+        tlp: 1
+        report:
+          success: true
+          summary: { taxonomies: [{ level: info, namespace: Abuse_Finder, predicate: Address, value: abuse@isp.example }] }
+          full: { abuse_finder: { abuse: [abuse@isp.example], value: 203.0.113.7 } }
+          artifacts: []
+result:
+  id: AWNei4vH3rJ8unegCPB9
+  analyzerName: Abuse_Finder_3_0
+  status: Success
+  data: 203.0.113.7
+  dataType: ip
+  tlp: 1
+  report:
+    success: true
+    summary: { taxonomies: [{ level: info, namespace: Abuse_Finder, predicate: Address, value: abuse@isp.example }] }
+    full: { abuse_finder: { abuse: [abuse@isp.example], value: 203.0.113.7 } }
+    artifacts: []

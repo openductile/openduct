@@ -1,0 +1,10 @@
+action: post_announcement
+credential: { api_key: ur_test_1 }
+input: { status_page_id: 12, title: Planned maintenance, content: The shop is closed from 22:00 to 23:00 UTC, type: Maintenance, status: Published }
+exchanges:
+  - sent:
+      method: POST
+      url: https://api.uptimerobot.com/v3/psps/12/announcements
+      body: { title: Planned maintenance, content: The shop is closed from 22:00 to 23:00 UTC, type: Maintenance, status: Published }
+    answer: { status: 201, body: { id: 90, title: Planned maintenance, content: The shop is closed from 22:00 to 23:00 UTC, type: Maintenance, status: Published } }
+result: { id: 90, title: Planned maintenance, content: The shop is closed from 22:00 to 23:00 UTC, type: Maintenance, status: Published }

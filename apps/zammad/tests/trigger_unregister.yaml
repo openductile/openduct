@@ -1,0 +1,11 @@
+description: Turning the workflow off removes the Zammad trigger, then the webhook
+trigger: ticket_event
+unregister: true
+workflow: wf1
+credential: { subdomain: acme, token: zm_admin, "webhook_secret@wf1": zm_sig_test_1, "webhook_id@wf1": "7", "trigger_id@wf1": "12" }
+exchanges:
+  - sent: { method: DELETE, url: https://acme.zammad.com/api/v1/triggers/12 }
+    answer: { body: {} }
+  - sent: { method: DELETE, url: https://acme.zammad.com/api/v1/webhooks/7 }
+    answer: { body: {} }
+kept: { webhook_secret: "", webhook_id: "", trigger_id: "" }

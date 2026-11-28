@@ -1,0 +1,30 @@
+description: The updates of an item
+action: list_updates
+credential:
+  token: monday-test-token
+input:
+  item_id: '9876543210'
+exchanges:
+- sent:
+    body:
+      query: 'query ($ids: [ID!]) { items(ids: $ids) { updates(limit: 100) { id body text_body created_at creator_id item_id
+        creator { id name } } } }'
+      variables:
+        ids:
+        - '9876543210'
+  answer:
+    body:
+      data:
+        items:
+        - updates:
+          - id: '3300000001'
+            text_body: The customer paid.
+            creator:
+              id: '55500001'
+              name: Ann Example
+result:
+- id: '3300000001'
+  text_body: The customer paid.
+  creator:
+    id: '55500001'
+    name: Ann Example

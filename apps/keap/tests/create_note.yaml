@@ -1,0 +1,40 @@
+# Made by `openduct app from-openapi`: Add a note to a contact.
+description: "Add a note to a contact, made from the API description's schemas"
+action: create_note
+credential: { access_token: test-access-token }
+input: { contact_id: contact_1, user_id: "123" }
+exchanges:
+  - sent:
+      method: POST
+      url: "https://api.keap.com/crm/rest/v2/contacts/contact_1/notes"
+      query: {}
+      headers: { authorization: "Bearer test-access-token" }
+      body: { user_id: "123" }
+    answer:
+      status: 201
+      body:
+        id: 12345
+        text: example
+        title: example
+        type: Call
+        contact_id: 1001
+        assigned_to_user: { id: 456, given_name: Dana, family_name: Example, email_address: "ann@example.com" }
+        create_time: "2024-01-10T08:00:00Z"
+        update_time: "2024-03-15T10:30:00Z"
+        last_updated_by_user_id: 456
+        pinned_at: "2024-02-18T16:45:00Z"
+        created_by_user_id: 789
+        custom_fields: [{ id: id_1, content: example }]
+result:
+  id: 12345
+  text: example
+  title: example
+  type: Call
+  contact_id: 1001
+  assigned_to_user: { id: 456, given_name: Dana, family_name: Example, email_address: "ann@example.com" }
+  create_time: "2024-01-10T08:00:00Z"
+  update_time: "2024-03-15T10:30:00Z"
+  last_updated_by_user_id: 456
+  pinned_at: "2024-02-18T16:45:00Z"
+  created_by_user_id: 789
+  custom_fields: [{ id: id_1, content: example }]

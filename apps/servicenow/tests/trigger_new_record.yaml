@@ -1,0 +1,10 @@
+description: The first poll of a table notes its records and runs none
+trigger: new_record
+credential: { instance: acme, username: integration.user, password: pw-test-1 }
+input: { table: change_request }
+exchanges:
+  - sent:
+      url: "https://acme.service-now.com/api/now/table/change_request"
+      query: { sysparm_query: ORDERBYDESCsys_created_on, sysparm_exclude_reference_link: "true", sysparm_limit: "100" }
+    answer: { body: { result: [{ sys_id: c1, number: CHG0030001 }] } }
+runs: []

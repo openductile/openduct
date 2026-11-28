@@ -1,0 +1,11 @@
+description: A task moved to another list - no body is sent
+action: move_task
+credential: { access_token: ya29.test }
+input: { list_id: "@default", task_id: dGFzazI, to_list: WjFoQ2VqVW1aV3hR }
+exchanges:
+  - sent:
+      method: POST
+      url: https://tasks.googleapis.com/tasks/v1/lists/@default/tasks/dGFzazI/move
+      query: { destinationTasklist: WjFoQ2VqVW1aV3hR }
+    answer: { body: { kind: tasks#task, id: dGFzazI, title: Call the printer, status: needsAction } }
+result: { kind: tasks#task, id: dGFzazI, title: Call the printer, status: needsAction }

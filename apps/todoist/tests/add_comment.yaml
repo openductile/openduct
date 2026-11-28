@@ -1,0 +1,7 @@
+action: add_comment
+credential: { token: todoist-test-token }
+input: { task_id: 6Xtest0000000001, content: Asked for a quote. }
+exchanges:
+  - sent: { method: POST, url: https://api.todoist.com/api/v1/comments, body: { content: Asked for a quote., task_id: 6Xtest0000000001 } }
+    answer: { body: { id: 6Xnote0000000001, content: Asked for a quote., posted_uid: "1000001", posted_at: "2026-11-27T11:00:00.000000Z" } }
+result: { id: 6Xnote0000000001, content: Asked for a quote., posted_uid: "1000001", posted_at: "2026-11-27T11:00:00.000000Z" }

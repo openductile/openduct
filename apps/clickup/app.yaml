@@ -1,0 +1,884 @@
+# Copyright 2026 Ductile AI, Inc
+# SPDX-License-Identifier: Apache-2.0
+# ClickUp: made by `openduct app from-openapi` from ClickUp's own API description (v2), then finished by hand:
+# labels in our own words, the inputs people use, pages as ClickUp gives them, and a webhook trigger.
+app: clickup
+name: ClickUp
+category: productivity
+description: Tasks, lists, comments and time of a ClickUp workspace.
+docs: https://developer.clickup.com/reference
+hosts: [api.clickup.com]
+base_url: https://api.clickup.com/api
+sign_in:
+  - id: clickup
+    label: A personal API token
+    fields:
+      - { name: api_key, label: Your personal API token (pk_...), secret: true }
+    headers: { Authorization: "{{ credential.api_key }}" }
+  - id: clickup_oauth
+    label: Sign in with ClickUp
+    oauth2: { authorize: "https://app.clickup.com/api", token: "https://api.clickup.com/api/v2/oauth/token" }
+    headers: { Authorization: "Bearer {{ credential.access_token }}" }
+default_action: create_task
+error: "status >= 400 && has(value.err) ? value.err + (has(value.ECODE) ? ' (' + value.ECODE + ')' : '') : null"
+actions:
+  create_task:
+    label: Create a task
+    description: "A new task in a list; give its name, and any of its text, people, status, priority, dates and tags."
+    write: true
+    method: POST
+    path: "/v2/list/{{ input.list_id }}/task"
+    inputs:
+      - { name: list_id, label: "The list it goes in: its id", required: true, kind: number }
+      - { name: name, label: The task's name, required: true }
+      - { name: description, label: What it is about (plain text) }
+      - { name: markdown_content, label: "What it is about, in Markdown (in place of the plain text)" }
+      - { name: assignees, label: "Who it is for: a list of user ids", kind: list }
+      - { name: tags, label: "Tags: a list of their names", kind: list }
+      - { name: status, label: "Its status, by name (as the list names them)" }
+      - { name: priority, label: "Priority: 1 urgent, 2 high, 3 normal, 4 low", kind: number }
+      - { name: due_date, label: When it is due (Unix time in milliseconds), kind: number }
+      - { name: due_date_time, label: The due date has a time of day too, kind: boolean }
+      - { name: start_date, label: When it starts (Unix time in milliseconds), kind: number }
+      - { name: start_date_time, label: The start date has a time of day too, kind: boolean }
+      - { name: time_estimate, label: How long it should take (milliseconds), kind: number }
+      - { name: points, label: Sprint points, kind: number }
+      - { name: parent, label: "Make it a subtask of this task (its id, in the same list)" }
+      - { name: links_to, label: Link it to this task (its id) }
+      - { name: custom_fields, label: "Custom field values: a list of records, each an id and a value", kind: list }
+      - { name: notify_all, label: "Notify everyone on it, its creator too", kind: boolean }
+    send:
+      name: "{{ input.name }}"
+      description: "{{ input.description }}"
+      assignees: "{{ input.assignees }}"
+      tags: "{{ input.tags }}"
+      status: "{{ input.status }}"
+      priority: "{{ input.priority }}"
+      due_date: "{{ input.due_date }}"
+      due_date_time: "{{ input.due_date_time }}"
+      time_estimate: "{{ input.time_estimate }}"
+      start_date: "{{ input.start_date }}"
+      start_date_time: "{{ input.start_date_time }}"
+      points: "{{ input.points }}"
+      notify_all: "{{ input.notify_all }}"
+      parent: "{{ input.parent }}"
+      markdown_content: "{{ input.markdown_content }}"
+      links_to: "{{ input.links_to }}"
+      custom_fields: "{{ input.custom_fields }}"
+    output:
+      id: text
+      custom_id: text
+      custom_item_id: number
+      name: text
+      text_content: text
+      description: text
+      markdown_description: text
+      status: record
+      orderindex: text
+      date_created: text
+      date_updated: text
+      date_closed: text
+      date_done: text
+      archived: boolean
+      creator: record
+      assignees: list
+      group_assignees: list
+      watchers: list
+      checklists: list
+      tags: list
+      parent: text
+      top_level_parent: text
+      priority: record
+      due_date: text
+      start_date: text
+      points: number
+      time_estimate: text
+      time_spent: number
+      custom_fields: list
+      dependencies: list
+      linked_tasks: list
+      locations: list
+      team_id: text
+      url: text
+      sharing: record
+      permission_level: text
+      list: record
+      project: record
+      folder: record
+      space: record
+  get_task:
+    label: Look up a task
+    description: "Everything about one task: its name, text, status, people, dates, tags, custom fields and list."
+    method: GET
+    path: "/v2/task/{{ input.task_id }}"
+    inputs:
+      - { name: task_id, label: The task's id, required: true }
+      - name: custom_task_ids
+        label: The id is the workspace's own task id (then give the workspace id too)
+        kind: boolean
+      - { name: team_id, label: "The workspace's id, for a workspace's own task id", kind: number }
+      - { name: include_subtasks, label: Give its subtasks too, kind: boolean }
+      - { name: include_markdown_description, label: Give its description in Markdown, kind: boolean }
+    query:
+      custom_task_ids: "{{ input.custom_task_ids }}"
+      team_id: "{{ input.team_id }}"
+      include_subtasks: "{{ input.include_subtasks }}"
+      include_markdown_description: "{{ input.include_markdown_description }}"
+    output:
+      id: text
+      custom_id: text
+      custom_item_id: number
+      name: text
+      text_content: text
+      description: text
+      markdown_description: text
+      status: record
+      orderindex: text
+      date_created: text
+      date_updated: text
+      date_closed: text
+      date_done: text
+      archived: boolean
+      creator: record
+      assignees: list
+      group_assignees: list
+      watchers: list
+      checklists: list
+      tags: list
+      parent: text
+      top_level_parent: text
+      priority: record
+      due_date: text
+      start_date: text
+      points: number
+      time_estimate: number
+      time_spent: number
+      custom_fields: list
+      dependencies: list
+      linked_tasks: list
+      locations: list
+      team_id: text
+      url: text
+      sharing: record
+      permission_level: text
+      list: record
+      project: record
+      folder: record
+      space: record
+      subtasks: list
+      attachments: list
+  update_task:
+    label: Change a task
+    description: Only the fields given change.
+    write: true
+    method: PUT
+    path: "/v2/task/{{ input.task_id }}"
+    inputs:
+      - { name: task_id, label: The task's id, required: true }
+      - { name: name, label: Its new name }
+      - { name: description, label: "What it is about (plain text; a single space clears it)" }
+      - { name: markdown_content, label: "What it is about, in Markdown" }
+      - { name: status, label: "Its status, by name" }
+      - { name: priority, label: "Priority: 1 urgent, 2 high, 3 normal, 4 low", kind: number }
+      - { name: due_date, label: When it is due (Unix time in milliseconds), kind: number }
+      - { name: due_date_time, label: The due date has a time of day too, kind: boolean }
+      - { name: start_date, label: When it starts (Unix time in milliseconds), kind: number }
+      - { name: start_date_time, label: The start date has a time of day too, kind: boolean }
+      - { name: time_estimate, label: How long it should take (milliseconds), kind: number }
+      - { name: points, label: Sprint points, kind: number }
+      - { name: assignees, label: "Who it is for: a record of add and rem, each a list of user ids", kind: record }
+      - { name: watchers, label: "Who follows it: a record of add and rem, each a list of user ids", kind: record }
+      - { name: parent, label: Move it under this task (a subtask's new parent) }
+      - { name: archived, label: Archive it (or bring it back), kind: boolean }
+      - name: custom_task_ids
+        label: The id is the workspace's own task id (then give the workspace id too)
+        kind: boolean
+      - { name: team_id, label: "The workspace's id, for a workspace's own task id", kind: number }
+    query: { custom_task_ids: "{{ input.custom_task_ids }}", team_id: "{{ input.team_id }}" }
+    send:
+      name: "{{ input.name }}"
+      description: "{{ input.description }}"
+      markdown_content: "{{ input.markdown_content }}"
+      status: "{{ input.status }}"
+      priority: "{{ input.priority }}"
+      due_date: "{{ input.due_date }}"
+      due_date_time: "{{ input.due_date_time }}"
+      parent: "{{ input.parent }}"
+      time_estimate: "{{ input.time_estimate }}"
+      start_date: "{{ input.start_date }}"
+      start_date_time: "{{ input.start_date_time }}"
+      points: "{{ input.points }}"
+      assignees: "{{ input.assignees }}"
+      watchers: "{{ input.watchers }}"
+      archived: "{{ input.archived }}"
+    output:
+      id: text
+      custom_id: text
+      custom_item_id: number
+      name: text
+      text_content: text
+      description: text
+      markdown_description: text
+      status: record
+      archived: boolean
+      orderindex: text
+      date_created: text
+      date_updated: text
+      date_closed: text
+      date_done: text
+      creator: record
+      assignees: list
+      group_assignees: list
+      watchers: list
+      checklists: list
+      tags: list
+      parent: text
+      top_level_parent: text
+      priority: record
+      due_date: text
+      start_date: text
+      points: number
+      time_estimate: text
+      time_spent: number
+      custom_fields: list
+      dependencies: list
+      linked_tasks: list
+      locations: list
+      team_id: text
+      url: text
+      sharing: record
+      permission_level: text
+      list: record
+      project: record
+      folder: record
+      space: record
+      subtasks: list
+      attachments: list
+  delete_task:
+    label: Remove a task
+    description: The task is gone for good, its subtasks with it.
+    write: true
+    method: DELETE
+    path: "/v2/task/{{ input.task_id }}"
+    inputs:
+      - { name: task_id, label: The task's id, required: true }
+      - name: custom_task_ids
+        label: The id is the workspace's own task id (then give the workspace id too)
+        kind: boolean
+      - { name: team_id, label: "The workspace's id, for a workspace's own task id", kind: number }
+    query: { custom_task_ids: "{{ input.custom_task_ids }}", team_id: "{{ input.team_id }}" }
+    result: "{'removed': status < 300}"
+    output: { removed: boolean }
+  list_tasks:
+    label: List a list's tasks
+    description: >-
+      The tasks whose home is the list, oldest made first unless ordered otherwise; every page, up to 1,000.
+    method: GET
+    path: "/v2/list/{{ input.list_id }}/task"
+    inputs:
+      - { name: list_id, label: The list's id, required: true, kind: number }
+      - { name: include_closed, label: Closed tasks too, kind: boolean }
+      - { name: subtasks, label: Subtasks too, kind: boolean }
+      - { name: archived, label: Only archived tasks, kind: boolean }
+      - { name: order_by, label: "Order by: id, created (the default), updated or due_date" }
+      - { name: reverse, label: In the other order, kind: boolean }
+      - { name: include_timl, label: Tasks whose home is another list too, kind: boolean }
+      - { name: due_date_gt, label: Due after (Unix time in milliseconds), kind: number }
+      - { name: due_date_lt, label: Due before (Unix time in milliseconds), kind: number }
+      - { name: date_created_gt, label: Made after (Unix time in milliseconds), kind: number }
+      - { name: date_created_lt, label: Made before (Unix time in milliseconds), kind: number }
+      - { name: date_updated_gt, label: Changed after (Unix time in milliseconds), kind: number }
+      - { name: date_updated_lt, label: Changed before (Unix time in milliseconds), kind: number }
+      - { name: include_markdown_description, label: Descriptions in Markdown, kind: boolean }
+    query:
+      archived: "{{ input.archived }}"
+      include_markdown_description: "{{ input.include_markdown_description }}"
+      order_by: "{{ input.order_by }}"
+      reverse: "{{ input.reverse }}"
+      subtasks: "{{ input.subtasks }}"
+      include_closed: "{{ input.include_closed }}"
+      include_timl: "{{ input.include_timl }}"
+      due_date_gt: "{{ input.due_date_gt }}"
+      due_date_lt: "{{ input.due_date_lt }}"
+      date_created_gt: "{{ input.date_created_gt }}"
+      date_created_lt: "{{ input.date_created_lt }}"
+      date_updated_gt: "{{ input.date_updated_gt }}"
+      date_updated_lt: "{{ input.date_updated_lt }}"
+    items: value.tasks
+    next: >-
+      (has(value.last_page) && value.last_page) || size(value.tasks) == 0 ? null : {'page': (page == null ? 0 :
+      int(page.page)) + 1}
+    output:
+      id: text
+      custom_id: text
+      custom_item_id: number
+      name: text
+      text_content: text
+      description: text
+      markdown_description: text
+      status: record
+      orderindex: text
+      date_created: text
+      date_updated: text
+      date_closed: text
+      date_done: text
+      archived: boolean
+      creator: record
+      assignees: list
+      group_assignees: list
+      watchers: list
+      checklists: list
+      tags: list
+      parent: text
+      top_level_parent: text
+      priority: record
+      due_date: text
+      start_date: text
+      points: number
+      time_estimate: text
+      time_spent: number
+      custom_fields: list
+      dependencies: list
+      linked_tasks: list
+      locations: list
+      team_id: text
+      url: text
+      sharing: record
+      permission_level: text
+      list: record
+      project: record
+      folder: record
+      space: record
+  find_tasks:
+    label: Find tasks in a workspace
+    description: >-
+      Tasks of every list of the workspace, narrowed by when they were made, changed or are due; every page, up to
+      1,000.
+    method: GET
+    path: "/v2/team/{{ input.team_id }}/task"
+    inputs:
+      - { name: team_id, label: The workspace's id, required: true, kind: number }
+      - { name: include_closed, label: Closed tasks too, kind: boolean }
+      - { name: subtasks, label: Subtasks too, kind: boolean }
+      - { name: parent, label: Only the subtasks of this task (its id) }
+      - { name: order_by, label: "Order by: id, created (the default), updated or due_date" }
+      - { name: reverse, label: In the other order, kind: boolean }
+      - { name: due_date_gt, label: Due after (Unix time in milliseconds), kind: number }
+      - { name: due_date_lt, label: Due before (Unix time in milliseconds), kind: number }
+      - { name: date_created_gt, label: Made after (Unix time in milliseconds), kind: number }
+      - { name: date_created_lt, label: Made before (Unix time in milliseconds), kind: number }
+      - { name: date_updated_gt, label: Changed after (Unix time in milliseconds), kind: number }
+      - { name: date_updated_lt, label: Changed before (Unix time in milliseconds), kind: number }
+      - { name: date_done_gt, label: Done after (Unix time in milliseconds), kind: number }
+      - { name: date_done_lt, label: Done before (Unix time in milliseconds), kind: number }
+      - { name: include_markdown_description, label: Descriptions in Markdown, kind: boolean }
+    query:
+      order_by: "{{ input.order_by }}"
+      reverse: "{{ input.reverse }}"
+      subtasks: "{{ input.subtasks }}"
+      include_closed: "{{ input.include_closed }}"
+      due_date_gt: "{{ input.due_date_gt }}"
+      due_date_lt: "{{ input.due_date_lt }}"
+      date_created_gt: "{{ input.date_created_gt }}"
+      date_created_lt: "{{ input.date_created_lt }}"
+      date_updated_gt: "{{ input.date_updated_gt }}"
+      date_updated_lt: "{{ input.date_updated_lt }}"
+      date_done_gt: "{{ input.date_done_gt }}"
+      date_done_lt: "{{ input.date_done_lt }}"
+      parent: "{{ input.parent }}"
+      include_markdown_description: "{{ input.include_markdown_description }}"
+    items: value.tasks
+    next: "size(value.tasks) == 0 ? null : {'page': (page == null ? 0 : int(page.page)) + 1}"
+    output:
+      id: text
+      custom_id: text
+      name: text
+      text_content: text
+      description: text
+      markdown_description: text
+      status: record
+      orderindex: text
+      date_created: text
+      date_updated: text
+      date_closed: text
+      date_done: text
+      creator: record
+      assignees: list
+      watchers: list
+      checklists: list
+      tags: list
+      parent: text
+      priority: number
+      due_date: text
+      start_date: text
+      points: number
+      time_estimate: number
+      custom_fields: list
+      dependencies: list
+      linked_tasks: list
+      locations: list
+      team_id: text
+      url: text
+      permission_level: text
+      list: record
+      project: record
+      folder: record
+      space: record
+  comment_on_task:
+    label: Comment on a task
+    description: "A comment on the task, as the token's owner; it may be given to someone to act on."
+    write: true
+    method: POST
+    path: "/v2/task/{{ input.task_id }}/comment"
+    inputs:
+      - { name: task_id, label: The task's id, required: true }
+      - { name: comment_text, label: The comment (plain text), required: true }
+      - { name: notify_all, label: Notify everyone on the task, required: true, kind: boolean }
+      - { name: assignee, label: Give the comment to this person to act on (their user id), kind: number }
+      - name: custom_task_ids
+        label: The id is the workspace's own task id (then give the workspace id too)
+        kind: boolean
+      - { name: team_id, label: "The workspace's id, for a workspace's own task id", kind: number }
+    query: { custom_task_ids: "{{ input.custom_task_ids }}", team_id: "{{ input.team_id }}" }
+    send:
+      comment_text: "{{ input.comment_text }}"
+      assignee: "{{ input.assignee }}"
+      notify_all: "{{ input.notify_all }}"
+    output: { id: text, hist_id: text, date: number }
+  list_task_comments:
+    label: List a task's comments
+    description: "Newest first; every page, up to 250."
+    method: GET
+    path: "/v2/task/{{ input.task_id }}/comment"
+    inputs:
+      - { name: task_id, label: The task's id, required: true }
+      - name: custom_task_ids
+        label: The id is the workspace's own task id (then give the workspace id too)
+        kind: boolean
+      - { name: team_id, label: "The workspace's id, for a workspace's own task id", kind: number }
+    query: { custom_task_ids: "{{ input.custom_task_ids }}", team_id: "{{ input.team_id }}" }
+    items: value.comments
+    next: >-
+      size(value.comments) < 25 ? null : {'start': value.comments[size(value.comments) - 1].date, 'start_id':
+      value.comments[size(value.comments) - 1].id}
+    output:
+      id: text
+      comment: list
+      comment_text: text
+      user: record
+      resolved: boolean
+      assignee: record
+      assigned_by: record
+      reactions: list
+      date: text
+      reply_count: text
+  tag_task:
+    label: Tag a task
+    description: "The tag is the space's; one not there yet is made."
+    write: true
+    method: POST
+    path: "/v2/task/{{ input.task_id }}/tag/{{ input.tag_name }}"
+    body: none
+    inputs:
+      - { name: task_id, label: The task's id, required: true }
+      - { name: tag_name, label: The tag's name, required: true }
+      - name: custom_task_ids
+        label: The id is the workspace's own task id (then give the workspace id too)
+        kind: boolean
+      - { name: team_id, label: "The workspace's id, for a workspace's own task id", kind: number }
+    query: { custom_task_ids: "{{ input.custom_task_ids }}", team_id: "{{ input.team_id }}" }
+    result: "{'tagged': status < 300}"
+    output: { tagged: boolean }
+  untag_task:
+    label: Take a tag off a task
+    description: "The tag stays in the space; only this task loses it."
+    write: true
+    method: DELETE
+    path: "/v2/task/{{ input.task_id }}/tag/{{ input.tag_name }}"
+    inputs:
+      - { name: task_id, label: The task's id, required: true }
+      - { name: tag_name, label: The tag's name, required: true }
+      - name: custom_task_ids
+        label: The id is the workspace's own task id (then give the workspace id too)
+        kind: boolean
+      - { name: team_id, label: "The workspace's id, for a workspace's own task id", kind: number }
+    query: { custom_task_ids: "{{ input.custom_task_ids }}", team_id: "{{ input.team_id }}" }
+    result: "{'untagged': status < 300}"
+    output: { untagged: boolean }
+  add_checklist:
+    label: Add a checklist to a task
+    description: "A new, empty checklist on the task; add its items with Add an item to a checklist."
+    write: true
+    method: POST
+    path: "/v2/task/{{ input.task_id }}/checklist"
+    inputs:
+      - { name: task_id, label: The task's id, required: true }
+      - { name: name, label: The checklist's name, required: true }
+      - name: custom_task_ids
+        label: The id is the workspace's own task id (then give the workspace id too)
+        kind: boolean
+      - { name: team_id, label: "The workspace's id, for a workspace's own task id", kind: number }
+    query: { custom_task_ids: "{{ input.custom_task_ids }}", team_id: "{{ input.team_id }}" }
+    send: { name: "{{ input.name }}" }
+    result: value.checklist
+    output: { checklist: record }
+  add_checklist_item:
+    label: Add an item to a checklist
+    description: An item at the end of the checklist, for someone or not.
+    write: true
+    method: POST
+    path: "/v2/checklist/{{ input.checklist_id }}/checklist_item"
+    inputs:
+      - { name: checklist_id, label: The checklist's id, required: true }
+      - { name: name, label: The item }
+      - { name: assignee, label: Who it is for (their user id), kind: number }
+    send: { name: "{{ input.name }}", assignee: "{{ input.assignee }}" }
+    result: value.checklist
+    output: { checklist: record }
+  set_custom_field:
+    label: Set a task's custom field
+    description: >-
+      The value as the field takes it: text, a number, a list of option or user ids, or a record (a date, a location).
+    write: true
+    method: POST
+    path: "/v2/task/{{ input.task_id }}/field/{{ input.field_id }}"
+    inputs:
+      - { name: task_id, label: The task's id, required: true }
+      - { name: field_id, label: The custom field's id (List a list's custom fields gives it), required: true }
+      - { name: body, label: "The value: a record such as {value: 42}", required: true, kind: record }
+      - name: custom_task_ids
+        label: The id is the workspace's own task id (then give the workspace id too)
+        kind: boolean
+      - { name: team_id, label: "The workspace's id, for a workspace's own task id", kind: number }
+    query: { custom_task_ids: "{{ input.custom_task_ids }}", team_id: "{{ input.team_id }}" }
+    send: "{{ input.body }}"
+    result: "{'set': status < 300}"
+    output: { set: boolean }
+  list_custom_fields:
+    label: List a list's custom fields
+    description: Each field's id, name, kind and options.
+    method: GET
+    path: "/v2/list/{{ input.list_id }}/field"
+    inputs:
+      - { name: list_id, label: The list's id, required: true, kind: number }
+    items: value.fields
+    output:
+      id: text
+      name: text
+      type: text
+      type_config: record
+      date_created: text
+      hide_from_guests: boolean
+      applied_objects: list
+  track_time:
+    label: Track time
+    description: "A time entry in the workspace, for a task or not; from a start, for a duration."
+    write: true
+    method: POST
+    path: "/v2/team/{{ input.team_id }}/time_entries"
+    inputs:
+      - { name: team_id, label: The workspace's id, required: true, kind: number }
+      - { name: start, label: When it started (Unix time in milliseconds), required: true, kind: number }
+      - { name: duration, label: How long (milliseconds), required: true, kind: number }
+      - { name: tid, label: The task it was for (its id) }
+      - { name: description, label: What was done }
+      - { name: billable, label: Billable, kind: boolean }
+      - { name: assignee, label: "Whose time (a user id; admins may give anyone's)", kind: number }
+    send:
+      description: "{{ input.description }}"
+      start: "{{ input.start }}"
+      billable: "{{ input.billable }}"
+      duration: "{{ input.duration }}"
+      assignee: "{{ input.assignee }}"
+      tid: "{{ input.tid }}"
+    output:
+      description: text
+      tags: list
+      start: number
+      billable: boolean
+      duration: number
+      assignee: number
+      tid: text
+  list_workspaces:
+    label: List your workspaces
+    description: >-
+      The workspaces the token may reach, with their members; each id is what other actions call the workspace's id.
+    method: GET
+    path: "/v2/team"
+    items: value.teams
+    output: { id: text, name: text, color: text, avatar: text, members: list }
+  list_spaces:
+    label: List a workspace's spaces
+    description: Each space's id, name, statuses and features.
+    method: GET
+    path: "/v2/team/{{ input.team_id }}/space"
+    inputs:
+      - { name: team_id, label: The workspace's id, required: true, kind: number }
+      - { name: archived, label: Only archived spaces, kind: boolean }
+    query: { archived: "{{ input.archived }}" }
+    items: value.spaces
+    output:
+      id: text
+      name: text
+      private: boolean
+      color: text
+      avatar: text
+      admin_can_manage: boolean
+      archived: boolean
+      members: list
+      statuses: list
+      multiple_assignees: boolean
+      features: record
+  list_folders:
+    label: List a space's folders
+    description: Each folder's id and name, with its lists.
+    method: GET
+    path: "/v2/space/{{ input.space_id }}/folder"
+    inputs:
+      - { name: space_id, label: The space's id, required: true, kind: number }
+      - { name: archived, label: Only archived folders, kind: boolean }
+    query: { archived: "{{ input.archived }}" }
+    items: value.folders
+    output:
+      id: text
+      name: text
+      orderindex: number
+      override_statuses: boolean
+      hidden: boolean
+      space: record
+      task_count: text
+      archived: boolean
+      statuses: list
+      lists: list
+      parent_folder: text
+  list_lists:
+    label: List a folder's lists
+    description: Each list's id, name, status and dates.
+    method: GET
+    path: "/v2/folder/{{ input.folder_id }}/list"
+    inputs:
+      - { name: folder_id, label: The folder's id, required: true, kind: number }
+      - { name: archived, label: Only archived lists, kind: boolean }
+    query: { archived: "{{ input.archived }}" }
+    items: value.lists
+    output:
+      id: text
+      name: text
+      orderindex: number
+      content: text
+      status: record
+      priority: record
+      assignee: text
+      task_count: text
+      due_date: text
+      start_date: text
+      folder: record
+      space: record
+      archived: boolean
+      override_statuses: boolean
+      permission_level: text
+  list_space_lists:
+    label: List a space's lists outside folders
+    description: The lists of a space that are in no folder.
+    method: GET
+    path: "/v2/space/{{ input.space_id }}/list"
+    inputs:
+      - { name: space_id, label: The space's id, required: true, kind: number }
+      - { name: archived, label: Only archived lists, kind: boolean }
+    query: { archived: "{{ input.archived }}" }
+    items: value.lists
+    output:
+      id: text
+      name: text
+      orderindex: number
+      content: text
+      status: record
+      priority: record
+      assignee: text
+      task_count: text
+      due_date: text
+      start_date: text
+      folder: record
+      space: record
+      archived: boolean
+      override_statuses: boolean
+      permission_level: text
+  get_list:
+    label: Look up a list
+    description: Its name, folder, space and statuses.
+    method: GET
+    path: "/v2/list/{{ input.list_id }}"
+    inputs:
+      - { name: list_id, label: The list's id, required: true, kind: number }
+    output:
+      id: text
+      name: text
+      orderindex: number
+      content: text
+      status: record
+      priority: record
+      assignee: text
+      task_count: text
+      due_date: text
+      due_date_time: boolean
+      start_date: text
+      start_date_time: text
+      folder: record
+      space: record
+      inbound_address: text
+      archived: boolean
+      override_statuses: boolean
+      statuses: list
+      permission_level: text
+  create_list:
+    label: Create a list in a folder
+    description: A new list in the folder, with its text, due date, priority and owner.
+    write: true
+    method: POST
+    path: "/v2/folder/{{ input.folder_id }}/list"
+    inputs:
+      - { name: folder_id, label: The folder's id, required: true, kind: number }
+      - { name: name, label: The list's name, required: true }
+      - { name: content, label: What it is for (plain text) }
+      - { name: markdown_content, label: "What it is for, in Markdown" }
+      - { name: due_date, label: When it is due (Unix time in milliseconds), kind: number }
+      - { name: priority, label: "Priority: 1 urgent, 2 high, 3 normal, 4 low", kind: number }
+      - { name: assignee, label: Who owns it (a user id), kind: number }
+    send:
+      name: "{{ input.name }}"
+      content: "{{ input.content }}"
+      markdown_content: "{{ input.markdown_content }}"
+      due_date: "{{ input.due_date }}"
+      priority: "{{ input.priority }}"
+      assignee: "{{ input.assignee }}"
+    output:
+      id: text
+      name: text
+      orderindex: number
+      content: text
+      status: record
+      priority: record
+      assignee: record
+      task_count: text
+      due_date: text
+      due_date_time: boolean
+      start_date: text
+      start_date_time: text
+      folder: record
+      space: record
+      statuses: list
+      inbound_address: text
+  create_space_list:
+    label: Create a list in a space
+    description: A list outside any folder.
+    write: true
+    method: POST
+    path: "/v2/space/{{ input.space_id }}/list"
+    inputs:
+      - { name: space_id, label: The space's id, required: true, kind: number }
+      - { name: name, label: The list's name, required: true }
+      - { name: content, label: What it is for (plain text) }
+      - { name: markdown_content, label: "What it is for, in Markdown" }
+      - { name: due_date, label: When it is due (Unix time in milliseconds), kind: number }
+      - { name: priority, label: "Priority: 1 urgent, 2 high, 3 normal, 4 low", kind: number }
+      - { name: assignee, label: Who owns it (a user id), kind: number }
+    send:
+      name: "{{ input.name }}"
+      content: "{{ input.content }}"
+      markdown_content: "{{ input.markdown_content }}"
+      due_date: "{{ input.due_date }}"
+      priority: "{{ input.priority }}"
+      assignee: "{{ input.assignee }}"
+    output:
+      id: text
+      name: text
+      orderindex: number
+      content: text
+      status: record
+      priority: record
+      assignee: record
+      task_count: text
+      due_date: text
+      due_date_time: boolean
+      start_date: text
+      start_date_time: text
+      folder: record
+      space: record
+      statuses: list
+      inbound_address: text
+  create_folder:
+    label: Create a folder
+    description: A new, empty folder in the space.
+    write: true
+    method: POST
+    path: "/v2/space/{{ input.space_id }}/folder"
+    inputs:
+      - { name: space_id, label: The space's id, required: true, kind: number }
+      - { name: name, label: The folder's name, required: true }
+    send: { name: "{{ input.name }}" }
+    output:
+      id: text
+      name: text
+      orderindex: number
+      override_statuses: boolean
+      hidden: boolean
+      space: record
+      task_count: text
+      archived: boolean
+      statuses: list
+      parent_folder: text
+  list_list_members:
+    label: List who can reach a list
+    description: Each person's user id, name and email - the ids tasks are given to.
+    method: GET
+    path: "/v2/list/{{ input.list_id }}/member"
+    inputs:
+      - { name: list_id, label: The list's id, required: true, kind: number }
+    items: value.members
+    output:
+      id: number
+      username: text
+      email: text
+      color: text
+      initials: text
+      profilePicture: text
+      profileInfo: record
+triggers:
+  task_event:
+    label: A task made or changed
+    description: >-
+      Each task made (or changed, moved, commented on, as chosen) in the workspace, or in one space, folder or list of
+      it, as ClickUp sends it, signed. Turning the workflow on asks ClickUp to send them, and turning it off stops it.
+    inputs:
+      - { name: team_id, label: The workspace's id, required: true }
+      - name: events
+        label: >-
+          Which, with commas: taskCreated (the default), taskUpdated, taskStatusUpdated, taskAssigneeUpdated,
+          taskCommentPosted, taskMoved, taskDeleted ...
+      - { name: space_id, label: Only in this space (its id) }
+      - { name: folder_id, label: Only in this folder (its id) }
+      - { name: list_id, label: Only in this list (its id) }
+    webhook:
+      signature: { header: x-signature, encoding: hex }
+      secret: webhook_secret
+      id: >-
+        value.webhook_id + '#' + value.event + '#' + value.task_id + '#' + (has(value.history_items) &&
+        size(value.history_items) > 0 ? value.history_items[0].id : '')
+      only: >-
+        (input.events == null ? ['taskCreated'] : input.events.split(',').map(e, e.trim())).exists(e, e ==
+        value.event)
+      event: >-
+        {'event': value.event, 'task_id': value.task_id, 'changes': has(value.history_items) ? value.history_items :
+        []}
+      register:
+        - method: POST
+          path: "/v2/team/{{ input.team_id }}/webhook"
+          send:
+            endpoint: "{{ input.address }}"
+            events: "{{ input.events == null ? ['taskCreated'] : input.events.split(',').map(e, e.trim()) }}"
+            space_id: "{{ input.space_id == null ? null : int(input.space_id) }}"
+            folder_id: "{{ input.folder_id == null ? null : int(input.folder_id) }}"
+            list_id: "{{ input.list_id == null ? null : int(input.list_id) }}"
+      keep: { webhook_secret: value.webhook.secret, webhook_id: value.id }
+      unregister:
+        - { method: DELETE, path: "/v2/webhook/{{ input.registered.webhook_id }}" }

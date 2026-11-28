@@ -1,0 +1,67 @@
+name: A Telegram help bot that hands questions to your team
+description: >-
+  A simple help bot for your customers on Telegram, with no AI: /start, /hours, /delivery and /contact are answered at
+  once with your own words, and anything else a customer writes is passed to your team's Telegram group - with who
+  wrote it and how to reply - while the customer is told when to expect an answer. Telegram is given the workflow's
+  address when you turn it on. Set your team group's chat id and your own answers below. Needs: telegram (your bot's
+  token).
+category: Support
+trigger:
+  telegram: { when: message, credential: telegram }
+# What a test runs on: a message as this trigger gives it.
+sample:
+  message_id: 301
+  date: 1795770000
+  chat: { id: 555000111, type: private }
+  from: { id: 555000111, first_name: Noah, username: noah_example }
+  text: Can I change the address on my order?
+steps:
+  - where: value.text != null && value.chat.type == 'private'
+  - name: command
+    set:
+      word: "value.text.startsWith('/') ? value.text.split(' ')[0].split('@')[0].lowerAscii() : ''"
+  - name: answer
+    switch:
+      cases:
+        - label: start
+          when: steps.command.word == '/start'
+          steps:
+            - telegram:
+                credential: telegram
+                chat_id: "{{ value.chat.id }}"
+                text: "Hello {{ value.from.first_name }}! Ask us anything, or try /hours, /delivery or /contact."
+        - label: hours
+          when: steps.command.word == '/hours'
+          steps:
+            - telegram:
+                credential: telegram
+                chat_id: "{{ value.chat.id }}"
+                text: "We are open Monday to Friday 9:00-18:00 and Saturday 10:00-16:00. Messages sent after hours are answered the next morning."
+        - label: delivery
+          when: steps.command.word == '/delivery'
+          steps:
+            - telegram:
+                credential: telegram
+                chat_id: "{{ value.chat.id }}"
+                text: "Orders placed before 14:00 leave the same day. Delivery takes 2-4 working days; you get a tracking link by e-mail."
+        - label: contact
+          when: steps.command.word == '/contact'
+          steps:
+            - telegram:
+                credential: telegram
+                chat_id: "{{ value.chat.id }}"
+                text: "Write here at any time, e-mail help@example.com, or call +1 555 0100 during opening hours."
+      default:
+        # Your team's group: add the bot to it, and put the group's chat id here.
+        - name: to_team
+          telegram:
+            credential: telegram
+            chat_id: "-1001234567890"
+            text: >-
+              Question from {{ value.from.first_name }}{{ has(value.from.username) ? ' (@' + value.from.username + ')' : '' }},
+              chat {{ value.chat.id }}: {{ value.text }}
+        - name: told
+          telegram:
+            credential: telegram
+            chat_id: "{{ value.chat.id }}"
+            text: "Thank you - a person from our team answers you here, usually within an hour during opening times."

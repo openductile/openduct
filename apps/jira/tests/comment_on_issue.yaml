@@ -1,0 +1,10 @@
+action: comment_on_issue
+credential: { site: examplecorp, email: ann@example.com, api_token: ATATT_test }
+input: { issue: SUP-13, text: A new tray is on its way. }
+exchanges:
+  - sent:
+      method: POST
+      url: https://examplecorp.atlassian.net/rest/api/3/issue/SUP-13/comment
+      body: { body: { type: doc, version: 1, content: [{ type: paragraph, content: [{ type: text, text: A new tray is on its way. }] }] } }
+    answer: { status: 201, body: { id: "10010", created: "2026-11-26T10:00:00.000+0000" } }
+result: { id: "10010", created: "2026-11-26T10:00:00.000+0000" }

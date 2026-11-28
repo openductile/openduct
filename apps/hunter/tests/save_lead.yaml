@@ -1,0 +1,11 @@
+description: A lead saved by its address, on a list, with a custom attribute
+action: save_lead
+credential: { api_key: hunter-test-key }
+input: { email: bo@example.com, first_name: Bo, company: Example Inc, leads_list_id: 7, custom_attributes: { deal_size: large } }
+exchanges:
+  - sent:
+      method: PUT
+      url: https://api.hunter.io/v2/leads
+      body: { email: bo@example.com, first_name: Bo, company: Example Inc, leads_list_id: 7, custom_attributes: { deal_size: large } }
+    answer: { status: 201, body: { data: { id: 102, email: bo@example.com, first_name: Bo, company: Example Inc, leads_list: { id: 7, name: Prospects, leads_count: 13 } } } }
+result: { id: 102, email: bo@example.com, first_name: Bo, company: Example Inc, leads_list: { id: 7, name: Prospects, leads_count: 13 } }

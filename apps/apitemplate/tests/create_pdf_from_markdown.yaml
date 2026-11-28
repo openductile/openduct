@@ -1,0 +1,12 @@
+description: A PDF made from Markdown, kept for a day
+action: create_pdf_from_markdown
+credential: { api_key: at_test_key_1 }
+input: { body: "# Price list\n\n- Pots: 12.00", expiration: 1440 }
+exchanges:
+  - sent:
+      method: POST
+      url: "https://rest.apitemplate.io/v2/create-pdf-from-markdown"
+      query: { expiration: "1440" }
+      body: { body: "# Price list\n\n- Pots: 12.00" }
+    answer: { status: 200, body: { status: success, download_url: "https://files.example.com/prices.pdf", total_pages: 1, transaction_ref: t-md-1 } }
+result: { status: success, download_url: "https://files.example.com/prices.pdf", total_pages: 1, transaction_ref: t-md-1 }

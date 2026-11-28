@@ -1,0 +1,13 @@
+# Made by `openduct app from-openapi`: Update Tag.
+description: "Update Tag, made from the API description's schemas"
+action: update_tag
+credential: { api_key: test-key }
+input: { id: abcd1234-ef56-gh78-ij90-abcdef123456, id_2: abcd1234-ef56-gh78-ij90-abcdef123456, name: example }
+exchanges:
+  - sent:
+      method: PATCH
+      url: "https://a.klaviyo.com/api/tags/abcd1234-ef56-gh78-ij90-abcdef123456"
+      query: {}
+      headers: { authorization: test-key, revision: "2026-10-15" }
+      body: { data: { type: tag, id: abcd1234-ef56-gh78-ij90-abcdef123456, attributes: { name: example } } }
+    answer: { status: 204 }

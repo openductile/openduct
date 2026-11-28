@@ -1,0 +1,7 @@
+action: sign_out_user
+credential: { access_token: ya29.test }
+input: { user: bob@example.com }
+exchanges:
+  - sent: { method: POST, url: https://admin.googleapis.com/admin/directory/v1/users/bob@example.com/signOut }
+    answer: { status: 204 }
+result: { signed_out: true }

@@ -1,0 +1,10 @@
+description: "A shelf emptied"
+action: clear_bookshelf
+credential: { access_token: ya29.test }
+input: { shelf: "1001" }
+exchanges:
+  - sent:
+      method: POST
+      url: https://books.googleapis.com/books/v1/mylibrary/bookshelves/1001/clearVolumes
+    answer: { status: 204 }
+result: { cleared: true }

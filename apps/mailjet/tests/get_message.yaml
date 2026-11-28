@@ -1,0 +1,34 @@
+description: One message
+action: get_message
+credential:
+  api_key: test-key
+  secret_key: test-secret
+input:
+  message_id: '288230376151711744'
+exchanges:
+- sent:
+    method: GET
+    url: https://api.mailjet.com/v3/REST/message/288230376151711744
+    headers:
+      authorization: Basic dGVzdC1rZXk6dGVzdC1zZWNyZXQ=
+  answer:
+    status: 200
+    body:
+      Count: 1
+      Data:
+      - &id001
+        ID: 288230376151711744
+        UUID: 1ab23cd4-e567-8901-2345-6789f0aa1b2c
+        Status: opened
+        Subject: Your order has shipped
+        ContactAlt: pat@example.com
+        ContactID: 1001
+        CampaignID: 0
+        ArrivedAt: '2026-11-20T08:00:00Z'
+        AttemptCount: 0
+        MessageSize: 3482
+        IsOpenTracked: true
+        IsClickTracked: true
+        SpamassassinScore: 0
+      Total: 1
+result: *id001

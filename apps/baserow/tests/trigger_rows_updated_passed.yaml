@@ -1,0 +1,8 @@
+description: Another event sent to the address is answered and runs nothing
+trigger: rows_created
+credential: { token: br-test-token, webhook_secret: wh-token-5f2c }
+delivery:
+  headers: { x-openduct-token: wh-token-5f2c }
+  at: 1700000000
+  body: '{"table_id": 1203, "event_id": "7e6f", "event_type": "rows.updated", "items": [{"id": 12, "Name": "Ed"}]}'
+passed: true

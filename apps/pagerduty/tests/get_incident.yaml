@@ -1,0 +1,7 @@
+action: get_incident
+credential: { api_key: pd_test_1 }
+input: { id: PINC001 }
+exchanges:
+  - sent: { method: GET, url: https://api.pagerduty.com/incidents/PINC001 }
+    answer: { body: { incident: { id: PINC001, incident_number: 42, title: Checkout is down, status: acknowledged, html_url: "https://shop-example.pagerduty.com/incidents/PINC001" } } }
+result: { id: PINC001, incident_number: 42, title: Checkout is down, status: acknowledged, html_url: "https://shop-example.pagerduty.com/incidents/PINC001" }

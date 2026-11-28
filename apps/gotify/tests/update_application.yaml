@@ -1,0 +1,13 @@
+description: "An application renamed"
+action: update_application
+sign_in: gotify_client
+credential: { base_url: "https://gotify.example.com", token: CzyoeNS.D4iJLVb }
+input: { app_id: 6, name: Server backups }
+exchanges:
+  - sent:
+      method: PUT
+      url: "https://gotify.example.com/application/6"
+      body: { name: Server backups }
+    answer:
+      body: { id: 6, name: Server backups, description: "", token: AbcdeNS.F4iJLVc, defaultPriority: 0, internal: false, image: image/image.jpeg, sortKey: a1, createdAt: "2026-11-27T12:00:00Z" }
+result: { id: 6, name: Server backups, description: "", token: AbcdeNS.F4iJLVc, defaultPriority: 0, internal: false, image: image/image.jpeg, sortKey: a1, createdAt: "2026-11-27T12:00:00Z" }

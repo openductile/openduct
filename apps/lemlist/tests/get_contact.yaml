@@ -1,0 +1,11 @@
+description: "A contact by email"
+action: get_contact
+credential: {"api_key": "test-key"}
+input: {"contact": "ann@example.com"}
+exchanges:
+  - sent:
+      method: GET
+      url: "https://api.lemlist.com/api/contacts/ann@example.com"
+      headers: {"authorization": "Basic OnRlc3Qta2V5"}
+    answer: {"status": 200, "body": {"_id": "ctc_C1", "fullName": "Ann Lee", "email": "ann@example.com", "firstName": "Ann", "lastName": "Lee", "createdAt": "2026-11-01T09:00:00.000Z", "unsubscribed": false, "campaignCount": 1, "fields": {"companyName": "Northwind Example"}, "campaigns": [{"campaignId": "cam_A1"}]}}
+result: {"_id": "ctc_C1", "fullName": "Ann Lee", "email": "ann@example.com", "firstName": "Ann", "lastName": "Lee", "createdAt": "2026-11-01T09:00:00.000Z", "unsubscribed": false, "campaignCount": 1, "fields": {"companyName": "Northwind Example"}, "campaigns": [{"campaignId": "cam_A1"}]}

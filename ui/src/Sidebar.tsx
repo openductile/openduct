@@ -21,6 +21,8 @@ const PATHS: Record<string, string> = {
     "M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z",
   credentials: "M15 7a4 4 0 1 1-3.9 4.9L4 19v-3h2v-2h2l1.1-1.1A4 4 0 0 1 15 7zM16 10h.01",
   files: "M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z",
+  tables: "M3 5h18v14H3zM3 10h18M3 15h18M9 10v9", // data tables
+  apps: "M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM16.5 13v7M13 16.5h7", // app generator
   members: "M16 19v-1a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v1M9.5 10a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zM21 19v-1a4 4 0 0 0-3-3.9M16 3.1a3.5 3.5 0 0 1 0 6.8",
   find: "M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14zM21 21l-4.3-4.3",
   system: "M4 5h16v11H4zM9 20h6M12 16v4",
@@ -210,6 +212,8 @@ export function Sidebar(props: {
         <span className="heading label">Connect</span>
         {item("credentials", "Credentials")}
         {item("files", "Files")}
+        {item("tables", "Tables") /* data tables */}
+        {item("apps", "Apps") /* app generator */}
       </div>
       {props.admin && (
         <div className="group">
@@ -379,6 +383,8 @@ function Find(props: { admin: boolean; onGo: (path: string) => void; onClose: ()
       { label: "Runs", hint: "page", path: "/runs" },
       { label: "Credentials", hint: "page", path: "/credentials" },
       { label: "Files", hint: "page", path: "/files" },
+      { label: "Tables", hint: "page", path: "/tables" }, // data tables
+      { label: "Apps", hint: "page", path: "/apps" }, // app generator
       ...(props.admin ? [{ label: "Members", hint: "page", path: "/members" }] : []),
       { label: "Settings", hint: "page", path: "/settings" },
     ];

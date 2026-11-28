@@ -26,16 +26,19 @@ mod kafka;
 mod modbus;
 mod mongo;
 mod mqtt;
-mod mysql;
+pub mod mysql; // sql databases: its SQL client, for workflows
 mod opcua;
 pub mod postgres;
 pub mod reach;
 mod s3;
 mod salesforce;
-mod scram;
+pub mod scram; // vector stores: MongoDB's sign-in, from workflows
 mod servicenow;
 pub mod settings;
+pub mod sigv4; // storage: S3 requests signed for the sink and for workflows' storage steps
 mod snowflake;
+pub mod sql; // sql databases
+pub mod sqlserver; // sql databases
 mod tls;
 mod web;
 mod webhook;

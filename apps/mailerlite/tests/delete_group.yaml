@@ -1,0 +1,17 @@
+description: A group deleted
+action: delete_group
+credential:
+  api_key: test-key
+input:
+  group_id: '42'
+exchanges:
+- sent:
+    method: DELETE
+    url: https://connect.mailerlite.com/api/groups/42
+    headers:
+      authorization: Bearer test-key
+      accept: application/json
+  answer:
+    status: 204
+result:
+  deleted: true

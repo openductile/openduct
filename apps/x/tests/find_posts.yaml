@@ -1,0 +1,14 @@
+description: A search, page after page while X gives a next token; the last page may hold none
+action: find_posts
+credential: { access_token: x_test1, user_id: "2244994945" }
+input: { query: "#tote -is:retweet", fields: "created_at,author_id" }
+exchanges:
+  - sent:
+      method: GET
+      url: https://api.x.com/2/tweets/search/recent
+      query: { query: "#tote -is:retweet", max_results: "100", post.fields: "created_at,author_id" }
+    answer: { body: { data: [{ id: "1", text: Love my tote }], meta: { result_count: 1, next_token: b26v89c19zqg8o3fpdv3n } } }
+  - sent:
+      query: { query: "#tote -is:retweet", max_results: "100", post.fields: "created_at,author_id", next_token: b26v89c19zqg8o3fpdv3n }
+    answer: { body: { meta: { result_count: 0 } } }
+result: [{ id: "1", text: Love my tote }]

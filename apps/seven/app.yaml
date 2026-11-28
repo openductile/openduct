@@ -1,0 +1,572 @@
+# Copyright 2026 Ductile AI, Inc
+# SPDX-License-Identifier: Apache-2.0
+# seven: made by `openduct app from-openapi` from seven-io/api-schemes at adc5f2304db9, json/openapi.json (MIT) (seven 1.0.0, OpenAPI 3.0).
+# Checked as made. Change what you like, then run `openduct app check` and `openduct app test` again.
+app: seven
+name: seven
+category: messaging
+description: "SMS, voice calls, WhatsApp and RCS messages, phone number lookups and contacts, through seven (seven.io)."
+docs: "https://docs.seven.io/en/rest-api"
+hosts: [gateway.seven.io]
+base_url: "https://gateway.seven.io/api"
+sign_in:
+  - id: seven
+    label: "An API key"
+    fields: [{ name: api_key, label: "The API key, from seven's Developer → API keys", secret: true }]
+    headers: { X-Api-Key: "{{ credential.api_key }}" }
+  - id: seven_oauth
+    label: "Sign in with seven"
+    oauth2:
+      authorize: "https://oauth.seven.io/authorize"
+      token: "https://oauth.seven.io/token"
+      client_auth: basic
+      scopes: [sms, voice, rcs, waba, status, journal, contacts, groups, lookup, balance, pricing, analytics, numbers]
+    headers: { Authorization: "Bearer {{ credential.access_token }}" }
+actions:
+  list_numbers:
+    label: "List your phone numbers"
+    description: "Retrieves active phone numbers"
+    method: GET
+    path: "/numbers/active"
+    items: value.activeNumbers
+    output:
+      country: text
+      number: text
+      friendly_name: text
+      billing: record
+      features: record
+      forward_sms_mo: record
+      expires: text
+      created: text
+  list_contacts:
+    label: "List contacts"
+    description: "Retrieves contacts"
+    method: GET
+    path: "/contacts"
+    items: value.data
+    output:
+      id: number
+      avatar: text
+      validation: record
+      initials: record
+      properties: record
+      groups: list
+      created: text
+  list_groups:
+    label: "List contact groups"
+    description: "Retrieves Groups"
+    method: GET
+    path: "/groups"
+    items: value.data
+    output: { id: number, name: text, members_count: number, has_more: boolean }
+  analytics_by_date:
+    label: "Usage by day"
+    description: "Retrieves analytics grouped by date"
+    method: GET
+    path: "/analytics/date"
+    inputs:
+      - { name: start, label: "From (YYYY-MM-DD; 30 days ago by default)" }
+      - { name: end, label: "Until (YYYY-MM-DD; today by default)" }
+      - { name: label, label: "Shows only data of a specific label" }
+      - name: subaccounts
+        label: "Receive the data only for the main account, all your (sub-)accounts or only for…"
+        description: "Receive the data only for the main account, all your (sub-)accounts or only for specific subaccounts."
+    query: { start: "{{ input.start }}", end: "{{ input.end }}", label: "{{ input.label }}", subaccounts: "{{ input.subaccounts }}" }
+    items: value
+    output:
+      sms: number
+      rcs: number
+      voice: number
+      hlr: number
+      mnp: number
+      inbound: number
+      usage_eur: number
+      date: text
+  list_sent_messages:
+    label: "List sent messages"
+    description: "Retrieves outbound journals for the associated API key"
+    method: GET
+    path: "/journal/outbound"
+    inputs:
+      - { name: id, label: "The ID of a message", kind: number }
+      - { name: date_from, label: "A start date from which the search should start" }
+      - { name: date_to, label: "An end date up to which the search is to be performed" }
+      - { name: to, label: "The receivers phone number in any format" }
+      - { name: state, label: "The status of the message" }
+    query:
+      id: "{{ input.id }}"
+      date_from: "{{ input.date_from }}"
+      date_to: "{{ input.date_to }}"
+      to: "{{ input.to }}"
+      state: "{{ input.state }}"
+      limit: "100"
+    items: value
+    next: "size(value) < 100 ? null : {'offset': (page == null ? 0 : int(page['offset'])) + size(value)}"
+    output:
+      channel: text
+      dlr: text
+      dlr_timestamp: text
+      mccmnc: text
+      latency: text
+      type: text
+      connection: text
+      label: text
+      foreign_id: text
+      to: text
+      from: text
+      text: text
+      timestamp: text
+      price: text
+      id: text
+  list_inbound_messages:
+    label: "List messages received"
+    description: "Retrieves inbound journals for the associated API key"
+    method: GET
+    path: "/journal/inbound"
+    inputs:
+      - { name: id, label: "The ID of a message", kind: number }
+      - { name: date_from, label: "A start date from which the search should start" }
+      - { name: date_to, label: "An end date up to which the search is to be performed" }
+      - { name: to, label: "The receivers phone number in any format" }
+      - { name: state, label: "The status of the message" }
+    query:
+      id: "{{ input.id }}"
+      date_from: "{{ input.date_from }}"
+      date_to: "{{ input.date_to }}"
+      to: "{{ input.to }}"
+      state: "{{ input.state }}"
+      limit: "100"
+    items: value
+    next: "size(value) < 100 ? null : {'offset': (page == null ? 0 : int(page['offset'])) + size(value)}"
+    output: { to: text, from: text, text: text, timestamp: text, price: text, id: text }
+  list_replies:
+    label: "List replies to your messages"
+    description: "Retrieves message replies for the associated API key"
+    method: GET
+    path: "/journal/replies"
+    inputs:
+      - { name: id, label: "The ID of a message", kind: number }
+      - { name: date_from, label: "A start date from which the search should start" }
+      - { name: date_to, label: "An end date up to which the search is to be performed" }
+      - { name: to, label: "The receivers phone number in any format" }
+      - { name: state, label: "The status of the message" }
+    query:
+      id: "{{ input.id }}"
+      date_from: "{{ input.date_from }}"
+      date_to: "{{ input.date_to }}"
+      to: "{{ input.to }}"
+      state: "{{ input.state }}"
+      limit: "100"
+    items: value
+    next: "size(value) < 100 ? null : {'offset': (page == null ? 0 : int(page['offset'])) + size(value)}"
+    output: { to: text, from: text, text: text, timestamp: text, price: text, id: text }
+  list_voice_calls:
+    label: "List voice calls made"
+    description: "Retrieves voice calls for the associated API key"
+    method: GET
+    path: "/journal/voice"
+    inputs:
+      - { name: id, label: "The ID of a message", kind: number }
+      - { name: date_from, label: "A start date from which the search should start" }
+      - { name: date_to, label: "An end date up to which the search is to be performed" }
+      - { name: to, label: "The receivers phone number in any format" }
+      - { name: state, label: "The status of the message" }
+    query:
+      id: "{{ input.id }}"
+      date_from: "{{ input.date_from }}"
+      date_to: "{{ input.date_to }}"
+      to: "{{ input.to }}"
+      state: "{{ input.state }}"
+      limit: "100"
+    items: value
+    next: "size(value) < 100 ? null : {'offset': (page == null ? 0 : int(page['offset'])) + size(value)}"
+    output:
+      to: text
+      from: text
+      text: text
+      timestamp: text
+      price: text
+      id: text
+      xml: boolean
+      duration: text
+      status: text
+      error: text
+  create_contact:
+    label: "Add a contact"
+    description: "Creates a contact"
+    write: true
+    method: POST
+    path: "/contacts"
+    body: form
+    inputs:
+      - { name: address, label: "The address of a contact" }
+      - { name: avatar, label: "The avatar of a contact" }
+      - { name: birthday, label: "The birthday of a contact" }
+      - { name: city, label: "The city of a contact" }
+      - { name: email, label: "The email of a contact" }
+      - { name: firstname, label: "The first name of a contact" }
+      - { name: home_number, label: "The home number of a contact" }
+      - { name: lastname, label: "The last name of a contact" }
+      - { name: mobile_number, label: "The mobile number of a contact" }
+      - { name: notes, label: "The notes of a contact" }
+      - { name: postal_code, label: "The postal code of a contact" }
+    send:
+      address: "{{ input.address }}"
+      avatar: "{{ input.avatar }}"
+      birthday: "{{ input.birthday }}"
+      city: "{{ input.city }}"
+      email: "{{ input.email }}"
+      firstname: "{{ input.firstname }}"
+      home_number: "{{ input.home_number }}"
+      lastname: "{{ input.lastname }}"
+      mobile_number: "{{ input.mobile_number }}"
+      notes: "{{ input.notes }}"
+      postal_code: "{{ input.postal_code }}"
+    output:
+      id: number
+      avatar: text
+      validation: record
+      initials: record
+      properties: record
+      groups: list
+      created: text
+  create_group:
+    label: "Add a contact group"
+    description: "Creates a group"
+    write: true
+    method: POST
+    path: "/groups"
+    body: form
+    inputs: [{ name: name, label: "The name of a group" }]
+    send: { name: "{{ input.name }}" }
+    output: { id: number, name: text, members_count: number, has_more: boolean }
+  list_prices:
+    label: "Prices by country"
+    description: "Retrieves pricing information for a single country or all"
+    method: GET
+    path: "/pricing"
+    inputs: [{ name: country, label: "The countries ISO code to get pricing for" }]
+    query: { country: "{{ input.country }}" }
+    items: value.countries
+    output: { countryCode: text, countryName: text, countryPrefix: text, networks: list }
+  get_sms_status:
+    label: "Get an SMS's delivery status"
+    description: "Retrieves dispatch status for given SMS IDs"
+    method: GET
+    path: "/status"
+    inputs: [{ name: msg_id, label: "A comma separated list of SMS IDs to check", required: true }]
+    query: { msg_id: "{{ input.msg_id }}" }
+    items: value
+    output: { id: text, status: text, status_time: text }
+  send_rcs:
+    label: "Send an RCS message"
+    description: "Sends a Rich Content Message"
+    write: true
+    method: POST
+    path: "/rcs/messages"
+    body: form
+    inputs:
+      - { name: text, label: "The actual text message to send", required: true }
+      - { name: to, label: "The recipient number", required: true }
+      - { name: from, label: "Optional agent ID" }
+      - { name: foreign_id, label: "Identifier to return in callbacks for status reports etc" }
+      - { name: label, label: "A custom label for sorting analytics" }
+      - name: delay
+        label: "Date/Time for delayed dispatch - expects a timestamp \"1141511104\" or date time…"
+        description: "Date/Time for delayed dispatch - expects a timestamp \"1141511104\" or date time \"2016-03-04 23:25:04\""
+      - { name: performance_tracking, label: "Enable performance tracking for found URLs", kind: boolean }
+      - { name: fallback, label: "Message fallback type" }
+    send:
+      text: "{{ input.text }}"
+      to: "{{ input.to }}"
+      from: "{{ input.from }}"
+      foreign_id: "{{ input.foreign_id }}"
+      label: "{{ input.label }}"
+      delay: "{{ input.delay }}"
+      performance_tracking: "{{ input.performance_tracking }}"
+      fallback: "{{ input.fallback }}"
+    output:
+      balance: number
+      debug: text
+      messages: list
+      sms_type: text
+      success: text
+      total_price: number
+  send_whatsapp:
+    label: "Send a WhatsApp message"
+    description: "Sends a WhatsApp message via the WhatsApp Business API."
+    write: true
+    method: POST
+    path: "/waba/messages"
+    inputs:
+      - { name: from, label: "The WhatsApp sender number", required: true }
+      - { name: to, label: "The recipient phone number", required: true }
+      - { name: type, label: "The message type" }
+      - { name: template, label: "The template name" }
+      - { name: language, label: "The language code for the template (e.g. \"de\", \"en\")" }
+      - { name: text, label: "The free text message content" }
+      - name: delay
+        label: "Date/Time for delayed dispatch - expects a date time like \"2026-02-10 09:00:00\"…"
+        description: "Date/Time for delayed dispatch - expects a date time like \"2026-02-10 09:00:00\" or a Unix timestamp."
+      - { name: label, label: "A custom label for sorting analytics" }
+      - { name: foreign_id, label: "Identifier to return in callbacks for status reports etc" }
+      - { name: ttl, label: "Time to live in minutes for the message", kind: number }
+      - { name: performance_tracking, label: "Enable performance tracking for found URLs", kind: boolean }
+      - { name: components, label: "Template components for parameter substitution", kind: record }
+      - { name: url, label: "Public URL of the media file" }
+      - { name: caption, label: "Caption for the media file" }
+      - { name: filename, label: "Filename for the document" }
+      - { name: latitude, label: "Latitude of the location", kind: number }
+      - { name: longitude, label: "Longitude of the location", kind: number }
+      - { name: name, label: "Name of the location" }
+      - { name: address, label: "Address of the location" }
+      - { name: contacts, label: "Contact cards to send", kind: list }
+      - { name: interactive_type, label: "Sub-type for interactive messages" }
+      - { name: body, label: "Body text for interactive messages" }
+      - { name: header, label: "Header text for interactive messages" }
+      - { name: footer, label: "Footer text for interactive messages" }
+      - { name: buttons, label: "Buttons for interactive button messages", kind: list }
+      - { name: button_text, label: "Button text for interactive list messages" }
+      - { name: sections, label: "Sections for interactive list messages", kind: list }
+    send:
+      from: "{{ input.from }}"
+      to: "{{ input.to }}"
+      type: "{{ input.type }}"
+      template: "{{ input.template }}"
+      language: "{{ input.language }}"
+      text: "{{ input.text }}"
+      delay: "{{ input.delay }}"
+      label: "{{ input.label }}"
+      foreign_id: "{{ input.foreign_id }}"
+      ttl: "{{ input.ttl }}"
+      performance_tracking: "{{ input.performance_tracking }}"
+      components: "{{ input.components }}"
+      url: "{{ input.url }}"
+      caption: "{{ input.caption }}"
+      filename: "{{ input.filename }}"
+      latitude: "{{ input.latitude }}"
+      longitude: "{{ input.longitude }}"
+      name: "{{ input.name }}"
+      address: "{{ input.address }}"
+      contacts: "{{ input.contacts }}"
+      interactive_type: "{{ input.interactive_type }}"
+      body: "{{ input.body }}"
+      header: "{{ input.header }}"
+      footer: "{{ input.footer }}"
+      buttons: "{{ input.buttons }}"
+      button_text: "{{ input.button_text }}"
+      sections: "{{ input.sections }}"
+    output:
+      success: text
+      total_price: number
+      balance: number
+      debug: text
+      sms_type: text
+      messages: list
+  get_contact:
+    label: "Get a contact"
+    description: "Retrieves a contact by its ID"
+    method: GET
+    path: "/contacts/{{ input.id }}"
+    inputs: [{ name: id, label: "The ID of the contact for retrieval", required: true }]
+    output:
+      id: number
+      avatar: text
+      validation: record
+      initials: record
+      properties: record
+      groups: list
+      created: text
+  get_group:
+    label: "Get a contact group"
+    description: "Retrieves a group by its ID"
+    method: GET
+    path: "/groups/{{ input.id }}"
+    inputs: [{ name: id, label: "The ID of the group for retrieval", required: true, kind: number }]
+    output: { id: number, name: text, members_count: number, has_more: boolean }
+  send_sms:
+    label: "Send an SMS"
+    description: "Sends one or multiple SMS to one or multiple recipients"
+    write: true
+    method: POST
+    path: "/sms"
+    body: form
+    # seven answers a message it refuses with a return code in place of 100 (sent) or 101 (sent to some).
+    error: "value.success in ['100', '101'] ? null : 'return code ' + string(value.success)"
+    inputs:
+      - name: text
+        label: "The actual text message to send - may not exceed 1520 characters"
+        required: true
+      - name: to
+        label: "The recipient number(s) or contact/group name(s) - separate multiple recipients…"
+        required: true
+      - { name: from, label: "A custom sender name" }
+      - { name: foreign_id, label: "Identifier to return in callbacks for status reports etc" }
+      - { name: label, label: "A custom label for sorting analytics" }
+      - name: udh
+        label: "A custom user data deader - if set and message contains hex code, the message…"
+        description: "A custom user data deader - if set and message contains hex code, the message gets sent as 8-bit binary"
+      - name: delay
+        label: "Date/Time for delayed dispatch - expects a timestamp \"1141511104\" or date time…"
+        description: "Date/Time for delayed dispatch - expects a timestamp \"1141511104\" or date time \"2016-03-04 23:25:04\""
+      - name: flash
+        label: "Send as flash SMS which appears directly on the recipients screen"
+        kind: boolean
+      - { name: performance_tracking, label: "Enable performance tracking for found URLs", kind: boolean }
+    send:
+      text: "{{ input.text }}"
+      to: "{{ input.to }}"
+      from: "{{ input.from }}"
+      foreign_id: "{{ input.foreign_id }}"
+      label: "{{ input.label }}"
+      udh: "{{ input.udh }}"
+      delay: "{{ input.delay }}"
+      flash: "{{ input.flash }}"
+      performance_tracking: "{{ input.performance_tracking }}"
+    output:
+      balance: number
+      debug: text
+      messages: list
+      sms_type: text
+      success: text
+      total_price: number
+  lookup_caller_name:
+    label: "Look up a caller's name"
+    description: "Retrieves Caller name info"
+    method: GET
+    path: "/lookup/cnam"
+    inputs: [{ name: number, label: "The phone number to look up", required: true }]
+    query: { number: "{{ input.number }}" }
+    output: { code: number, success: text, name: text, number: text }
+  check_number_format:
+    label: "Check a phone number's format"
+    description: "Retrieves number format info"
+    method: GET
+    path: "/lookup/format"
+    inputs: [{ name: number, label: "The phone number to look up", required: true }]
+    query: { number: "{{ input.number }}" }
+    output:
+      success: boolean
+      international: text
+      international_formatted: text
+      national: text
+      country_iso: text
+      country_name: text
+      country_code: text
+  lookup_hlr:
+    label: "Check a mobile number is live (HLR)"
+    description: "Retrieves home location register info"
+    method: GET
+    path: "/lookup/hlr"
+    inputs: [{ name: number, label: "The phone number to look up", required: true }]
+    query: { number: "{{ input.number }}" }
+    output:
+      international_formatted: text
+      country_name: text
+      country_code: text
+      international_format_number: text
+      national_format_number: text
+      country_prefix: text
+      current_carrier: record
+      original_carrier: record
+      lookup_outcome: text
+      lookup_outcome_message: text
+      valid_number: text
+      reachable: text
+      roaming: record
+  lookup_portability:
+    label: "Look up a number's network (portability)"
+    description: "Retrieves mobile number portability info"
+    method: GET
+    path: "/lookup/mnp"
+    inputs: [{ name: number, label: "The phone number to look up", required: true }]
+    query: { number: "{{ input.number }}" }
+    output: { code: number, success: boolean, price: number, mnp: record }
+  update_contact:
+    label: "Change a contact"
+    description: "Updates a contact"
+    write: true
+    method: PATCH
+    path: "/contacts/{{ input.id }}"
+    body: form
+    inputs:
+      - { name: id, label: "The contact's ID", required: true }
+      - { name: address, label: "The address of a contact" }
+      - { name: avatar, label: "The avatar of a contact" }
+      - { name: birthday, label: "The birthday of a contact" }
+      - { name: city, label: "The city of a contact" }
+      - { name: email, label: "The email of a contact" }
+      - { name: firstname, label: "The first name of a contact" }
+      - { name: home_number, label: "The home number of a contact" }
+      - { name: lastname, label: "The last name of a contact" }
+      - { name: mobile_number, label: "The mobile number of a contact" }
+      - { name: notes, label: "The notes of a contact" }
+      - { name: postal_code, label: "The postal code of a contact" }
+    send:
+      address: "{{ input.address }}"
+      avatar: "{{ input.avatar }}"
+      birthday: "{{ input.birthday }}"
+      city: "{{ input.city }}"
+      email: "{{ input.email }}"
+      firstname: "{{ input.firstname }}"
+      home_number: "{{ input.home_number }}"
+      lastname: "{{ input.lastname }}"
+      mobile_number: "{{ input.mobile_number }}"
+      notes: "{{ input.notes }}"
+      postal_code: "{{ input.postal_code }}"
+    output:
+      id: number
+      avatar: text
+      validation: record
+      initials: record
+      properties: record
+      groups: list
+      created: text
+  get_balance:
+    label: "Get the account balance"
+    description: "Retrieves the account balance for given API key"
+    method: GET
+    path: "/balance"
+    output: { amount: number, currency: text }
+  send_voice_call:
+    label: "Call a number and read a message aloud"
+    description: "Sends a text-to-speech message to a given recipient number"
+    write: true
+    method: POST
+    path: "/voice"
+    body: form
+    error: "value.success in ['100', '101'] ? null : 'return code ' + string(value.success)"
+    inputs:
+      - name: to
+        label: "The number to call (or a contact's name), as +4915112345678"
+        required: true
+      - name: text
+        label: "What is read aloud: plain text or SSML"
+        required: true
+      - { name: ringtime, label: "The duration of the ringing until the phone is hung up", kind: number }
+      - name: from
+        label: "Sets the sender - must be a verified sender - use an inbound number of yours or…"
+      - { name: foreign_id, label: "A unique ID that you can use for later assignment of the call" }
+    send:
+      to: "{{ input.to }}"
+      text: "{{ input.text }}"
+      ringtime: "{{ input.ringtime }}"
+      from: "{{ input.from }}"
+      foreign_id: "{{ input.foreign_id }}"
+    output: { success: text, total_price: number, balance: number, debug: text, messages: list }
+  delete_contact:
+    label: "Delete a contact"
+    description: "Delete a contact by its ID"
+    write: true
+    method: DELETE
+    path: "/contacts/{{ input.id }}"
+    inputs: [{ name: id, label: "The ID of the contact for deletion", required: true }]
+    output: { error: text, success: boolean }
+triggers:
+  new_inbound_sms:
+    label: A message received
+    description: Each SMS that comes in to one of your numbers, asked for every few minutes.
+    poll:
+      action: list_inbound_messages
+      id: item.id
+      every: 5m

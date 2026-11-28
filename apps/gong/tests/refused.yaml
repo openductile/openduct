@@ -1,0 +1,7 @@
+# Made by `openduct app from-openapi`: a refusal.
+description: "Gong refuses list_calls: the step fails in its words"
+action: list_calls
+credential: { access_key: ann, access_key_secret: test-password }
+input: { from_date_time: example, to_date_time: example }
+exchanges: [{ answer: { status: 404, body: { message: "Not found" } } }]
+error: "Gong answered 404: Not found"

@@ -1,0 +1,10 @@
+description: A record removed
+action: delete_record
+credential: { instance: acme, username: integration.user, password: pw-test-1 }
+input: { table: sc_task, sys_id: 1f2e3d4c5b6a79880716253443526170 }
+exchanges:
+  - sent:
+      method: DELETE
+      url: "https://acme.service-now.com/api/now/table/sc_task/1f2e3d4c5b6a79880716253443526170"
+    answer: { status: 204 }
+result: null

@@ -1,0 +1,15 @@
+# Made by `openduct app from-openapi`: Get clicks by group.
+description: "Get clicks by group, made from the API description's schemas"
+action: list_group_clicks
+credential: { token: test-token }
+input: { group_guid: group_guid_1 }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://api-ssl.bitly.com/v4/groups/group_guid_1/clicks"
+      query: { unit: day, units: "-1" }
+      headers: { authorization: "Bearer test-token" }
+    answer:
+      status: 200
+      body: { unit: example, units: 1, unit_reference: example, data: [{ ts: example, count: 1 }] }
+result: [{ ts: example, count: 1 }]

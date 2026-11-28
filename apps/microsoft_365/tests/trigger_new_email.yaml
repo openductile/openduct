@@ -1,0 +1,19 @@
+description: Mail that arrived in the inbox since the last poll, the newest asked for
+trigger: new_email
+credential: { access_token: eyJ0 }
+seen: { items: [["AAMk1", ""]] }
+exchanges:
+  - sent:
+      method: GET
+      url: https://graph.microsoft.com/v1.0/me/mailFolders/inbox/messages
+      query:
+        "$orderby": receivedDateTime desc
+        "$top": "50"
+        "$select": "id,subject,from,toRecipients,receivedDateTime,bodyPreview,hasAttachments,webLink"
+    answer:
+      body:
+        value:
+          - { id: AAMk2, subject: Invoice, from: { emailAddress: { address: billing@example.com } } }
+          - { id: AAMk1, subject: Hello }
+        "@odata.nextLink": "https://graph.microsoft.com/v1.0/me/mailFolders/inbox/messages?$skip=50"
+runs: [{ id: AAMk2, subject: Invoice, from: { emailAddress: { address: billing@example.com } } }]

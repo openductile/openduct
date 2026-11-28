@@ -1,0 +1,10 @@
+description: Turning the workflow off deletes the endpoint it added
+trigger: event
+unregister: true
+workflow: wf1
+credential: { secret_key: sk_test_1, "webhook_secret@wf1": whsec_new, "webhook_id@wf1": we_1 }
+input: { events: checkout.session.completed }
+exchanges:
+  - sent: { method: DELETE, url: https://api.stripe.com/v1/webhook_endpoints/we_1 }
+    answer: { body: { id: we_1, object: webhook_endpoint, deleted: true } }
+kept: { webhook_secret: "", webhook_id: "" }

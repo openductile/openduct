@@ -1,0 +1,48 @@
+name: Sum up the replies to an e-mail campaign
+description: >-
+  Press Run with a Gmail search for a campaign's replies (its subject, the last two weeks): up to 30 replies are read,
+  a model sums up what people said - interest, objections, questions, unsubscribes - and the campaign's line goes into
+  your Campaign replies sheet with how many replied. For marketers and founders who send campaigns from their own
+  inbox and want the gist without reading every reply. Needs: gmail, model, google_sheets.
+category: Marketing
+trigger: manual
+# What a test runs on: what you give when you press Run.
+sample:
+  campaign: Winter menu launch
+  search: "subject:(winter menu) newer_than:14d -from:me"
+steps:
+  - name: found
+    gmail:
+      action: find_emails
+      credential: gmail
+      q: "{{ value.search }}"
+    retry: { attempts: 3, wait: 15s }
+  - name: first
+    list: { items: steps.found, limit: 30 }
+  - where: size(steps.first) > 0
+  - name: replies
+    for_each:
+      items: steps.first
+      steps:
+        - name: mail
+          gmail:
+            action: read_email
+            credential: gmail
+            message_id: "{{ item.id }}"
+          retry: { attempts: 3, wait: 15s }
+  - name: gist
+    summarise:
+      credential: model
+      text: "{{ steps.replies.map(r, has(r.mail.snippet) ? r.mail.snippet : '') }}"
+      length: six short lines
+      style: >-
+        bullets in four groups - interested, objections, questions, unsubscribe or not interested - each with
+        roughly how many said it; no names or e-mail addresses
+  - name: row
+    google_sheets:
+      action: add_row
+      credential: google_sheets
+      spreadsheet_id: your-spreadsheet-id
+      sheet: Campaign replies
+      values: "{{ [value.campaign, size(steps.first), steps.gist.summary, value.search] }}"
+    retry: { attempts: 3, wait: 10s }

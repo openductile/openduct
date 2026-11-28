@@ -1,0 +1,9 @@
+description: A refusal in Disqus's words
+action: get_thread
+credential: {api_key: pubkey-test-1, api_secret: secret-test-1, access_token: token-test-1}
+input: {thread: '9999'}
+exchanges:
+- answer:
+    status: 400
+    body: {code: 2, response: 'Invalid argument, ''thread'': Unable to find thread ''9999'''}
+error: 'Disqus answered 400: Invalid argument, ''thread'': Unable to find thread ''9999'''

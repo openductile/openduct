@@ -1,0 +1,22 @@
+description: Files added to a folder, newest asked for; those seen before are not run again
+trigger: new_file
+credential: { access_token: ya29.test }
+input: { folder_id: f1 }
+seen: { items: [["d1", ""]] }
+exchanges:
+  - sent:
+      method: GET
+      url: https://www.googleapis.com/drive/v3/files
+      query:
+        q: "trashed = false and 'f1' in parents"
+        orderBy: createdTime desc
+        pageSize: "50"
+        fields: "nextPageToken, files(id, name, mimeType, createdTime, modifiedTime, webViewLink, parents, size)"
+    answer:
+      body:
+        files:
+          - { id: d2, name: invoice.pdf, mimeType: application/pdf, createdTime: "2026-11-27T10:00:00Z" }
+          - { id: d1, name: notes.txt, mimeType: text/plain, createdTime: "2026-11-26T10:00:00Z" }
+        nextPageToken: more
+runs:
+  - { id: d2, name: invoice.pdf, mimeType: application/pdf, createdTime: "2026-11-27T10:00:00Z" }

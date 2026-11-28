@@ -1,0 +1,29 @@
+description: An invoice made from a template, its data the whole body
+action: create_pdf
+credential: { api_key: at_test_key_1 }
+input:
+  template_id: cd890b2b199c5c42
+  data: { invoice_number: INV-1001, customer: Example Coffee, total_amount: 82.5 }
+  filename: inv-1001.pdf
+  meta: order-1001
+exchanges:
+  - sent:
+      method: POST
+      url: "https://rest.apitemplate.io/v2/create-pdf"
+      query: { template_id: cd890b2b199c5c42, filename: inv-1001.pdf, meta: order-1001 }
+      headers: { x-api-key: at_test_key_1 }
+      body: { invoice_number: INV-1001, customer: Example Coffee, total_amount: 82.5 }
+    answer:
+      status: 200
+      body:
+        status: success
+        download_url: "https://files.example.com/inv-1001.pdf"
+        template_id: cd890b2b199c5c42
+        total_pages: 1
+        transaction_ref: a0430897-2c94-40e1-a09b-57403d811ceb
+result:
+  status: success
+  download_url: "https://files.example.com/inv-1001.pdf"
+  template_id: cd890b2b199c5c42
+  total_pages: 1
+  transaction_ref: a0430897-2c94-40e1-a09b-57403d811ceb

@@ -1,0 +1,73 @@
+name: A new error in Sentry, explained in Slack
+description: >-
+  When Sentry reports a new issue to this workflow's address (an alert rule's webhook), an AI agent reads the issue's
+  latest event and its tags through Sentry's API, and posts to your team's Slack channel what broke, where in the
+  code, how many people it touches, a likely cause and a first thing to try - with the link to the issue. Set your
+  organization's slug below. Needs: model (an AI credential), sentry (a bearer credential with an auth token that may
+  read issues and events), slack.
+category: Engineering
+trigger:
+  # Left empty here: each workflow made from the template is given a token of its own (add it to the address).
+  webhook: { token: "" }
+# What a test runs on: an event as this trigger gives it.
+sample:
+  action: created
+  data:
+    issue:
+      id: "4900000001"
+      shortId: SHOP-API-3F
+      title: "TypeError: Cannot read properties of undefined (reading 'price')"
+      culprit: checkout/cart.js in totalOf
+      permalink: https://your-org.sentry.io/issues/4900000001/
+      level: error
+      count: "37"
+      userCount: 21
+      firstSeen: "2026-11-27T08:41:00Z"
+      project: { slug: shop-api }
+steps:
+  - where: value.action == 'created' && has(value.data.issue)
+  - name: explain
+    agent:
+      credential: model
+      instructions: >-
+        You help an on-call engineer. Read the issue's latest event (its stack trace and request) and its tags, then
+        write for a Slack channel, in at most eight short lines: what broke and where in the code; how many people it
+        touches and on which releases or browsers; the most likely cause, saying how sure you are; and one first
+        thing to try. Never invent a line of code you did not see.
+      input: >-
+        New issue {{ value.data.issue.shortId }} in {{ value.data.issue.project.slug }}: {{ value.data.issue.title }}
+        ({{ value.data.issue.culprit }}). Seen {{ value.data.issue.count }} times by {{ value.data.issue.userCount }}
+        people since {{ value.data.issue.firstSeen }}. The issue's id: {{ value.data.issue.id }}.
+      tools:
+        - name: latest_event
+          description: "The issue's latest event: its stack trace, the request, the release and the browser or device."
+          parameters:
+            type: object
+            properties:
+              issue_id: { type: string, description: "The issue's id, a number as 4900000001" }
+            required: [issue_id]
+          http:
+            # Your organization's slug, as in its address.
+            url: "https://sentry.io/api/0/organizations/your-org/issues/{{ args.issue_id }}/events/latest/"
+            credential: sentry
+        - name: issue_tags
+          description: "How the issue's events spread over releases, browsers, devices and environments."
+          parameters:
+            type: object
+            properties:
+              issue_id: { type: string, description: "The issue's id" }
+            required: [issue_id]
+          http:
+            url: "https://sentry.io/api/0/organizations/your-org/issues/{{ args.issue_id }}/tags/"
+            credential: sentry
+      allow: [latest_event, issue_tags]
+      max_turns: 5
+      max_tool_calls: 4
+      # A run never waits more than two minutes for the explanation.
+      timeout: 2m
+  - name: post
+    slack:
+      credential: slack
+      channel: "#incidents"
+      text: "New error <{{ value.data.issue.permalink }}|{{ value.data.issue.shortId }}>: {{ value.data.issue.title }}\n{{ steps.explain.text }}"
+    retry: { attempts: 3, wait: 10s }

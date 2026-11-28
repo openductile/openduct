@@ -1,0 +1,25 @@
+name: A weekly report on Monday mornings, from Postgres
+description: >-
+  Every Monday at 08:00 in your own time zone, count the last week's orders and their total in your database (an
+  orders table with total and created_at) and e-mail the figures to your team.
+category: Data
+trigger:
+  # Choose your own time zone: the report comes at 08:00 there, summer and winter.
+  schedule: { every: week, on: [monday], at: "08:00", timezone: Europe/London }
+# What a test runs on: an event as this trigger gives it.
+sample:
+  scheduled_at: '2026-11-30T08:00:00Z'
+steps:
+  - name: figures
+    postgres:
+      credential: db
+      sql: >-
+        SELECT count(*) AS orders, coalesce(sum(total), 0) AS revenue FROM orders
+        WHERE created_at >= $1::timestamptz - interval '7 days' AND created_at < $1::timestamptz
+      params: [value.scheduled_at]
+  - name: send
+    email:
+      credential: mail
+      to: team@example.com
+      subject: "Last week: {{ steps.figures.rows[0].orders }} orders"
+      text: "Orders: {{ steps.figures.rows[0].orders }}. Revenue: {{ steps.figures.rows[0].revenue }}."

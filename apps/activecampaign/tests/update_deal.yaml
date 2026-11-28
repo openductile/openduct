@@ -1,0 +1,32 @@
+description: A deal marked won
+action: update_deal
+credential:
+  account: shopexample
+  api_key: test-key
+input:
+  deal_id: '7'
+  status: 1
+exchanges:
+- sent:
+    method: PUT
+    url: https://shopexample.api-us1.com/api/3/deals/7
+    headers:
+      api-token: test-key
+    body:
+      deal:
+        status: 1
+  answer:
+    status: 200
+    body:
+      deal: &id001
+        id: '7'
+        title: Spring order
+        value: '45678'
+        currency: usd
+        status: '1'
+        contact: '113'
+        group: '1'
+        stage: '2'
+        owner: '1'
+        cdate: '2026-11-27T10:05:00-06:00'
+result: *id001

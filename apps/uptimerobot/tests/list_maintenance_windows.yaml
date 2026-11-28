@@ -1,0 +1,6 @@
+action: list_maintenance_windows
+credential: { api_key: ur_test_1 }
+exchanges:
+  - sent: { method: GET, url: https://api.uptimerobot.com/v3/maintenance-windows, query: { limit: "200" } }
+    answer: { body: { nextLink: null, data: [{ id: 51, name: Sunday backups, interval: weekly, time: "02:00:00", duration: 60, days: [7], monitorIds: [801], status: active }] } }
+result: [{ id: 51, name: Sunday backups, interval: weekly, time: "02:00:00", duration: 60, days: [7], monitorIds: [801], status: active }]

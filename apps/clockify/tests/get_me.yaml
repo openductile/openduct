@@ -1,0 +1,79 @@
+description: "Who I am: what it sends, and an answer shaped as Clockify's API description says"
+action: get_me
+credential: { api_key: test-key }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://api.clockify.me/api/v1/user"
+      query: {}
+      headers: { x-api-key: test-key }
+    answer:
+      status: 200
+      body:
+        activeWorkspace: "64a687e29ae1f428e7ebe303"
+        customFields:
+          - customFieldId: "5e4117fe8c625f38930d57b7"
+            customFieldName: TIN
+            customFieldType: TXT
+            userId: "5a0ab5acb07987125438b60f"
+            value: "20231211-12345"
+        defaultWorkspace: "64a687e29ae1f428e7ebe303"
+        email: "ann@example.com"
+        id: "5a0ab5acb07987125438b60f"
+        memberships:
+          - costRate: { amount: 10500, currency: USD }
+            hourlyRate: { amount: 10500, currency: USD }
+            membershipStatus: PENDING
+            membershipType: WORKSPACE
+            targetId: "64c777ddd3fcab07cfbb210c"
+            userId: "5a0ab5acb07987125438b60f"
+        name: example
+        profilePicture: example
+        settings:
+          alerts: true
+          approval: false
+          collapseAllProjectLists: true
+          dashboardPinToTop: true
+          dashboardSelection: ME
+          dashboardViewType: PROJECT
+          dateFormat: example
+          groupSimilarEntriesDisabled: true
+          invoiceReminders: false
+          isCompactViewOn: false
+          lang: en
+          longRunning: true
+        status: ACTIVE
+result:
+  activeWorkspace: "64a687e29ae1f428e7ebe303"
+  customFields:
+    - customFieldId: "5e4117fe8c625f38930d57b7"
+      customFieldName: TIN
+      customFieldType: TXT
+      userId: "5a0ab5acb07987125438b60f"
+      value: "20231211-12345"
+  defaultWorkspace: "64a687e29ae1f428e7ebe303"
+  email: "ann@example.com"
+  id: "5a0ab5acb07987125438b60f"
+  memberships:
+    - costRate: { amount: 10500, currency: USD }
+      hourlyRate: { amount: 10500, currency: USD }
+      membershipStatus: PENDING
+      membershipType: WORKSPACE
+      targetId: "64c777ddd3fcab07cfbb210c"
+      userId: "5a0ab5acb07987125438b60f"
+  name: example
+  profilePicture: example
+  settings:
+    alerts: true
+    approval: false
+    collapseAllProjectLists: true
+    dashboardPinToTop: true
+    dashboardSelection: ME
+    dashboardViewType: PROJECT
+    dateFormat: example
+    groupSimilarEntriesDisabled: true
+    invoiceReminders: false
+    isCompactViewOn: false
+    lang: en
+    longRunning: true
+  status: ACTIVE

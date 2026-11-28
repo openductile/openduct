@@ -1,0 +1,71 @@
+name: A Telegram bot that sums up any link you send it
+description: >-
+  Send your Telegram bot a link - an article, a report, a competitor's announcement - and it reads the page, has a
+  model sum it up in three short points and say who would care, and answers in the same chat in a few seconds. A
+  message without a link is answered with how to use it; a page it cannot read says so. Needs: a Telegram bot (bot)
+  and an AI credential (model).
+category: Productivity
+trigger:
+  telegram: { when: message, credential: bot }
+# What a test runs on: a message as this trigger gives it.
+sample:
+  message_id: 12
+  chat: { id: 123456789, type: private }
+  from: { id: 123456789, first_name: Sam }
+  date: 1795770000
+  text: "worth reading? https://news.example.com/2026/11/small-shops-and-ai"
+steps:
+  - where: value.text != null
+  - name: asked
+    set:
+      url: "regex.extract(value.text, 'https?://[^\\\\s<>\"]+')"
+  - name: no_link
+    if:
+      when: steps.asked.url == null
+      then:
+        - name: how_to
+          telegram:
+            credential: bot
+            chat_id: "{{ value.chat.id }}"
+            text: Send me a link to a web page and I will sum it up in three points.
+        - stop: {}
+  - name: page
+    http:
+      url: "{{ steps.asked.url }}"
+      response: text
+      timeout: 20s
+      fail_on_status: false
+      headers: { User-Agent: "Mozilla/5.0 (compatible; LinkSummaryBot/1.0)" }
+      sample: >-
+        <html><head><title>Small shops are quietly adopting AI</title></head><body><article><h1>Small shops are
+        quietly adopting AI</h1><p>A survey of 1,200 small retailers found that four in ten now use AI tools, mostly
+        for product descriptions and customer e-mail.</p><p>Owners said the biggest gain was time: about five hours a
+        week. The biggest worry was getting facts wrong in front of customers.</p></article></body></html>
+    retry: { attempts: 2, wait: 5s }
+  - name: readable
+    if:
+      when: steps.page.status >= 400
+      then:
+        - telegram:
+            credential: bot
+            chat_id: "{{ value.chat.id }}"
+            text: "I could not read that page (it answered {{ steps.page.status }}). It may need a sign-in."
+        - stop: {}
+  - name: html
+    convert: { format: html, text: "{{ string(steps.page.body) }}", name: page.html }
+  - name: words
+    extract_file: { file: steps.html, format: html }
+  - name: summary
+    ai:
+      credential: model
+      system: >-
+        You sum up a web page for a busy person: three short points of what it says, then one line on who would
+        care and why. Keep to what the page says; no opinions of your own.
+      prompt: "{{ steps.words.title }}\n\n{{ steps.words.text.substring(0, math.least(size(steps.words.text), 20000)) }}"
+      max_tokens: 350
+  - name: reply
+    telegram:
+      credential: bot
+      chat_id: "{{ value.chat.id }}"
+      text: "{{ steps.words.title }}\n\n{{ steps.summary.text }}"
+    retry: { attempts: 3, wait: 10s }

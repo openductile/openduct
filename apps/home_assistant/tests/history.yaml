@@ -1,0 +1,17 @@
+description: A sensor's changes since a start, minimal - one list of changes for the entity
+action: history
+credential: { url: "http://home.example:8123", token: ha-test-token }
+input: { entity_id: sensor.kitchen_temperature, start: "2026-11-26T00:00:00Z", minimal: true }
+exchanges:
+  - sent:
+      method: GET
+      url: "http://home.example:8123/api/history/period/2026-11-26T00:00:00Z"
+      query: { filter_entity_id: sensor.kitchen_temperature, minimal_response: "true" }
+    answer:
+      status: 200
+      body:
+        - - { entity_id: sensor.kitchen_temperature, state: "20.1", attributes: { unit_of_measurement: "°C" }, last_changed: "2026-11-26T00:00:00+00:00", last_updated: "2026-11-26T00:00:00+00:00" }
+          - { last_changed: "2026-11-26T06:00:00+00:00", state: "20.8" }
+result:
+  - - { entity_id: sensor.kitchen_temperature, state: "20.1", attributes: { unit_of_measurement: "°C" }, last_changed: "2026-11-26T00:00:00+00:00", last_updated: "2026-11-26T00:00:00+00:00" }
+    - { last_changed: "2026-11-26T06:00:00+00:00", state: "20.8" }

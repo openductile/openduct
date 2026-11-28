@@ -1,0 +1,145 @@
+# Copyright 2026 Ductile AI, Inc
+# SPDX-License-Identifier: Apache-2.0
+# Google Business Profile: reviews and posts, through Google's My Business API v4, written by hand from its
+# reference pages, https://developers.google.com/my-business/reference/rest (fetched 2026-11-27; CC BY 4.0).
+# Labels and descriptions are our own words.
+app: google_business_profile
+name: Google Business Profile
+category: social
+description: Reviews of a business on Google, and replies to them, and the posts on its profile.
+docs: https://developers.google.com/my-business/reference/rest
+hosts: [mybusiness.googleapis.com]
+base_url: https://mybusiness.googleapis.com/v4
+sign_in:
+  - id: google_business_profile
+    label: Sign in with Google
+    oauth2:
+      authorize: https://accounts.google.com/o/oauth2/v2/auth
+      token: https://oauth2.googleapis.com/token
+      scopes: [https://www.googleapis.com/auth/business.manage]
+      extra: { access_type: offline, prompt: consent }
+    headers:
+      Authorization: "Bearer {{ credential.access_token }}"
+error: value.error.message
+actions:
+  list_reviews:
+    label: List reviews
+    description: The reviews of a business location, newest first (or by rating), with any reply.
+    method: GET
+    path: "/accounts/{{ input.account_id }}/locations/{{ input.location_id }}/reviews"
+    inputs:
+      - { name: account_id, label: "The account's id (a number)", required: true }
+      - { name: location_id, label: "The location's id (a number)", required: true }
+      - { name: order_by, label: "In this order: updateTime desc (the default), rating, or rating desc" }
+    query: { orderBy: "{{ input.order_by }}", pageSize: "50" }
+    items: "has(value.reviews) ? value.reviews : []"
+    next: "has(value.nextPageToken) ? {'pageToken': value.nextPageToken} : null"
+    output: &review { name: text, reviewId: text, reviewer: record, starRating: text, comment: text, createTime: text, updateTime: text, reviewReply: record }
+  get_review:
+    label: Look up a review
+    description: One review, with any reply.
+    method: GET
+    path: "/accounts/{{ input.account_id }}/locations/{{ input.location_id }}/reviews/{{ input.review_id }}"
+    inputs:
+      - { name: account_id, label: "The account's id", required: true }
+      - { name: location_id, label: "The location's id", required: true }
+      - { name: review_id, label: "The review's id", required: true }
+    output: *review
+  reply_to_review:
+    label: Reply to a review
+    description: The business's answer under a review, shown to everyone; a reply there already is replaced.
+    write: true
+    method: PUT
+    path: "/accounts/{{ input.account_id }}/locations/{{ input.location_id }}/reviews/{{ input.review_id }}/reply"
+    inputs:
+      - { name: account_id, label: "The account's id", required: true }
+      - { name: location_id, label: "The location's id", required: true }
+      - { name: review_id, label: "The review's id", required: true }
+      - { name: comment, label: "The reply (at most 4,096 bytes)", required: true }
+    send: { comment: "{{ input.comment }}" }
+    output: { comment: text, updateTime: text, reviewReplyState: text, policyViolation: text }
+  delete_reply:
+    label: Delete a review's reply
+    description: The business's answer under a review taken away.
+    write: true
+    method: DELETE
+    path: "/accounts/{{ input.account_id }}/locations/{{ input.location_id }}/reviews/{{ input.review_id }}/reply"
+    inputs:
+      - { name: account_id, label: "The account's id", required: true }
+      - { name: location_id, label: "The location's id", required: true }
+      - { name: review_id, label: "The review's id", required: true }
+    result: "{'deleted': true}"
+    output: { deleted: boolean }
+  list_posts:
+    label: List posts
+    description: The posts on a location's profile - news, events and offers.
+    method: GET
+    path: "/accounts/{{ input.account_id }}/locations/{{ input.location_id }}/localPosts"
+    inputs:
+      - { name: account_id, label: "The account's id", required: true }
+      - { name: location_id, label: "The location's id", required: true }
+    query: { pageSize: "100" }
+    items: "has(value.localPosts) ? value.localPosts : []"
+    next: "has(value.nextPageToken) ? {'pageToken': value.nextPageToken} : null"
+    output: &post { name: text, languageCode: text, summary: text, callToAction: record, createTime: text, updateTime: text, event: record, state: text, media: list, searchUrl: text, topicType: text, offer: record }
+  create_post:
+    label: Add a post
+    description: A post on a location's profile, with a button and a photo if given.
+    write: true
+    method: POST
+    path: "/accounts/{{ input.account_id }}/locations/{{ input.location_id }}/localPosts"
+    inputs:
+      - { name: account_id, label: "The account's id", required: true }
+      - { name: location_id, label: "The location's id", required: true }
+      - { name: summary, label: "What it says", required: true }
+      - { name: button, label: "A button: BOOK, ORDER, SHOP, LEARN_MORE, SIGN_UP or CALL" }
+      - { name: button_url, label: "Where the button leads (not for CALL)" }
+      - { name: photo_url, label: "A photo, by its public address" }
+      - { name: language_code, label: "Its language, such as en" }
+    send:
+      topicType: STANDARD
+      summary: "{{ input.summary }}"
+      languageCode: "{{ input.language_code }}"
+      callToAction:
+        actionType: "{{ input.button }}"
+        url: "{{ input.button_url }}"
+      media: "{{ has(input.photo_url) && input.photo_url != null ? [{'mediaFormat': 'PHOTO', 'sourceUrl': input.photo_url}] : null }}"
+    output: *post
+  get_post:
+    label: Look up a post
+    description: One post on a location's profile.
+    method: GET
+    path: "/accounts/{{ input.account_id }}/locations/{{ input.location_id }}/localPosts/{{ input.post_id }}"
+    inputs:
+      - { name: account_id, label: "The account's id", required: true }
+      - { name: location_id, label: "The location's id", required: true }
+      - { name: post_id, label: "The post's id", required: true }
+    output: *post
+  delete_post:
+    label: Delete a post
+    description: A post taken off a location's profile.
+    write: true
+    method: DELETE
+    path: "/accounts/{{ input.account_id }}/locations/{{ input.location_id }}/localPosts/{{ input.post_id }}"
+    inputs:
+      - { name: account_id, label: "The account's id", required: true }
+      - { name: location_id, label: "The location's id", required: true }
+      - { name: post_id, label: "The post's id", required: true }
+    result: "{'deleted': true}"
+    output: { deleted: boolean }
+triggers:
+  new_review:
+    label: A new review
+    description: Each review written of a business location, asked for every few minutes.
+    inputs:
+      - { name: account_id, label: "The account's id", required: true }
+      - { name: location_id, label: "The location's id", required: true }
+    poll:
+      method: GET
+      path: "/accounts/{{ input.account_id }}/locations/{{ input.location_id }}/reviews"
+      query: { orderBy: updateTime desc, pageSize: "50" }
+      items: "has(value.reviews) ? value.reviews : []"
+      next: "has(value.nextPageToken) ? {'pageToken': value.nextPageToken} : null"
+      newest_first: true
+      id: item.reviewId
+      every: 15m

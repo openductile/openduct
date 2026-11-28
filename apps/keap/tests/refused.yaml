@@ -1,0 +1,6 @@
+# Made by `openduct app from-openapi`: a refusal.
+description: "Keap refuses list_tasks: the step fails in its words"
+action: list_tasks
+credential: { access_token: test-access-token }
+exchanges: [{ answer: { status: 404, body: { message: "Not found" } } }]
+error: "Keap answered 404: Not found"

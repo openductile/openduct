@@ -1,0 +1,11 @@
+description: A checklist item ticked
+action: check_item
+credential: { api_key: testkey0123456789, token: ATTAtesttoken0123 }
+input: { card_id: 6567a1b2c3d4e5f600000001, item_id: 6567a1b2c3d4e5f600000i01 }
+exchanges:
+  - sent:
+      method: PUT
+      url: https://api.trello.com/1/cards/6567a1b2c3d4e5f600000001/checkItem/6567a1b2c3d4e5f600000i01
+      query: { key: testkey0123456789, token: ATTAtesttoken0123, state: complete }
+    answer: { body: { id: 6567a1b2c3d4e5f600000i01, name: Pack the order, state: complete, idChecklist: 6567a1b2c3d4e5f600000k01 } }
+result: { id: 6567a1b2c3d4e5f600000i01, name: Pack the order, state: complete, idChecklist: 6567a1b2c3d4e5f600000k01 }

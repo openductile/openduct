@@ -1,0 +1,19 @@
+description: An item archived
+action: archive_item
+credential:
+  token: monday-test-token
+input:
+  item_id: '9876543210'
+exchanges:
+- sent:
+    body:
+      query: 'mutation ($item: ID!) { archive_item(item_id: $item) { id } }'
+      variables:
+        item: '9876543210'
+  answer:
+    body:
+      data:
+        archive_item:
+          id: '9876543210'
+result:
+  id: '9876543210'

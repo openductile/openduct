@@ -1,0 +1,70 @@
+description: The open jobs
+action: list_job_openings
+credential:
+  company_domain: acme
+  api_key: test-key
+input:
+  status_groups: Open
+exchanges:
+- sent:
+    method: GET
+    url: https://acme.bamboohr.com/api/v1/applicant_tracking/jobs
+    query:
+      statusGroups: Open
+    headers:
+      authorization: Basic dGVzdC1rZXk6eA==
+      accept: application/json
+  answer:
+    status: 200
+    body:
+    - id: 21
+      title:
+        id: 3
+        label: Barista
+      postedDate: '2026-11-01T09:00:00Z'
+      location:
+        id: 2
+        label: Denver
+        address: {}
+      department:
+        id: 5
+        label: Operations
+      status:
+        id: 1
+        label: Open
+      hiringLead:
+        employeeId: 102
+        firstName: Ben
+        lastName: Tester
+        avatar: null
+        jobTitle: {}
+      newApplicantsCount: 2
+      activeApplicantsCount: 3
+      totalApplicantsCount: 5
+      postingUrl: https://acme.bamboohr.com/careers/21
+result:
+- id: 21
+  title:
+    id: 3
+    label: Barista
+  postedDate: '2026-11-01T09:00:00Z'
+  location:
+    id: 2
+    label: Denver
+    address: {}
+  department:
+    id: 5
+    label: Operations
+  status:
+    id: 1
+    label: Open
+  hiringLead:
+    employeeId: 102
+    firstName: Ben
+    lastName: Tester
+    avatar: null
+    jobTitle: {}
+  newApplicantsCount: 2
+  activeApplicantsCount: 3
+  totalApplicantsCount: 5
+  postingUrl: https://acme.bamboohr.com/careers/21

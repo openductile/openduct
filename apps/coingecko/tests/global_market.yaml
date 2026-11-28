@@ -1,0 +1,6 @@
+action: global_market
+credential: { api_key: CG-test1 }
+exchanges:
+  - sent: { method: GET, url: https://api.coingecko.com/api/v3/global }
+    answer: { body: { data: { active_cryptocurrencies: 17397, markets: 1476, total_market_cap: { usd: 2621040321355.04 }, market_cap_percentage: { btc: 57.95 }, market_cap_change_percentage_24h_usd: -1.61 } } }
+result: { active_cryptocurrencies: 17397, markets: 1476, total_market_cap: { usd: 2621040321355.04 }, market_cap_percentage: { btc: 57.95 }, market_cap_change_percentage_24h_usd: -1.61 }

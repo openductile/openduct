@@ -1,0 +1,228 @@
+# Copyright 2026 Ductile AI, Inc
+# SPDX-License-Identifier: Apache-2.0
+app: zoom
+name: Zoom
+category: scheduling
+description: Zoom meetings scheduled, changed and cancelled, people registered for them, and their recordings, attendees and summaries after.
+docs: https://developers.zoom.us/docs/api/meetings/
+hosts: [api.zoom.us]
+base_url: https://api.zoom.us/v2
+sign_in:
+  - id: zoom
+    label: Sign in with Zoom
+    oauth2:
+      authorize: https://zoom.us/oauth/authorize
+      token: https://zoom.us/oauth/token
+      client_auth: basic
+    headers:
+      Authorization: "Bearer {{ credential.access_token }}"
+error: "has(value.message) ? value.message : null"
+default_action: create_meeting
+actions:
+  create_meeting:
+    label: Schedule a meeting
+    description: >-
+      A Zoom meeting at a time, for so many minutes, with a topic and agenda; optionally with a waiting room,
+      registration, or recorded to the cloud. Gives its id, join link, host's start link and passcode.
+    write: true
+    method: POST
+    path: /users/me/meetings
+    inputs:
+      - { name: topic, label: "Its topic", required: true }
+      - { name: start_time, label: "When: 2026-12-01T15:00:00 in the time zone below, or 2026-12-01T20:00:00Z", required: true }
+      - { name: timezone, label: "In this time zone, such as America/New_York (the account's when empty)" }
+      - { name: duration, label: "For this many minutes (60 when empty)", kind: number }
+      - { name: agenda, label: "Its agenda" }
+      - { name: password, label: "Its passcode (up to 10 characters; Zoom makes one when the account needs it)" }
+      - { name: waiting_room, label: "People wait until the host lets them in", kind: boolean }
+      - { name: join_before_host, label: "People may join before the host", kind: boolean }
+      - { name: registration, label: "People register first: auto (approved at once) or manual (the host approves)" }
+      - { name: record_to_cloud, label: "Record it to the cloud as it starts", kind: boolean }
+    send:
+      topic: "{{ input.topic }}"
+      type: 2
+      start_time: "{{ input.start_time }}"
+      timezone: "{{ input.timezone }}"
+      duration: "{{ input.duration }}"
+      agenda: "{{ input.agenda }}"
+      password: "{{ input.password }}"
+      settings:
+        waiting_room: "{{ input.waiting_room }}"
+        join_before_host: "{{ input.join_before_host }}"
+        approval_type: "{{ input.registration == 'auto' ? 0 : (input.registration == 'manual' ? 1 : null) }}"
+        auto_recording: "{{ input.record_to_cloud == true ? 'cloud' : null }}"
+    output: &meeting { id: number, uuid: text, topic: text, start_time: text, timezone: text, duration: number, agenda: text, join_url: text, start_url: text, password: text, registration_url: text, host_id: text, settings: record }
+  list_meetings:
+    label: List meetings
+    description: The signed-in person's meetings - upcoming, live now, past, or all scheduled ones; every page.
+    method: GET
+    path: /users/me/meetings
+    inputs:
+      - { name: which, label: "upcoming, live, previous_meetings or scheduled (every one not yet expired); scheduled when empty" }
+      - { name: from, label: "From this day (2026-12-01)" }
+      - { name: to, label: "To this day (2026-12-31)" }
+    query: { type: "{{ input.which }}", from: "{{ input.from }}", to: "{{ input.to }}", page_size: "300" }
+    items: value.meetings
+    next: "has(value.next_page_token) && value.next_page_token != '' ? {'next_page_token': value.next_page_token} : null"
+    output: { id: number, uuid: text, topic: text, start_time: text, timezone: text, duration: number, agenda: text, join_url: text, type: number, created_at: text }
+  get_meeting:
+    label: Get a meeting
+    description: A meeting's topic, time, links, passcode, settings and - for a repeating one - its occurrences.
+    method: GET
+    path: "/meetings/{{ string(input.meeting_id).replace(' ', '') }}"
+    inputs:
+      - { name: meeting_id, label: "The meeting's id (its number)", required: true }
+    output: *meeting
+  update_meeting:
+    label: Change a meeting
+    description: A meeting's topic, time, length, agenda or passcode; what is left empty stays.
+    write: true
+    method: PATCH
+    path: "/meetings/{{ string(input.meeting_id).replace(' ', '') }}"
+    inputs:
+      - { name: meeting_id, label: "The meeting's id (its number)", required: true }
+      - { name: topic, label: "Its new topic" }
+      - { name: start_time, label: "Its new time: 2026-12-01T15:00:00 in the time zone below, or with Z" }
+      - { name: timezone, label: "In this time zone, such as America/New_York" }
+      - { name: duration, label: "For this many minutes", kind: number }
+      - { name: agenda, label: "Its new agenda" }
+      - { name: password, label: "Its new passcode" }
+    send:
+      topic: "{{ input.topic }}"
+      start_time: "{{ input.start_time }}"
+      timezone: "{{ input.timezone }}"
+      duration: "{{ input.duration }}"
+      agenda: "{{ input.agenda }}"
+      password: "{{ input.password }}"
+    result: "{'changed': true}"
+    output: { changed: boolean }
+  delete_meeting:
+    label: Cancel a meeting
+    description: A meeting deleted; Zoom can tell the people registered for it.
+    write: true
+    method: DELETE
+    path: "/meetings/{{ string(input.meeting_id).replace(' ', '') }}"
+    inputs:
+      - { name: meeting_id, label: "The meeting's id (its number)", required: true }
+      - { name: tell_registrants, label: "Email the people registered that it is cancelled", kind: boolean }
+    query: { cancel_meeting_reminder: "{{ input.tell_registrants }}" }
+    result: "{'cancelled': true}"
+    output: { cancelled: boolean }
+  add_registrant:
+    label: Register someone for a meeting
+    description: >-
+      A person registered for a meeting that takes registration; gives their own join link (unless the host approves
+      each one first).
+    write: true
+    method: POST
+    path: "/meetings/{{ string(input.meeting_id).replace(' ', '') }}/registrants"
+    inputs:
+      - { name: meeting_id, label: "The meeting's id (its number)", required: true }
+      - { name: email, label: "Their email address", required: true }
+      - { name: first_name, label: "Their first name", required: true }
+      - { name: last_name, label: "Their last name" }
+      - { name: org, label: "Their organisation" }
+      - { name: phone, label: "Their phone number" }
+      - { name: approve, label: "Approve them at once (a meeting where the host approves each one)", kind: boolean }
+    send:
+      email: "{{ input.email }}"
+      first_name: "{{ input.first_name }}"
+      last_name: "{{ input.last_name }}"
+      org: "{{ input.org }}"
+      phone: "{{ input.phone }}"
+      auto_approve: "{{ input.approve }}"
+    output: { id: number, registrant_id: text, join_url: text, topic: text, start_time: text, participant_pin_code: number }
+  list_registrants:
+    label: List a meeting's registrants
+    description: The people registered for a meeting - approved, waiting, or turned down; every page.
+    method: GET
+    path: "/meetings/{{ string(input.meeting_id).replace(' ', '') }}/registrants"
+    inputs:
+      - { name: meeting_id, label: "The meeting's id (its number)", required: true }
+      - { name: status, label: "approved, pending or denied (approved when empty)" }
+    query: { status: "{{ input.status }}", page_size: "300" }
+    items: value.registrants
+    next: "has(value.next_page_token) && value.next_page_token != '' ? {'next_page_token': value.next_page_token} : null"
+    output: &registrant { id: text, email: text, first_name: text, last_name: text, status: text, create_time: text, join_url: text, org: text, phone: text }
+  list_past_participants:
+    label: List who attended a meeting
+    description: >-
+      Who joined a meeting that has ended, when they joined and left, and for how long; every page. Zoom gives this to
+      paid accounts.
+    method: GET
+    path: "/past_meetings/{{ string(input.meeting_id).replace(' ', '') }}/participants"
+    inputs:
+      - { name: meeting_id, label: "The meeting's id (its number), or one meeting's UUID", required: true }
+    query: { page_size: "300" }
+    items: value.participants
+    next: "has(value.next_page_token) && value.next_page_token != '' ? {'next_page_token': value.next_page_token} : null"
+    output: { id: text, name: text, user_email: text, join_time: text, leave_time: text, duration: number, status: text, internal_user: boolean }
+  list_recordings:
+    label: List cloud recordings
+    description: >-
+      The signed-in person's meetings recorded to the cloud between two days (at most a month apart), each with its
+      files - video, audio, chat, transcript - and their links; every page.
+    method: GET
+    path: /users/me/recordings
+    inputs:
+      - { name: from, label: "From this day (2026-11-01); today when empty" }
+      - { name: to, label: "To this day (2026-11-30)" }
+    query: { from: "{{ input.from }}", to: "{{ input.to }}", page_size: "300" }
+    items: value.meetings
+    next: "has(value.next_page_token) && value.next_page_token != '' ? {'next_page_token': value.next_page_token} : null"
+    output: &recording { id: number, uuid: text, topic: text, start_time: text, duration: number, total_size: number, recording_count: number, share_url: text, recording_files: list }
+  get_meeting_recordings:
+    label: Get a meeting's recordings
+    description: One meeting's cloud recording files - video, audio, chat, transcript - with their download and play links.
+    method: GET
+    path: "/meetings/{{ string(input.meeting_id).replace(' ', '') }}/recordings"
+    inputs:
+      - { name: meeting_id, label: "The meeting's id (its number), or one meeting's UUID", required: true }
+    output: *recording
+  get_meeting_summary:
+    label: Get a meeting's summary
+    description: >-
+      The summary Zoom's AI Companion wrote of a meeting that has ended - what was said, and the next steps - when the
+      host had meeting summaries turned on.
+    method: GET
+    path: "/meetings/{{ string(input.meeting_id).replace(' ', '') }}/meeting_summary"
+    inputs:
+      - { name: meeting_id, label: "The meeting's id (its number), or one meeting's UUID", required: true }
+    output: { meeting_id: number, meeting_uuid: text, meeting_topic: text, meeting_start_time: text, meeting_end_time: text, summary_content: text, next_steps: list, summary_overview: text, summary_details: list }
+  me:
+    label: Who I am
+    description: The signed-in person's Zoom user id, name, time zone, personal meeting id and account type.
+    method: GET
+    path: /users/me
+    output: { id: text, first_name: text, last_name: text, display_name: text, timezone: text, pmi: number, type: number, account_id: text, status: text }
+triggers:
+  new_recording:
+    label: A meeting recorded to the cloud
+    description: >-
+      Each meeting whose cloud recording is ready, asked for every 15 minutes: its topic, time, and files with their
+      links.
+    poll:
+      method: GET
+      path: /users/me/recordings
+      query:
+        from: "{{ string(timestamp(input.now) - duration('168h')).substring(0, 10) }}"
+        to: "{{ string(timestamp(input.now) + duration('24h')).substring(0, 10) }}"
+        page_size: "300"
+      items: value.meetings
+      next: "has(value.next_page_token) && value.next_page_token != '' ? {'next_page_token': value.next_page_token} : null"
+      id: item.uuid
+      every: 15m
+  new_registrant:
+    label: Someone registered for a meeting
+    description: Each person who registers for a meeting (approved ones, or those waiting for the host), asked for every few minutes.
+    inputs:
+      - { name: meeting_id, label: "The meeting's id (its number)", required: true }
+      - { name: status, label: "approved or pending (approved when empty)" }
+    poll:
+      method: GET
+      path: "/meetings/{{ string(input.meeting_id).replace(' ', '') }}/registrants"
+      query: { status: "{{ input.status }}", page_size: "300" }
+      items: value.registrants
+      next: "has(value.next_page_token) && value.next_page_token != '' ? {'next_page_token': value.next_page_token} : null"
+      id: item.id
+      every: 5m

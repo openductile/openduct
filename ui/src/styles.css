@@ -862,6 +862,11 @@ nav.side.folded .brand-row { flex-direction: column; height: auto; gap: 0.35rem;
 .tg-segments button.here { color: var(--ink); background: var(--bg); box-shadow: var(--flow-shadow); font-weight: 400; }
 .tg-note { display: flex; gap: 0.45rem; align-items: flex-start; margin: 0; font-size: var(--fs-sm); line-height: 1.45; color: var(--muted); }
 .tg-note svg { flex: none; margin-top: 0.12rem; }
+/* cron-schedules: the times of a schedule, and its next runs */
+.tg-times { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+.tg-time { display: inline-flex; align-items: center; gap: 0.2rem; }
+.tg-time input[type="time"] { width: 9.5rem; }
+.tg-next { margin: 0; padding-left: 1.2rem; display: grid; gap: 0.15rem; font-size: var(--fs-sm); font-variant-numeric: tabular-nums; }
 @media (max-width: 40rem) { .tg-kinds { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 
 /* One line on top of Runs and Logs: the title, its filters, its search ---------------------------------------- */
@@ -903,3 +908,10 @@ nav.side.folded .brand-row { flex-direction: column; height: auto; gap: 0.35rem;
 .open-tab .tab-close:hover { background: var(--line); }
 .open-tab .tab-dot { position: absolute; top: 8px; right: 6px; margin: 0; width: 6px; height: 6px; }
 .open-tab.dirty:hover .tab-dot, .open-tab.dirty.here .tab-dot { display: none; }
+
+/* G2 AI agents: an agent's tools, each a card in its form; and what each call did ----------------------------- */
+.tools-list { list-style: none; padding: 0; margin: 0.3rem 0; display: grid; gap: 0.5rem; }
+.tools-list .tool { display: grid; gap: 0.35rem; padding: 0.55rem 0.7rem; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); }
+.tools-list .tool .name { font-weight: 400; min-width: 8rem; }
+.agent-calls code { font-size: var(--fs-sm); white-space: pre-wrap; word-break: break-word; }
+.agent-calls tr.bad td { color: var(--muted); }

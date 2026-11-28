@@ -1,0 +1,11 @@
+description: A contact changed, signed with a secret entered by hand (a webhook made in Mautic)
+trigger: changed_contact
+workflow: wf2
+credential: {"site_url": "https://mautic.example.com", "username": "admin", "password": "pw-test", "webhook_secret": "mautic-hook-secret-1"}
+delivery:
+  headers: { webhook-signature: "6OWXUv603HytALAppdDuWFYAWSkpi7a2bW9znfskcoo=" }
+  body: '{"mautic.lead_post_save_update":[{"contact":{"id":52,"isPublished":true,"dateAdded":"2026-11-27T10:00:00+00:00","dateModified":"2026-11-27T11:00:00+00:00","points":0,"fields":{"core":{"firstname":{"alias":"firstname","value":"Dee"},"lastname":{"alias":"lastname","value":"Ray"},"email":{"alias":"email","value":"dee@example.com"}},"social":[],"personal":[],"professional":[]}},"timestamp":"2026-11-27T11:00:00+00:00"}],"timestamp":"2026-11-27T11:00:02+00:00"}'
+  at: 1764237600
+runs:
+  - {"id": 52, "email": "dee@example.com", "first_name": "Dee", "last_name": "Ray", "company": null, "phone": null, "points": 0, "date_added": "2026-11-27T10:00:00+00:00", "date_modified": "2026-11-27T11:00:00+00:00", "contact": {"id": 52, "isPublished": true, "dateAdded": "2026-11-27T10:00:00+00:00", "dateModified": "2026-11-27T11:00:00+00:00", "points": 0, "fields": {"core": {"firstname": {"alias": "firstname", "value": "Dee"}, "lastname": {"alias": "lastname", "value": "Ray"}, "email": {"alias": "email", "value": "dee@example.com"}}, "social": [], "personal": [], "professional": []}}}
+ids: ["52@2026-11-27T11:00:00+00:00"]

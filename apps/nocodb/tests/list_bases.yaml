@@ -1,0 +1,8 @@
+description: A workspace's bases
+action: list_bases
+credential: { api_token: test-nocodb-token }
+input: { workspace_id: wexample0001 }
+exchanges:
+  - sent: { method: GET, url: https://app.nocodb.com/api/v3/meta/workspaces/wexample0001/bases }
+    answer: { body: { list: [{ id: pexample0001, title: Sales, workspace_id: wexample0001 }] } }
+result: [{ id: pexample0001, title: Sales, workspace_id: wexample0001 }]

@@ -1,0 +1,51 @@
+name: Keep your Bluesky accounts' followers in PostgreSQL every day
+description: >-
+  Each evening, reads your Bluesky accounts' public profiles - followers, accounts followed, posts - and keeps one
+  row a day per account in a PostgreSQL table, so your dashboards can show growth over weeks and months. Run again
+  the same day, it updates that day's row rather than adding one. Make the table first: CREATE TABLE social_followers
+  (day date, handle text, followers int, following int, posts int, PRIMARY KEY (day, handle)). Needs: social_db.
+category: Marketing
+trigger:
+  # 23:50 in your own time zone, so each row is the day's last count.
+  schedule: { every: day, at: "23:50", timezone: America/Los_Angeles }
+# What a test runs on: an event as this trigger gives it.
+sample:
+  scheduled_at: "2026-11-28T07:50:00Z"
+steps:
+  - name: accounts
+    set:
+      # Your accounts' handles.
+      handles: "['yourbrand.bsky.social', 'yourbrand-support.bsky.social']"
+  # The day the count is for, on the schedule's clock.
+  - name: day
+    datetime: { value: value.scheduled_at, timezone: America/Los_Angeles, format: "%Y-%m-%d" }
+  - name: each
+    for_each:
+      items: steps.accounts.handles
+      steps:
+        - name: profile
+          http:
+            url: https://public.api.bsky.app/xrpc/app.bsky.actor.getProfile
+            query: { actor: "{{ item }}" }
+            sample:
+              did: "did:plc:abc123example"
+              handle: yourbrand.bsky.social
+              displayName: Your Brand
+              followersCount: 1843
+              followsCount: 212
+              postsCount: 517
+          retry: { attempts: 3, wait: 30s }
+        - name: keep
+          postgres:
+            credential: social_db
+            sql: >-
+              INSERT INTO social_followers (day, handle, followers, following, posts)
+              VALUES ($1::date, $2, $3::int, $4::int, $5::int)
+              ON CONFLICT (day, handle) DO UPDATE
+              SET followers = EXCLUDED.followers, following = EXCLUDED.following, posts = EXCLUDED.posts
+            params:
+              - steps.day.formatted
+              - item
+              - steps.profile.body.followersCount
+              - steps.profile.body.followsCount
+              - steps.profile.body.postsCount

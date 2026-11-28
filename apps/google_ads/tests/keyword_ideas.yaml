@@ -1,0 +1,21 @@
+description: Ideas from two phrases, in English, for the United States
+action: keyword_ideas
+credential: { access_token: ya29.test }
+input: { customer_id: "1234567890", keywords: [garden furniture, teak bench], language: languageConstants/1000, locations: [geoTargetConstants/2840], developer_token: devtok-test }
+exchanges:
+  - sent:
+      method: POST
+      url: "https://googleads.googleapis.com/v26/customers/1234567890:generateKeywordIdeas"
+      body:
+        keywordSeed: { keywords: [garden furniture, teak bench] }
+        language: languageConstants/1000
+        geoTargetConstants: [geoTargetConstants/2840]
+        keywordPlanNetwork: GOOGLE_SEARCH
+    answer:
+      status: 200
+      body:
+        results:
+          - { text: outdoor teak bench, keywordIdeaMetrics: { avgMonthlySearches: "2400", competition: MEDIUM } }
+        totalSize: "1"
+result:
+  - { text: outdoor teak bench, keywordIdeaMetrics: { avgMonthlySearches: "2400", competition: MEDIUM } }

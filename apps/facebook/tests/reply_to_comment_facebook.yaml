@@ -1,0 +1,9 @@
+description: A reply under a comment on a Facebook post
+action: reply_to_comment
+credential: { access_token: EAAB_test }
+input: { comment_id: "1029384756_555_123", message: Thank you! }
+exchanges:
+  - sent:
+      url: https://graph.facebook.com/v25.0/1029384756_555_123/comments
+    answer: { body: { id: "1029384756_555_124" } }
+result: { id: "1029384756_555_124" }

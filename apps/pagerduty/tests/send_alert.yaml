@@ -1,0 +1,15 @@
+description: An alert triggered on a service through its integration key, at the Events API's own address
+action: send_alert
+credential: { api_key: pd_test_1 }
+input: { routing_key: R0UT1NGKEYEXAMPLE0000000000000000, summary: Disk 95% full on db-1, severity: warning, source: db-1.example.com, dedup_key: db-1/disk, details: { used: "95%" } }
+exchanges:
+  - sent:
+      method: POST
+      url: https://events.pagerduty.com/v2/enqueue
+      body:
+        routing_key: R0UT1NGKEYEXAMPLE0000000000000000
+        event_action: trigger
+        dedup_key: db-1/disk
+        payload: { summary: Disk 95% full on db-1, severity: warning, source: db-1.example.com, custom_details: { used: "95%" } }
+    answer: { status: 202, body: { status: success, message: Event processed, dedup_key: db-1/disk } }
+result: { status: success, message: Event processed, dedup_key: db-1/disk }

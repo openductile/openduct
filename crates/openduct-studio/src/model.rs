@@ -365,6 +365,9 @@ pub(crate) struct Model {
     pub files: Table<FileRecord>,
     pub alerts_sent: Table<AlertSent>,
     pub pipelines: Table<PipelineRecord>,
+    /// MCP: the tokens AI assistants sign in to a workspace's MCP server with (their hashes).
+    pub mcp_tokens: Table<crate::mcp::McpToken>,
+    pub custom_apps: Table<crate::custom_apps::CustomApp>, // app generator: each workspace's own apps
 }
 
 impl Model {
@@ -381,6 +384,8 @@ impl Model {
             files: Table::open(broker, FILES).await?,
             alerts_sent: Table::open(broker, ALERTS_SENT).await?,
             pipelines: Table::open(broker, PIPELINES).await?,
+            mcp_tokens: Table::open(broker, crate::mcp::MCP_TOKENS).await?, // MCP
+            custom_apps: Table::open(broker, crate::custom_apps::CUSTOM_APPS).await?, // app generator
         })
     }
 

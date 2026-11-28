@@ -1,0 +1,25 @@
+description: An employee changed again runs again
+trigger: changed_employee
+credential:
+  company_domain: acme
+  api_key: test-key
+seen:
+  items:
+  - - '101'
+    - '"2023-11-14T20:00:00+00:00"'
+exchanges:
+- sent:
+    query:
+      since: '2023-11-07T22:13:20Z'
+      type: updated
+  answer:
+    status: 200
+    body:
+      latest: '2023-11-14T21:30:00+00:00'
+      employees:
+        '101':
+          id: '101'
+          action: Updated
+          lastChanged: '2023-11-14T21:30:00+00:00'
+ids:
+- '101'

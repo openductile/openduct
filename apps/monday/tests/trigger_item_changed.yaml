@@ -1,0 +1,55 @@
+description: An item changed since the poll before runs again
+trigger: item_changed
+credential:
+  token: monday-test-token
+input:
+  board_id: '1234567890'
+seen:
+  items:
+  - - '9876543210'
+    - d5d0b6915aa6cf52
+  - - '9876543211'
+    - d2f5797dc1552cf6
+exchanges:
+- answer:
+    body:
+      data:
+        boards:
+        - items_page:
+            cursor: null
+            items:
+            - &id004
+              id: '9876543210'
+              name: Order 1042
+              state: active
+              created_at: '2026-11-27T09:00:00Z'
+              updated_at: '2026-11-27T09:00:00Z'
+              url: https://example-co.monday.com/boards/1234567890/pulses/9876543210
+              creator_id: '55500001'
+              group: &id001
+                id: topics
+                title: New orders
+              board: &id002
+                id: '1234567890'
+                name: Orders
+              column_values: &id003
+              - id: status
+                type: status
+                text: Working on it
+                value: '{"index":0}'
+              - id: date4
+                type: date
+                text: '2026-12-01'
+                value: '{"date":"2026-12-01"}'
+            - id: '9876543211'
+              name: Order 1043
+              state: active
+              created_at: '2026-11-27T09:00:00Z'
+              updated_at: '2026-11-27T10:00:00Z'
+              url: https://example-co.monday.com/boards/1234567890/pulses/9876543211
+              creator_id: '55500001'
+              group: *id001
+              board: *id002
+              column_values: *id003
+runs:
+- *id004

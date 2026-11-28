@@ -1,0 +1,12 @@
+description: A conversation removed
+action: delete_conversation
+credential: {access_token: hs-test-token}
+input: {conversation_id: '3443157477'}
+exchanges:
+- sent:
+    method: DELETE
+    url: https://api.helpscout.net/v2/conversations/3443157477
+    query: {}
+    headers: {authorization: Bearer hs-test-token}
+  answer: {status: 204}
+result: {deleted: true}

@@ -1,0 +1,23 @@
+description: Turning the workflow on makes a signed webhook for its address, then a Zammad trigger calling it for new tickets
+trigger: ticket_event
+register: true
+workflow: wf1
+address: https://studio.example/hooks/h1
+credential: { subdomain: acme, token: zm_admin }
+exchanges:
+  - sent:
+      method: POST
+      url: https://acme.zammad.com/api/v1/webhooks
+      headers: { authorization: Token token=zm_admin }
+    answer: { status: 201, body: { id: 7, name: OpenDuct workflow wf1, endpoint: https://studio.example/hooks/h1, signature_token: "**********", active: true } }
+  - sent:
+      method: POST
+      url: https://acme.zammad.com/api/v1/triggers
+      body:
+        name: OpenDuct workflow wf1
+        condition: { ticket.action: { operator: is, value: create } }
+        perform: { notification.webhook: { webhook_id: 7 } }
+        activator: action
+        execution_condition_mode: selective
+        active: true
+    answer: { status: 201, body: { id: 12, name: OpenDuct workflow wf1, perform: { notification.webhook: { webhook_id: 7 } }, active: true } }

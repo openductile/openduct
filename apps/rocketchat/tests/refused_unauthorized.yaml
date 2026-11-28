@@ -1,0 +1,6 @@
+description: A token Rocket.Chat does not take
+action: me
+credential: { workspace: acme, user_id: uAbC123, token: wrong }
+exchanges:
+  - answer: { status: 401, body: { status: error, message: You must be logged in to do this. } }
+error: "Rocket.Chat answered 401: You must be logged in to do this."

@@ -1,0 +1,13 @@
+description: A table's fields
+action: list_fields
+credential: { token: br-test-token }
+input: { table_id: 1203 }
+exchanges:
+  - sent: { method: GET, url: https://api.baserow.io/api/database/fields/table/1203/ }
+    answer:
+      body:
+        - { id: 5001, table_id: 1203, name: Name, order: 0, type: text, primary: true, read_only: false }
+        - { id: 5002, table_id: 1203, name: Status, order: 1, type: single_select, primary: false, read_only: false, select_options: [{ id: 3, value: Open, color: blue }] }
+result:
+  - { id: 5001, table_id: 1203, name: Name, order: 0, type: text, primary: true, read_only: false }
+  - { id: 5002, table_id: 1203, name: Status, order: 1, type: single_select, primary: false, read_only: false, select_options: [{ id: 3, value: Open, color: blue }] }

@@ -1,0 +1,11 @@
+description: The teams of the token's owner
+action: list_teams
+credential: { server_url: "https://chat.example.com", token: testmmtoken0000000000000000 }
+input: { user_id: me }
+exchanges:
+  - sent:
+      method: GET
+      url: https://chat.example.com/api/v4/users/me/teams
+      headers: { authorization: Bearer testmmtoken0000000000000000 }
+    answer: { body: [{ id: t1aaaaaaaaaaaaaaaaaaaaaaaa, name: example-co, display_name: Example Co, type: O }] }
+result: [{ id: t1aaaaaaaaaaaaaaaaaaaaaaaa, name: example-co, display_name: Example Co, type: O }]

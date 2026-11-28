@@ -1,0 +1,338 @@
+# Copyright 2026 Ductile AI, Inc
+# SPDX-License-Identifier: Apache-2.0
+# Written by hand from Salesforce's REST API Developer Guide (Summer '26, API version 67.0) and its Object Reference.
+app: salesforce
+name: Salesforce
+category: crm
+description: Leads, contacts, accounts, opportunities, cases and any other record of a Salesforce org.
+docs: https://developer.salesforce.com/docs/atlas.en-us.api_rest.meta/api_rest/intro_rest.htm
+hosts: ["*.my.salesforce.com"]
+# The org's own address (MyDomainName.my.salesforce.com): asked once signed in, or given with a client's id and secret.
+base_url: "https://{{ credential.instance }}/services/data/v67.0"
+sign_in:
+  - id: salesforce
+    label: Sign in with Salesforce
+    oauth2:
+      authorize: https://login.salesforce.com/services/oauth2/authorize
+      token: https://login.salesforce.com/services/oauth2/token
+      scopes: [api, refresh_token, id]
+      # The org's address, from the REST address the sign-in's user info gives.
+      after_connect: { url: "https://login.salesforce.com/services/oauth2/userinfo", keep: { instance: "value.urls.rest.split('/')[2]" } }
+    headers: { Authorization: "Bearer {{ credential.access_token }}" }
+  - id: salesforce_sandbox
+    label: Sign in with Salesforce (a sandbox)
+    oauth2:
+      authorize: https://test.salesforce.com/services/oauth2/authorize
+      token: https://test.salesforce.com/services/oauth2/token
+      scopes: [api, refresh_token, id]
+      after_connect: { url: "https://test.salesforce.com/services/oauth2/userinfo", keep: { instance: "value.urls.rest.split('/')[2]" } }
+    headers: { Authorization: "Bearer {{ credential.access_token }}" }
+  - id: salesforce_client
+    label: An external client app's id and secret (server to server)
+    fields:
+      - { name: instance, label: "Your org's address, such as mycompany.my.salesforce.com" }
+      - { name: client_id, label: "The app's consumer key" }
+      - { name: client_secret, label: "The app's consumer secret", secret: true }
+    oauth2: { grant: client_credentials, token: "https://{{ credential.instance }}/services/oauth2/token" }
+    headers: { Authorization: "Bearer {{ credential.access_token }}" }
+# Salesforce says what was wrong as a list: a message and a code for each.
+error: "status >= 400 && type(value) == list && size(value) > 0 ? value.map(e, e.message + ' (' + e.errorCode + ')').join('; ') : null"
+default_action: create_record
+actions:
+  create_record:
+    label: Create a record
+    description: "A record of any kind - standard or custom - from its fields by their API names, such as {LastName: Lee, Company: Example Co}."
+    write: true
+    method: POST
+    path: "/sobjects/{{ input.object }}/"
+    inputs:
+      - { name: object, label: "Which kind: Lead, Contact, Account, Opportunity, Case, or a custom object's API name", required: true }
+      - { name: fields, label: "Its fields, by their API names", required: true, kind: record }
+    send: "{{ input.fields }}"
+    output: { id: text, success: boolean, errors: list }
+  get_record:
+    label: Look up a record
+    description: A record's fields by its id; all of them, or only those named.
+    method: GET
+    path: "/sobjects/{{ input.object }}/{{ input.id }}"
+    inputs:
+      - { name: object, label: "Which kind: Lead, Contact, Account ...", required: true }
+      - { name: id, label: "The record's id", required: true }
+      - { name: fields, label: "Only these fields, with commas (Name,Email,Phone)" }
+    query: { fields: "{{ input.fields }}" }
+    output: { attributes: record, Id: text, Name: text, CreatedDate: text, LastModifiedDate: text, OwnerId: text }
+  update_record:
+    label: Change a record
+    description: Only the fields given change.
+    write: true
+    method: PATCH
+    path: "/sobjects/{{ input.object }}/{{ input.id }}"
+    inputs:
+      - { name: object, label: "Which kind: Lead, Contact, Account ...", required: true }
+      - { name: id, label: "The record's id", required: true }
+      - { name: fields, label: "The fields to change, by their API names", required: true, kind: record }
+    send: "{{ input.fields }}"
+    # Salesforce answers 204, with nothing.
+    result: "{'updated': status == 204}"
+    output: { updated: boolean }
+  upsert_record:
+    label: Create or change a record by an outside id
+    description: >-
+      Finds the record whose external id field holds the value and changes it, or makes it when there is none
+      (unless only changing is asked).
+    write: true
+    method: PATCH
+    path: "/sobjects/{{ input.object }}/{{ input.id_field }}/{{ input.id_value }}"
+    inputs:
+      - { name: object, label: "Which kind: Lead, Contact, Account ...", required: true }
+      - { name: id_field, label: "The external id field's API name, such as Customer_Number__c", required: true }
+      - { name: id_value, label: "Its value for this record", required: true }
+      - { name: fields, label: "The record's fields, by their API names", required: true, kind: record }
+      - { name: update_only, label: "Only change one there already; never make one", kind: boolean }
+    query: { updateOnly: "{{ input.update_only }}" }
+    send: "{{ input.fields }}"
+    output: { id: text, success: boolean, created: boolean, errors: list }
+  delete_record:
+    label: Remove a record
+    description: The record goes to the org's recycle bin.
+    write: true
+    method: DELETE
+    path: "/sobjects/{{ input.object }}/{{ input.id }}"
+    inputs:
+      - { name: object, label: "Which kind: Lead, Contact, Account ...", required: true }
+      - { name: id, label: "The record's id", required: true }
+    result: "{'removed': status == 204}"
+    output: { removed: boolean }
+  query:
+    label: Find records with a query
+    description: "The records a SOQL query finds, such as SELECT Id, Name FROM Lead WHERE Status = 'Open' ORDER BY CreatedDate DESC; up to 2,000."
+    method: GET
+    path: /query
+    inputs:
+      - { name: soql, label: "The query (SOQL)", required: true }
+    query: { q: "{{ input.soql }}" }
+    items: value.records
+    output: { attributes: record, Id: text }
+  search:
+    label: Search with SOSL
+    description: "Records of any kinds whose fields hold the words, such as FIND {Lee} IN ALL FIELDS RETURNING Lead(Id, Name), Contact(Id, Name)."
+    method: GET
+    path: /search/
+    inputs:
+      - { name: sosl, label: "The search (SOSL)", required: true }
+    query: { q: "{{ input.sosl }}" }
+    items: value.searchRecords
+    output: { attributes: record, Id: text }
+  find_records:
+    label: Search records for words
+    description: Records whose fields hold the words, without writing SOSL; of one kind, or of every kind searched.
+    method: GET
+    path: /parameterizedSearch/
+    inputs:
+      - { name: q, label: "The words to look for", required: true }
+      - { name: object, label: "Only records of this kind: Lead, Contact, Account ..." }
+      - { name: fields, label: "The fields each gives, with commas (Id,Name,Email); the kind is needed for these" }
+      - { name: limit, label: "At most this many (up to 2,000); the kind is needed for this", kind: number }
+    query: { q: "{{ input.q }}", sobject: "{{ input.object }}", fields: "{{ input.fields }}", defaultLimit: "{{ input.limit }}" }
+    items: value.searchRecords
+    output: { attributes: record, Id: text }
+  describe_object:
+    label: Describe a kind of record
+    description: A kind's fields - their API names, labels, types and picklist values - and what may be done with it.
+    method: GET
+    path: "/sobjects/{{ input.object }}/describe"
+    inputs:
+      - { name: object, label: "Which kind: Lead, Contact, Account ...", required: true }
+    output: { name: text, label: text, custom: boolean, createable: boolean, updateable: boolean, fields: list, recordTypeInfos: list }
+  list_objects:
+    label: List the kinds of record
+    description: Every standard and custom object the user may reach, with its API name and label.
+    method: GET
+    path: /sobjects/
+    items: value.sobjects
+    output: { name: text, label: text, custom: boolean, createable: boolean, queryable: boolean }
+  create_lead:
+    label: Create a lead
+    description: A new lead; its last name and company are needed.
+    write: true
+    method: POST
+    path: /sobjects/Lead/
+    inputs:
+      - { name: last_name, label: Last name, required: true }
+      - { name: company, label: Company, required: true }
+      - { name: first_name, label: First name }
+      - { name: email, label: Email }
+      - { name: phone, label: Phone }
+      - { name: title, label: Job title }
+      - { name: status, label: "Its status, as the org names them (Open - Not Contacted ...)" }
+      - { name: source, label: "Where it came from (Web, Phone Inquiry ...)" }
+      - { name: description, label: Notes }
+    send:
+      LastName: "{{ input.last_name }}"
+      Company: "{{ input.company }}"
+      FirstName: "{{ input.first_name }}"
+      Email: "{{ input.email }}"
+      Phone: "{{ input.phone }}"
+      Title: "{{ input.title }}"
+      Status: "{{ input.status }}"
+      LeadSource: "{{ input.source }}"
+      Description: "{{ input.description }}"
+    output: { id: text, success: boolean, errors: list }
+  create_contact:
+    label: Create a contact
+    description: A new contact, under an account or not; its last name is needed.
+    write: true
+    method: POST
+    path: /sobjects/Contact/
+    inputs:
+      - { name: last_name, label: Last name, required: true }
+      - { name: first_name, label: First name }
+      - { name: email, label: Email }
+      - { name: phone, label: Phone }
+      - { name: title, label: Job title }
+      - { name: account_id, label: "The account it belongs to (its id)" }
+      - { name: description, label: Notes }
+    send:
+      LastName: "{{ input.last_name }}"
+      FirstName: "{{ input.first_name }}"
+      Email: "{{ input.email }}"
+      Phone: "{{ input.phone }}"
+      Title: "{{ input.title }}"
+      AccountId: "{{ input.account_id }}"
+      Description: "{{ input.description }}"
+    output: { id: text, success: boolean, errors: list }
+  create_account:
+    label: Create an account
+    description: A new account - a company or organization you deal with.
+    write: true
+    method: POST
+    path: /sobjects/Account/
+    inputs:
+      - { name: name, label: Name, required: true }
+      - { name: website, label: Website }
+      - { name: phone, label: Phone }
+      - { name: industry, label: Industry }
+      - { name: description, label: Notes }
+    send:
+      Name: "{{ input.name }}"
+      Website: "{{ input.website }}"
+      Phone: "{{ input.phone }}"
+      Industry: "{{ input.industry }}"
+      Description: "{{ input.description }}"
+    output: { id: text, success: boolean, errors: list }
+  create_opportunity:
+    label: Create an opportunity
+    description: A new deal; its name, stage and close date are needed.
+    write: true
+    method: POST
+    path: /sobjects/Opportunity/
+    inputs:
+      - { name: name, label: Name, required: true }
+      - { name: stage, label: "Its stage, as the org names them (Prospecting, Closed Won ...)", required: true }
+      - { name: close_date, label: "When it should close (YYYY-MM-DD)", required: true }
+      - { name: amount, label: Amount, kind: number }
+      - { name: account_id, label: "The account it is with (its id)" }
+      - { name: description, label: Notes }
+    send:
+      Name: "{{ input.name }}"
+      StageName: "{{ input.stage }}"
+      CloseDate: "{{ input.close_date }}"
+      Amount: "{{ input.amount }}"
+      AccountId: "{{ input.account_id }}"
+      Description: "{{ input.description }}"
+    output: { id: text, success: boolean, errors: list }
+  create_case:
+    label: Open a case
+    description: A new support case, for a contact or account or not.
+    write: true
+    method: POST
+    path: /sobjects/Case/
+    inputs:
+      - { name: subject, label: Subject, required: true }
+      - { name: description, label: What it is about }
+      - { name: status, label: "Its status, as the org names them (New ...)" }
+      - { name: priority, label: "Priority: High, Medium, Low" }
+      - { name: origin, label: "Where it came from (Email, Phone, Web)" }
+      - { name: contact_id, label: "The contact it is for (their id)" }
+      - { name: account_id, label: "The account it is for (its id)" }
+    send:
+      Subject: "{{ input.subject }}"
+      Description: "{{ input.description }}"
+      Status: "{{ input.status }}"
+      Priority: "{{ input.priority }}"
+      Origin: "{{ input.origin }}"
+      ContactId: "{{ input.contact_id }}"
+      AccountId: "{{ input.account_id }}"
+    output: { id: text, success: boolean, errors: list }
+  create_task:
+    label: Add a task
+    description: A to-do, for a person (a lead or contact) and about a record (an account, opportunity ...), or not.
+    write: true
+    method: POST
+    path: /sobjects/Task/
+    inputs:
+      - { name: subject, label: Subject, required: true }
+      - { name: due_date, label: "When it is due (YYYY-MM-DD)" }
+      - { name: who_id, label: "The lead or contact it is with (their id)" }
+      - { name: what_id, label: "The record it is about (its id)" }
+      - { name: status, label: "Its status (Not Started, Completed ...)" }
+      - { name: priority, label: "Priority: High, Normal, Low" }
+      - { name: description, label: Notes }
+      - { name: owner_id, label: "Whose task it is (a user's id; yours when empty)" }
+    send:
+      Subject: "{{ input.subject }}"
+      ActivityDate: "{{ input.due_date }}"
+      WhoId: "{{ input.who_id }}"
+      WhatId: "{{ input.what_id }}"
+      Status: "{{ input.status }}"
+      Priority: "{{ input.priority }}"
+      Description: "{{ input.description }}"
+      OwnerId: "{{ input.owner_id }}"
+    output: { id: text, success: boolean, errors: list }
+  add_to_campaign:
+    label: Add someone to a campaign
+    description: A lead or contact made a member of the campaign.
+    write: true
+    method: POST
+    path: /sobjects/CampaignMember/
+    inputs:
+      - { name: campaign_id, label: "The campaign's id", required: true }
+      - { name: lead_id, label: "The lead's id (or a contact's)" }
+      - { name: contact_id, label: "The contact's id (or a lead's)" }
+      - { name: status, label: "Their status in it (Sent, Responded ...)" }
+    send:
+      CampaignId: "{{ input.campaign_id }}"
+      LeadId: "{{ input.lead_id }}"
+      ContactId: "{{ input.contact_id }}"
+      Status: "{{ input.status }}"
+    output: { id: text, success: boolean, errors: list }
+triggers:
+  new_record:
+    label: A new record
+    description: Each record of the kind made (a lead, a contact, an opportunity ...), read in full; the newest asked for every few minutes.
+    inputs:
+      - { name: object, label: "Which kind: Lead, Contact, Account, Opportunity, Case, or a custom object's API name", required: true }
+    poll:
+      method: GET
+      path: /query
+      query: { q: "SELECT Id, CreatedDate FROM {{ input.object }} ORDER BY CreatedDate DESC LIMIT 200" }
+      items: value.records
+      newest_first: true
+      id: item.Id
+      each: { action: get_record, input: { object: "{{ input.object }}", id: "{{ item.Id }}" } }
+      every: 5m
+  changed_record:
+    label: A record made or changed
+    description: Each record of the kind made or changed, read in full; the last changed asked for every few minutes.
+    inputs:
+      - { name: object, label: "Which kind: Lead, Contact, Account, Opportunity, Case, or a custom object's API name", required: true }
+    poll:
+      method: GET
+      path: /query
+      query: { q: "SELECT Id, LastModifiedDate FROM {{ input.object }} ORDER BY LastModifiedDate DESC LIMIT 200" }
+      items: value.records
+      newest_first: true
+      id: item.Id
+      version: item.LastModifiedDate
+      each: { action: get_record, input: { object: "{{ input.object }}", id: "{{ item.Id }}" } }
+      every: 5m

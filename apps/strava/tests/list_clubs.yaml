@@ -1,0 +1,6 @@
+action: list_clubs
+credential: { access_token: st_test_1 }
+exchanges:
+  - sent: { method: GET, url: https://www.strava.com/api/v3/athlete/clubs, query: { per_page: "200" } }
+    answer: { body: [{ id: 3001, name: Harbourside Runners, sport_type: running, city: Bristol, member_count: 214 }] }
+result: [{ id: 3001, name: Harbourside Runners, sport_type: running, city: Bristol, member_count: 214 }]

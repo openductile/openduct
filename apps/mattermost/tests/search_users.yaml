@@ -1,0 +1,12 @@
+description: Users whose names begin with the words, in a team
+action: search_users
+credential: { server_url: "https://chat.example.com", token: testmmtoken0000000000000000 }
+input: { term: ann, team_id: t1aaaaaaaaaaaaaaaaaaaaaaaa }
+exchanges:
+  - sent:
+      method: POST
+      url: https://chat.example.com/api/v4/users/search
+      headers: { authorization: Bearer testmmtoken0000000000000000 }
+      body: { term: ann, team_id: t1aaaaaaaaaaaaaaaaaaaaaaaa }
+    answer: { body: [{ id: u1aaaaaaaaaaaaaaaaaaaaaaaa, username: ann.example, first_name: Ann, last_name: Example, email: ann@example.com, roles: system_user }] }
+result: [{ id: u1aaaaaaaaaaaaaaaaaaaaaaaa, username: ann.example, first_name: Ann, last_name: Example, email: ann@example.com, roles: system_user }]

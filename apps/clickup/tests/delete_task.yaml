@@ -1,0 +1,12 @@
+description: "Remove a task"
+action: delete_task
+credential: { api_key: test-key }
+input: { task_id: "9xh" }
+exchanges:
+  - sent:
+      method: DELETE
+      url: "https://api.clickup.com/api/v2/task/9xh"
+      query: {}
+      headers: { authorization: test-key }
+    answer: { status: 204, body: {} }
+result: { removed: true }

@@ -1,0 +1,7 @@
+action: get_user
+credential: { access_token: ya29.test }
+input: { user: ann@example.com }
+exchanges:
+  - sent: { method: GET, url: https://admin.googleapis.com/admin/directory/v1/users/ann@example.com }
+    answer: { body: { id: "100000000000000000001", primaryEmail: ann@example.com, isAdmin: false, lastLoginTime: "2026-11-27T08:12:00.000Z" } }
+result: { id: "100000000000000000001", primaryEmail: ann@example.com, isAdmin: false, lastLoginTime: "2026-11-27T08:12:00.000Z" }

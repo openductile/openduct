@@ -1,0 +1,6 @@
+description: A wrong key is refused with 400 and the error in Linear's words
+action: me
+credential: { api_key: lin_api_wrong }
+exchanges:
+  - answer: { status: 400, body: { errors: [{ message: Authentication required - not authenticated, extensions: { code: AUTHENTICATION_ERROR } }] } }
+error: "Linear answered 400: Authentication required - not authenticated"

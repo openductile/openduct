@@ -1,0 +1,17 @@
+description: Two switches turned off at once
+action: turn_off
+credential: { url: "http://home.example:8123", token: ha-test-token }
+input: { entity_id: "switch.heater, switch.fan" }
+exchanges:
+  - sent:
+      method: POST
+      url: "http://home.example:8123/api/services/homeassistant/turn_off"
+      body: { entity_id: "switch.heater, switch.fan" }
+    answer:
+      status: 200
+      body:
+        - { entity_id: switch.heater, state: "off", attributes: {}, last_changed: "2026-11-27T22:00:00+00:00" }
+        - { entity_id: switch.fan, state: "off", attributes: {}, last_changed: "2026-11-27T22:00:00+00:00" }
+result:
+  - { entity_id: switch.heater, state: "off", attributes: {}, last_changed: "2026-11-27T22:00:00+00:00" }
+  - { entity_id: switch.fan, state: "off", attributes: {}, last_changed: "2026-11-27T22:00:00+00:00" }

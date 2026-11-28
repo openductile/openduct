@@ -1,0 +1,26 @@
+name: A blog's new posts, posted to Slack
+description: >-
+  Every half hour, look at a blog's feed (RSS, Atom or JSON Feed) and post each new post's title, link and summary to
+  a Slack channel, oldest first. The first look only notes what the feed holds: only posts that come after it is
+  turned on are posted, each once. A site's own page that offers a feed works as its address too.
+category: Marketing
+trigger:
+  feed: { url: "https://blog.example.com/feed.xml", every: 30m }
+# What a test runs on: an item as this trigger gives it.
+sample:
+  id: https://blog.example.com/posts/how-we-wax-a-cap
+  title: How we wax a cap
+  link: https://blog.example.com/posts/how-we-wax-a-cap
+  date: "2026-11-27T09:00:00Z"
+  summary: Waxing a cap takes an afternoon, a pot of wax and more patience than you would think.
+  content: null
+  author: Ada Fern
+  categories: [care, caps]
+  enclosure: null
+  feed: { title: The workshop's journal, link: "https://blog.example.com/", url: "https://blog.example.com/feed.xml" }
+steps:
+  - name: post
+    slack:
+      credential: team-slack
+      channel: "#reading"
+      text: "New on {{ value.feed.title }}: {{ value.title }} - {{ value.link }}\n{{ value.summary }}"

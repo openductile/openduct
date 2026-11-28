@@ -1,0 +1,14 @@
+# Made by `openduct app from-openapi`: Update an existing domain.
+description: "Update an existing domain, made from the API description's schemas"
+action: update_domain
+credential: { token: test-token }
+input: { domain_id: domain_1 }
+exchanges:
+  - sent:
+      method: PATCH
+      url: "https://api.resend.com/domains/domain_1"
+      query: {}
+      headers: { authorization: "Bearer test-token" }
+      body: {}
+    answer: { status: 200, body: { id: d91cd9bd-1176-453e-8fc1-35364d380206, object: domain } }
+result: { id: d91cd9bd-1176-453e-8fc1-35364d380206, object: domain }

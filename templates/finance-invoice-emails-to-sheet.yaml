@@ -1,0 +1,110 @@
+name: Invoices that came by email, logged in a sheet
+description: >-
+  For small finance teams and bookkeepers: every weekday at 6 pm, find the emails with an invoice attached, read the
+  invoice number, the amount and the due date from each email's subject and text, and add one row an invoice to an
+  Invoices sheet - then email you the day's list with the total. Each email is logged once, however often the search
+  finds it (a data table remembers which). What could not be read is left blank for you to fill in. Needs: a Gmail
+  sign-in called gmail, a Google Sheets sign-in called sheets, and a data table invoice_emails (message_id, logged_at).
+category: Finance
+trigger:
+  schedule: { every: weekday, at: "18:00", timezone: America/Chicago }
+# What a test runs on: an event as this trigger gives it.
+sample:
+  scheduled_at: "2026-11-27T00:00:00Z"
+steps:
+  - name: settings
+    set:
+      # Change these to your own.
+      spreadsheet: "'your-spreadsheet-id'"
+      send_to: "'books@example.com'"
+  - name: found
+    gmail:
+      credential: gmail
+      action: find_emails
+      # Two days, so a slow mail is not missed; the table keeps each one logged once.
+      q: "subject:(invoice OR bill) has:attachment newer_than:2d -in:spam"
+    retry: { attempts: 3, wait: 30s }
+  - name: check
+    for_each:
+      items: steps.found
+      steps:
+        - name: seen
+          table: { name: invoice_emails, action: count, where: { message_id: "{{ item.id }}" } }
+  - name: new_ones
+    # The emails not logged before.
+    javascript: |
+      return steps.found.filter((m, i) => steps.check[i].seen.count === 0);
+  - name: each_email
+    for_each:
+      items: steps.new_ones
+      steps:
+        - name: email
+          gmail: { credential: gmail, action: read_email, message_id: "{{ item.id }}" }
+          retry: { attempts: 3, wait: 10s }
+        - name: invoice
+          javascript: |
+            // Reads who sent it, the invoice number, the amount and the due date from the subject and text.
+            const m = steps.email || {};
+            const headers = (m.payload && m.payload.headers) || [];
+            const header = n => (headers.find(h => h.name.toLowerCase() === n) || {}).value || "";
+            const text = `${header("subject")} ${m.snippet || ""}`;
+            // The first word after "invoice" or "bill" (and no., number or #) that has a digit in it.
+            const words = [...text.matchAll(/(?:invoice|bill)\s*(?:no\.?|number|#)?\s*[:#]?\s*([A-Z0-9][A-Z0-9\-\/]{2,})/gi)];
+            const number = (words.map(w => w[1]).find(w => /\d/.test(w))) || "";
+            // An amount as $1,234.56, 1.234,56 EUR or GBP 99: the last separator followed by two digits is the decimal one.
+            const money = text.match(/(USD|EUR|GBP|CAD|AUD|\$|€|£)\s?(\d[\d.,]*)|(\d[\d.,]*)\s?(USD|EUR|GBP|CAD|AUD)/i);
+            let amount = "", currency = "";
+            if (money) {
+              const raw = money[2] || money[3];
+              const sign = (money[1] || money[4] || "").toUpperCase();
+              currency = { "$": "USD", "€": "EUR", "£": "GBP" }[sign] || sign;
+              const cents = /[.,]\d{2}$/.test(raw);
+              const whole = cents ? raw.slice(0, -3).replace(/[.,]/g, "") : raw.replace(/[.,]/g, "");
+              amount = cents ? `${whole}.${raw.slice(-2)}` : whole;
+            }
+            const due = (text.match(/due\s*(?:date|on|by)?\s*:?\s*(\d{4}-\d{2}-\d{2}|\d{1,2}\/\d{1,2}\/\d{4}|[A-Z][a-z]{2,8}\.?\s\d{1,2},?\s\d{4})/i) || [])[1] || "";
+            return { from: header("from"), subject: header("subject"), date: header("date"), number, amount, currency, due };
+        - name: add
+          google_sheets:
+            credential: sheets
+            action: add_row
+            spreadsheet_id: "{{ steps.settings.spreadsheet }}"
+            sheet: Invoices
+            values:
+              - "{{ steps.invoice.date }}"
+              - "{{ steps.invoice.from }}"
+              - "{{ steps.invoice.number }}"
+              - "{{ steps.invoice.amount }}"
+              - "{{ steps.invoice.currency }}"
+              - "{{ steps.invoice.due }}"
+              - "{{ steps.invoice.subject }}"
+              - "https://mail.google.com/mail/u/0/#all/{{ item.id }}"
+          retry: { attempts: 3, wait: 10s }
+        - name: logged
+          table:
+            name: invoice_emails
+            action: insert
+            row: { message_id: "{{ item.id }}", logged_at: "{{ value.scheduled_at }}" }
+  - name: today
+    javascript: |
+      // The invoices logged in this run, and their total in each currency.
+      const added = steps.each_email.map(r => r.invoice).filter(Boolean);
+      const totals = {};
+      for (const i of added) {
+        if (i.amount) totals[i.currency || "?"] = Math.round(((totals[i.currency || "?"] || 0) + Number(i.amount)) * 100) / 100;
+      }
+      const lines = added.map(i => `- ${i.from}: invoice ${i.number || "(no number)"}, ${i.amount || "?"} ${i.currency}, due ${i.due || "?"}`);
+      const sum = Object.entries(totals).map(([c, t]) => `${t.toFixed(2)} ${c}`).join(", ");
+      return { count: added.length, text: `${added.length} new invoices today (${sum || "no amounts read"}):\n${lines.join("\n")}` };
+  - name: tell
+    if:
+      when: steps.today.count > 0
+      then:
+        - name: send
+          gmail:
+            credential: gmail
+            action: send_email
+            to: "{{ steps.settings.send_to }}"
+            subject: "{{ steps.today.count }} new invoices logged"
+            text: "{{ steps.today.text }}"
+          retry: { attempts: 3, wait: 30s }

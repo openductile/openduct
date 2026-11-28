@@ -1,0 +1,887 @@
+# Copyright 2026 Ductile AI, Inc
+# SPDX-License-Identifier: Apache-2.0
+# Pipedrive: made by `openduct app from-openapi` from Pipedrive's own API descriptions (API v2, and v1 for leads and
+# notes), then finished by hand: labels in our own words, records out of Pipedrive's wrapping, polls for new deals,
+# people and organizations.
+app: pipedrive
+name: Pipedrive
+category: crm
+description: Deals, people, organizations, leads, activities and notes of a Pipedrive company.
+docs: https://developers.pipedrive.com/docs/api/v1
+hosts: [api.pipedrive.com]
+base_url: https://api.pipedrive.com
+sign_in:
+  - id: pipedrive
+    label: A personal API token
+    fields:
+      - { name: api_key, label: "Your API token (your profile, Personal preferences, API)", secret: true }
+    headers: { x-api-token: "{{ credential.api_key }}" }
+default_action: create_deal
+error: "status >= 400 && type(value) == map && has(value.error) && value.error != null ? string(value.error) : null"
+actions:
+  create_deal:
+    label: Create a deal
+    description: A new deal, for a person or organization, in a pipeline's stage, with its value.
+    write: true
+    method: POST
+    path: "/api/v2/deals"
+    inputs:
+      - { name: title, label: The deal's title, required: true }
+      - { name: person_id, label: The person it is with (their id), kind: number }
+      - { name: org_id, label: The organization it is with (its id), kind: number }
+      - { name: value, label: Its value, kind: number }
+      - { name: currency, label: "Its currency (USD, EUR ...; the company's when empty)" }
+      - { name: pipeline_id, label: Its pipeline (its id), kind: number }
+      - { name: stage_id, label: Its stage (its id), kind: number }
+      - { name: status, label: "Status: open (the default), won or lost" }
+      - { name: owner_id, label: Who owns it (a user's id), kind: number }
+      - { name: probability, label: How likely it is to be won (0 to 100), kind: number }
+      - { name: expected_close_date, label: When it should close (YYYY-MM-DD) }
+      - { name: label_ids, label: "Labels: a list of their ids", kind: list }
+      - name: custom_fields
+        label: "Custom field values: a record of each field's key and its value"
+        kind: record
+    send:
+      title: "{{ input.title }}"
+      owner_id: "{{ input.owner_id }}"
+      person_id: "{{ input.person_id }}"
+      org_id: "{{ input.org_id }}"
+      pipeline_id: "{{ input.pipeline_id }}"
+      stage_id: "{{ input.stage_id }}"
+      value: "{{ input.value }}"
+      currency: "{{ input.currency }}"
+      status: "{{ input.status }}"
+      probability: "{{ input.probability }}"
+      expected_close_date: "{{ input.expected_close_date }}"
+      label_ids: "{{ input.label_ids }}"
+      custom_fields: "{{ input.custom_fields }}"
+    result: value.data
+    output:
+      id: number
+      title: text
+      value: number
+      currency: text
+      status: text
+      pipeline_id: number
+      stage_id: number
+      person_id: number
+      org_id: number
+      owner_id: number
+      add_time: text
+      update_time: text
+      expected_close_date: text
+      custom_fields: record
+  get_deal:
+    label: Look up a deal
+    description: One deal, by its id.
+    method: GET
+    path: "/api/v2/deals/{{ input.id }}"
+    inputs:
+      - { name: id, label: The deal's id, required: true, kind: number }
+      - { name: include_option_labels, label: "Give the names of chosen options, not only their ids", kind: boolean }
+    query: { include_option_labels: "{{ input.include_option_labels }}" }
+    result: value.data
+    output:
+      id: number
+      title: text
+      value: number
+      currency: text
+      status: text
+      pipeline_id: number
+      stage_id: number
+      person_id: number
+      org_id: number
+      owner_id: number
+      add_time: text
+      update_time: text
+      expected_close_date: text
+      custom_fields: record
+  update_deal:
+    label: Change a deal
+    description: "Only the fields given change; a new stage moves it along."
+    write: true
+    method: PATCH
+    path: "/api/v2/deals/{{ input.id }}"
+    inputs:
+      - { name: id, label: The deal's id, required: true, kind: number }
+      - { name: title, label: The deal's title }
+      - { name: person_id, label: The person it is with (their id), kind: number }
+      - { name: org_id, label: The organization it is with (its id), kind: number }
+      - { name: value, label: Its value, kind: number }
+      - { name: currency, label: Its currency }
+      - { name: pipeline_id, label: Its pipeline (its id), kind: number }
+      - { name: stage_id, label: Its stage (its id), kind: number }
+      - { name: status, label: "Status: open, won or lost" }
+      - { name: lost_reason, label: Why it was lost }
+      - { name: owner_id, label: Who owns it (a user's id), kind: number }
+      - { name: probability, label: How likely it is to be won (0 to 100), kind: number }
+      - { name: expected_close_date, label: When it should close (YYYY-MM-DD) }
+      - { name: label_ids, label: "Labels: a list of their ids", kind: list }
+      - name: custom_fields
+        label: "Custom field values: a record of each field's key and its value"
+        kind: record
+    send:
+      title: "{{ input.title }}"
+      owner_id: "{{ input.owner_id }}"
+      person_id: "{{ input.person_id }}"
+      org_id: "{{ input.org_id }}"
+      pipeline_id: "{{ input.pipeline_id }}"
+      stage_id: "{{ input.stage_id }}"
+      value: "{{ input.value }}"
+      currency: "{{ input.currency }}"
+      status: "{{ input.status }}"
+      probability: "{{ input.probability }}"
+      lost_reason: "{{ input.lost_reason }}"
+      expected_close_date: "{{ input.expected_close_date }}"
+      label_ids: "{{ input.label_ids }}"
+      custom_fields: "{{ input.custom_fields }}"
+    result: value.data
+    output:
+      id: number
+      title: text
+      value: number
+      currency: text
+      status: text
+      pipeline_id: number
+      stage_id: number
+      person_id: number
+      org_id: number
+      owner_id: number
+      add_time: text
+      update_time: text
+      expected_close_date: text
+      custom_fields: record
+  delete_deal:
+    label: Remove a deal
+    description: The deal is removed (Pipedrive keeps it 30 days before it is gone for good).
+    write: true
+    method: DELETE
+    path: "/api/v2/deals/{{ input.id }}"
+    inputs:
+      - { name: id, label: The deal's id, required: true, kind: number }
+    result: value.data
+    output: { id: number }
+  list_deals:
+    label: List deals
+    description: >-
+      Deals that are not archived, by owner, person, organization, pipeline, stage or a saved filter; every page, up
+      to 1,000.
+    method: GET
+    path: "/api/v2/deals"
+    inputs:
+      - { name: pipeline_id, label: Only in this pipeline (its id), kind: number }
+      - { name: stage_id, label: Only at this stage (its id), kind: number }
+      - { name: person_id, label: Only with this person (their id), kind: number }
+      - { name: org_id, label: Only with this organization (its id), kind: number }
+      - { name: owner_id, label: Only those this user owns (their id), kind: number }
+      - { name: filter_id, label: Only those a saved filter finds (its id), kind: number }
+      - { name: updated_since, label: "Only those changed since (RFC 3339, such as 2026-11-01T00:00:00Z)" }
+      - { name: sort_by, label: "Order by: id (the default), update_time or add_time" }
+      - { name: sort_direction, label: asc (the default) or desc }
+    query:
+      filter_id: "{{ input.filter_id }}"
+      owner_id: "{{ input.owner_id }}"
+      person_id: "{{ input.person_id }}"
+      org_id: "{{ input.org_id }}"
+      pipeline_id: "{{ input.pipeline_id }}"
+      stage_id: "{{ input.stage_id }}"
+      updated_since: "{{ input.updated_since }}"
+      sort_by: "{{ input.sort_by }}"
+      sort_direction: "{{ input.sort_direction }}"
+      limit: "100"
+    items: value.data
+    next: >-
+      value.additional_data.next_cursor == null || value.additional_data.next_cursor == '' ? null : {'cursor':
+      value.additional_data.next_cursor}
+    output:
+      id: number
+      title: text
+      value: number
+      currency: text
+      status: text
+      pipeline_id: number
+      stage_id: number
+      person_id: number
+      org_id: number
+      owner_id: number
+      add_time: text
+      update_time: text
+      expected_close_date: text
+      custom_fields: record
+  search_deals:
+    label: Search deals
+    description: "Deals whose title, notes or custom fields hold the words; every page."
+    method: GET
+    path: "/api/v2/deals/search"
+    inputs:
+      - { name: term, label: The words (at least 2 characters), required: true }
+      - { name: exact_match, label: Only whole matches, kind: boolean }
+      - { name: person_id, label: Only with this person (their id), kind: number }
+      - { name: organization_id, label: Only with this organization (its id), kind: number }
+      - { name: status, label: "Only these: open, won or lost" }
+    query:
+      term: "{{ input.term }}"
+      exact_match: "{{ input.exact_match }}"
+      person_id: "{{ input.person_id }}"
+      organization_id: "{{ input.organization_id }}"
+      status: "{{ input.status }}"
+      limit: "100"
+    items: value.data.items.map(i, i.item)
+    next: >-
+      has(value.additional_data) && value.additional_data != null && has(value.additional_data.next_cursor) &&
+      value.additional_data.next_cursor != null ? {'cursor': value.additional_data.next_cursor} : null
+    output:
+      id: number
+      type: text
+      title: text
+      value: number
+      currency: text
+      status: text
+      owner: record
+      stage: record
+      person: record
+      organization: record
+  add_product_to_deal:
+    label: Add a product to a deal
+    description: A product on the deal, at a price and quantity.
+    write: true
+    method: POST
+    path: "/api/v2/deals/{{ input.id }}/products"
+    inputs:
+      - { name: id, label: The deal's id, required: true, kind: number }
+      - { name: product_id, label: The product's id, required: true, kind: number }
+      - { name: item_price, label: The price of one, required: true, kind: number }
+      - { name: quantity, label: How many, required: true, kind: number }
+      - { name: discount, label: "A discount (a percentage, or an amount as the discount type says)", kind: number }
+      - { name: discount_type, label: The discount is a percentage (the default) or an amount }
+      - { name: comments, label: Notes }
+    send:
+      product_id: "{{ input.product_id }}"
+      item_price: "{{ input.item_price }}"
+      quantity: "{{ input.quantity }}"
+      comments: "{{ input.comments }}"
+      discount: "{{ input.discount }}"
+      discount_type: "{{ input.discount_type }}"
+    result: value.data
+    output:
+      id: number
+      deal_id: number
+      product_id: number
+      item_price: number
+      quantity: number
+      sum: number
+      currency: text
+  create_person:
+    label: Create a person
+    description: A new contact person, with their emails and phones, in an organization or not.
+    write: true
+    method: POST
+    path: "/api/v2/persons"
+    inputs:
+      - { name: name, label: Their name, required: true }
+      - name: emails
+        label: "Emails: a list of records such as {value: ann@example.com, primary: true, label: work}"
+        kind: list
+      - name: phones
+        label: "Phones: a list of records such as {value: '+1 555 0100', primary: true, label: mobile}"
+        kind: list
+      - { name: org_id, label: The organization they are in (its id), kind: number }
+      - { name: owner_id, label: Who owns them (a user's id), kind: number }
+      - { name: job_title, label: Job title }
+      - { name: label_ids, label: "Labels: a list of their ids", kind: list }
+      - name: custom_fields
+        label: "Custom field values: a record of each field's key and its value"
+        kind: record
+    send:
+      name: "{{ input.name }}"
+      owner_id: "{{ input.owner_id }}"
+      org_id: "{{ input.org_id }}"
+      emails: "{{ input.emails }}"
+      phones: "{{ input.phones }}"
+      label_ids: "{{ input.label_ids }}"
+      job_title: "{{ input.job_title }}"
+      custom_fields: "{{ input.custom_fields }}"
+    result: value.data
+    output:
+      id: number
+      name: text
+      first_name: text
+      last_name: text
+      emails: list
+      phones: list
+      org_id: number
+      owner_id: number
+      add_time: text
+      update_time: text
+      custom_fields: record
+  get_person:
+    label: Look up a person
+    description: One person, by their id.
+    method: GET
+    path: "/api/v2/persons/{{ input.id }}"
+    inputs:
+      - { name: id, label: The person's id, required: true, kind: number }
+      - { name: include_option_labels, label: "Give the names of chosen options, not only their ids", kind: boolean }
+    query: { include_option_labels: "{{ input.include_option_labels }}" }
+    result: value.data
+    output:
+      id: number
+      name: text
+      first_name: text
+      last_name: text
+      emails: list
+      phones: list
+      org_id: number
+      owner_id: number
+      add_time: text
+      update_time: text
+      custom_fields: record
+  update_person:
+    label: Change a person
+    description: "Only the fields given change; emails and phones given take the place of theirs."
+    write: true
+    method: PATCH
+    path: "/api/v2/persons/{{ input.id }}"
+    inputs:
+      - { name: id, label: The person's id, required: true, kind: number }
+      - { name: name, label: Their name }
+      - name: emails
+        label: "Emails: a list of records such as {value: ann@example.com, primary: true, label: work}"
+        kind: list
+      - { name: phones, label: "Phones: a list of records", kind: list }
+      - { name: org_id, label: The organization they are in (its id), kind: number }
+      - { name: owner_id, label: Who owns them (a user's id), kind: number }
+      - { name: job_title, label: Job title }
+      - { name: label_ids, label: "Labels: a list of their ids", kind: list }
+      - { name: custom_fields, label: Custom field values, kind: record }
+    send:
+      name: "{{ input.name }}"
+      owner_id: "{{ input.owner_id }}"
+      org_id: "{{ input.org_id }}"
+      emails: "{{ input.emails }}"
+      phones: "{{ input.phones }}"
+      label_ids: "{{ input.label_ids }}"
+      job_title: "{{ input.job_title }}"
+      custom_fields: "{{ input.custom_fields }}"
+    result: value.data
+    output:
+      id: number
+      name: text
+      first_name: text
+      last_name: text
+      emails: list
+      phones: list
+      org_id: number
+      owner_id: number
+      add_time: text
+      update_time: text
+      custom_fields: record
+  list_persons:
+    label: List people
+    description: "People, by owner, organization, deal or a saved filter; every page, up to 1,000."
+    method: GET
+    path: "/api/v2/persons"
+    inputs:
+      - { name: org_id, label: Only in this organization (its id), kind: number }
+      - { name: deal_id, label: Only on this deal (its id), kind: number }
+      - { name: owner_id, label: Only those this user owns (their id), kind: number }
+      - { name: filter_id, label: Only those a saved filter finds (its id), kind: number }
+      - { name: updated_since, label: Only those changed since (RFC 3339) }
+      - { name: sort_by, label: "Order by: id (the default), update_time or add_time" }
+      - { name: sort_direction, label: asc (the default) or desc }
+    query:
+      filter_id: "{{ input.filter_id }}"
+      owner_id: "{{ input.owner_id }}"
+      org_id: "{{ input.org_id }}"
+      deal_id: "{{ input.deal_id }}"
+      updated_since: "{{ input.updated_since }}"
+      sort_by: "{{ input.sort_by }}"
+      sort_direction: "{{ input.sort_direction }}"
+      limit: "100"
+    items: value.data
+    next: >-
+      value.additional_data.next_cursor == null || value.additional_data.next_cursor == '' ? null : {'cursor':
+      value.additional_data.next_cursor}
+    output:
+      id: number
+      name: text
+      first_name: text
+      last_name: text
+      emails: list
+      phones: list
+      org_id: number
+      owner_id: number
+      add_time: text
+      update_time: text
+      custom_fields: record
+  search_people:
+    label: Search people
+    description: "People whose name, email, phone, notes or custom fields hold the words; every page."
+    method: GET
+    path: "/api/v2/persons/search"
+    inputs:
+      - { name: term, label: "The words, an email or a phone (at least 2 characters)", required: true }
+      - { name: exact_match, label: Only whole matches, kind: boolean }
+      - { name: organization_id, label: Only in this organization (its id), kind: number }
+    query:
+      term: "{{ input.term }}"
+      exact_match: "{{ input.exact_match }}"
+      organization_id: "{{ input.organization_id }}"
+      limit: "100"
+    items: value.data.items.map(i, i.item)
+    next: >-
+      has(value.additional_data) && value.additional_data != null && has(value.additional_data.next_cursor) &&
+      value.additional_data.next_cursor != null ? {'cursor': value.additional_data.next_cursor} : null
+    output:
+      id: number
+      type: text
+      name: text
+      phones: list
+      emails: list
+      organization: record
+      owner: record
+  create_organization:
+    label: Create an organization
+    description: A new organization - a company you deal with.
+    write: true
+    method: POST
+    path: "/api/v2/organizations"
+    inputs:
+      - { name: name, label: Its name, required: true }
+      - { name: owner_id, label: Who owns it (a user's id), kind: number }
+      - { name: website, label: Website }
+      - { name: address, label: "Its address: a record such as {value: '1 Main St, Springfield'}", kind: record }
+      - { name: industry, label: Its industry (an option's id), kind: number }
+      - { name: label_ids, label: "Labels: a list of their ids", kind: list }
+      - { name: custom_fields, label: Custom field values, kind: record }
+    send:
+      name: "{{ input.name }}"
+      owner_id: "{{ input.owner_id }}"
+      label_ids: "{{ input.label_ids }}"
+      address: "{{ input.address }}"
+      website: "{{ input.website }}"
+      industry: "{{ input.industry }}"
+      custom_fields: "{{ input.custom_fields }}"
+    result: value.data
+    output:
+      id: number
+      name: text
+      owner_id: number
+      address: record
+      add_time: text
+      update_time: text
+      custom_fields: record
+  get_organization:
+    label: Look up an organization
+    description: One organization, by its id.
+    method: GET
+    path: "/api/v2/organizations/{{ input.id }}"
+    inputs:
+      - { name: id, label: The organization's id, required: true, kind: number }
+      - { name: include_option_labels, label: "Give the names of chosen options, not only their ids", kind: boolean }
+    query: { include_option_labels: "{{ input.include_option_labels }}" }
+    result: value.data
+    output:
+      id: number
+      name: text
+      owner_id: number
+      address: record
+      add_time: text
+      update_time: text
+      custom_fields: record
+  update_organization:
+    label: Change an organization
+    description: Only the fields given change.
+    write: true
+    method: PATCH
+    path: "/api/v2/organizations/{{ input.id }}"
+    inputs:
+      - { name: id, label: The organization's id, required: true, kind: number }
+      - { name: name, label: Its name }
+      - { name: owner_id, label: Who owns it (a user's id), kind: number }
+      - { name: website, label: Website }
+      - { name: address, label: "Its address: a record such as {value: '1 Main St, Springfield'}", kind: record }
+      - { name: label_ids, label: "Labels: a list of their ids", kind: list }
+      - { name: custom_fields, label: Custom field values, kind: record }
+    send:
+      name: "{{ input.name }}"
+      owner_id: "{{ input.owner_id }}"
+      label_ids: "{{ input.label_ids }}"
+      address: "{{ input.address }}"
+      website: "{{ input.website }}"
+      custom_fields: "{{ input.custom_fields }}"
+    result: value.data
+    output:
+      id: number
+      name: text
+      owner_id: number
+      address: record
+      add_time: text
+      update_time: text
+      custom_fields: record
+  list_organizations:
+    label: List organizations
+    description: "Organizations, by owner or a saved filter; every page, up to 1,000."
+    method: GET
+    path: "/api/v2/organizations"
+    inputs:
+      - { name: owner_id, label: Only those this user owns (their id), kind: number }
+      - { name: filter_id, label: Only those a saved filter finds (its id), kind: number }
+      - { name: updated_since, label: Only those changed since (RFC 3339) }
+      - { name: sort_by, label: "Order by: id (the default), update_time or add_time" }
+      - { name: sort_direction, label: asc (the default) or desc }
+    query:
+      filter_id: "{{ input.filter_id }}"
+      owner_id: "{{ input.owner_id }}"
+      updated_since: "{{ input.updated_since }}"
+      sort_by: "{{ input.sort_by }}"
+      sort_direction: "{{ input.sort_direction }}"
+      limit: "100"
+    items: value.data
+    next: >-
+      value.additional_data.next_cursor == null || value.additional_data.next_cursor == '' ? null : {'cursor':
+      value.additional_data.next_cursor}
+    output:
+      id: number
+      name: text
+      owner_id: number
+      address: record
+      add_time: text
+      update_time: text
+      custom_fields: record
+  search_organizations:
+    label: Search organizations
+    description: "Organizations whose name, address, notes or custom fields hold the words; every page."
+    method: GET
+    path: "/api/v2/organizations/search"
+    inputs:
+      - { name: term, label: The words (at least 2 characters), required: true }
+      - { name: exact_match, label: Only whole matches, kind: boolean }
+    query: { term: "{{ input.term }}", exact_match: "{{ input.exact_match }}", limit: "100" }
+    items: value.data.items.map(i, i.item)
+    next: >-
+      has(value.additional_data) && value.additional_data != null && has(value.additional_data.next_cursor) &&
+      value.additional_data.next_cursor != null ? {'cursor': value.additional_data.next_cursor} : null
+    output: { id: number, type: text, name: text, address: text, owner: record }
+  create_lead:
+    label: Create a lead
+    description: A new lead - a possible deal not yet qualified - for a person or an organization.
+    write: true
+    method: POST
+    path: "/v1/leads"
+    inputs:
+      - { name: title, label: The lead's title, required: true }
+      - { name: person_id, label: "The person it is with (their id; or give an organization)", kind: number }
+      - { name: organization_id, label: The organization it is with (its id), kind: number }
+      - { name: owner_id, label: Who owns it (a user's id), kind: number }
+      - { name: value, label: "Its value: a record such as {amount: 500, currency: USD}", kind: record }
+      - { name: expected_close_date, label: When it should close (YYYY-MM-DD) }
+      - { name: label_ids, label: "Labels: a list of their ids", kind: list }
+    send:
+      title: "{{ input.title }}"
+      owner_id: "{{ input.owner_id }}"
+      label_ids: "{{ input.label_ids }}"
+      person_id: "{{ input.person_id }}"
+      organization_id: "{{ input.organization_id }}"
+      value: "{{ input.value }}"
+      expected_close_date: "{{ input.expected_close_date }}"
+    result: value.data
+    output:
+      id: text
+      title: text
+      owner_id: number
+      person_id: number
+      organization_id: number
+      value: record
+      expected_close_date: text
+      label_ids: list
+      add_time: text
+  search_leads:
+    label: Search leads
+    description: "Leads whose title, notes or custom fields hold the words; every page."
+    method: GET
+    path: "/api/v2/leads/search"
+    inputs:
+      - { name: term, label: The words (at least 2 characters), required: true }
+      - { name: exact_match, label: Only whole matches, kind: boolean }
+      - { name: person_id, label: Only with this person (their id), kind: number }
+      - { name: organization_id, label: Only with this organization (its id), kind: number }
+    query:
+      term: "{{ input.term }}"
+      exact_match: "{{ input.exact_match }}"
+      person_id: "{{ input.person_id }}"
+      organization_id: "{{ input.organization_id }}"
+      limit: "100"
+    items: value.data.items.map(i, i.item)
+    next: >-
+      has(value.additional_data) && value.additional_data != null && has(value.additional_data.next_cursor) &&
+      value.additional_data.next_cursor != null ? {'cursor': value.additional_data.next_cursor} : null
+    output:
+      id: text
+      type: text
+      title: text
+      owner: record
+      person: record
+      organization: record
+      value: number
+      currency: text
+  create_activity:
+    label: Add an activity
+    description: A call, meeting, task or other activity, on a deal, lead, person or organization, due at a time.
+    write: true
+    method: POST
+    path: "/api/v2/activities"
+    inputs:
+      - { name: subject, label: What it is }
+      - { name: type, label: "Its kind, as the company names them (call, meeting, task, email ...)" }
+      - { name: due_date, label: When it is due (YYYY-MM-DD) }
+      - { name: due_time, label: "At what time (HH:MM, UTC)" }
+      - { name: duration, label: "How long (HH:MM)" }
+      - { name: deal_id, label: On this deal (its id), kind: number }
+      - { name: lead_id, label: On this lead (its id) }
+      - { name: org_id, label: With this organization (its id), kind: number }
+      - name: participants
+        label: "People in it: a list of records such as {person_id: 7, primary: true}"
+        kind: list
+      - { name: owner_id, label: Whose it is (a user's id), kind: number }
+      - { name: note, label: A note (HTML) }
+      - { name: done, label: Done already, kind: boolean }
+      - { name: busy, label: Shows the owner as busy, kind: boolean }
+    send:
+      subject: "{{ input.subject }}"
+      type: "{{ input.type }}"
+      owner_id: "{{ input.owner_id }}"
+      deal_id: "{{ input.deal_id }}"
+      lead_id: "{{ input.lead_id }}"
+      org_id: "{{ input.org_id }}"
+      due_date: "{{ input.due_date }}"
+      due_time: "{{ input.due_time }}"
+      duration: "{{ input.duration }}"
+      busy: "{{ input.busy }}"
+      done: "{{ input.done }}"
+      participants: "{{ input.participants }}"
+      note: "{{ input.note }}"
+    result: value.data
+    output:
+      id: number
+      subject: text
+      type: text
+      due_date: text
+      due_time: text
+      done: boolean
+      deal_id: number
+      lead_id: text
+      person_id: number
+      org_id: number
+      owner_id: number
+      add_time: text
+      update_time: text
+  update_activity:
+    label: Change an activity
+    description: "Only the fields given change; mark it done here."
+    write: true
+    method: PATCH
+    path: "/api/v2/activities/{{ input.id }}"
+    inputs:
+      - { name: id, label: The activity's id, required: true, kind: number }
+      - { name: subject, label: What it is }
+      - { name: type, label: Its kind }
+      - { name: due_date, label: When it is due (YYYY-MM-DD) }
+      - { name: due_time, label: "At what time (HH:MM, UTC)" }
+      - { name: duration, label: "How long (HH:MM)" }
+      - { name: deal_id, label: On this deal (its id), kind: number }
+      - { name: owner_id, label: Whose it is (a user's id), kind: number }
+      - { name: note, label: A note (HTML) }
+      - { name: done, label: Done, kind: boolean }
+    send:
+      subject: "{{ input.subject }}"
+      type: "{{ input.type }}"
+      owner_id: "{{ input.owner_id }}"
+      deal_id: "{{ input.deal_id }}"
+      due_date: "{{ input.due_date }}"
+      due_time: "{{ input.due_time }}"
+      duration: "{{ input.duration }}"
+      done: "{{ input.done }}"
+      note: "{{ input.note }}"
+    result: value.data
+    output:
+      id: number
+      subject: text
+      type: text
+      due_date: text
+      due_time: text
+      done: boolean
+      deal_id: number
+      lead_id: text
+      person_id: number
+      org_id: number
+      owner_id: number
+      add_time: text
+      update_time: text
+  list_activities:
+    label: List activities
+    description: >-
+      Activities, by owner, deal, lead, person, organization, whether done, or a saved filter; every page, up to
+      1,000.
+    method: GET
+    path: "/api/v2/activities"
+    inputs:
+      - { name: owner_id, label: Only this user's (their id), kind: number }
+      - { name: deal_id, label: Only on this deal (its id), kind: number }
+      - { name: lead_id, label: Only on this lead (its id) }
+      - { name: person_id, label: Only with this person (their id), kind: number }
+      - { name: org_id, label: Only with this organization (its id), kind: number }
+      - { name: done, label: Only those done (or not), kind: boolean }
+      - { name: filter_id, label: Only those a saved filter finds (its id), kind: number }
+      - { name: updated_since, label: Only those changed since (RFC 3339) }
+      - { name: sort_by, label: "Order by: id (the default), update_time, add_time or due_date" }
+      - { name: sort_direction, label: asc (the default) or desc }
+    query:
+      filter_id: "{{ input.filter_id }}"
+      owner_id: "{{ input.owner_id }}"
+      deal_id: "{{ input.deal_id }}"
+      lead_id: "{{ input.lead_id }}"
+      person_id: "{{ input.person_id }}"
+      org_id: "{{ input.org_id }}"
+      done: "{{ input.done }}"
+      updated_since: "{{ input.updated_since }}"
+      sort_by: "{{ input.sort_by }}"
+      sort_direction: "{{ input.sort_direction }}"
+      limit: "100"
+    items: value.data
+    next: >-
+      value.additional_data.next_cursor == null || value.additional_data.next_cursor == '' ? null : {'cursor':
+      value.additional_data.next_cursor}
+    output:
+      id: number
+      subject: text
+      type: text
+      due_date: text
+      due_time: text
+      done: boolean
+      deal_id: number
+      lead_id: text
+      person_id: number
+      org_id: number
+      owner_id: number
+      add_time: text
+      update_time: text
+  add_note:
+    label: Add a note
+    description: A note (HTML) on a deal, lead, person or organization.
+    write: true
+    method: POST
+    path: "/v1/notes"
+    inputs:
+      - { name: content, label: The note (HTML), required: true }
+      - { name: deal_id, label: On this deal (its id), kind: number }
+      - { name: lead_id, label: On this lead (its id) }
+      - { name: person_id, label: On this person (their id), kind: number }
+      - { name: org_id, label: On this organization (its id), kind: number }
+      - { name: pinned_to_deal_flag, label: "Pin it on the deal: 1", kind: number }
+      - { name: pinned_to_person_flag, label: "Pin it on the person: 1", kind: number }
+    send:
+      content: "{{ input.content }}"
+      lead_id: "{{ input.lead_id }}"
+      deal_id: "{{ input.deal_id }}"
+      person_id: "{{ input.person_id }}"
+      org_id: "{{ input.org_id }}"
+      pinned_to_deal_flag: "{{ input.pinned_to_deal_flag }}"
+      pinned_to_person_flag: "{{ input.pinned_to_person_flag }}"
+    result: value.data
+    output:
+      id: number
+      content: text
+      deal_id: number
+      person_id: number
+      org_id: number
+      lead_id: text
+      add_time: text
+  list_pipelines:
+    label: List pipelines
+    description: The company's pipelines, with their ids.
+    method: GET
+    path: "/api/v2/pipelines"
+    query: { limit: "100" }
+    items: value.data
+    next: >-
+      value.additional_data.next_cursor == null || value.additional_data.next_cursor == '' ? null : {'cursor':
+      value.additional_data.next_cursor}
+    output:
+      id: number
+      name: text
+      order_nr: number
+      is_deleted: boolean
+      is_deal_probability_enabled: boolean
+      add_time: text
+      update_time: text
+  list_stages:
+    label: List stages
+    description: The stages of a pipeline (or of all), with their ids and order.
+    method: GET
+    path: "/api/v2/stages"
+    inputs:
+      - { name: pipeline_id, label: Only this pipeline's (its id), kind: number }
+    query: { pipeline_id: "{{ input.pipeline_id }}", limit: "100" }
+    items: value.data
+    next: >-
+      value.additional_data.next_cursor == null || value.additional_data.next_cursor == '' ? null : {'cursor':
+      value.additional_data.next_cursor}
+    output:
+      id: number
+      order_nr: number
+      name: text
+      is_deleted: boolean
+      deal_probability: number
+      pipeline_id: number
+      is_deal_rot_enabled: boolean
+      days_to_rotten: number
+      add_time: text
+      update_time: text
+triggers:
+  new_deal:
+    label: A new deal
+    description: Each deal made, the newest asked for every few minutes.
+    poll:
+      action: list_deals
+      input: { sort_by: add_time, sort_direction: desc }
+      newest_first: true
+      id: string(item.id)
+      every: "5m"
+  changed_deal:
+    label: A deal made or changed
+    description: Each deal made or changed (a new stage, won or lost), the last changed asked for every few minutes.
+    poll:
+      action: list_deals
+      input: { sort_by: update_time, sort_direction: desc }
+      newest_first: true
+      id: string(item.id)
+      version: item.update_time
+      every: "5m"
+  new_person:
+    label: A new person
+    description: Each person added, the newest asked for every few minutes.
+    poll:
+      action: list_persons
+      input: { sort_by: add_time, sort_direction: desc }
+      newest_first: true
+      id: string(item.id)
+      every: "5m"
+  new_organization:
+    label: A new organization
+    description: Each organization added, the newest asked for every few minutes.
+    poll:
+      action: list_organizations
+      input: { sort_by: add_time, sort_direction: desc }
+      newest_first: true
+      id: string(item.id)
+      every: "5m"
+  new_activity:
+    label: A new activity
+    description: Each activity added, the newest asked for every few minutes.
+    poll:
+      action: list_activities
+      input: { sort_by: add_time, sort_direction: desc }
+      newest_first: true
+      id: string(item.id)
+      every: "5m"

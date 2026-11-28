@@ -1,0 +1,11 @@
+description: A subtask under a task
+action: create_subtask
+credential: { token: "2/1200000000000001/1209999999999999:0a1b2c3d4e5f" }
+input: { task_id: "1204000000000001", name: Check the hours, due_on: "2026-11-30" }
+exchanges:
+  - sent:
+      method: POST
+      url: https://app.asana.com/api/1.0/tasks/1204000000000001/subtasks
+      body: { data: { name: Check the hours, due_on: "2026-11-30" } }
+    answer: { status: 201, body: { data: { gid: "1204000000000010", name: Check the hours, due_on: "2026-11-30", parent: { gid: "1204000000000001", name: Send the March invoices } } } }
+result: { gid: "1204000000000010", name: Check the hours, due_on: "2026-11-30", parent: { gid: "1204000000000001", name: Send the March invoices } }

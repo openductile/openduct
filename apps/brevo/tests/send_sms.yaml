@@ -1,0 +1,10 @@
+action: send_sms
+credential: { api_key: xkeysib-test-1 }
+input: { to: "+15555550100", text: Your order A-1001 is ready to collect., sender: ExampleShop }
+exchanges:
+  - sent:
+      method: POST
+      url: https://api.brevo.com/v3/transactionalSMS/sms
+      body: { recipient: "+15555550100", content: Your order A-1001 is ready to collect., sender: ExampleShop, type: transactional }
+    answer: { status: 201, body: { reference: ref-test-1, messageId: 1795770000000001, smsCount: 1, usedCredits: 0.7, remainingCredits: 99.3 } }
+result: { reference: ref-test-1, messageId: 1795770000000001, smsCount: 1, usedCredits: 0.7, remainingCredits: 99.3 }

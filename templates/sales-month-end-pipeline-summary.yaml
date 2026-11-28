@@ -1,0 +1,108 @@
+name: A month-end summary of the sales pipeline
+description: >-
+  On the last day of each month at 15:00 (New York time), read the deals in your Pipeline sheet (deal, owner, stage,
+  value, expected close, last activity). A short Python script works out the figures exactly - won this month, open by
+  stage, closing next month, deals quiet for 30 days - and an AI agent writes the summary from them, reading your
+  Notes sheet for the deals at risk. The summary is added to a Monthly sheet and sent from Outlook to the sales team.
+  Needs: sheets (google_sheets), model (ai), outlook (microsoft_365).
+category: Sales
+trigger:
+  schedule: { every: month, on: [last], at: "15:00", timezone: America/New_York }
+# What a test runs on: an event as this trigger gives it.
+sample:
+  scheduled_at: '2026-11-30T20:00:00Z'
+steps:
+  - name: deals
+    google_sheets:
+      action: read_rows
+      credential: sheets
+      spreadsheet_id: your-spreadsheet-id
+      range: Pipeline!A1:F2000
+    retry: { attempts: 3, wait: 30s }
+  - name: figures
+    python: |
+      # The sheet's first row names the columns: Deal, Owner, Stage, Value, Close (YYYY-MM-DD), Last activity.
+      from datetime import date, timedelta
+
+      rows = steps.get("deals") or []
+      head = [str(h).strip().lower() for h in (rows[0] if rows else [])]
+      def col(row, name):
+          return row[head.index(name)] if name in head and head.index(name) < len(row) else ""
+      def day(text):
+          try:
+              return date.fromisoformat(str(text)[:10])
+          except ValueError:
+              return None
+      def money(text):
+          try:
+              return float(str(text).replace(",", "").replace("$", "").strip() or 0)
+          except ValueError:
+              return 0.0
+
+      today = date.fromisoformat(value["scheduled_at"][:10])
+      month_start = today.replace(day=1)
+      next_start = (month_start + timedelta(days=32)).replace(day=1)
+      next_end = (next_start + timedelta(days=32)).replace(day=1) - timedelta(days=1)
+
+      won, open_by_stage, closing, quiet = 0.0, {}, [], []
+      for row in rows[1:]:
+          stage = str(col(row, "stage")).strip() or "Unknown"
+          amount = money(col(row, "value"))
+          close, last = day(col(row, "close")), day(col(row, "last activity"))
+          if stage.lower() == "won":
+              if close and month_start <= close <= today:
+                  won += amount
+              continue
+          if stage.lower() == "lost":
+              continue
+          open_by_stage[stage] = open_by_stage.get(stage, 0.0) + amount
+          if close and next_start <= close <= next_end:
+              closing.append(col(row, "deal"))
+          if last and (today - last).days >= 30:
+              quiet.append(f"{col(row, 'deal')} ({col(row, 'owner')}, {(today - last).days} days)")
+
+      result = {
+          "month": today.strftime("%B %Y"),
+          "won": round(won, 2),
+          "open_by_stage": {k: round(v, 2) for k, v in sorted(open_by_stage.items())},
+          "open_total": round(sum(open_by_stage.values()), 2),
+          "closing_next_month": closing,
+          "quiet_30_days": quiet,
+          "deals_read": max(len(rows) - 1, 0),
+      }
+  - name: writer
+    agent:
+      credential: model
+      instructions: >-
+        You write a sales team's month-end summary in at most eight short lines: what was won, what the open pipeline
+        looks like, what closes next month, and which deals need attention. Use the figures exactly as given; do not
+        add up anything yourself. For the quiet deals, read the Notes sheet with read_notes and say in a few words
+        why each may be stuck.
+      input: "Figures for {{ steps.figures.month }}: {{ steps.figures }}"
+      tools:
+        - name: read_notes
+          description: The Notes sheet - deal, date, note - for what was said about each deal lately.
+          google_sheets:
+            action: read_rows
+            credential: sheets
+            spreadsheet_id: your-spreadsheet-id
+            range: Notes!A1:C2000
+      allow: [read_notes]
+      max_turns: 4
+      max_tool_calls: 3
+  - name: keep
+    google_sheets:
+      action: add_row
+      credential: sheets
+      spreadsheet_id: your-spreadsheet-id
+      sheet: Monthly
+      values: ["{{ steps.figures.month }}", "{{ steps.figures.won }}", "{{ steps.figures.open_total }}", "{{ size(steps.figures.quiet_30_days) }}", "{{ steps.writer.text }}"]
+    retry: { attempts: 3, wait: 30s }
+  - name: send
+    microsoft_365:
+      action: send_email
+      credential: outlook
+      to: sales-team@example.com
+      subject: "Pipeline, {{ steps.figures.month }}: won {{ steps.figures.won }}, open {{ steps.figures.open_total }}"
+      text: "{{ steps.writer.text }}"
+    retry: { attempts: 3, wait: 30s }

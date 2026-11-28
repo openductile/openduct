@@ -1,0 +1,17 @@
+description: Articles not seen before start runs, oldest first
+trigger: new_news_article
+credential: { api_key: serp_test_key_1 }
+input: { q: Example Coffee }
+seen: { items: [["https://news.example/old", ""]] }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://serpapi.com/search"
+      query: { api_key: serp_test_key_1, engine: google_news, q: Example Coffee, so: "1" }
+    answer:
+      body:
+        news_results:
+          - { position: 1, title: Example Coffee opens a second shop, link: "https://news.example/second-shop", iso_date: "2026-11-27T08:00:00Z" }
+          - { position: 2, title: Example Coffee wins an award, link: "https://news.example/award", iso_date: "2026-11-26T08:00:00Z" }
+          - { position: 3, title: Example Coffee opens, link: "https://news.example/old", iso_date: "2026-10-01T08:00:00Z" }
+ids: ["https://news.example/award", "https://news.example/second-shop"]

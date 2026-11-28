@@ -1,0 +1,17 @@
+description: "The repositories Travis CI builds"
+action: list_repos
+credential: { token: test-token }
+input: { active: true }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://api.travis-ci.com/repos"
+      query: { active: "true", limit: "100" }
+    answer:
+      body:
+        "@type": repositories
+        "@pagination": { limit: 100, offset: 0, count: 1, is_first: true, is_last: true, next: null }
+        repositories:
+          - { id: 891, name: storefront, slug: shop-example/storefront, active: true, private: true, github_language: Ruby, default_branch: { name: main } }
+result:
+  - { id: 891, name: storefront, slug: shop-example/storefront, active: true, private: true, github_language: Ruby, default_branch: { name: main } }

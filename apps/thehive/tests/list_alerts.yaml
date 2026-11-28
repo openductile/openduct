@@ -1,0 +1,89 @@
+description: 'The newest alerts of a status: a query of TheHive''s'
+action: list_alerts
+credential:
+  url: https://thehive.example.com
+  api_key: test-key
+input:
+  status: New
+  limit: 2
+exchanges:
+- sent:
+    method: POST
+    url: https://thehive.example.com/api/v1/query
+    headers:
+      authorization: Bearer test-key
+    body:
+      query:
+      - _name: listAlert
+      - _name: filter
+        _eq:
+          _field: status
+          _value: New
+      - _name: sort
+        _fields:
+        - _createdAt: desc
+      - _name: page
+        from: 0
+        to: 2
+  answer:
+    status: 200
+    body:
+    - &id001
+      _id: ~4160
+      _type: Alert
+      _createdBy: soc-bot@example.com
+      _createdAt: 1795161600000
+      _updatedAt: 1795161600000
+      type: phishing
+      source: mail-gateway
+      sourceRef: MG-4160
+      externalLink: null
+      title: Invoice with a macro
+      description: A reported email asks for a password reset.
+      severity: 2
+      severityLabel: MEDIUM
+      date: 1795161600000
+      tags:
+      - phishing
+      tlp: 2
+      tlpLabel: AMBER
+      pap: 2
+      papLabel: AMBER
+      follow: true
+      customFields: []
+      observableCount: 1
+      status: New
+      stage: New
+      assignee: null
+      summary: null
+    - &id002
+      _id: ~4096
+      _type: Alert
+      _createdBy: soc-bot@example.com
+      _createdAt: 1795161600000
+      _updatedAt: 1795161600000
+      type: phishing
+      source: mail-gateway
+      sourceRef: MG-4096
+      externalLink: null
+      title: Password reset email reported
+      description: A reported email asks for a password reset.
+      severity: 2
+      severityLabel: MEDIUM
+      date: 1795161600000
+      tags:
+      - phishing
+      tlp: 2
+      tlpLabel: AMBER
+      pap: 2
+      papLabel: AMBER
+      follow: true
+      customFields: []
+      observableCount: 1
+      status: New
+      stage: New
+      assignee: null
+      summary: null
+result:
+- *id001
+- *id002

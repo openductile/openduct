@@ -1,0 +1,26 @@
+# Made by `openduct app from-openapi`: Create metadata taxonomy.
+description: "Create metadata taxonomy, made from the API description's schemas"
+action: create_metadata_taxonomy
+credential: { access_token: test-access-token }
+input: { display_name: Geography, namespace: enterprise_123456 }
+exchanges:
+  - sent:
+      method: POST
+      url: "https://api.box.com/2.0/metadata_taxonomies"
+      query: {}
+      headers: { authorization: "Bearer test-access-token" }
+      body: { displayName: Geography, namespace: enterprise_123456 }
+    answer:
+      status: 201
+      body:
+        id: "822227e0-47a5-921b-88a8-494760b2e6d2"
+        key: geography
+        displayName: Geography
+        namespace: enterprise_123456
+        levels: [{ displayName: Continent, description: Continent, level: 1 }]
+result:
+  id: "822227e0-47a5-921b-88a8-494760b2e6d2"
+  key: geography
+  displayName: Geography
+  namespace: enterprise_123456
+  levels: [{ displayName: Continent, description: Continent, level: 1 }]

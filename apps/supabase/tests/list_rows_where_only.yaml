@@ -1,0 +1,9 @@
+description: Conditions alone, a few columns, at most 5 rows
+action: list_rows
+credential: { project_url: "https://abcdefgh.supabase.co", api_key: sb_secret_test1 }
+input: { table: orders, where: "total.gte.50", columns: "id,total", limit: 5 }
+exchanges:
+  - sent:
+      query: { select: "id,total", and: "(total.gte.50)", limit: "5" }
+    answer: { body: [{ id: 1, total: 50 }] }
+result: [{ id: 1, total: 50 }]

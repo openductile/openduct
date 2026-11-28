@@ -1,0 +1,11 @@
+description: "A contact taken out of a segment"
+action: remove_from_segment
+credential: {"site_url": "https://mautic.example.com", "username": "admin", "password": "pw-test"}
+input: {"segment_id": 3, "contact_id": 47}
+exchanges:
+  - sent:
+      method: POST
+      url: "https://mautic.example.com/api/segments/3/contact/47/remove"
+      headers: {"authorization": "Basic YWRtaW46cHctdGVzdA=="}
+    answer: {"status": 200, "body": {"success": 1}}
+result: {"success": 1}

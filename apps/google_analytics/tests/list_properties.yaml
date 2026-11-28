@@ -1,0 +1,35 @@
+description: Every property of every account, over two pages
+action: list_properties
+credential: { access_token: ya29.a0 }
+exchanges:
+  - sent:
+      method: GET
+      url: https://analyticsadmin.googleapis.com/v1beta/accountSummaries
+      query: { pageSize: "200" }
+      headers: { authorization: Bearer ya29.a0 }
+    answer:
+      body:
+        accountSummaries:
+          - name: accountSummaries/1000
+            account: accounts/1000
+            displayName: Example Shop
+            propertySummaries:
+              - { property: properties/123456789, displayName: "Shop \"web\"", propertyType: PROPERTY_TYPE_ORDINARY, parent: accounts/1000 }
+              - { property: properties/223456789, displayName: Shop app, propertyType: PROPERTY_TYPE_ORDINARY, parent: accounts/1000 }
+          - { name: accountSummaries/1001, account: accounts/1001, displayName: Empty account }
+        nextPageToken: p2
+  - sent:
+      url: https://analyticsadmin.googleapis.com/v1beta/accountSummaries
+      query: { pageSize: "200", pageToken: p2 }
+    answer:
+      body:
+        accountSummaries:
+          - name: accountSummaries/2000
+            account: accounts/2000
+            displayName: Example Blog
+            propertySummaries:
+              - { property: properties/323456789, displayName: Blog, propertyType: PROPERTY_TYPE_ORDINARY, parent: accounts/2000 }
+result:
+  - { property_id: "123456789", name: "Shop \"web\"", kind: PROPERTY_TYPE_ORDINARY, account_id: "1000", account: Example Shop }
+  - { property_id: "223456789", name: Shop app, kind: PROPERTY_TYPE_ORDINARY, account_id: "1000", account: Example Shop }
+  - { property_id: "323456789", name: Blog, kind: PROPERTY_TYPE_ORDINARY, account_id: "2000", account: Example Blog }

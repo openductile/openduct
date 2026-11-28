@@ -1,0 +1,17 @@
+description: A subscriber taken off
+action: delete_subscriber
+credential:
+  api_key: test-key
+input:
+  subscriber_id: '31986843064993537'
+exchanges:
+- sent:
+    method: DELETE
+    url: https://connect.mailerlite.com/api/subscribers/31986843064993537
+    headers:
+      authorization: Bearer test-key
+      accept: application/json
+  answer:
+    status: 204
+result:
+  removed: true

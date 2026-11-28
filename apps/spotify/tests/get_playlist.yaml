@@ -1,0 +1,7 @@
+action: get_playlist
+credential: { access_token: BQ-test-token }
+input: { playlist: "https://open.spotify.com/playlist/0TestList000000000001" }
+exchanges:
+  - sent: { method: GET, url: https://api.spotify.com/v1/playlists/0TestList000000000001 }
+    answer: { body: { id: 0TestList000000000001, name: Shop music, description: Played in the shop, followers: { total: 3 }, snapshot_id: snap1 } }
+result: { id: 0TestList000000000001, name: Shop music, description: Played in the shop, followers: { total: 3 }, snapshot_id: snap1 }

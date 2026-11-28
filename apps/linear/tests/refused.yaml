@@ -1,0 +1,7 @@
+description: Linear answers a GraphQL error with 200; the step fails in its words
+action: get_issue
+credential: { api_key: lin_api_test1 }
+input: { issue: ENG-999 }
+exchanges:
+  - answer: { status: 200, body: { errors: [{ message: Entity not found - Could not find referenced Issue., path: [issue], extensions: { code: INVALID_INPUT } }], data: null } }
+error: "Linear refused it: Entity not found - Could not find referenced Issue."

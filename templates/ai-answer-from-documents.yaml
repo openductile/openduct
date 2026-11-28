@@ -1,0 +1,26 @@
+name: Answer from your documents
+description: >-
+  When a question comes in over a webhook ({"question": ...}), find the passages of your documents nearest it (kept by
+  "Keep documents for answers"), have a model answer from those passages only, and answer the caller with the answer
+  and every passage it was given - its document, its score, and whether the answer cited it.
+category: AI
+trigger:
+  webhook: {}
+# What a test runs on: an event as this trigger gives it.
+sample:
+  question: How long do I have to send something back?
+steps:
+  - name: answer
+    ask_documents:
+      credential: docs-db
+      table: doc_pieces
+      embed_with: model
+      question: "{{ value.question }}"
+      top_k: 4
+      max_tokens: 500
+  - name: reply
+    respond:
+      status: 200
+      body:
+        answer: "{{ steps.answer.text }}"
+        sources: "{{ steps.answer.sources }}"

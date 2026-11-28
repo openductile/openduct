@@ -1,0 +1,7 @@
+action: update_member
+credential: { access_token: ya29.test }
+input: { group: sales@example.com, member: dan@example.com, role: MANAGER }
+exchanges:
+  - sent: { method: PATCH, url: https://admin.googleapis.com/admin/directory/v1/groups/sales@example.com/members/dan@example.com, body: { role: MANAGER } }
+    answer: { body: { id: "100000000000000000004", email: dan@example.com, role: MANAGER } }
+result: { id: "100000000000000000004", email: dan@example.com, role: MANAGER }

@@ -1,0 +1,121 @@
+name: Take in supplier invoices, checked, with a reply to each
+description: >-
+  Suppliers, or your e-invoicing portal, send each invoice to this workflow's address as JSON - its number, the
+  supplier, their e-mail, the amount, the currency, the day it was issued, the day it is due, and the PDF in Base64.
+  Each one is checked with your own rules (in Python), and a duplicate is refused; a good one is kept in the invoices
+  data table, its PDF saved in the invoices folder, and the supplier thanked from your Gmail, while a wrong one is
+  answered with what to correct. Make the table once, under Tables: invoices (number, supplier, email, currency, issued,
+  due as text; amount as a number); the folder is one your admin allows (--files-root invoices=...). Needs: gmail.
+category: Finance
+trigger:
+  # Left empty here: each workflow made from the template is given a token of its own.
+  webhook: { token: "" }
+# What a test runs on: an event as this trigger gives it.
+sample:
+  number: INV-2026-0417
+  supplier: Harbor Paper Co.
+  email: accounts@harbor-paper.example
+  amount: 1240.50
+  currency: USD
+  issued: "2026-11-20"
+  due: "2026-12-20"
+  po: PO-3381
+  pdf: JVBERi0xLjQKJcOkw7zDtsOfCjEgMCBvYmoKPDwvVHlwZS9DYXRhbG9nPj4KZW5kb2JqCnRyYWlsZXIKPDwvUm9vdCAxIDAgUj4+CiUlRU9G
+steps:
+  - name: check
+    python: |
+      from datetime import date
+
+      problems = []
+      for field in ("number", "supplier", "email", "amount", "currency", "issued", "due"):
+          if value.get(field) in (None, ""):
+              problems.append(f"{field} is missing")
+      try:
+          amount = round(float(value.get("amount") or 0), 2)
+          if amount <= 0:
+              problems.append("the amount must be more than 0")
+      except (TypeError, ValueError):
+          amount = 0
+          problems.append("the amount is not a number")
+      currency = str(value.get("currency") or "").upper()
+      if currency and currency not in ("USD", "EUR", "GBP", "CAD"):
+          problems.append(f"we pay in USD, EUR, GBP or CAD, not {currency}")
+      try:
+          issued = date.fromisoformat(str(value.get("issued")))
+          due = date.fromisoformat(str(value.get("due")))
+          if due < issued:
+              problems.append("the due day is before the day it was issued")
+          elif (due - issued).days > 120:
+              problems.append("the due day is more than 120 days after the day it was issued")
+      except ValueError:
+          problems.append("the days are written as 2026-11-20")
+      email = str(value.get("email") or "").strip().lower()
+      if email and "@" not in email:
+          problems.append("the e-mail address is not valid")
+      result = {
+          "ok": not problems,
+          "problems": problems,
+          "number": str(value.get("number") or "").strip(),
+          "email": email,
+          "amount": amount,
+          "currency": currency,
+      }
+  - name: earlier
+    table: { name: invoices, action: get, where: { number: "{{ steps.check.number }}" }, limit: 1 }
+  - name: answer
+    switch:
+      cases:
+        - label: already had
+          when: size(steps.earlier) > 0
+          steps:
+            - respond: { status: 409, body: { error: "invoice {{ steps.check.number }} was sent before" } }
+        - label: to correct
+          when: "!steps.check.ok"
+          steps:
+            - name: tell
+              gmail:
+                action: send_email
+                credential: gmail
+                to: "{{ steps.check.email }}"
+                subject: "Invoice {{ steps.check.number }}: please correct and send it again"
+                text: >-
+                  Thank you for invoice {{ steps.check.number }}. We cannot take it in as it is:
+                  {{ steps.check.problems.join('; ') }}. Please correct it and send it again.
+              on_error: continue
+            - respond: { status: 422, body: { problems: "{{ steps.check.problems }}" } }
+      default:
+        - name: keep
+          table:
+            name: invoices
+            action: insert
+            row:
+              number: "{{ steps.check.number }}"
+              supplier: "{{ value.supplier }}"
+              email: "{{ steps.check.email }}"
+              amount: "{{ steps.check.amount }}"
+              currency: "{{ steps.check.currency }}"
+              issued: "{{ value.issued }}"
+              due: "{{ value.due }}"
+        - name: pdf
+          if:
+            when: has(value.pdf) && value.pdf != ''
+            then:
+              - name: file
+                convert: { format: base64, base64: value.pdf, name: "{{ steps.check.number }}.pdf", type: application/pdf }
+              - name: saved
+                storage:
+                  action: write
+                  root: invoices
+                  path: "{{ steps.check.number }}.pdf"
+                  file: steps.file
+        - name: thanks
+          gmail:
+            action: send_email
+            credential: gmail
+            to: "{{ steps.check.email }}"
+            subject: "Invoice {{ steps.check.number }} received"
+            text: >-
+              Thank you - we have invoice {{ steps.check.number }} for {{ '%.2f'.format([steps.check.amount]) }}
+              {{ steps.check.currency }}, due {{ value.due }}. You hear from us only if something is wrong.
+          retry: { attempts: 3, wait: 10s }
+        - respond: { status: 201, body: { received: "{{ steps.check.number }}" } }

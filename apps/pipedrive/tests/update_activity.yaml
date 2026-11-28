@@ -1,0 +1,30 @@
+description: "Change an activity"
+action: update_activity
+credential: { api_key: test-key }
+input: { id: 1 }
+exchanges:
+  - sent:
+      method: PATCH
+      url: "https://api.pipedrive.com/api/v2/activities/1"
+      query: {}
+      headers: { x-api-token: test-key }
+      body: {}
+    answer:
+      status: 200
+      body:
+        success: true
+        data:
+          id: 1
+          subject: example
+          type: example
+          owner_id: 1
+          creator_user_id: 1
+          is_deleted: true
+          add_time: example
+          update_time: example
+          deal_id: 1
+          lead_id: lead_1
+          person_id: 1
+          org_id: 1
+result: {id: 1, subject: example, type: example, owner_id: 1, creator_user_id: 1, is_deleted: true, add_time: example, update_time: example,
+  deal_id: 1, lead_id: lead_1, person_id: 1, org_id: 1}

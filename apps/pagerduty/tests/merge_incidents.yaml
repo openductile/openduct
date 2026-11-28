@@ -1,0 +1,10 @@
+action: merge_incidents
+credential: { api_key: pd_test_1 }
+input: { id: PINC001, from: ann@example.com, source_ids: "PINC002, PINC003" }
+exchanges:
+  - sent:
+      method: PUT
+      url: https://api.pagerduty.com/incidents/PINC001/merge
+      body: { source_incidents: [{ id: PINC002, type: incident_reference }, { id: PINC003, type: incident_reference }] }
+    answer: { body: { incident: { id: PINC001, status: triggered, title: Checkout is down } } }
+result: { id: PINC001, status: triggered, title: Checkout is down }

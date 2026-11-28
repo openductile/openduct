@@ -1,0 +1,21 @@
+description: A report uploaded in three requests - an address asked for, the bytes sent there, the upload finished in a thread
+action: upload_file
+credential: { bot_token: xoxb-1 }
+input: { channel: C0123456, content: "date,total\n2026-11-23,120.00\n", filename: report.csv, title: Daily report, comment: "Today's figures", thread_ts: "1700000000.000100" }
+exchanges:
+  - sent:
+      method: POST
+      url: https://slack.com/api/files.getUploadURLExternal
+      body: { filename: report.csv, length: "29" }
+    answer: { body: { ok: true, upload_url: "https://files.slack.com/upload/v1/ABC123", file_id: F123ABC456 } }
+  - sent:
+      method: POST
+      url: https://files.slack.com/upload/v1/ABC123
+      body: "date,total\n2026-11-23,120.00\n"
+    answer: { body: "OK - 29" }
+  - sent:
+      method: POST
+      url: https://slack.com/api/files.completeUploadExternal
+      body: { files: [{ id: F123ABC456, title: Daily report }], channel_id: C0123456, initial_comment: "Today's figures", thread_ts: "1700000000.000100" }
+    answer: { body: { ok: true, files: [{ id: F123ABC456, title: Daily report }] } }
+result: { ok: true, files: [{ id: F123ABC456, title: Daily report }] }

@@ -1,0 +1,25 @@
+description: An application moved to a status
+action: set_application_status
+credential:
+  company_domain: acme
+  api_key: test-key
+input:
+  application_id: '5001'
+  status_id: 3
+exchanges:
+- sent:
+    method: POST
+    url: https://acme.bamboohr.com/api/v1/applicant_tracking/applications/5001/status
+    headers:
+      authorization: Basic dGVzdC1rZXk6eA==
+      accept: application/json
+    body:
+      status: 3
+  answer:
+    status: 200
+    body:
+      type: positionApplicantStatus
+      id: 77
+result:
+  type: positionApplicantStatus
+  id: 77

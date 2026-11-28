@@ -1,0 +1,7 @@
+description: A token Gmail no longer takes fails the poll, in Gmail's words
+trigger: new_email
+credential: { access_token: ya29.old }
+seen: { items: [] }
+exchanges:
+  - answer: { status: 403, body: { error: { code: 403, message: Insufficient Permission } } }
+refused: "Gmail answered 403: Insufficient Permission"

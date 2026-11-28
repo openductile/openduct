@@ -1,0 +1,83 @@
+# Made by `openduct app from-openapi`: List all conversations.
+description: "List all conversations, made from the API description's schemas"
+action: list_conversations
+credential: { token: test-token }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://api.intercom.io/conversations"
+      query: { per_page: "100" }
+      headers: { authorization: "Bearer test-token" }
+    answer:
+      status: 200
+      body:
+        type: conversation.list
+        conversations:
+          - type: conversation
+            id: "1295"
+            title: example
+            created_at: 1663597223
+            updated_at: 1663597260
+            waiting_since: 1663597260
+            snoozed_until: 1663597260
+            open: true
+            state: open
+            read: true
+            priority: none
+            admin_assignee_id: 0
+        total_count: 12345
+        pages:
+          type: pages
+          page: 1
+          next: { page: 2, starting_after: token_2 }
+          per_page: 2
+          total_pages: 13
+  - sent:
+      method: GET
+      url: "https://api.intercom.io/conversations"
+      query: { per_page: "100", starting_after: token_2 }
+      headers: { authorization: "Bearer test-token" }
+    answer:
+      status: 200
+      body:
+        type: conversation.list
+        conversations:
+          - type: conversation
+            id: id_2
+            title: example
+            created_at: 1663597223
+            updated_at: 1663597260
+            waiting_since: 1663597260
+            snoozed_until: 1663597260
+            open: true
+            state: open
+            read: true
+            priority: none
+            admin_assignee_id: 0
+        total_count: 12345
+        pages: { type: pages, page: 1, next: { page: 2, starting_after: null }, per_page: 2, total_pages: 13 }
+result:
+  - type: conversation
+    id: "1295"
+    title: example
+    created_at: 1663597223
+    updated_at: 1663597260
+    waiting_since: 1663597260
+    snoozed_until: 1663597260
+    open: true
+    state: open
+    read: true
+    priority: none
+    admin_assignee_id: 0
+  - type: conversation
+    id: id_2
+    title: example
+    created_at: 1663597223
+    updated_at: 1663597260
+    waiting_since: 1663597260
+    snoozed_until: 1663597260
+    open: true
+    state: open
+    read: true
+    priority: none
+    admin_assignee_id: 0

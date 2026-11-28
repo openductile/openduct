@@ -1,0 +1,55 @@
+name: An end-of-day support digest, written by an AI agent
+description: >-
+  Every weekday at 17:30 London time, an AI agent goes through the day's customer e-mail in Gmail, reads the ones
+  that ask for something, looks up each order they mention in your shop's API, and e-mails you a short digest: who is
+  still waiting, what they need, and where their order stands - urgent first. It only reads; nothing is answered for
+  you. Needs: Gmail (gmail), your shop's API key as a bearer credential (shop_api) and an AI credential (model).
+category: Support
+trigger:
+  schedule: { every: weekday, at: "17:30", timezone: Europe/London }
+# What a test runs on: an event as this trigger gives it.
+sample:
+  scheduled_at: '2026-11-27T17:30:00Z'
+steps:
+  - name: digest
+    agent:
+      credential: model
+      instructions: >-
+        You prepare a shop owner's end-of-day support digest. First find today's customer e-mail with find_emails
+        (search "in:inbox newer_than:1d -category:promotions -category:social"), then read the ones that look like a
+        customer asking for something. For every order number they mention (as A-1042), look it up with order_status
+        before you say anything about it; never guess a status. Then write the digest in three parts - Urgent, Today,
+        Can wait - one line a customer: their name or address, what they need, the order's status. Say "Nothing
+        waiting" when there is nothing. At most 20 lines, plain words, no greeting.
+      input: "Today's digest, for {{ string(timestamp(value.scheduled_at)).substring(0, 10) }}."
+      tools:
+        - name: find_emails
+          description: Finds e-mails in the inbox by a Gmail search, giving each one's id.
+          gmail: { action: find_emails, credential: gmail }
+        - name: read_email
+          description: Reads one e-mail in full, by its id from find_emails.
+          gmail: { action: read_email, credential: gmail }
+        - name: order_status
+          description: An order's status, items and delivery date, by its number (as A-1042).
+          parameters:
+            type: object
+            properties:
+              id: { type: string, description: "The order's number, as A-1042" }
+            required: [id]
+          http:
+            credential: shop_api
+            # Your shop's own API: an order by its number.
+            url: "https://shop.example.com/api/orders/{{ args.id }}"
+      # Every tool only reads.
+      allow: [find_emails, read_email, order_status]
+      max_turns: 15
+      max_tool_calls: 40
+      max_tokens: 1500
+  - name: send
+    gmail:
+      action: send_email
+      credential: gmail
+      to: owner@example.com
+      subject: "Support digest, {{ string(timestamp(value.scheduled_at)).substring(0, 10) }}"
+      text: "{{ steps.digest.text }}"
+    retry: { attempts: 3, wait: 30s }

@@ -1,0 +1,5 @@
+description: A check with another token is refused
+trigger: new_message
+credential: { access_token: EAAG1, phone_number_id: P1, api_version: v21.0, app_secret: meta_app_secret_1, verify_token: my-token }
+confirm: "hub.mode=subscribe&hub.verify_token=guessed&hub.challenge=1158201444"
+refused: "403"

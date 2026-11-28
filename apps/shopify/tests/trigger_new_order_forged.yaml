@@ -1,0 +1,11 @@
+description: An order signed with another secret is refused
+trigger: new_order
+credential: { shop: mystore, access_token: shpat_1, webhook_secret: shpss_test_app_secret }
+delivery:
+  headers:
+    x-shopify-hmac-sha256: "o569tYmPujVlzeYZ41CoP1YGsaBGx9jB3z2LaI7VUnE="
+    x-shopify-topic: orders/create
+    x-shopify-webhook-id: w3
+  body: '{"id":820982911946154508,"email":"ann@example.com","total_price":"42.00","line_items":[{"title":"Tote","quantity":1}]}'
+  at: 1700000000
+refused: "signature does not match"

@@ -1,0 +1,43 @@
+name: Your Airtable product catalog, as a tool for AI assistants
+description: >-
+  Keep your products in Airtable - name, price, stock, description and a photo - and turn this on: AI assistants that
+  speak MCP, given a token on the Settings page, can then look a product up by name and get its price, whether it is
+  in stock, its description and its photo's address, which an assistant that sees images can show or describe. It only
+  reads, and you can run it by hand to try a name (set your base below; the table is Products). Needs: airtable (a
+  personal access token that may read the base).
+category: E-commerce
+trigger: manual
+# Offered to AI assistants through the workspace's MCP server.
+tool:
+  name: find_product
+  description: Products of the shop's catalog whose name contains some words, with price, stock, description and photo.
+  input:
+    name: { type: string, description: "Words from the product's name, as linen apron", required: true }
+# What a test runs on: the arguments an assistant sends.
+sample:
+  name: linen apron
+steps:
+  - where: has(value.name) && size(value.name.trim()) > 1
+  - name: found
+    airtable:
+      action: list_records
+      credential: airtable
+      # Your base's id (app..., in its address).
+      base_id: your-base-id
+      table: Products
+      # Whatever the case; a quote in the words is written so the formula stays a formula.
+      formula: >-
+        {{ "SEARCH(LOWER(\"" + value.name.trim().replace('\\', '').replace('"', '\\"') + "\"), LOWER({Name}))" }}
+    retry: { attempts: 3, wait: 5s }
+  - name: products
+    javascript: |
+      // At most five, each with what an assistant needs to answer; a photo is Airtable's attachment address.
+      const list = (steps.found || []).slice(0, 5).map((r) => {
+        const f = r.fields || {};
+        const photo = Array.isArray(f.Photo) && f.Photo[0] ? f.Photo[0].url : null;
+        return {
+          name: f.Name, price: f.Price ?? null, in_stock: Number(f.Stock || 0) > 0, stock: Number(f.Stock || 0),
+          description: f.Description || "", photo,
+        };
+      });
+      return { count: list.length, products: list, note: list.length ? "" : "No product has those words in its name." };

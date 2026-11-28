@@ -1,0 +1,10 @@
+description: Turning the workflow off deletes the form's webhook
+trigger: new_answer
+unregister: true
+workflow: wf1
+credential: { token: tfp_1, "webhook_secret@wf1": s1 }
+input: { form_id: abc123 }
+exchanges:
+  - sent: { method: DELETE, url: https://api.typeform.com/forms/abc123/webhooks/openduct-wf1 }
+    answer: { status: 204 }
+kept: { webhook_secret: "" }

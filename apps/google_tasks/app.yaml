@@ -1,0 +1,217 @@
+# Copyright 2026 Ductile AI, Inc
+# SPDX-License-Identifier: Apache-2.0
+# Google Tasks: written by hand from Google's Tasks API reference and its discovery document
+# (https://tasks.googleapis.com/$discovery/rest?version=v1, revision 20261117, read 2026-11-27).
+app: google_tasks
+name: Google Tasks
+category: productivity
+description: Tasks and task lists in Google Tasks, added, changed, done and moved.
+docs: "https://developers.google.com/workspace/tasks/reference/rest"
+hosts: [tasks.googleapis.com]
+base_url: "https://tasks.googleapis.com/tasks/v1"
+sign_in:
+  - id: google_tasks
+    label: Sign in with Google
+    oauth2:
+      authorize: https://accounts.google.com/o/oauth2/v2/auth
+      token: https://oauth2.googleapis.com/token
+      scopes: [https://www.googleapis.com/auth/tasks]
+      extra: { access_type: offline, prompt: consent }
+    headers:
+      Authorization: "Bearer {{ credential.access_token }}"
+error: value.error.message
+default_action: create_task
+actions:
+  list_task_lists:
+    label: "List task lists"
+    description: "The task lists of the signed-in account, with their ids."
+    method: GET
+    path: /users/@me/lists
+    query: { maxResults: "1000" }
+    items: "has(value.items) ? value.items : []"
+    next: &next "has(value.nextPageToken) ? {'pageToken': value.nextPageToken} : null"
+    output: &list { id: text, title: text, updated: text, selfLink: text }
+  create_task_list:
+    label: "Make a task list"
+    description: "A new, empty task list."
+    write: true
+    method: POST
+    path: /users/@me/lists
+    inputs: [{ name: title, label: "The list's name", required: true }]
+    send: { title: "{{ input.title }}" }
+    output: *list
+  rename_task_list:
+    label: "Rename a task list"
+    description: "A task list given another name."
+    write: true
+    method: PATCH
+    path: "/users/@me/lists/{{ input.list_id }}"
+    inputs:
+      - &list_id { name: list_id, label: "The list's id (@default for the account's first list)", required: true }
+      - { name: title, label: "Its new name", required: true }
+    send: { title: "{{ input.title }}" }
+    output: *list
+  delete_task_list:
+    label: "Delete a task list"
+    description: "A task list removed, with all its tasks."
+    write: true
+    method: DELETE
+    path: "/users/@me/lists/{{ input.list_id }}"
+    inputs: [*list_id]
+    result: "{'deleted': true}"
+    output: { deleted: boolean }
+  list_tasks:
+    label: "List tasks"
+    description: "The tasks of a list, in order: only those not done, or due between two days, if asked; every page."
+    method: GET
+    path: "/lists/{{ input.list_id }}/tasks"
+    inputs:
+      - *list_id
+      - { name: only_open, label: "Only tasks not yet done", kind: boolean }
+      - { name: due_from, label: "Due on or after (such as 2026-12-01T00:00:00Z)" }
+      - { name: due_until, label: "Due before (such as 2026-12-08T00:00:00Z)" }
+    query:
+      showCompleted: "{{ input.only_open == true ? 'false' : 'true' }}"
+      showHidden: "{{ input.only_open == true ? 'false' : 'true' }}"
+      dueMin: "{{ input.due_from }}"
+      dueMax: "{{ input.due_until }}"
+      maxResults: "100"
+    items: "has(value.items) ? value.items : []"
+    next: *next
+    output: &task
+      id: text
+      title: text
+      notes: text
+      status: text
+      due: text
+      completed: text
+      updated: text
+      parent: text
+      position: text
+      hidden: boolean
+      deleted: boolean
+      links: list
+      webViewLink: text
+  get_task:
+    label: "Look up a task"
+    description: "One task of a list: its title, notes, due day and status."
+    method: GET
+    path: "/lists/{{ input.list_id }}/tasks/{{ input.task_id }}"
+    inputs:
+      - *list_id
+      - &task_id { name: task_id, label: "The task's id", required: true }
+    output: *task
+  create_task:
+    label: "Add a task"
+    description: "A new task at the top of a list, or under another task, with notes and a day it is due."
+    write: true
+    method: POST
+    path: "/lists/{{ input.list_id }}/tasks"
+    inputs:
+      - *list_id
+      - { name: title, label: "The task", required: true }
+      - { name: notes, label: "Notes" }
+      - &due { name: due, label: "Due on (a day, such as 2026-12-01; Google keeps the day only)" }
+      - { name: parent, label: "Under this task (its id), as a subtask" }
+      - { name: after, label: "After this task (its id) - at the top when empty" }
+    query: { parent: "{{ input.parent }}", previous: "{{ input.after }}" }
+    send:
+      title: "{{ input.title }}"
+      notes: "{{ input.notes }}"
+      due: &due_send "{{ input.due.contains('T') ? input.due : input.due + 'T00:00:00.000Z' }}"
+    output: *task
+  update_task:
+    label: "Change a task"
+    description: "A task's title, notes or due day changed, or it marked done or not; what is not given stays as it is."
+    write: true
+    method: PATCH
+    path: "/lists/{{ input.list_id }}/tasks/{{ input.task_id }}"
+    inputs:
+      - *list_id
+      - *task_id
+      - { name: title, label: "Its new title" }
+      - { name: notes, label: "Its new notes" }
+      - *due
+      - { name: status, label: "needsAction (to do) or completed (done)" }
+    send:
+      title: "{{ input.title }}"
+      notes: "{{ input.notes }}"
+      due: *due_send
+      status: "{{ input.status }}"
+    output: *task
+  complete_task:
+    label: "Mark a task done"
+    description: "A task marked as done."
+    write: true
+    method: PATCH
+    path: "/lists/{{ input.list_id }}/tasks/{{ input.task_id }}"
+    inputs: [*list_id, *task_id]
+    send: { status: completed }
+    output: *task
+  move_task:
+    label: "Move a task"
+    description: "A task moved: under another task, after another, to the top, or to another list."
+    write: true
+    method: POST
+    path: "/lists/{{ input.list_id }}/tasks/{{ input.task_id }}/move"
+    body: none
+    inputs:
+      - *list_id
+      - *task_id
+      - { name: parent, label: "Under this task (its id); at the top level when empty" }
+      - { name: after, label: "After this task (its id); first when empty" }
+      - { name: to_list, label: "To this list (its id)" }
+    query: { parent: "{{ input.parent }}", previous: "{{ input.after }}", destinationTasklist: "{{ input.to_list }}" }
+    output: *task
+  delete_task:
+    label: "Delete a task"
+    description: "A task removed from its list."
+    write: true
+    method: DELETE
+    path: "/lists/{{ input.list_id }}/tasks/{{ input.task_id }}"
+    inputs: [*list_id, *task_id]
+    result: "{'deleted': true}"
+    output: { deleted: boolean }
+  clear_completed:
+    label: "Clear done tasks"
+    description: "The tasks of a list that are done, hidden from it (as Google Tasks' own Clear does)."
+    write: true
+    method: POST
+    path: "/lists/{{ input.list_id }}/clear"
+    body: none
+    inputs: [*list_id]
+    result: "{'cleared': true}"
+    output: { cleared: boolean }
+triggers:
+  new_task:
+    label: "A new task"
+    description: "Each task added to a list, asked for every few minutes."
+    inputs:
+      - *list_id
+    poll:
+      method: GET
+      path: "/lists/{{ input.list_id }}/tasks"
+      query: { showCompleted: "false", maxResults: "100" }
+      items: "has(value.items) ? value.items : []"
+      next: *next
+      id: item.id
+      every: 5m
+  task_completed:
+    label: "A task done"
+    description: "Each task of a list marked as done, asked for every few minutes."
+    inputs:
+      - *list_id
+    poll:
+      method: GET
+      path: "/lists/{{ input.list_id }}/tasks"
+      # Asked from five minutes before the poll before, in case the two clocks differ; a task seen is not run twice.
+      query:
+        showCompleted: "true"
+        showHidden: "true"
+        completedMin: "{{ input.cursor == null ? input.now : string(timestamp(input.cursor) - duration('5m')) }}"
+        maxResults: "100"
+      items: "has(value.items) ? value.items.filter(t, t.status == 'completed') : []"
+      next: *next
+      id: item.id
+      cursor: input.now
+      every: 5m

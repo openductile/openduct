@@ -1,0 +1,15 @@
+description: "The unsubscribes"
+action: list_unsubscribes
+credential: {"api_key": "key-test", "domain": "mg.example.com"}
+exchanges:
+  - sent:
+      method: GET
+      url: "https://api.mailgun.net/v3/mg.example.com/unsubscribes"
+      query: {"limit": "1000"}
+      headers: {"authorization": "Basic YXBpOmtleS10ZXN0"}
+    answer: {"status": 200, "body": {"items": [{"address": "yan@example.com", "tags": ["*"], "created_at": "Thu, 26 Nov 2026 01:49:40 UTC"}], "paging": {"next": "https://api.mailgun.net/v3/mg.example.com/bounces?page=next&address=zed%40example.com&limit=1000"}}}
+  - sent:
+      method: GET
+      url: "https://api.mailgun.net/v3/mg.example.com/bounces?page=next&address=zed%40example.com&limit=1000"
+    answer: {"status": 200, "body": {"items": [], "paging": {}}}
+result: [{"address": "yan@example.com", "tags": ["*"], "created_at": "Thu, 26 Nov 2026 01:49:40 UTC"}]

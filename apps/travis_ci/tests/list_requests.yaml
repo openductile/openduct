@@ -1,0 +1,16 @@
+description: "A repository's build requests"
+action: list_requests
+credential: { token: test-token }
+input: { repo: shop-example/storefront }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://api.travis-ci.com/repo/shop-example%2Fstorefront/requests"
+      query: { limit: "25" }
+    answer:
+      body:
+        "@type": requests
+        requests:
+          - { id: 147, state: processed, result: approved, message: "Release check", branch_name: main, event_type: api, created_at: "2026-11-27T10:00:00Z", builds: [{ id: 86601346, number: "212", state: created }] }
+result:
+  - { id: 147, state: processed, result: approved, message: "Release check", branch_name: main, event_type: api, created_at: "2026-11-27T10:00:00Z", builds: [{ id: 86601346, number: "212", state: created }] }

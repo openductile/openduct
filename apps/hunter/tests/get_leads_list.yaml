@@ -1,0 +1,11 @@
+description: A leads list and its leads
+action: get_leads_list
+credential: { api_key: hunter-test-key }
+input: { leads_list_id: "7" }
+exchanges:
+  - sent: { method: GET, url: https://api.hunter.io/v2/leads_lists/7, query: { limit: "100" } }
+    answer:
+      body:
+        data: { id: 7, name: Prospects, leads_count: 1, type: static, created_at: "2026-10-01 09:00:00 UTC", leads: [{ id: 101, email: ann.example@example.com }] }
+        meta: { params: { limit: 100, offset: 0, leads_list_id: 7 } }
+result: { id: 7, name: Prospects, leads_count: 1, type: static, created_at: "2026-10-01 09:00:00 UTC", leads: [{ id: 101, email: ann.example@example.com }] }

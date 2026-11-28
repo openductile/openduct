@@ -1,0 +1,22 @@
+description: A task by its id
+action: get_task
+credential: { token: "2/1200000000000001/1209999999999999:0a1b2c3d4e5f" }
+input: { task_id: "1204000000000001" }
+exchanges:
+  - sent: { method: GET, url: https://app.asana.com/api/1.0/tasks/1204000000000001 }
+    answer:
+      body:
+        data:
+          gid: "1204000000000001"
+          name: Send the March invoices
+          completed: false
+          due_on: "2026-12-01"
+          memberships: [{ project: { gid: "1201000000000001", name: Billing }, section: { gid: "1205000000000001", name: To do } }]
+          custom_fields: [{ gid: "1206000000000001", name: Priority, display_value: High }]
+result:
+  gid: "1204000000000001"
+  name: Send the March invoices
+  completed: false
+  due_on: "2026-12-01"
+  memberships: [{ project: { gid: "1201000000000001", name: Billing }, section: { gid: "1205000000000001", name: To do } }]
+  custom_fields: [{ gid: "1206000000000001", name: Priority, display_value: High }]

@@ -1,0 +1,9 @@
+description: A key with no tokens left is refused (402), in Jina's words
+action: read_page
+credential: { api_key: jina_test_0a1b2c3d4e5f }
+input: { url: "https://www.example.com/" }
+exchanges:
+  - answer:
+      status: 402
+      body: { code: 402, status: 40203, message: "Insufficient account balance" }
+error: "Jina AI answered 402: Insufficient account balance"

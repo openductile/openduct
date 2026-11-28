@@ -1,0 +1,10 @@
+action: create_playlist
+credential: { access_token: BQ-test-token }
+input: { name: Shop music, description: Played in the shop, public: false }
+exchanges:
+  - sent:
+      method: POST
+      url: https://api.spotify.com/v1/me/playlists
+      body: { name: Shop music, description: Played in the shop, public: false }
+    answer: { status: 201, body: { id: 0TestList000000000001, name: Shop music, public: false, uri: "spotify:playlist:0TestList000000000001", snapshot_id: snap1 } }
+result: { id: 0TestList000000000001, name: Shop music, public: false, uri: "spotify:playlist:0TestList000000000001", snapshot_id: snap1 }

@@ -1,0 +1,7 @@
+description: No contact has any of the addresses - SendGrid answers 404
+action: find_contacts_by_email
+credential: { token: SG.test-key }
+input: { emails: nobody@example.com }
+exchanges:
+  - answer: { status: 404, body: { errors: [{ message: "No contacts found", field: null }] } }
+error: "SendGrid answered 404: No contacts found"

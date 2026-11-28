@@ -1,0 +1,7 @@
+description: A sender not set up in Brevo is refused in Brevo's words
+action: send_email
+credential: { api_key: xkeysib-test-1 }
+input: { to: ann@example.com, subject: Hello, text: Hi, sender_email: nobody@example.com }
+exchanges:
+  - answer: { status: 400, body: { code: invalid_parameter, message: "Sender is invalid / inactive" } }
+error: "Brevo answered 400: invalid_parameter: Sender is invalid / inactive"

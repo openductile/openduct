@@ -1,0 +1,45 @@
+description: "Find tasks in a workspace"
+action: find_tasks
+credential: { api_key: test-key }
+input: { team_id: 123 }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://api.clickup.com/api/v2/team/123/task"
+      query: {}
+      headers: { authorization: test-key }
+    answer:
+      status: 200
+      body:
+        tasks:
+          - id: id_1
+            custom_id: custom_1
+            name: example
+            text_content: example
+            description: example
+            markdown_description: example
+            status: { id: id_1, status: example, color: example, orderindex: 1, type: example }
+            orderindex: example
+            date_created: example
+            date_updated: example
+            date_closed: example
+            date_done: example
+  - sent:
+      method: GET
+      url: "https://api.clickup.com/api/v2/team/123/task"
+      query: { page: "1" }
+      headers: { authorization: test-key }
+    answer: { status: 200, body: { tasks: [] } }
+result:
+  - id: id_1
+    custom_id: custom_1
+    name: example
+    text_content: example
+    description: example
+    markdown_description: example
+    status: { id: id_1, status: example, color: example, orderindex: 1, type: example }
+    orderindex: example
+    date_created: example
+    date_updated: example
+    date_closed: example
+    date_done: example

@@ -1,0 +1,14 @@
+# Made by `openduct app from-openapi`: Send an email.
+description: "Send an email, made from the API description's schemas"
+action: create_email
+credential: { token: test-token }
+input: { from: example, to: example, subject: example }
+exchanges:
+  - sent:
+      method: POST
+      url: "https://api.resend.com/emails"
+      query: {}
+      headers: { authorization: "Bearer test-token" }
+      body: { from: example, to: example, subject: example }
+    answer: { status: 200, body: { id: id_1 } }
+result: { id: id_1 }

@@ -1,0 +1,49 @@
+description: "Gather items over many pages"
+action: extract_pages
+credential: { token: test-token }
+input: { session_id: session_1, window_id: window_1, prompt: example }
+exchanges:
+  - sent:
+      method: POST
+      url: "https://api.airtop.ai/api/v1/sessions/session_1/windows/window_1/paginated-extraction"
+      query: {}
+      headers: { authorization: "Bearer test-token" }
+      body: { prompt: example }
+    answer:
+      status: 201
+      body:
+        data: { modelResponse: example }
+        errors: [{ code: example, details: {}, message: example, reason: example }]
+        meta:
+          clientProvided: { clientRequestId: client_request_1 }
+          requestId: request_1
+          screenshots:
+            - dataUrl: example
+              fileId: file_1
+              fileName: example
+              format: base64
+              scrollPosition: {}
+              signedDownloadUrl: example
+              urlExpiry: example
+              viewportDimensions: {}
+          status: success
+          usage: { credits: 1, id: id_1 }
+        warnings: [{ code: example, details: {}, message: example, reason: example }]
+result:
+  data: { modelResponse: example }
+  errors: [{ code: example, details: {}, message: example, reason: example }]
+  meta:
+    clientProvided: { clientRequestId: client_request_1 }
+    requestId: request_1
+    screenshots:
+      - dataUrl: example
+        fileId: file_1
+        fileName: example
+        format: base64
+        scrollPosition: {}
+        signedDownloadUrl: example
+        urlExpiry: example
+        viewportDimensions: {}
+    status: success
+    usage: { credits: 1, id: id_1 }
+  warnings: [{ code: example, details: {}, message: example, reason: example }]

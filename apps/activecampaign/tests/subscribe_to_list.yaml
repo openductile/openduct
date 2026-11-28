@@ -1,0 +1,38 @@
+description: A contact subscribed to a list
+action: subscribe_to_list
+credential:
+  account: shopexample
+  api_key: test-key
+input:
+  contact_id: '113'
+  list_id: '2'
+exchanges:
+- sent:
+    method: POST
+    url: https://shopexample.api-us1.com/api/3/contactLists
+    headers:
+      api-token: test-key
+    body:
+      contactList:
+        contact: '113'
+        list: '2'
+        status: 1
+  answer:
+    status: 200
+    body:
+      contacts:
+      - id: '113'
+        email: ann@example.com
+        firstName: Ann
+        lastName: Example
+        phone: '+15555550100'
+        cdate: '2026-11-27T10:00:00-06:00'
+        udate: '2026-11-27T10:00:00-06:00'
+        orgid: '0'
+      contactList: &id001
+        id: '31'
+        contact: '113'
+        list: '2'
+        status: '1'
+        sdate: '2026-11-27T10:15:00-06:00'
+result: *id001

@@ -1,0 +1,12 @@
+description: "The tags used in a group"
+action: list_tags
+credential: { token: test-token }
+input: { group_guid: Bx1ab23cD4E }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://api-ssl.bitly.com/v4/groups/Bx1ab23cD4E/tags"
+      query: {}
+      headers: { authorization: "Bearer test-token" }
+    answer: { status: 200, body: { tags: [newsletter, spring-sale] } }
+result: { tags: [newsletter, spring-sale] }

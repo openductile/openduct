@@ -1,0 +1,14 @@
+description: A new version of a file, its text sent as Base64, with the sha of the one it replaces
+action: save_file
+credential: { token: test-token-1 }
+input: { owner: example-shop, repo: website, path: docs/prices.md, text: "# Prices\n\nA tote is 26.\n", message: New tote price, sha: 3d21ec53a331a6f037a91c368710b99387d012c1 }
+exchanges:
+  - sent:
+      method: PUT
+      url: https://api.github.com/repos/example-shop/website/contents/docs/prices.md
+      body: { message: New tote price, content: IyBQcmljZXMKCkEgdG90ZSBpcyAyNi4K, sha: 3d21ec53a331a6f037a91c368710b99387d012c1 }
+    answer:
+      body:
+        content: { path: docs/prices.md, sha: 95b966ae1c166bd92f8ae7d1c313e738c731dfc3, html_url: "https://github.com/example-shop/website/blob/main/docs/prices.md" }
+        commit: { sha: 7638417db6d59f3c431d3e1f261cc637155684cd, message: New tote price }
+result: { path: docs/prices.md, sha: 95b966ae1c166bd92f8ae7d1c313e738c731dfc3, url: "https://github.com/example-shop/website/blob/main/docs/prices.md", commit: 7638417db6d59f3c431d3e1f261cc637155684cd }

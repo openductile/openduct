@@ -1,0 +1,40 @@
+description: A case by its number
+action: get_case
+credential:
+  url: https://thehive.example.com
+  api_key: test-key
+input:
+  case_id: '42'
+exchanges:
+- sent:
+    method: GET
+    url: https://thehive.example.com/api/v1/case/42
+    headers:
+      authorization: Bearer test-key
+  answer:
+    status: 200
+    body: &id001
+      _id: ~8192
+      _type: Case
+      _createdBy: analyst@example.com
+      _createdAt: 1795161600000
+      _updatedAt: 1795165200000
+      number: 42
+      title: Password reset email reported
+      description: Reported phishing email.
+      severity: 2
+      severityLabel: MEDIUM
+      startDate: 1795161600000
+      endDate: null
+      tags:
+      - phishing
+      flag: false
+      tlp: 2
+      pap: 2
+      status: New
+      stage: New
+      summary: null
+      impactStatus: null
+      assignee: analyst@example.com
+      customFields: []
+result: *id001

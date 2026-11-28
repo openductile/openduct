@@ -1,0 +1,85 @@
+# Made by `openduct app from-openapi`: List issues.
+description: "List issues, made from the API description's schemas"
+action: list_issues
+credential: { token: test-token }
+input: { organization_id_or_slug: example }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://us.sentry.io/api/0/organizations/example/issues/"
+      query: {}
+      headers: { authorization: "Bearer test-token" }
+    answer:
+      status: 200
+      body:
+        - id: id_1
+          shareId: share_1
+          shortId: short_1
+          title: example
+          culprit: example
+          permalink: example
+          logger: example
+          level: sample
+          status: resolved
+          statusDetails:
+            ignoreCount: 1
+            ignoreUntil: "2026-01-15T09:30:00Z"
+            ignoreUserCount: 1
+            ignoreUserWindow: 1
+            ignoreWindow: 1
+            actor:
+              identities: [{}]
+              avatar: { avatarType: letter_avatar, avatarUuid: avatar_uuid_1, avatarUrl: example }
+              authenticators: [{}]
+              canReset2fa: true
+              id: id_1
+              name: example
+              username: example
+              email: "ann@example.com"
+              avatarUrl: example
+              isActive: true
+              isSuspended: true
+              hasPasswordAuth: true
+            inNextRelease: true
+            inRelease: example
+            inCommit: example
+            pendingEvents: 1
+            info: { dateCreated: example, syncCount: 1, totalEvents: 1 }
+          substatus: archived_until_escalating
+          isPublic: true
+result:
+  - id: id_1
+    shareId: share_1
+    shortId: short_1
+    title: example
+    culprit: example
+    permalink: example
+    logger: example
+    level: sample
+    status: resolved
+    statusDetails:
+      ignoreCount: 1
+      ignoreUntil: "2026-01-15T09:30:00Z"
+      ignoreUserCount: 1
+      ignoreUserWindow: 1
+      ignoreWindow: 1
+      actor:
+        identities: [{}]
+        avatar: { avatarType: letter_avatar, avatarUuid: avatar_uuid_1, avatarUrl: example }
+        authenticators: [{}]
+        canReset2fa: true
+        id: id_1
+        name: example
+        username: example
+        email: "ann@example.com"
+        avatarUrl: example
+        isActive: true
+        isSuspended: true
+        hasPasswordAuth: true
+      inNextRelease: true
+      inRelease: example
+      inCommit: example
+      pendingEvents: 1
+      info: { dateCreated: example, syncCount: 1, totalEvents: 1 }
+    substatus: archived_until_escalating
+    isPublic: true

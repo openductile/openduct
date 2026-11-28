@@ -1,0 +1,48 @@
+description: The organisation's users, the next page from the link Graph gives
+action: list_users
+sign_in: microsoft_entra_admin
+credential: {access_token: eyJ0-admin}
+exchanges:
+- sent:
+    method: GET
+    url: https://graph.microsoft.com/v1.0/users
+    headers: {authorization: Bearer eyJ0-admin}
+    query: {$top: '999'}
+  answer:
+    status: 200
+    body:
+      value:
+      - &id002
+        id: 6ea91a8d-e32e-41a1-b7bd-d2d185eed0e0
+        displayName: Ann Example
+        givenName: Ann
+        surname: Example
+        mail: ann@contoso.example
+        userPrincipalName: ann@contoso.example
+        jobTitle: Office Manager
+        officeLocation: Main office
+        mobilePhone: null
+        businessPhones: &id001 [+1 555 0100]
+        preferredLanguage: en-US
+      '@odata.nextLink': https://graph.microsoft.com/v1.0/users?$top=999&$skiptoken=RFNwdAIAAQAAAB
+- sent:
+    url: https://graph.microsoft.com/v1.0/users?$top=999&$skiptoken=RFNwdAIAAQAAAB
+    query: {}
+  answer:
+    body:
+      value:
+      - &id003
+        id: 4562bcc8-c436-4f95-b7c0-4f8ce89dca5e
+        displayName: Bob Example
+        givenName: Bob
+        surname: Example
+        mail: bob@contoso.example
+        userPrincipalName: bob@contoso.example
+        jobTitle: Sales
+        officeLocation: Main office
+        mobilePhone: null
+        businessPhones: *id001
+        preferredLanguage: en-US
+result:
+- *id002
+- *id003

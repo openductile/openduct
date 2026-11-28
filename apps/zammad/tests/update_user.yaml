@@ -1,0 +1,7 @@
+action: update_user
+credential: { subdomain: acme, token: zm_test_1 }
+input: { id: "9", phone: "+1 555 0100", note: Prefers calls in the morning }
+exchanges:
+  - sent: { method: PUT, url: https://acme.zammad.com/api/v1/users/9, body: { phone: "+1 555 0100", note: Prefers calls in the morning } }
+    answer: { body: { id: 9, phone: "+1 555 0100", note: Prefers calls in the morning } }
+result: { id: 9, phone: "+1 555 0100", note: Prefers calls in the morning }

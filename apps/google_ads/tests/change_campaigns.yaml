@@ -1,0 +1,17 @@
+description: A campaign renamed, checked only
+action: change_campaigns
+credential: { access_token: ya29.test }
+input:
+  customer_id: "1234567890"
+  operations: [{ update: { resourceName: customers/1234567890/campaigns/111, name: Winter sale 2026 }, updateMask: name }]
+  validate_only: true
+  developer_token: devtok-test
+exchanges:
+  - sent:
+      method: POST
+      url: "https://googleads.googleapis.com/v26/customers/1234567890/campaigns:mutate"
+      body:
+        operations: [{ update: { resourceName: customers/1234567890/campaigns/111, name: Winter sale 2026 }, updateMask: name }]
+        validateOnly: true
+    answer: { status: 200, body: {} }
+result: {}

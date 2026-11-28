@@ -1,0 +1,9 @@
+description: Turning the workflow off deletes the webhook it added
+trigger: new_order
+unregister: true
+workflow: wf1
+credential: { shop: mystore, access_token: shpat_1, "webhook_id@wf1": "4759306" }
+exchanges:
+  - sent: { method: DELETE, url: https://mystore.myshopify.com/admin/api/2025-01/webhooks/4759306.json }
+    answer: { body: {} }
+kept: { webhook_id: "" }

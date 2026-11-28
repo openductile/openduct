@@ -1,0 +1,82 @@
+name: An order help chat that looks orders up through your MCP server
+description: >-
+  A chat for your site where customers ask about their orders: an AI agent answers, looking each order and its
+  parcel up with the tools of your shop's MCP server (read only), and keeps the conversation in mind. When a
+  customer sounds unhappy, your support team's Teams channel is told at once, so a person can step in. Needs: model,
+  shop_mcp (the MCP server's token), teams.
+category: Support
+trigger:
+  chat:
+    texts:
+      title: Order help
+      welcome: Hi! Give me your order number and I will look it up.
+      placeholder: Your question
+    # The sites that may show the chat (add yours), beside its own page.
+    origins: ["https://www.example.com"]
+    history: 10
+    limits: { message: 2000, per_session: 20, per_address: 60 }
+# What a test runs on: a message as this trigger gives it.
+sample:
+  message: Where is my order 10482? It was meant to arrive on Monday and nobody tells me anything.
+  session: c2f9a1d07b5e4c3a9e1f6d8b2a4c7e90
+  history:
+    - { role: user, content: Hello }
+    - { role: assistant, content: "Hi! Give me your order number and I will look it up." }
+  person: { name: Lena Park, email: lena.park@example.com }
+steps:
+  - name: mood
+    sentiment:
+      credential: model
+      text: "{{ value.message }}"
+      labels:
+        - positive
+        - neutral
+        - name: negative
+          description: Unhappy, angry, worried or about to leave
+          steps:
+            - name: tell_team
+              teams:
+                credential: teams
+                text: >-
+                  An unhappy customer in the order chat ({{ has(value.person.email) ? value.person.email : 'no
+                  e-mail given' }}): "{{ value.message }}"
+              retry: { attempts: 3, wait: 10s }
+  - name: answer
+    agent:
+      credential: model
+      instructions: >-
+        You answer customers of an online shop about their orders, kindly and in at most four sentences. Look an
+        order up before you say anything about it, and its parcel before you say when it arrives; never guess. If the
+        customer gives no order number, ask for it. If they sound upset, say sorry once and tell them a person from
+        the team will also read the chat.
+      input: "{{ value.message }}"
+      tools:
+        - name: order_status
+          description: An order's status, items, and the day it was sent, by its number (as 10482).
+          parameters:
+            type: object
+            properties:
+              order: { type: string, description: "The order's number, as 10482" }
+            required: [order]
+          mcp:
+            url: https://mcp.shop.example.com/mcp
+            credential: shop_mcp
+            tool: get_order
+            arguments: { order_id: "{{ args.order }}" }
+            read_only: true
+        - name: parcel
+          description: Where an order's parcel is and when it should arrive, by the order's number.
+          parameters:
+            type: object
+            properties:
+              order: { type: string, description: "The order's number, as 10482" }
+            required: [order]
+          mcp:
+            url: https://mcp.shop.example.com/mcp
+            credential: shop_mcp
+            tool: track_shipment
+            arguments: { order_id: "{{ args.order }}" }
+            read_only: true
+      memory: { key: "{{ value.session }}", window: 10 }
+      max_turns: 6
+      max_tool_calls: 6

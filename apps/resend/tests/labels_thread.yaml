@@ -1,0 +1,21 @@
+# Made by `openduct app from-openapi`: Add labels to an inbox thread.
+description: "Add labels to an inbox thread, made from the API description's schemas"
+action: labels_thread
+credential: { token: test-token }
+input:
+  inbox_id: inbox_1
+  thread_id: "00000000-0000-4000-8000-000000000001"
+  labels: ["00000000-0000-4000-8000-000000000001"]
+exchanges:
+  - sent:
+      method: POST
+      url: "https://api.resend.com/inboxes/inbox_1/threads/00000000-0000-4000-8000-000000000001/labels"
+      query: {}
+      headers: { authorization: "Bearer test-token" }
+      body: { labels: ["00000000-0000-4000-8000-000000000001"] }
+    answer:
+      status: 200
+      body:
+        object: list
+        data: [{ id: "7f9c1d2e-4a6b-4c3d-8e15-9b0a7c6d5e34", name: Urgent, color: example }]
+result: { object: list, data: [{ id: "7f9c1d2e-4a6b-4c3d-8e15-9b0a7c6d5e34", name: Urgent, color: example }] }

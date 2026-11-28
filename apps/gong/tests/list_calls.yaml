@@ -1,0 +1,77 @@
+# Made by `openduct app from-openapi`: List calls.
+description: "List calls, made from the API description's schemas"
+action: list_calls
+credential: { access_key: ann, access_key_secret: test-password }
+input: { from_date_time: example, to_date_time: example }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://api.gong.io/v2/calls"
+      query: { fromDateTime: example, toDateTime: example }
+      headers: { authorization: "Basic YW5uOnRlc3QtcGFzc3dvcmQ=" }
+    answer:
+      status: 200
+      body:
+        requestId: "4al018gzaztcr8nbukw"
+        records: { totalRecords: 263, currentPageSize: 100, currentPageNumber: 0, cursor: token_2 }
+        calls:
+          - id: "7782342274025937895"
+            url: example
+            title: example
+            scheduled: "2018-02-17T10:30:00Z"
+            started: "2018-02-17T10:30:00Z"
+            duration: 460
+            primaryUserId: "234599484848423"
+            direction: Inbound
+            system: Outreach
+            scope: Internal
+            media: Video
+            language: eng
+  - sent:
+      method: GET
+      url: "https://api.gong.io/v2/calls"
+      query: { fromDateTime: example, toDateTime: example, cursor: token_2 }
+      headers: { authorization: "Basic YW5uOnRlc3QtcGFzc3dvcmQ=" }
+    answer:
+      status: 200
+      body:
+        requestId: "4al018gzaztcr8nbukw"
+        records: { totalRecords: 263, currentPageSize: 100, currentPageNumber: 0, cursor: null }
+        calls:
+          - id: id_2
+            url: example
+            title: example
+            scheduled: "2018-02-17T10:30:00Z"
+            started: "2018-02-17T10:30:00Z"
+            duration: 460
+            primaryUserId: "234599484848423"
+            direction: Inbound
+            system: Outreach
+            scope: Internal
+            media: Video
+            language: eng
+result:
+  - id: "7782342274025937895"
+    url: example
+    title: example
+    scheduled: "2018-02-17T10:30:00Z"
+    started: "2018-02-17T10:30:00Z"
+    duration: 460
+    primaryUserId: "234599484848423"
+    direction: Inbound
+    system: Outreach
+    scope: Internal
+    media: Video
+    language: eng
+  - id: id_2
+    url: example
+    title: example
+    scheduled: "2018-02-17T10:30:00Z"
+    started: "2018-02-17T10:30:00Z"
+    duration: 460
+    primaryUserId: "234599484848423"
+    direction: Inbound
+    system: Outreach
+    scope: Internal
+    media: Video
+    language: eng

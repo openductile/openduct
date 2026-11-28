@@ -1,0 +1,12 @@
+description: An item added to the collection asked for starts a run
+trigger: new_item
+workflow: wf3
+credential: { token: test-token, "webhook_secret@wf3": whsec_test_5f3a9c }
+input: { site_id: site_1, collection_id: col_1 }
+delivery:
+  headers: { x-webflow-timestamp: "1764237600000", x-webflow-signature: "c26ced5e41a05fededbacbead414810dd80aebf3d8a0db34682ca5b6844740a6" }
+  body: '{"triggerType":"collection_item_created","payload":{"id":"itm_9","siteId":"site_1","workspaceId":"ws_1","collectionId":"col_1","isDraft":true,"fieldData":{"name":"New post","slug":"new-post"}}}'
+  at: 1764237605
+runs:
+  - { id: itm_9, siteId: site_1, workspaceId: ws_1, collectionId: col_1, isDraft: true, fieldData: { name: New post, slug: new-post } }
+ids: [itm_9]

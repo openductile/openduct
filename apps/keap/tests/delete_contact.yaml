@@ -1,0 +1,12 @@
+# Made by `openduct app from-openapi`: Delete a contact.
+description: "Delete a contact, made from the API description's schemas"
+action: delete_contact
+credential: { access_token: test-access-token }
+input: { contact_id: contact_1 }
+exchanges:
+  - sent:
+      method: DELETE
+      url: "https://api.keap.com/crm/rest/v2/contacts/contact_1"
+      query: {}
+      headers: { authorization: "Bearer test-access-token" }
+    answer: { status: 204 }

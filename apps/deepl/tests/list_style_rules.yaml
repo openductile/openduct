@@ -1,0 +1,19 @@
+description: The style rule lists, over two pages
+action: list_style_rules
+credential: { api_key: 0f6a2c1e-5b7d-4e2a-9c3f-1a2b3c4d5e6f }
+input: { detailed: false }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://api.deepl.com/v3/style_rules"
+      query: { detailed: "false", page_size: "25" }
+    answer:
+      status: 200
+      body:
+        style_rules: [{ style_id: s01 }, { style_id: s02 }, { style_id: s03 }, { style_id: s04 }, { style_id: s05 }, { style_id: s06 }, { style_id: s07 }, { style_id: s08 }, { style_id: s09 }, { style_id: s10 }, { style_id: s11 }, { style_id: s12 }, { style_id: s13 }, { style_id: s14 }, { style_id: s15 }, { style_id: s16 }, { style_id: s17 }, { style_id: s18 }, { style_id: s19 }, { style_id: s20 }, { style_id: s21 }, { style_id: s22 }, { style_id: s23 }, { style_id: s24 }, { style_id: s25 }]
+  - sent:
+      query: { detailed: "false", page_size: "25", page: "1" }
+    answer:
+      status: 200
+      body: { style_rules: [{ style_id: s26, name: House style, language: de }] }
+result: [{ style_id: s01 }, { style_id: s02 }, { style_id: s03 }, { style_id: s04 }, { style_id: s05 }, { style_id: s06 }, { style_id: s07 }, { style_id: s08 }, { style_id: s09 }, { style_id: s10 }, { style_id: s11 }, { style_id: s12 }, { style_id: s13 }, { style_id: s14 }, { style_id: s15 }, { style_id: s16 }, { style_id: s17 }, { style_id: s18 }, { style_id: s19 }, { style_id: s20 }, { style_id: s21 }, { style_id: s22 }, { style_id: s23 }, { style_id: s24 }, { style_id: s25 }, { style_id: s26, name: House style, language: de }]

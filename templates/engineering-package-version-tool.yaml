@@ -1,0 +1,74 @@
+name: Latest package version, as a tool for AI coding assistants
+description: >-
+  For developers who work with an AI assistant: turn this on and make a token on the Settings page, and any assistant
+  that speaks MCP can ask this workspace for an npm or PyPI package's latest version - with its summary, licence and
+  home page, and the known security advisories for that version from the OSV database - instead of guessing from what it
+  learned long ago. An unknown package is answered as an error the assistant can read. Needs: nothing but a token for
+  the assistant.
+category: Engineering
+trigger: manual
+# Offered to AI assistants through the workspace's MCP server: what a model reads to choose it, and what it takes.
+tool:
+  name: latest_package_version
+  description: >-
+    The latest released version of an npm or PyPI package, with its summary, licence, home page and the security
+    advisories known for that version. Use it before adding or upgrading a dependency.
+  input:
+    ecosystem: { type: string, description: "npm or pypi", required: true, choices: [npm, pypi] }
+    name: { type: string, description: "The package's name, as express, @types/node or requests", required: true }
+  timeout: 30s
+# What a test runs on: the arguments an assistant sends.
+sample:
+  ecosystem: npm
+  name: express
+steps:
+  - name: registry
+    http:
+      method: GET
+      # npm writes a scoped package's slash as %2F; PyPI answers for any spelling of the name.
+      url: >-
+        {{ value.ecosystem == 'npm'
+          ? 'https://registry.npmjs.org/' + value.name.trim().replace('/', '%2F') + '/latest'
+          : 'https://pypi.org/pypi/' + value.name.trim() + '/json' }}
+      timeout: 15s
+      sample:
+        name: express
+        version: 5.1.0
+        description: Fast, unopinionated, minimalist web framework
+        license: MIT
+        homepage: https://expressjs.com/
+    retry: { attempts: 2, wait: 3s }
+    on_error: continue
+  - name: known
+    if:
+      when: "!has(steps.registry.status) || steps.registry.status != 200"
+      then:
+        - stop: { error: "no {{ value.ecosystem }} package called {{ value.name }}" }
+  - name: package
+    set:
+      # npm answers with the version itself; PyPI with info about the project.
+      info: "value.ecosystem == 'npm' ? steps.registry.body : steps.registry.body.info"
+  - name: advisories
+    http:
+      method: POST
+      url: https://api.osv.dev/v1/query
+      json:
+        version: "{{ steps.package.info.version }}"
+        package:
+          name: "{{ value.name.trim() }}"
+          ecosystem: "{{ value.ecosystem == 'npm' ? 'npm' : 'PyPI' }}"
+      timeout: 15s
+      sample:
+        vulns: []
+    retry: { attempts: 2, wait: 3s }
+    on_error: continue
+  - name: answer
+    set:
+      name: value.name.trim()
+      ecosystem: value.ecosystem
+      latest: steps.package.info.version
+      summary: "value.ecosystem == 'npm' ? steps.package.info.description : steps.package.info.summary"
+      license: steps.package.info.license
+      home_page: "value.ecosystem == 'npm' ? steps.package.info.homepage : steps.package.info.home_page"
+      advisories: "has(steps.advisories.body) && has(steps.advisories.body.vulns) ? steps.advisories.body.vulns.map(v, v.id) : []"
+      advisories_checked: has(steps.advisories.status) && steps.advisories.status == 200

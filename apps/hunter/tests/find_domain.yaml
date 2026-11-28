@@ -1,0 +1,11 @@
+description: A company's website from its name
+action: find_domain
+credential: { api_key: hunter-test-key }
+input: { company: Example Inc }
+exchanges:
+  - sent: { method: GET, url: https://api.hunter.io/v2/domain-finder, query: { company: Example Inc } }
+    answer:
+      body:
+        data: [{ domain: example.com, company_name: Example Inc, logo: "https://logos.example/example.com.png", email_count: 42 }]
+        meta: { results: 1, params: { company: Example Inc } }
+result: [{ domain: example.com, company_name: Example Inc, logo: "https://logos.example/example.com.png", email_count: 42 }]

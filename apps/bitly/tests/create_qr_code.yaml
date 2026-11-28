@@ -1,0 +1,40 @@
+# Made by `openduct app from-openapi`: Create a QR Code.
+description: "Create a QR Code, made from the API description's schemas"
+action: create_qr_code
+credential: { token: test-token }
+input: { group_guid: group_guid_1, destination: {} }
+exchanges:
+  - sent:
+      method: POST
+      url: "https://api-ssl.bitly.com/v4/qr-codes"
+      query: {}
+      headers: { authorization: "Bearer test-token" }
+      body: { group_guid: group_guid_1 }
+    answer:
+      status: 201
+      body:
+        qrcode_id: qrcode_1
+        group_guid: group_guid_1
+        title: example
+        is_customized: true
+        serialized_content: example
+        qr_code_type: bitlink
+        long_urls: [example]
+        bitlink_id: bitlink_1
+        domain: example
+        is_gs1: true
+        created_by: example
+        tags: [example]
+result:
+  qrcode_id: qrcode_1
+  group_guid: group_guid_1
+  title: example
+  is_customized: true
+  serialized_content: example
+  qr_code_type: bitlink
+  long_urls: [example]
+  bitlink_id: bitlink_1
+  domain: example
+  is_gs1: true
+  created_by: example
+  tags: [example]

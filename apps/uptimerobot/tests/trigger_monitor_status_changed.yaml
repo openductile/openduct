@@ -1,0 +1,13 @@
+description: A monitor whose status changed since the last poll runs again; the others do not
+trigger: monitor_status_changed
+credential: { api_key: ur_test_1 }
+seen: { items: [["801", 31a39f31068413c8], ["802", dc566d1e3abe9cf5]] }   # each version kept as the start of the SHA-256 of its JSON ("DOWN", "UP")
+exchanges:
+  - sent: { method: GET, url: https://api.uptimerobot.com/v3/monitors, query: { limit: "200" } }
+    answer:
+      body:
+        nextLink: null
+        data:
+          - { id: 801, friendlyName: Shop, status: UP }
+          - { id: 802, friendlyName: Blog, status: UP }
+runs: [{ id: 801, friendlyName: Shop, status: UP }]

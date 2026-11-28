@@ -1,0 +1,12 @@
+description: A hostname's history over two pages, the next asked for with the page state given
+action: hostname_history
+credential: { api_key: us_test_1 }
+input: { hostname: shop.example.com }
+exchanges:
+  - sent: { method: GET, url: https://urlscan.io/api/v1/hostname/shop.example.com, query: { limit: "1000" } }
+    answer: { body: { pageState: ps2, results: [{ seen_on: "2026-11-20", source: ct, first_seen: "2026-11-20", last_seen: "2026-11-27" }] } }
+  - sent: { url: https://urlscan.io/api/v1/hostname/shop.example.com, query: { limit: "1000", pageState: ps2 } }
+    answer: { body: { results: [{ seen_on: "2026-11-21", source: scan, first_seen: "2026-11-21", last_seen: "2026-11-21" }] } }
+result:
+  - { seen_on: "2026-11-20", source: ct, first_seen: "2026-11-20", last_seen: "2026-11-27" }
+  - { seen_on: "2026-11-21", source: scan, first_seen: "2026-11-21", last_seen: "2026-11-21" }

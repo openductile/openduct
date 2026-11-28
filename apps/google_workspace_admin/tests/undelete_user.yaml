@@ -1,0 +1,7 @@
+action: undelete_user
+credential: { access_token: ya29.test }
+input: { id: "100000000000000000002" }
+exchanges:
+  - sent: { method: POST, url: https://admin.googleapis.com/admin/directory/v1/users/100000000000000000002/undelete, body: { orgUnitPath: / } }
+    answer: { status: 204 }
+result: { restored: true }

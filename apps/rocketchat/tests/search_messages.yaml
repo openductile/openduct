@@ -1,0 +1,7 @@
+action: search_messages
+credential: { workspace: acme, user_id: uAbC123, token: rc_test_1 }
+input: { room_id: rSales1, text: refund }
+exchanges:
+  - sent: { method: GET, url: https://acme.rocket.chat/api/v1/chat.search, query: { roomId: rSales1, searchText: refund, count: "100" } }
+    answer: { body: { messages: [{ _id: mSg010, rid: rSales1, msg: Refund sent for order 1001 }], success: true } }
+result: [{ _id: mSg010, rid: rSales1, msg: Refund sent for order 1001 }]

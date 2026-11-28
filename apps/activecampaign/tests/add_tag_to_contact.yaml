@@ -1,0 +1,29 @@
+description: A tag put on a contact
+action: add_tag_to_contact
+credential:
+  account: shopexample
+  api_key: test-key
+input:
+  contact_id: 113
+  tag_id: 20
+exchanges:
+- sent:
+    method: POST
+    url: https://shopexample.api-us1.com/api/3/contactTags
+    headers:
+      api-token: test-key
+    body:
+      contactTag:
+        contact: 113
+        tag: 20
+  answer:
+    status: 201
+    body:
+      contactTag: &id001
+        id: '55'
+        contact: '113'
+        tag: '20'
+        cdate: '2026-11-27T10:10:00-06:00'
+      contacts: []
+      tags: []
+result: *id001

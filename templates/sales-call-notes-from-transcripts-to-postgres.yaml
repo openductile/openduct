@@ -1,0 +1,67 @@
+name: Sales call notes from AssemblyAI transcripts, kept in PostgreSQL
+description: >-
+  When AssemblyAI finishes a call's transcript, it calls this workflow (give its address as webhook_url, with
+  webhook_auth_header_name x-openduct-token and the workflow's token as the value): the transcript is read, summed up
+  in a few lines, the next steps, objections and follow-up date pulled out, and all of it kept in your call_notes
+  table, one row per call, for your CRM or dashboards to read. Needs: assemblyai (an API key, sent as the
+  authorization header), model, sales_db.
+category: Sales
+trigger:
+  # Left empty here: each workflow made from the template is given a token of its own.
+  webhook: { token: "" }
+# What a test runs on: an event as this trigger gives it.
+sample:
+  transcript_id: 5552493-16d8-42d8-8feb-c2a16b56f6e8
+  status: completed
+steps:
+  - where: value.status == 'completed'
+  - name: transcript
+    http:
+      url: "https://api.assemblyai.com/v2/transcript/{{ value.transcript_id }}"
+      credential: assemblyai
+      sample:
+        id: 5552493-16d8-42d8-8feb-c2a16b56f6e8
+        status: completed
+        audio_duration: 1260
+        text: >-
+          Thanks for making time, Priya. So you are on spreadsheets today for about forty field technicians? Yes, and
+          the trouble is the Friday payroll export, it takes my team half a day. Our plan at that size is twelve
+          dollars a seat. That is more than we budgeted; we would need the finance lead, Marcus, to sign off. Then
+          let us send a quote for forty seats and book a demo with Marcus for next Thursday, December third.
+    retry: { attempts: 3, wait: 30s }
+  - name: summary
+    summarise:
+      credential: model
+      text: "{{ steps.transcript.body.text }}"
+      length: 3 sentences
+      style: for a salesperson, plain words, naming the customer's need and where the deal stands
+  - name: details
+    extract:
+      credential: model
+      text: "{{ steps.transcript.body.text }}"
+      fields:
+        - { name: company_need, description: "what the customer wants solved, in a few words" }
+        - { name: next_steps, type: list, description: what each side agreed to do next }
+        - { name: objections, type: list, description: "concerns the customer raised, as price or timing" }
+        - { name: decision_maker, description: "who signs off, if named" }
+        - { name: follow_up, type: date, description: the next meeting or call agreed }
+  # The table: call_notes (transcript_id text PRIMARY KEY, minutes numeric, summary text, need text,
+  # next_steps jsonb, objections jsonb, decision_maker text, follow_up date).
+  - name: keep
+    postgres:
+      credential: sales_db
+      sql: >-
+        INSERT INTO call_notes (transcript_id, minutes, summary, need, next_steps, objections, decision_maker, follow_up)
+        VALUES ($1, $2::numeric, $3, $4, $5::jsonb, $6::jsonb, $7, $8::date)
+        ON CONFLICT (transcript_id) DO UPDATE SET summary = EXCLUDED.summary, need = EXCLUDED.need,
+        next_steps = EXCLUDED.next_steps, objections = EXCLUDED.objections,
+        decision_maker = EXCLUDED.decision_maker, follow_up = EXCLUDED.follow_up
+      params:
+        - value.transcript_id
+        - round(double(steps.transcript.body.audio_duration) / 60, 1)
+        - steps.summary.summary
+        - steps.details.json.company_need
+        - steps.details.json.next_steps
+        - steps.details.json.objections
+        - steps.details.json.decision_maker
+        - steps.details.json.follow_up

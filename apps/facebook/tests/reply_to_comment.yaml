@@ -1,0 +1,11 @@
+description: A reply under an Instagram comment
+action: reply_to_comment
+credential: { access_token: EAAB_test }
+input: { comment_id: "17870913679156914", message: Thank you!, on_instagram: true }
+exchanges:
+  - sent:
+      method: POST
+      url: https://graph.facebook.com/v25.0/17870913679156914/replies
+      body: { message: Thank you! }
+    answer: { body: { id: "17873440459141021" } }
+result: { id: "17873440459141021" }

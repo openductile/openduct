@@ -1,0 +1,39 @@
+name: Keep documents for answers
+description: >-
+  When a document comes in over a webhook ({"source": ..., "team": ..., "text": ...}, in Markdown or plain text), cut
+  it into pieces at its headings, turn each piece into a vector and keep them in Postgres with pgvector - the table is
+  made the first time. A document sent again replaces its old pieces. "Answer from your documents" answers questions
+  from them.
+category: AI
+trigger:
+  webhook: {}
+# What a test runs on: an event as this trigger gives it.
+sample:
+  source: returns-policy
+  team: support
+  text: |-
+    # Returns
+
+    Anything bought in the last 30 days can be sent back, unused and in its box.
+
+    # Refunds
+
+    Refunds go to the card that paid, within 5 working days of the parcel reaching us.
+steps:
+  - name: split
+    split_text:
+      text: "{{ value.text }}"
+      source: "{{ value.source }}"
+      by: markdown
+      size: 1200
+      overlap: 200
+      metadata:
+        team: "{{ value.team }}"
+  - name: keep
+    vector_store:
+      action: add
+      credential: docs-db
+      table: doc_pieces
+      create: true
+      embed_with: model
+      pieces: steps.split.pieces

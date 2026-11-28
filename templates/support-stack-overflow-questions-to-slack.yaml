@@ -1,0 +1,89 @@
+name: New Stack Overflow questions about your product, in Slack
+description: >-
+  For developer-facing companies: every hour, find the new Stack Overflow questions with your product's tag, have a
+  model put each in one line - what the person is trying to do and what goes wrong - look up the closest of your own
+  help answers (kept in Postgres with pgvector), and post them to a Slack channel with their links, so someone who knows
+  answers while the asker is still there. Needs: an AI credential called model (with an embedding model), a Postgres
+  credential called docs_db, and a Slack credential called slack.
+category: Support
+trigger:
+  schedule: { every: 1h }
+# What a test runs on: an event as this trigger gives it.
+sample:
+  scheduled_at: "2026-11-27T15:00:00Z"
+steps:
+  - name: settings
+    set:
+      # Your product's tag on Stack Overflow, and the channel to tell.
+      tag: "'your-product'"
+      channel: "'#community'"
+      # A help answer at least this close (0 to 1) is shown beside the question.
+      close_enough: "0.75"
+  - name: questions
+    http:
+      method: GET
+      url: https://api.stackexchange.com/2.3/questions
+      query:
+        site: stackoverflow
+        tagged: "{{ steps.settings.tag }}"
+        sort: creation
+        order: desc
+        # The hour since the last run, in seconds since 1970.
+        fromdate: "{{ int(timestamp(value.scheduled_at)) - 3600 }}"
+        todate: "{{ int(timestamp(value.scheduled_at)) }}"
+        filter: withbody
+        pagesize: "30"
+      fail_on_status: true
+      sample:
+        items:
+          - question_id: 79990001
+            title: Webhook signature check fails after upgrading the SDK to 3.x
+            link: https://stackoverflow.com/questions/79990001
+            tags: [your-product, webhooks, node.js]
+            is_answered: false
+            answer_count: 0
+            owner: { display_name: dev_sam }
+            body: "<p>Since 3.0 every webhook is refused with <code>invalid signature</code>. I pass the raw body as before.</p>"
+        has_more: false
+    retry: { attempts: 3, wait: 30s }
+  - where: size(steps.questions.body.items) > 0
+  - name: each_question
+    for_each:
+      items: steps.questions.body.items
+      steps:
+        - name: gist
+          ai:
+            credential: model
+            system: >-
+              Put a developer's question in one plain line: what they are trying to do, and what goes wrong. No
+              greeting, no advice.
+            prompt: "{{ item.title }}\n{{ item.body.substring(0, math.least(size(item.body), 4000)) }}"
+            max_tokens: 80
+        - name: closest
+          vector_store:
+            action: search
+            credential: docs_db
+            table: help_pieces
+            embed_with: model
+            query: "{{ item.title }}"
+            top_k: 1
+          on_error: continue
+  - name: message
+    javascript: |
+      // One Slack message for the hour: each question in a line, its link, and the closest help answer when close.
+      const items = steps.questions.body.items;
+      const lines = items.map((q, i) => {
+        const r = steps.each_question[i] || {};
+        const line = (r.gist && r.gist.text) || q.title;
+        const hit = r.closest && r.closest.matches && r.closest.matches[0];
+        const near = hit && hit.score >= steps.settings.close_enough
+          ? `\n    closest help answer: ${(hit.metadata && hit.metadata.link) || hit.source}` : "";
+        return `- ${line} (${q.answer_count} answers) ${q.link}${near}`;
+      });
+      return { text: `${items.length} new Stack Overflow questions tagged ${steps.settings.tag}:\n${lines.join("\n")}` };
+  - name: post
+    slack:
+      credential: slack
+      channel: "{{ steps.settings.channel }}"
+      text: "{{ steps.message.text }}"
+    retry: { attempts: 3, wait: 10s }

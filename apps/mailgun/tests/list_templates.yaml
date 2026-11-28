@@ -1,0 +1,15 @@
+description: "The templates; an empty page ends the list"
+action: list_templates
+credential: {"api_key": "key-test", "domain": "mg.example.com"}
+exchanges:
+  - sent:
+      method: GET
+      url: "https://api.mailgun.net/v3/mg.example.com/templates"
+      query: {"limit": "100"}
+      headers: {"authorization": "Basic YXBpOmtleS10ZXN0"}
+    answer: {"status": 200, "body": {"items": [{"id": "t1", "name": "welcome", "description": "Welcome email", "createdAt": "Mon, 02 Nov 2026 15:04:05 UTC"}], "paging": {"next": "https://api.mailgun.net/v3/mg.example.com/templates?limit=100&p=welcome&page=next"}}}
+  - sent:
+      method: GET
+      url: "https://api.mailgun.net/v3/mg.example.com/templates?limit=100&p=welcome&page=next"
+    answer: {"status": 200, "body": {"items": null, "paging": {}}}
+result: [{"id": "t1", "name": "welcome", "description": "Welcome email", "createdAt": "Mon, 02 Nov 2026 15:04:05 UTC"}]

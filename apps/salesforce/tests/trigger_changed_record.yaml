@@ -1,0 +1,19 @@
+description: A contact changed since it was seen is new again, read in full
+trigger: changed_record
+credential: { access_token: "00D000000000001!AQ.test", instance: examplecorp.my.salesforce.com }
+input: { object: Contact }
+seen: { items: [["0035e00000XyZaBAAV", a924cd6f3d9553c6]] }
+exchanges:
+  - sent:
+      method: GET
+      url: https://examplecorp.my.salesforce.com/services/data/v67.0/query
+      query: { q: "SELECT Id, LastModifiedDate FROM Contact ORDER BY LastModifiedDate DESC LIMIT 200" }
+    answer:
+      body:
+        done: true
+        records:
+          - { attributes: { type: Contact }, Id: 0035e00000XyZaBAAV, LastModifiedDate: "2026-11-27T11:00:00.000+0000" }
+  - sent: { method: GET, url: https://examplecorp.my.salesforce.com/services/data/v67.0/sobjects/Contact/0035e00000XyZaBAAV }
+    answer: { body: { attributes: { type: Contact }, Id: 0035e00000XyZaBAAV, LastName: Okafor, Email: bo.okafor@example.com } }
+runs:
+  - { attributes: { type: Contact }, Id: 0035e00000XyZaBAAV, LastName: Okafor, Email: bo.okafor@example.com }

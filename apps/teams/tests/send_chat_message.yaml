@@ -1,0 +1,12 @@
+description: A message in a chat, as text by default
+action: send_chat_message
+sign_in: teams
+credential: { access_token: eyJ0.teams }
+input: { chat_id: "19:2da4c29f6d7041eca70b638b43d45437@thread.v2", text: Hello world }
+exchanges:
+  - sent:
+      method: POST
+      url: "https://graph.microsoft.com/v1.0/chats/19:2da4c29f6d7041eca70b638b43d45437@thread.v2/messages"
+      body: { body: { contentType: text, content: Hello world } }
+    answer: { status: 201, body: { id: "1616991463150", chatId: "19:2da4c29f6d7041eca70b638b43d45437@thread.v2", createdDateTime: "2026-11-23T04:17:43.15Z", body: { contentType: text, content: Hello world } } }
+result: { id: "1616991463150", chatId: "19:2da4c29f6d7041eca70b638b43d45437@thread.v2", createdDateTime: "2026-11-23T04:17:43.15Z", body: { contentType: text, content: Hello world } }

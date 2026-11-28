@@ -1,0 +1,9 @@
+description: A user not allowed to change a kind of record
+action: update_records
+credential: { address: "https://mycompany.example.com", api_key: 6578616d706c65206b6579 }
+input: { model: account.move, ids: "7", values: { ref: X } }
+exchanges:
+  - answer:
+      status: 403
+      body: { name: odoo.exceptions.AccessError, message: "You are not allowed to modify 'Journal Entry' (account.move) records.", arguments: ["You are not allowed to modify 'Journal Entry' (account.move) records."], context: {}, debug: "" }
+error: "You are not allowed to modify 'Journal Entry' (account.move) records."

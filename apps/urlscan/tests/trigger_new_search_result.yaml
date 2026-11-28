@@ -1,0 +1,18 @@
+description: Scans matching the query since the last poll, the newest asked for first, run oldest first
+trigger: new_search_result
+credential: { api_key: us_test_1 }
+input: { q: "page.domain:shop.example.com" }
+seen: { items: [["0e37e828-a9d9-45c0-ac50-1ca579b86c72", ""]] }
+exchanges:
+  - sent:
+      method: GET
+      url: https://urlscan.io/api/v1/search
+      query: { q: "page.domain:shop.example.com", size: "100" }
+    answer:
+      body:
+        results:
+          - { _id: 9c2d0000-0000-4000-8000-000000000005, page: { url: "https://shop.example.com/pay" } }
+          - { _id: 9c2d0000-0000-4000-8000-000000000004, page: { url: "https://shop.example.com/cart" } }
+          - { _id: 0e37e828-a9d9-45c0-ac50-1ca579b86c72, page: { url: "https://shop.example.com/login" } }
+        has_more: true
+ids: [9c2d0000-0000-4000-8000-000000000004, 9c2d0000-0000-4000-8000-000000000005]

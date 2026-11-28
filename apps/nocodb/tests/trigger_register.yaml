@@ -1,0 +1,13 @@
+description: Turning the workflow on adds a webhook to the table that sends the workflow's secret in a header
+trigger: record_event
+register: true
+workflow: wf1
+address: https://studio.example/hooks/h1
+credential: { api_token: test-nocodb-token }
+input: { base_id: pexample0001, table_id: mexample0001 }
+exchanges:
+  - sent:
+      method: POST
+      url: https://app.nocodb.com/api/v3/meta/bases/pexample0001/tables/mexample0001/hooks
+      headers: { xc-token: test-nocodb-token }
+    answer: { body: { id: hkexample0001, table_id: mexample0001, title: OpenDuct workflow wf1, event: record, operation: [insert], active: true } }

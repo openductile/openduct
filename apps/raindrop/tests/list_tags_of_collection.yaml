@@ -1,0 +1,11 @@
+description: "The tags of one collection"
+action: list_tags
+credential: { token: test-token }
+input: { collection_id: 77 }
+exchanges:
+  - sent:
+      method: GET
+      url: https://api.raindrop.io/rest/v1/tags/77
+    answer:
+      body: { result: true, items: [{ _id: supplier, count: 12 }] }
+result: [{ _id: supplier, count: 12 }]

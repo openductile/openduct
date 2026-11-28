@@ -1,0 +1,25 @@
+description: The plan and what is left of it
+action: account
+credential: { api_key: hunter-test-key }
+exchanges:
+  - sent: { method: GET, url: https://api.hunter.io/v2/account }
+    answer:
+      body:
+        data:
+          first_name: Ann
+          last_name: Example
+          email: ann.example@example.com
+          plan_name: Starter
+          plan_level: 1
+          reset_date: "2026-12-01"
+          team_id: 5
+          requests: { searches: { used: 12, available: 500 }, verifications: { used: 30, available: 1000 } }
+result:
+  first_name: Ann
+  last_name: Example
+  email: ann.example@example.com
+  plan_name: Starter
+  plan_level: 1
+  reset_date: "2026-12-01"
+  team_id: 5
+  requests: { searches: { used: 12, available: 500 }, verifications: { used: 30, available: 1000 } }

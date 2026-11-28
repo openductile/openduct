@@ -1,0 +1,13 @@
+description: Every entity's state
+action: list_states
+credential: { url: "http://home.example:8123", token: ha-test-token }
+exchanges:
+  - sent: { method: GET, url: "http://home.example:8123/api/states" }
+    answer:
+      status: 200
+      body:
+        - { entity_id: sun.sun, state: below_horizon, attributes: {}, last_changed: "2026-11-27T05:43:32+00:00" }
+        - { entity_id: light.porch, state: "on", attributes: { friendly_name: Porch }, last_changed: "2026-11-27T06:00:00+00:00" }
+result:
+  - { entity_id: sun.sun, state: below_horizon, attributes: {}, last_changed: "2026-11-27T05:43:32+00:00" }
+  - { entity_id: light.porch, state: "on", attributes: { friendly_name: Porch }, last_changed: "2026-11-27T06:00:00+00:00" }

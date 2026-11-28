@@ -1,0 +1,11 @@
+description: A board's cards made
+action: list_board_activity
+credential: { api_key: testkey0123456789, token: ATTAtesttoken0123 }
+input: { board_id: 6567a1b2c3d4e5f6000000b1, filter: createCard }
+exchanges:
+  - sent:
+      method: GET
+      url: https://api.trello.com/1/boards/6567a1b2c3d4e5f6000000b1/actions
+      query: { key: testkey0123456789, token: ATTAtesttoken0123, filter: createCard }
+    answer: { body: [{ id: 6567a1b2c3d4e5f600000a02, type: createCard, date: "2026-11-27T10:05:00.000Z", idMemberCreator: 6567a1b2c3d4e5f600000m01, data: { card: { id: 6567a1b2c3d4e5f600000002, name: Send the invoice }, list: { id: 6567a1b2c3d4e5f6000000a1, name: To do }, board: { id: 6567a1b2c3d4e5f6000000b1, name: Orders } }, memberCreator: { id: 6567a1b2c3d4e5f600000m01, fullName: Ann Example } }] }
+result: [{ id: 6567a1b2c3d4e5f600000a02, type: createCard, date: "2026-11-27T10:05:00.000Z", idMemberCreator: 6567a1b2c3d4e5f600000m01, data: { card: { id: 6567a1b2c3d4e5f600000002, name: Send the invoice }, list: { id: 6567a1b2c3d4e5f6000000a1, name: To do }, board: { id: 6567a1b2c3d4e5f6000000b1, name: Orders } }, memberCreator: { id: 6567a1b2c3d4e5f600000m01, fullName: Ann Example } }]

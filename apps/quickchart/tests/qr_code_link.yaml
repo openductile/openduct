@@ -1,0 +1,13 @@
+description: A QR code for a ticket page, with a caption
+action: qr_code_link
+credential: { api_key: "" }
+input: { text: "https://tickets.example.com/t/T-1042", size: 300, caption: Show this at the door }
+exchanges:
+  - sent:
+      method: POST
+      url: https://quickchart.io/qr-url
+      body: { text: "https://tickets.example.com/t/T-1042", size: 300, caption: Show this at the door }
+    answer:
+      status: 200
+      body: { url: "https://quickchart.io/qr?text=https%3A%2F%2Ftickets.example.com%2Ft%2FT-1042&size=300&caption=Show+this+at+the+door" }
+result: { url: "https://quickchart.io/qr?text=https%3A%2F%2Ftickets.example.com%2Ft%2FT-1042&size=300&caption=Show+this+at+the+door" }

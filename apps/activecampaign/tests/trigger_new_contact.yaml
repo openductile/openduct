@@ -1,0 +1,43 @@
+description: A contact added since the last poll starts a run; the page with one seen is the last asked
+trigger: new_contact
+credential:
+  account: shopexample
+  api_key: test-key
+seen:
+  items:
+  - - '113'
+    - ''
+exchanges:
+- sent:
+    method: GET
+    url: https://shopexample.api-us1.com/api/3/contacts
+    query:
+      orders[cdate]: desc
+      limit: '100'
+    headers:
+      api-token: test-key
+  answer:
+    status: 200
+    body:
+      contacts:
+      - &id001
+        id: '114'
+        email: bo@example.com
+        firstName: Bo
+        lastName: Example
+        phone: '+15555550100'
+        cdate: '2026-11-27T10:00:00-06:00'
+        udate: '2026-11-27T10:00:00-06:00'
+        orgid: '0'
+      - id: '113'
+        email: ann@example.com
+        firstName: Ann
+        lastName: Example
+        phone: '+15555550100'
+        cdate: '2026-11-27T10:00:00-06:00'
+        udate: '2026-11-27T10:00:00-06:00'
+        orgid: '0'
+      meta:
+        total: '2'
+runs:
+- *id001

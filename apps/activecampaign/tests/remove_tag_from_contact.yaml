@@ -1,0 +1,18 @@
+description: A tag taken off a contact
+action: remove_tag_from_contact
+credential:
+  account: shopexample
+  api_key: test-key
+input:
+  contact_tag_id: '55'
+exchanges:
+- sent:
+    method: DELETE
+    url: https://shopexample.api-us1.com/api/3/contactTags/55
+    headers:
+      api-token: test-key
+  answer:
+    status: 200
+    body: {}
+result:
+  removed: true

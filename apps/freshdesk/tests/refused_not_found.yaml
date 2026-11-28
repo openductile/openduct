@@ -1,0 +1,14 @@
+description: A ticket that is not there
+action: get_ticket
+credential:
+  domain: acme
+  api_key: test-key
+input:
+  ticket_id: '999'
+exchanges:
+- answer:
+    status: 404
+    body:
+      code: access_denied
+      message: You are not authorized to perform this action.
+error: 'Freshdesk answered 404: You are not authorized to perform this action.'

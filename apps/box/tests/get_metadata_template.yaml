@@ -1,0 +1,53 @@
+# Made by `openduct app from-openapi`: Get metadata template by ID.
+description: "Get metadata template by ID, made from the API description's schemas"
+action: get_metadata_template
+credential: { access_token: test-access-token }
+input: { template_id: template_1 }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://api.box.com/2.0/metadata_templates/template_1"
+      query: {}
+      headers: { authorization: "Bearer test-access-token" }
+    answer:
+      status: 200
+      body:
+        id: "58063d82-4128-7b43-bba9-92f706befcdf"
+        type: metadata_template
+        scope: enterprise_123456
+        templateKey: productInfo
+        displayName: example
+        hidden: true
+        fields:
+          - type: string
+            key: category
+            displayName: Category
+            description: example
+            hidden: true
+            options: [{}]
+            taxonomyKey: locationTaxonomy
+            taxonomyId: "05ece6d7-fec4-4d3f-bfd2-36fd4dddea97"
+            namespace: enterprise_123456
+            optionsRules: { multiSelect: true, selectableLevels: [null] }
+            id: "822227e0-47a5-921b-88a8-494760b2e6d2"
+        copyInstanceOnItemCopy: true
+result:
+  id: "58063d82-4128-7b43-bba9-92f706befcdf"
+  type: metadata_template
+  scope: enterprise_123456
+  templateKey: productInfo
+  displayName: example
+  hidden: true
+  fields:
+    - type: string
+      key: category
+      displayName: Category
+      description: example
+      hidden: true
+      options: [{}]
+      taxonomyKey: locationTaxonomy
+      taxonomyId: "05ece6d7-fec4-4d3f-bfd2-36fd4dddea97"
+      namespace: enterprise_123456
+      optionsRules: { multiSelect: true, selectableLevels: [null] }
+      id: "822227e0-47a5-921b-88a8-494760b2e6d2"
+  copyInstanceOnItemCopy: true

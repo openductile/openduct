@@ -1,0 +1,10 @@
+action: search_tickets
+credential: { subdomain: acme, token: zm_test_1 }
+input: { query: "state.name:open AND customer.email:ann@example.com", sort_by: created_at, order_by: desc }
+exchanges:
+  - sent:
+      method: GET
+      url: https://acme.zammad.com/api/v1/tickets/search
+      query: { query: "state.name:open AND customer.email:ann@example.com", sort_by: created_at, order_by: desc, per_page: "100" }
+    answer: { body: [{ id: 42, number: "31042", title: Order 1001 arrived damaged, state_id: 2 }] }
+result: [{ id: 42, number: "31042", title: Order 1001 arrived damaged, state_id: 2 }]

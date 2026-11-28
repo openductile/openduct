@@ -1,0 +1,45 @@
+description: One driver
+action: get_worker
+credential:
+  api_key: test-key
+input:
+  worker_id: h*wSb*apKlDkUFnuLTtjPke7
+exchanges:
+- sent:
+    method: GET
+    url: https://onfleet.com/api/v2/workers/h*wSb*apKlDkUFnuLTtjPke7
+    headers:
+      authorization: Basic dGVzdC1rZXk6
+  answer:
+    status: 200
+    body: &id001
+      id: h*wSb*apKlDkUFnuLTtjPke7
+      timeCreated: 1794500000000
+      timeLastModified: 1795161600000
+      organization: yAM*fDkztrT3gUcz9mNDgNOL
+      name: Lee Driver
+      displayName: Lee
+      phone: '+14155550123'
+      activeTask: null
+      tasks:
+      - 11z1BbsQUZFHD1XAd~emDDeK
+      onDuty: true
+      timeLastSeen: 1795161500000
+      capacity: 0
+      userData: {}
+      accountStatus: ACCEPTED
+      metadata: []
+      imageUrl: null
+      teams:
+      - R4P7jhuzaIZ4cHHZE1ghmTtB
+      delayTime: null
+      location:
+      - -122.41
+      - 37.78
+      vehicle:
+        id: tN1HjcvygQWvz5FRR1JAxwL8
+        type: CAR
+        description: White van
+        licensePlate: TEST123
+        color: white
+result: *id001

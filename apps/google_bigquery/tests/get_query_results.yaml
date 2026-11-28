@@ -1,0 +1,14 @@
+description: A finished query's rows over two pages
+action: get_query_results
+credential: { access_token: ya29.bq-test }
+input: { project_id: example-shop-1, job_id: job_test_2, location: europe-west2 }
+exchanges:
+  - sent:
+      method: GET
+      url: https://bigquery.googleapis.com/bigquery/v2/projects/example-shop-1/queries/job_test_2
+      query: { location: europe-west2, maxResults: "10000", timeoutMs: "30000", formatOptions.timestampOutputFormat: ISO8601_STRING }
+    answer: { body: { schema: { fields: [{ name: n, type: INTEGER }] }, rows: [{ f: [{ v: "41" }] }], pageToken: pt2, jobComplete: true } }
+  - sent:
+      query: { location: europe-west2, maxResults: "10000", timeoutMs: "30000", formatOptions.timestampOutputFormat: ISO8601_STRING, pageToken: pt2 }
+    answer: { body: { schema: { fields: [{ name: n, type: INTEGER }] }, rows: [{ f: [{ v: "42" }] }], jobComplete: true } }
+result: [{ n: 41 }, { n: 42 }]

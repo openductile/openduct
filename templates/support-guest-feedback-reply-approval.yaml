@@ -1,0 +1,87 @@
+name: Guest feedback answered personally, after the manager says yes
+description: >-
+  For a small hotel, a guesthouse or a rental: guests leave feedback on a form after their stay. An AI agent looks the
+  stay up in your Bookings sheet, writes a short note for the manager and a personal reply, and the feedback is added
+  to your Feedback sheet. The manager gets the draft by e-mail with a link to approve it - with a comment that goes
+  into the reply - and only an approved reply is sent from Gmail; with no answer in two days nothing is sent. Needs:
+  model (ai), sheets (google_sheets), mail (smtp), guest_mail (gmail).
+category: Support
+trigger:
+  form:
+    title: How was your stay?
+    fields:
+      - { name: email, label: Your e-mail, type: email, required: true }
+      - { name: booking, label: Your booking number, type: text, required: true, max_length: 20 }
+      - { name: rating, label: "Your stay, from 1 (poor) to 5 (excellent)", type: number, min: 1, max: 5, required: true }
+      - { name: liked, label: "What did you like?", type: long_text, max_length: 2000 }
+      - { name: better, label: "What could we do better?", type: long_text, max_length: 2000 }
+    thanks: Thank you for telling us - we read every answer.
+# What a test runs on: an answer as the form gives it.
+sample:
+  email: guest.lee@example.com
+  booking: BK-30417
+  rating: 3
+  liked: The breakfast and the view from the room.
+  better: The shower was lukewarm two mornings in a row, and nobody followed up after I mentioned it.
+steps:
+  - name: helper
+    agent:
+      credential: model
+      instructions: >-
+        You help the manager of a small hotel answer guest feedback. First find the booking in the Bookings sheet
+        with read_bookings (columns: booking, guest name, room, arrival, departure, notes). Then write a reply in the
+        manager's voice - warm, specific to what the guest said, at most 120 words, no promises of refunds or
+        discounts - and a two-line note for the manager on what to fix. If the booking is not found, write the reply
+        without the stay's details.
+      input: "Booking {{ value.booking }}, rating {{ value.rating }} of 5. Liked: {{ value.liked }} Could be better: {{ value.better }}"
+      tools:
+        - name: read_bookings
+          description: The Bookings sheet, a row a booking.
+          google_sheets: { action: read_rows, credential: sheets, spreadsheet_id: your-spreadsheet-id, range: "Bookings!A1:F5000" }
+      allow: [read_bookings]
+      output:
+        schema:
+          type: object
+          properties:
+            guest_name: { type: string, description: "the guest's first name, or empty" }
+            reply: { type: string }
+            manager_note: { type: string }
+            topic: { type: string, enum: [room, cleanliness, staff, food, noise, price, other, none] }
+          required: [guest_name, reply, manager_note, topic]
+      max_turns: 4
+      max_tool_calls: 2
+  - name: log
+    google_sheets:
+      action: add_row
+      credential: sheets
+      spreadsheet_id: your-spreadsheet-id
+      sheet: Feedback
+      values: ["{{ value.booking }}", "{{ value.rating }}", "{{ steps.helper.json.topic }}", "{{ steps.helper.json.manager_note }}", "{{ value.better }}"]
+    retry: { attempts: 3, wait: 30s }
+  - name: ask_manager
+    email:
+      credential: mail
+      to: manager@example.com
+      subject: "Feedback {{ value.rating }}/5 on {{ value.booking }}: approve the reply?"
+      text: "{{ steps.helper.json.manager_note }}\n\nThe guest wrote:\nLiked: {{ value.liked }}\nBetter: {{ value.better }}\n\nThe reply drafted:\n{{ steps.helper.json.reply }}\n\nApprove or reject it here (the link works once; a comment is added to the reply): {{ links.decide }}"
+  - name: decide
+    approval:
+      title: "Send this reply on booking {{ value.booking }}?"
+      description: "{{ steps.helper.json.reply }}"
+      comment: true
+      approve: Send it
+      reject: "Don't send"
+      timeout: 2d
+      on_timeout: continue
+  - name: send
+    if:
+      when: steps.decide.approved == true && has(steps.helper.json.reply) && steps.helper.json.reply != ''
+      then:
+        - name: reply
+          gmail:
+            action: send_email
+            credential: guest_mail
+            to: "{{ value.email }}"
+            subject: Thank you for your feedback
+            text: "{{ steps.helper.json.reply }}{{ steps.decide.comment != '' ? '\\n\\n' + steps.decide.comment : '' }}"
+          retry: { attempts: 3, wait: 10s }

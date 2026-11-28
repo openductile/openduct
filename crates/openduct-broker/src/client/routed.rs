@@ -137,6 +137,10 @@ impl Routed {
 
     /// The connection to the broker first named, made again when it broke.
     async fn first(&mut self) -> Result<&mut Client, ClientError> {
+        // A connection left in the middle of a request still has that answer coming: a new one is made.
+        if self.first.as_ref().is_some_and(Client::mid_exchange) {
+            self.first = None;
+        }
         if self.first.is_none() {
             self.first = Some(Client::connect_with(&self.seed, self.timeout, &self.security).await?);
         }
@@ -187,6 +191,9 @@ impl Routed {
 
     /// The connection to broker `id`.
     async fn to(&mut self, id: i32) -> Result<&mut Client, ClientError> {
+        if self.connections.get(&id).is_some_and(Client::mid_exchange) {
+            self.connections.remove(&id);
+        }
         if !self.connections.contains_key(&id) {
             if !self.brokers.contains_key(&id) {
                 self.learn(None).await?;

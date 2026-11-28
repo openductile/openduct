@@ -1,0 +1,17 @@
+description: The workspace's Phantoms, with their settings
+action: list_agents
+credential: { api_key: pb_test_key_1 }
+input: { with_argument: true }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://api.phantombuster.com/api/v2/agents/fetch-all"
+      query: { withArgument: "true" }
+    answer:
+      status: 200
+      body:
+        - { id: "7345678901234567", name: Maps search, script: Maps Search Export.js, argument: "{\"search\":\"bakeries\"}", lastEndType: finished, nbContainersRunning: 0 }
+        - { id: "7345678901234568", name: Profile scraper, script: LinkedIn Profile Scraper.js, lastEndType: error, nbContainersRunning: 1 }
+result:
+  - { id: "7345678901234567", name: Maps search, script: Maps Search Export.js, argument: "{\"search\":\"bakeries\"}", lastEndType: finished, nbContainersRunning: 0 }
+  - { id: "7345678901234568", name: Profile scraper, script: LinkedIn Profile Scraper.js, lastEndType: error, nbContainersRunning: 1 }

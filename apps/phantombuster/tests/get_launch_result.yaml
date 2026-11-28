@@ -1,0 +1,13 @@
+description: What a launch found
+action: get_launch_result
+credential: { api_key: pb_test_key_1 }
+input: { id: "4512345678901234" }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://api.phantombuster.com/api/v2/containers/fetch-result-object"
+      query: { id: "4512345678901234" }
+    answer:
+      status: 200
+      body: { resultObject: "[{\"title\":\"Rose City Roasters\",\"website\":\"https://roasters.example\"}]" }
+result: { resultObject: "[{\"title\":\"Rose City Roasters\",\"website\":\"https://roasters.example\"}]" }

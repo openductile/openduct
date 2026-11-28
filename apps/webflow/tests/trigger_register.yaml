@@ -1,0 +1,15 @@
+description: Turning the workflow on adds a webhook for the form's answers; its signing secret is kept
+trigger: new_form_submission
+register: true
+workflow: wf1
+address: https://studio.example/hooks/h1
+credential: { token: test-token }
+input: { site_id: site_1, form_name: Contact Us }
+exchanges:
+  - sent:
+      method: POST
+      url: "https://api.webflow.com/v2/sites/site_1/webhooks"
+      headers: { authorization: "Bearer test-token" }
+      body: { triggerType: form_submission, url: "https://studio.example/hooks/h1", filter: { name: Contact Us } }
+    answer: { status: 201, body: { id: wh_1, triggerType: form_submission, siteId: site_1, url: "https://studio.example/hooks/h1", secretKey: whsec_test_5f3a9c } }
+kept: { webhook_secret: whsec_test_5f3a9c, webhook_id: wh_1 }

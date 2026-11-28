@@ -48,3 +48,32 @@ actions:
       start: { dateTime: "{{ input.start }}" }
       end: { dateTime: "{{ input.end }}" }
       attendees: "{{ input.attendees == null ? null : input.attendees.map(e, {'email': e}) }}"
+triggers:
+  new_event:
+    label: A new event
+    description: Each event added to a calendar, asked for every few minutes.
+    inputs:
+      - { name: calendar_id, label: "The calendar (primary for your own, or its id)", required: true }
+    poll:
+      method: GET
+      path: "/calendars/{{ input.calendar_id }}/events"
+      query: { updatedMin: "{{ input.cursor == null ? input.now : input.cursor }}", orderBy: updated, showDeleted: "false", maxResults: "250" }
+      items: value.items
+      next: "value.nextPageToken == null ? null : {'pageToken': value.nextPageToken}"
+      id: item.id
+      # The next poll asks for what changed since the last change dealt with (Google's own clock).
+      cursor: "size(items) == 0 ? (cursor == null ? input.now : cursor) : items[size(items) - 1].updated"
+  changed_event:
+    label: An event added or changed
+    description: Each event added to a calendar or changed (its time, its people), asked for every few minutes.
+    inputs:
+      - { name: calendar_id, label: "The calendar (primary for your own, or its id)", required: true }
+    poll:
+      method: GET
+      path: "/calendars/{{ input.calendar_id }}/events"
+      query: { updatedMin: "{{ input.cursor == null ? input.now : input.cursor }}", orderBy: updated, showDeleted: "false", maxResults: "250" }
+      items: value.items
+      next: "value.nextPageToken == null ? null : {'pageToken': value.nextPageToken}"
+      id: item.id
+      version: item.updated
+      cursor: "size(items) == 0 ? (cursor == null ? input.now : cursor) : items[size(items) - 1].updated"

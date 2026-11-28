@@ -1,0 +1,10 @@
+description: A share removed
+action: delete_share
+credential: { url: "https://cloud.example.com", username: ann, password: app-pass-1 }
+input: { id: "42" }
+exchanges:
+  - sent:
+      method: DELETE
+      url: "https://cloud.example.com/ocs/v2.php/apps/files_sharing/api/v1/shares/42"
+    answer: { status: 200, body: { ocs: { meta: { status: ok, statuscode: 200, message: OK }, data: [] } } }
+result: { status: ok, statuscode: 200, message: OK }

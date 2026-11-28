@@ -1,0 +1,6 @@
+action: me
+credential: { access_token: st_test_1 }
+exchanges:
+  - sent: { method: GET, url: https://www.strava.com/api/v3/athlete, headers: { authorization: Bearer st_test_1 } }
+    answer: { body: { id: 1234567, username: ann_runs, firstname: Ann, lastname: Lee, city: Bristol, country: United Kingdom, premium: true, measurement_preference: meters } }
+result: { id: 1234567, username: ann_runs, firstname: Ann, lastname: Lee, city: Bristol, country: United Kingdom, premium: true, measurement_preference: meters }

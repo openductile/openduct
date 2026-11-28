@@ -1,0 +1,21 @@
+description: The files made, over two pages
+action: list_objects
+credential: { api_key: at_test_key_1 }
+input: { transaction_type: PDF }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://rest.apitemplate.io/v2/list-objects"
+      query: { transaction_type: PDF, limit: "100" }
+    answer:
+      status: 200
+      body:
+        status: success
+        objects: [{ transaction_ref: t001 }, { transaction_ref: t002 }, { transaction_ref: t003 }, { transaction_ref: t004 }, { transaction_ref: t005 }, { transaction_ref: t006 }, { transaction_ref: t007 }, { transaction_ref: t008 }, { transaction_ref: t009 }, { transaction_ref: t010 }, { transaction_ref: t011 }, { transaction_ref: t012 }, { transaction_ref: t013 }, { transaction_ref: t014 }, { transaction_ref: t015 }, { transaction_ref: t016 }, { transaction_ref: t017 }, { transaction_ref: t018 }, { transaction_ref: t019 }, { transaction_ref: t020 }, { transaction_ref: t021 }, { transaction_ref: t022 }, { transaction_ref: t023 }, { transaction_ref: t024 }, { transaction_ref: t025 }, { transaction_ref: t026 }, { transaction_ref: t027 }, { transaction_ref: t028 }, { transaction_ref: t029 }, { transaction_ref: t030 }, { transaction_ref: t031 }, { transaction_ref: t032 }, { transaction_ref: t033 }, { transaction_ref: t034 }, { transaction_ref: t035 }, { transaction_ref: t036 }, { transaction_ref: t037 }, { transaction_ref: t038 }, { transaction_ref: t039 }, { transaction_ref: t040 }, { transaction_ref: t041 }, { transaction_ref: t042 }, { transaction_ref: t043 }, { transaction_ref: t044 }, { transaction_ref: t045 }, { transaction_ref: t046 }, { transaction_ref: t047 }, { transaction_ref: t048 }, { transaction_ref: t049 }, { transaction_ref: t050 }, { transaction_ref: t051 }, { transaction_ref: t052 }, { transaction_ref: t053 }, { transaction_ref: t054 }, { transaction_ref: t055 }, { transaction_ref: t056 }, { transaction_ref: t057 }, { transaction_ref: t058 }, { transaction_ref: t059 }, { transaction_ref: t060 }, { transaction_ref: t061 }, { transaction_ref: t062 }, { transaction_ref: t063 }, { transaction_ref: t064 }, { transaction_ref: t065 }, { transaction_ref: t066 }, { transaction_ref: t067 }, { transaction_ref: t068 }, { transaction_ref: t069 }, { transaction_ref: t070 }, { transaction_ref: t071 }, { transaction_ref: t072 }, { transaction_ref: t073 }, { transaction_ref: t074 }, { transaction_ref: t075 }, { transaction_ref: t076 }, { transaction_ref: t077 }, { transaction_ref: t078 }, { transaction_ref: t079 }, { transaction_ref: t080 }, { transaction_ref: t081 }, { transaction_ref: t082 }, { transaction_ref: t083 }, { transaction_ref: t084 }, { transaction_ref: t085 }, { transaction_ref: t086 }, { transaction_ref: t087 }, { transaction_ref: t088 }, { transaction_ref: t089 }, { transaction_ref: t090 }, { transaction_ref: t091 }, { transaction_ref: t092 }, { transaction_ref: t093 }, { transaction_ref: t094 }, { transaction_ref: t095 }, { transaction_ref: t096 }, { transaction_ref: t097 }, { transaction_ref: t098 }, { transaction_ref: t099 }, { transaction_ref: t100 }]
+  - sent:
+      query: { transaction_type: PDF, limit: "100", offset: "100" }
+    answer:
+      status: 200
+      body:
+        status: success
+        objects: [{ transaction_ref: t101, meta: order-1001, transaction_type: PDF, primary_url: "https://files.example.com/inv-1001.pdf", created_at: "2026-11-27T09:00:00.000Z" }]

@@ -1,0 +1,7 @@
+action: list_incident_alerts
+credential: { api_key: pd_test_1 }
+input: { id: PINC001 }
+exchanges:
+  - sent: { method: GET, url: https://api.pagerduty.com/incidents/PINC001/alerts, query: { limit: "100" } }
+    answer: { body: { offset: 0, limit: 100, more: false, alerts: [{ id: PALRT01, summary: Payment errors over 5%, status: triggered, severity: critical }] } }
+result: [{ id: PALRT01, summary: Payment errors over 5%, status: triggered, severity: critical }]

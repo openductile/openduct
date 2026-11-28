@@ -1,0 +1,15 @@
+description: The kinds of record the user may reach
+action: list_objects
+credential: { access_token: "00D000000000001!AQ.test", instance: examplecorp.my.salesforce.com }
+exchanges:
+  - sent: { method: GET, url: https://examplecorp.my.salesforce.com/services/data/v67.0/sobjects/ }
+    answer:
+      body:
+        encoding: UTF-8
+        maxBatchSize: 200
+        sobjects:
+          - { name: Account, label: Account, custom: false, createable: true, queryable: true }
+          - { name: Customer_Feedback__c, label: Customer Feedback, custom: true, createable: true, queryable: true }
+result:
+  - { name: Account, label: Account, custom: false, createable: true, queryable: true }
+  - { name: Customer_Feedback__c, label: Customer Feedback, custom: true, createable: true, queryable: true }

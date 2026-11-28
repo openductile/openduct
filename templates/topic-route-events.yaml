@@ -2,7 +2,7 @@ name: Route a topic's records by type
 description: >-
   Read the events topic as it is written: orders go to the orders topic, everything else to the other-events topic,
   each keyed as it came.
-category: Streaming
+category: Engineering
 trigger:
   topic: { name: events }
 # What a test runs on: an event as this trigger gives it.

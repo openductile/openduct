@@ -1,0 +1,44 @@
+name: A morning tech news brief on Telegram
+description: >-
+  Every weekday at 7:30 New York time, read the stories on the Hacker News front page, have a model pick the five
+  that matter most to a team that builds and runs web products, and send them to your Telegram channel in five short
+  lines, each with its link. Set the channel (or a chat's id) to your own. Needs: a Telegram bot added to the channel
+  (bot) and an AI credential (model).
+category: Productivity
+trigger:
+  schedule: { every: weekday, at: "07:30", timezone: America/New_York }
+# What a test runs on: an event as this trigger gives it.
+sample:
+  scheduled_at: '2026-11-27T12:30:00Z'
+steps:
+  - name: front_page
+    # Hacker News search, by Algolia: public, no key.
+    http:
+      url: https://hn.algolia.com/api/v1/search
+      query: { tags: front_page, hitsPerPage: "30" }
+      # What a test answers with, sending nothing: an answer shaped like the API's.
+      sample:
+        hits:
+          - { objectID: "41000001", title: A new open-source time-series database, url: "https://example.com/tsdb", points: 412, num_comments: 120 }
+          - { objectID: "41000002", title: "Ask HN: How do you price a small SaaS?", url: null, points: 230, num_comments: 310 }
+          - { objectID: "41000003", title: Postgres 19 is out, url: "https://example.com/pg19", points: 520, num_comments: 140 }
+    retry: { attempts: 3, wait: 30s }
+  - where: size(steps.front_page.body.hits) > 0
+  - name: brief
+    ai:
+      credential: model
+      system: >-
+        You write a morning brief for a small team that builds and runs web products. Pick the five stories that
+        matter most to them - new tools, security, outages, ways of working - one line each in plain words, ending
+        with the story's link. No greeting, no sign-off.
+      # A discussion with no link of its own is linked to its comments.
+      prompt: >-
+        Today's front page, one story a line (title | points | link):
+        {{ steps.front_page.body.hits.map(h, h.title + ' | ' + string(h.points) + ' | ' + (h.url != null ? h.url : 'https://news.ycombinator.com/item?id=' + h.objectID)).join('\n') }}
+      max_tokens: 500
+  - name: send
+    telegram:
+      credential: bot
+      chat_id: "@your_channel"
+      text: "Morning brief\n\n{{ steps.brief.text }}"
+    retry: { attempts: 3, wait: 30s }

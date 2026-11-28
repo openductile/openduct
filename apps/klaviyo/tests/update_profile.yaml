@@ -1,0 +1,62 @@
+# Made by `openduct app from-openapi`: Update Profile.
+description: "Update Profile, made from the API description's schemas"
+action: update_profile
+credential: { api_key: test-key }
+input: { id: "01GDDKASAP8TKDDA2GRZDSVP4H", id_2: "01GDDKASAP8TKDDA2GRZDSVP4H" }
+exchanges:
+  - sent:
+      method: PATCH
+      url: "https://a.klaviyo.com/api/profiles/01GDDKASAP8TKDDA2GRZDSVP4H"
+      query: {}
+      headers: { authorization: test-key, revision: "2026-10-15" }
+      body: { data: { type: profile, id: "01GDDKASAP8TKDDA2GRZDSVP4H" } }
+    answer:
+      status: 200
+      body:
+        data:
+          type: profile
+          id: "01GDDKASAP8TKDDA2GRZDSVP4H"
+          attributes:
+            email: "ann@example.com"
+            phone_number: example
+            external_id: external_1
+            first_name: Sarah
+            last_name: Mason
+            organization: example
+            locale: en-US
+            title: example
+            image: example
+            created: "2026-01-15T09:30:00Z"
+            updated: "2026-01-15T09:30:00Z"
+            last_event_date: "2026-01-15T09:30:00Z"
+          relationships:
+            lists: { data: [null], links: {} }
+            segments: { data: [null], links: {} }
+            push-tokens: { data: [null], links: {} }
+          links: { self: "https://example.com/1" }
+        links: { self: "https://example.com/1" }
+        meta: { agent_hints: { next_steps: [example] } }
+result:
+  data:
+    type: profile
+    id: "01GDDKASAP8TKDDA2GRZDSVP4H"
+    attributes:
+      email: "ann@example.com"
+      phone_number: example
+      external_id: external_1
+      first_name: Sarah
+      last_name: Mason
+      organization: example
+      locale: en-US
+      title: example
+      image: example
+      created: "2026-01-15T09:30:00Z"
+      updated: "2026-01-15T09:30:00Z"
+      last_event_date: "2026-01-15T09:30:00Z"
+    relationships:
+      lists: { data: [null], links: {} }
+      segments: { data: [null], links: {} }
+      push-tokens: { data: [null], links: {} }
+    links: { self: "https://example.com/1" }
+  links: { self: "https://example.com/1" }
+  meta: { agent_hints: { next_steps: [example] } }

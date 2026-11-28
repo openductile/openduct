@@ -1,0 +1,38 @@
+description: "List invoices: what it sends, and an answer shaped as Clockify's API description says"
+action: list_invoices
+credential: { api_key: test-key }
+input: { workspace_id: "64a687e29ae1f428e7ebe303" }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://api.clockify.me/api/v1/workspaces/64a687e29ae1f428e7ebe303/invoices"
+      query: { page-size: "50" }
+      headers: { x-api-key: test-key }
+    answer:
+      status: 200
+      body:
+        invoices:
+          - amount: 100
+            balance: 50
+            clientId: "98h687e29ae1f428e7ebe707"
+            clientName: example
+            currency: USD
+            dueDate: "2020-06-01T08:00:00Z"
+            id: "78a687e29ae1f428e7ebe303"
+            issuedDate: "2020-01-01T08:00:00Z"
+            number: "202306121129"
+            paid: 50
+            status: UNSENT
+        total: 100
+result:
+  - amount: 100
+    balance: 50
+    clientId: "98h687e29ae1f428e7ebe707"
+    clientName: example
+    currency: USD
+    dueDate: "2020-06-01T08:00:00Z"
+    id: "78a687e29ae1f428e7ebe303"
+    issuedDate: "2020-01-01T08:00:00Z"
+    number: "202306121129"
+    paid: 50
+    status: UNSENT

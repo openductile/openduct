@@ -1,0 +1,12 @@
+description: A person looked up by user name
+action: get_user
+credential: {}
+input: { id: ann_example }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://hacker-news.firebaseio.com/v0/user/ann_example.json"
+    answer:
+      status: 200
+      body: { id: ann_example, created: 1700000000, karma: 420, about: "I grow plants.", submitted: [46100001, 46090000] }
+result: { id: ann_example, created: 1700000000, karma: 420, about: "I grow plants.", submitted: [46100001, 46090000] }

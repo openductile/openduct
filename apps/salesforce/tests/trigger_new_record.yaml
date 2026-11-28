@@ -1,0 +1,23 @@
+description: Leads made since the last poll, each read in full and run oldest first; listing stops at one seen before
+trigger: new_record
+credential: { access_token: "00D000000000001!AQ.test", instance: examplecorp.my.salesforce.com }
+input: { object: Lead }
+seen: { items: [["00Q5e000001AbcDEAZ", ""]] }
+exchanges:
+  - sent:
+      method: GET
+      url: https://examplecorp.my.salesforce.com/services/data/v67.0/query
+      query: { q: "SELECT Id, CreatedDate FROM Lead ORDER BY CreatedDate DESC LIMIT 200" }
+      headers: { authorization: Bearer 00D000000000001!AQ.test }
+    answer:
+      body:
+        totalSize: 2
+        done: true
+        records:
+          - { attributes: { type: Lead }, Id: 00Q5e000001AbcDFAZ, CreatedDate: "2026-11-27T10:05:00.000+0000" }
+          - { attributes: { type: Lead }, Id: 00Q5e000001AbcDEAZ, CreatedDate: "2026-11-27T09:00:00.000+0000" }
+  - sent: { method: GET, url: https://examplecorp.my.salesforce.com/services/data/v67.0/sobjects/Lead/00Q5e000001AbcDFAZ }
+    answer: { body: { attributes: { type: Lead }, Id: 00Q5e000001AbcDFAZ, LastName: Park, FirstName: Cy, Company: Example Co, Email: cy@example.com } }
+runs:
+  - { attributes: { type: Lead }, Id: 00Q5e000001AbcDFAZ, LastName: Park, FirstName: Cy, Company: Example Co, Email: cy@example.com }
+ids: ["00Q5e000001AbcDFAZ"]

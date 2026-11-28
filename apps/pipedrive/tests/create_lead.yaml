@@ -1,0 +1,41 @@
+description: "Create a lead"
+action: create_lead
+credential: { api_key: test-key }
+input: { title: example }
+exchanges:
+  - sent:
+      method: POST
+      url: "https://api.pipedrive.com/v1/leads"
+      query: {}
+      headers: { x-api-token: test-key }
+      body: { title: example }
+    answer:
+      status: 201
+      body:
+        success: true
+        data:
+          id: "00000000-0000-4000-8000-000000000001"
+          title: example
+          owner_id: 1
+          creator_id: 1
+          label_ids: ["00000000-0000-4000-8000-000000000001"]
+          person_id: 1
+          organization_id: 1
+          source_name: example
+          origin: example
+          origin_id: origin_1
+          channel: 1
+          channel_id: channel_1
+result:
+  id: 00000000-0000-4000-8000-000000000001
+  title: example
+  owner_id: 1
+  creator_id: 1
+  label_ids: [00000000-0000-4000-8000-000000000001]
+  person_id: 1
+  organization_id: 1
+  source_name: example
+  origin: example
+  origin_id: origin_1
+  channel: 1
+  channel_id: channel_1

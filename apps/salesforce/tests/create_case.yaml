@@ -1,0 +1,12 @@
+description: "A case for a contact"
+action: create_case
+credential: { access_token: "00D000000000001!AQ.test", instance: examplecorp.my.salesforce.com }
+input: { subject: Order arrived damaged, priority: High, origin: Email, contact_id: 0035e00000XyZaBAAV }
+exchanges:
+  - sent:
+      method: POST
+      url: https://examplecorp.my.salesforce.com/services/data/v67.0/sobjects/Case/
+      headers: { authorization: Bearer 00D000000000001!AQ.test }
+      body: { Subject: Order arrived damaged, Priority: High, Origin: Email, ContactId: 0035e00000XyZaBAAV }
+    answer: { status: 201, body: { id: 5005e00000CaSeAAAV, success: true, errors: [] } }
+result: { id: 5005e00000CaSeAAAV, success: true, errors: [] }

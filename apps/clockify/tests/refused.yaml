@@ -1,0 +1,5 @@
+description: "Clockify refuses list_workspaces: the step fails in its words"
+action: list_workspaces
+credential: { api_key: test-key }
+exchanges: [{ answer: { status: 404, body: { message: "Not found" } } }]
+error: "Clockify answered 404: Not found"

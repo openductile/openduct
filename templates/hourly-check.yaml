@@ -1,6 +1,6 @@
 name: Check a website every hour
 description: Every hour, call an address and send the run to CatchErr when it does not answer 200, so you see each outage in the history.
-category: Monitoring
+category: Engineering
 trigger:
   schedule: { every: 1h }
 # What a test runs on: an event as this trigger gives it.

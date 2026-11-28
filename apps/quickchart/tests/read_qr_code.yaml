@@ -1,0 +1,13 @@
+description: What a QR code in a public image says
+action: read_qr_code
+credential: { api_key: "" }
+input: { image_url: "https://files.example.com/scans/ticket.png" }
+exchanges:
+  - sent:
+      method: GET
+      url: https://quickchart.io/qr-read
+      query: { url: "https://files.example.com/scans/ticket.png" }
+    answer:
+      status: 200
+      body: { result: T-1042 }
+result: { result: T-1042 }

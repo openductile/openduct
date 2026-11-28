@@ -1,0 +1,17 @@
+description: "A table's open records, newest first, over two pages: NocoDB says there is a next while there is"
+action: list_records
+credential: { api_token: test-nocodb-token }
+input: { base_id: pexample0001, table_id: mexample0001, where: "(Status,eq,Open)", sort_by: CreatedAt, descending: true }
+exchanges:
+  - sent:
+      method: GET
+      url: https://app.nocodb.com/api/v3/data/pexample0001/mexample0001/records
+      query: { where: "(Status,eq,Open)", sort: '{"direction":"desc","field":"CreatedAt"}', pageSize: "100" }
+      headers: { xc-token: test-nocodb-token }
+    answer: { body: { records: [{ id: 2, fields: { Name: Bo Example, Email: bo@example.com, Status: Open } }], next: "https://app.nocodb.com/api/v3/data/pexample0001/mexample0001/records?page=2", prev: null } }
+  - sent:
+      method: GET
+      url: https://app.nocodb.com/api/v3/data/pexample0001/mexample0001/records
+      query: { where: "(Status,eq,Open)", sort: '{"direction":"desc","field":"CreatedAt"}', pageSize: "100", page: "2" }
+    answer: { body: { records: [{ id: 1, fields: { Name: Ann Example, Email: ann@example.com, Status: Open } }], next: null, prev: "https://app.nocodb.com/api/v3/data/pexample0001/mexample0001/records?page=1" } }
+result: [{ id: 2, fields: { Name: Bo Example, Email: bo@example.com, Status: Open } }, { id: 1, fields: { Name: Ann Example, Email: ann@example.com, Status: Open } }]

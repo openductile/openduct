@@ -1,0 +1,20 @@
+description: Contacts added since the poll before, the newest asked for; listing stops at one seen before
+trigger: new_contact
+credential: { access_token: test-access-token }
+seen: { items: [["101", ""]] }
+exchanges:
+  - sent:
+      method: GET
+      url: https://api.keap.com/crm/rest/v2/contacts
+      query: { order_by: create_time desc, page_size: "100" }
+      headers: { authorization: Bearer test-access-token }
+    answer:
+      body:
+        contacts:
+          - { id: "103", given_name: Cleo, family_name: Example, email_addresses: [{ email: cleo@example.com, field: EMAIL1 }], create_time: "2026-11-27T10:05:00Z" }
+          - { id: "102", given_name: Bob, family_name: Example, email_addresses: [{ email: bob@example.com, field: EMAIL1 }], create_time: "2026-11-27T09:40:00Z" }
+          - { id: "101", given_name: Ann, family_name: Example, email_addresses: [{ email: ann@example.com, field: EMAIL1 }], create_time: "2026-11-26T08:00:00Z" }
+        next_page_token: p2
+runs:
+  - { id: "102", given_name: Bob, family_name: Example, email_addresses: [{ email: bob@example.com, field: EMAIL1 }], create_time: "2026-11-27T09:40:00Z" }
+  - { id: "103", given_name: Cleo, family_name: Example, email_addresses: [{ email: cleo@example.com, field: EMAIL1 }], create_time: "2026-11-27T10:05:00Z" }

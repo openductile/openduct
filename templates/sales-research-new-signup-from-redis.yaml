@@ -1,0 +1,90 @@
+name: Research each new signup your app announces on Redis
+description: >-
+  Your app publishes each signup on a Redis channel ({"email", "name", "plan"}). For a work address, this reads the
+  company's website, and an AI agent - which can open a few more of its pages - writes what the company does, how
+  big it looks, how well it fits and a first line for sales to open with; a row goes to your Leads sheet in Google
+  Sheets. Addresses at free mail providers are left out. Needs: a Redis credential (cache), Google Sheets (sheets)
+  and an AI credential (model).
+category: Sales
+trigger:
+  redis: { credential: cache, channel: signups }
+# What a test runs on: a message as this trigger gives it.
+sample:
+  email: maria.lopez@northwind-bikes.example
+  name: Maria Lopez
+  plan: team-trial
+steps:
+  - name: who
+    set:
+      domain: "value.email == null || !value.email.contains('@') ? null : value.email.split('@')[1].lowerAscii()"
+  # Free mail says nothing about a company.
+  - where: >-
+      steps.who.domain != null && !(steps.who.domain in ['gmail.com', 'googlemail.com', 'yahoo.com', 'outlook.com',
+      'hotmail.com', 'live.com', 'icloud.com', 'me.com', 'aol.com', 'proton.me', 'protonmail.com', 'gmx.com', 'mail.com'])
+  - name: home
+    http:
+      url: "https://{{ steps.who.domain }}"
+      response: text
+      timeout: 20s
+      # A site that refuses or is down still lets the agent write what it can.
+      fail_on_status: false
+      sample: >-
+        <html><head><title>Northwind Bikes - e-bikes for city deliveries</title></head><body><h1>Cargo e-bikes for
+        businesses</h1><p>We build and lease cargo e-bikes to bakeries, florists and couriers in 14 cities, with
+        servicing included.</p><p>Founded 2019. 60 people in Denver and Austin.</p></body></html>
+    retry: { attempts: 2, wait: 10s }
+  - name: page
+    convert: { format: html, text: "{{ steps.home.status < 400 ? string(steps.home.body) : '' }}", name: home.html }
+  - name: words
+    extract_file: { file: steps.page, format: html }
+  - name: research
+    agent:
+      credential: model
+      instructions: >-
+        You research a new signup's company for a small B2B software company that sells scheduling tools to
+        businesses with field staff. Use the home page text given; open at most three more pages of the same site
+        with page (such as /about, /pricing, /customers) when it helps. Never invent facts; say "unknown" instead.
+        Fit is 0 to 100: higher for businesses with staff on the road or in shifts.
+      input: >-
+        Signup: {{ value.name }} <{{ value.email }}>, plan {{ value.plan }}. Site: https://{{ steps.who.domain }}
+        Home page ({{ steps.words.title }}): {{ steps.words.text.substring(0, math.least(size(steps.words.text), 6000)) }}
+      tools:
+        - name: page
+          description: "The HTML of one page of the company's site, by its path (as /about)."
+          parameters:
+            type: object
+            properties:
+              path: { type: string, description: "The page's path, starting with /" }
+            required: [path]
+          http:
+            url: "https://{{ steps.who.domain }}{{ args.path.startsWith('/') ? args.path : '/' + args.path }}"
+            response: text
+            timeout: 20s
+      allow: [page]
+      max_turns: 5
+      max_tool_calls: 3
+      output:
+        schema:
+          type: object
+          properties:
+            does: { type: string, description: "What the company does, in one sentence" }
+            size: { type: string, description: "As 1-10, 11-50, 51-200, 200+ or unknown" }
+            fit: { type: integer, minimum: 0, maximum: 100 }
+            opener: { type: string, description: "A first sentence for a sales e-mail, about them, not us" }
+          required: [does, size, fit, opener]
+  - name: lead
+    google_sheets:
+      action: add_row
+      credential: sheets
+      spreadsheet_id: your-sheet-id
+      sheet: Leads
+      values:
+        - "{{ value.email }}"
+        - "{{ value.name }}"
+        - "{{ steps.who.domain }}"
+        - "{{ value.plan }}"
+        - "{{ has(steps.research.json.does) ? steps.research.json.does : steps.research.text }}"
+        - "{{ has(steps.research.json.size) ? steps.research.json.size : 'unknown' }}"
+        - "{{ has(steps.research.json.fit) ? steps.research.json.fit : '' }}"
+        - "{{ has(steps.research.json.opener) ? steps.research.json.opener : '' }}"
+    retry: { attempts: 3, wait: 30s }

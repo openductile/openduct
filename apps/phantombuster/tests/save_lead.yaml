@@ -1,0 +1,23 @@
+description: A lead saved, made new
+action: save_lead
+credential: { api_key: pb_test_key_1 }
+input:
+  linkedin_profile_url: "https://linkedin.example/in/ann-example"
+  first_name: Ann
+  last_name: Example
+  company_name: Example Coffee
+  professional_emails: [ann@example.com]
+exchanges:
+  - sent:
+      method: POST
+      url: "https://api.phantombuster.com/api/v2/org-storage/leads/save"
+      body:
+        linkedinProfileUrl: "https://linkedin.example/in/ann-example"
+        firstName: Ann
+        lastName: Example
+        companyName: Example Coffee
+        professionalEmails: [ann@example.com]
+    answer:
+      status: 200
+      body: { isCreation: true, id: l101, linkedinProfileSlug: ann-example, firstName: Ann, lastName: Example, companyName: Example Coffee, professionalEmails: [ann@example.com] }
+result: { isCreation: true, id: l101, linkedinProfileSlug: ann-example, firstName: Ann, lastName: Example, companyName: Example Coffee, professionalEmails: [ann@example.com] }

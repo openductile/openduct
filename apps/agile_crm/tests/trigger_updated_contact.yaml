@@ -1,0 +1,42 @@
+description: A contact seen before whose update time changed runs again
+trigger: updated_contact
+credential: {domain: shopexample, email: dana@shop.example, api_key: agile-test-key}
+seen:
+  items:
+  - ['5629585249009664', db1ce9db1531170f]
+exchanges:
+- sent:
+    method: POST
+    url: https://shopexample.agilecrm.com/dev/api/filters/filter/dynamic-filter
+    headers: {authorization: Basic ZGFuYUBzaG9wLmV4YW1wbGU6YWdpbGUtdGVzdC1rZXk=, accept: application/json}
+    query: {}
+    body: {page_size: '50', global_sort_key: -updated_time, filterJson: '{"rules":[{"LHS":"updated_time","CONDITION":"LAST","RHS":"1"}],"or_rules":[],"contact_type":"PERSON"}'}
+  answer:
+    status: 200
+    body:
+    - id: '5629585249009664'
+      type: PERSON
+      created_time: '1764237600'
+      updated_time: 1764244800
+      star_value: 4
+      lead_score: 10
+      tags: &id001 [Lead]
+      properties: &id002
+      - {type: SYSTEM, name: first_name, value: Ann}
+      - {type: SYSTEM, name: last_name, value: Example}
+      - {type: SYSTEM, name: email, value: ann@example.com, subtype: work}
+      contact_company_id: null
+      owner: &id003 {id: 6263975862861824, email: dana@shop.example, name: Dana Example}
+      campaignStatus: &id004 []
+runs:
+- id: '5629585249009664'
+  type: PERSON
+  created_time: '1764237600'
+  updated_time: 1764244800
+  star_value: 4
+  lead_score: 10
+  tags: *id001
+  properties: *id002
+  contact_company_id: null
+  owner: *id003
+  campaignStatus: *id004

@@ -117,6 +117,10 @@ impl Cluster {
     fn start(&mut self, id: u64) {
         let mut command = Command::new(OPENDUCT);
         command.envs(self.env.iter().map(|(k, v)| (k.as_str(), v.as_str())));
+        // A partition goes back to its first broker 2 seconds after another took it over, not the 120 a real
+        // cluster waits (a broker stopping must not be handed back what it just gave away): the tests below wait
+        // for leaders to spread over the brokers, and for a restarted broker to lead again.
+        command.env("OPENDUCT_HAND_BACK_AFTER_SECS", "2");
         if let Some(dir) = &self.tls {
             command
                 .env("OPENDUCT_REPLICATION_TLS_CERT", dir.join(format!("{id}.pem")))
@@ -331,7 +335,7 @@ async fn a_kafka_client_carries_on_when_the_leader_s_process_is_killed() {
         .await
         .unwrap();
     // Each partition is led by another broker - once the first elections' winners have handed back to each
-    // partition's first broker (every second; a loaded runner takes a few).
+    // partition's first broker (2 seconds after they took it over, in these tests; a loaded runner takes a few).
     let deadline = Instant::now() + Duration::from_secs(30);
     let leaders = loop {
         let leaders = cluster.partition_leaders("events", 3).await;

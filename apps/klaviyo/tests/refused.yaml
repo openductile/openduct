@@ -1,0 +1,6 @@
+# Made by `openduct app from-openapi`: a refusal.
+description: "Klaviyo refuses list_campaign_messages: the step fails in its words"
+action: list_campaign_messages
+credential: { api_key: test-key }
+exchanges: [{ answer: { status: 404, body: { message: "Not found" } } }]
+error: "Klaviyo answered 404: Not found"

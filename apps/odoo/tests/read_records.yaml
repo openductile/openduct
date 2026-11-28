@@ -1,0 +1,10 @@
+description: Two records by their ids
+action: read_records
+credential: { address: "https://mycompany.example.com", api_key: 6578616d706c65206b6579 }
+input: { model: res.partner, ids: "25, 26", fields: name }
+exchanges:
+  - sent:
+      url: https://mycompany.example.com/json/2/res.partner/read
+      body: { ids: [25, 26], fields: [name] }
+    answer: { body: [{ id: 25, name: Example Deco }, { id: 26, name: Ann Example }] }
+result: [{ id: 25, name: Example Deco }, { id: 26, name: Ann Example }]

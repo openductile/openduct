@@ -44,6 +44,16 @@ LimitNOFILE=65536
 WantedBy=multi-user.target
 ```
 
+### Containers, Kubernetes and a cloud's machine
+
+- **Docker Compose**: `deploy/compose`, OpenDuct with an S3 store and PostgreSQL.
+- **Kubernetes**: `deploy/kubernetes/openduct.yaml`, a manifest of three nodes; or the Helm chart
+  `deploy/helm/openduct`, one node or (`values-cluster.yaml`) a cluster, its secret as a file, probes as
+  [Health](#health) says ([its README](../deploy/helm/openduct/README.md)).
+- **One machine on a cloud**: the OpenTofu modules `deploy/opentofu/aws-vm`, `gcp-vm` and `azure-vm` start Debian
+  with the released program as a systemd service, every port closed but to the addresses given
+  ([their README](../deploy/opentofu/README.md)).
+
 ## Secrets are files
 
 OpenDuct reads no secret from the environment: an environment variable is seen by every process the server starts,
@@ -298,6 +308,101 @@ Do not let an orchestrator's own rolling update wait on readiness alone when you
 cluster is already without a majority, no broker becomes ready, and the change that would mend it never reaches the
 others. Replace the brokers that are not ready first, then the ready ones one at a time.
 
+## Upgrading and rolling back
+
+A release replaces the program; what OpenDuct keeps - topics, the studio's accounts, workflows, credentials and runs -
+stays on its disks and is read by the new release. Upgrade one node at a time, as [upgrades](upgrades.md) says for
+the brokers: a node asked to stop hands its partitions over first, so restarting one at a time leaves no partition
+without a leader, and the studio keeps answering on the other nodes.
+
+1. Stop one node (SIGTERM, and give it 30 seconds).
+2. Start it again with the new release: same data directory, same settings.
+3. Wait until `openduct health --ready` says yes on it - joined, every partition it holds led and level - then the
+   next node.
+
+- **systemd**: replace `/usr/local/bin/openduct` and `systemctl restart openduct`. On a machine made by the
+  `deploy/opentofu/*-vm` modules, `sudo openduct-upgrade <version>` does it, the release's checksum checked.
+- **Docker Compose** (`deploy/compose`): set `OPENDUCT_IMAGE` to the new image, then `docker compose up -d`.
+- **Kubernetes**: change the image in `deploy/kubernetes/openduct.yaml` and apply it; with the Helm chart,
+  `helm upgrade openduct deploy/helm/openduct --reuse-values --set image.tag=<version>`. The StatefulSet restarts one
+  node at a time and waits for each to be ready (its readiness probe is `openduct health --ready`) before the next.
+- **One node** is down while it restarts: a few seconds. Webhooks sent meanwhile are refused; senders that retry
+  (most apps do) deliver them once it is back.
+
+**Rolling back** goes the same way, one node at a time with the release before - possible while the cluster has not
+moved to the new release's feature level, that is until the last node is upgraded ([upgrades](upgrades.md#feature-levels)).
+After that, roll forward with a release that mends what was wrong. `helm rollback openduct` takes the chart's release
+before; on a machine of the OpenTofu modules the release before stays as `/usr/local/bin/openduct.previous`. A
+workflow is rolled back on its own, without touching the program: `openduct workflow rollback <name>` (below).
+
+## CI/CD for workflows
+
+A workflow is a file, so it can live in a repository, be reviewed in pull requests, and reach the studio through CI:
+
+```sh
+openduct workflow check orders.yaml             # in any CI: no studio needed
+openduct workflow test orders.yaml              # its sample run, sending nothing
+openduct workflow pull workflows                # the workspace's workflows, a file each (order-alerts.yaml)
+openduct workflow diff workflows                # what a push would change, workflow by workflow, step by step
+openduct workflow push workflows --dry-run      # the same, as a push would say it
+openduct workflow push workflows [--activate] [--prune]
+openduct workflow rollback "Order alerts" [--to 3]
+openduct workflow promote --all --from Test --to Production
+```
+
+- **Signing in**: the commands that reach a studio take `--studio https://flows.example.com` (or `OPENDUCT_STUDIO`)
+  and an API token, from `OPENDUCT_TOKEN` or a file given with `--token-file` (its first line; only its owner may read
+  it). A token is made by a workspace's admin in the studio, under Settings, API tokens: a role (viewer, editor or
+  admin, never above the admin's own), an expiry (90 days unless said, at most a year), and optionally the workflows
+  it reaches (names, or beginnings as `billing-*`). The token goes over HTTPS only, unless the studio is on the same
+  machine or `--allow-http` says so; the studio must be started with the name it is reached by (`--studio-host`).
+- **Pull** writes one file a workflow, named after it, `on: true` in the file of each workflow that runs. A workflow
+  keeps the file that names it already; `--prune` removes the folder's files that name no workflow.
+- **Push** checks every file first and changes nothing if one is wrong, or if the workspace lacks a credential,
+  lookup file, data table or other workflow a file names (it says which, for each workflow). New and changed
+  workflows are saved as new versions; a new one stays off unless the file says `on: true` or `--activate` is given;
+  one that runs goes on running, with its new version; `on: false` turns one off; `--prune` turns off (never
+  deletes) the workflows the folder does not have. Credentials are named, never carried: each workspace holds its
+  own values under the same names, which is how test and production reach different accounts.
+- **Other workflows by name**: a file names the workflow a `run_workflow` step runs (or a `failed` trigger watches)
+  by its name, and a push gives it the id it has where it lands - so one folder pushes into any workspace.
+- **Environments**: in Settings, Environment, a workspace is marked as development, test or production, with an
+  order; promotion goes forward (a lower order to a higher one) and copies each workflow's newest definition as a
+  new version, after checking the target has everything it names. The CLI's token is the target's; its maker must
+  see the source. The editor's **Promote** button does the same for one workflow. A production workspace can take
+  changes only by push or promotion: with the switch on, people cannot add, change or delete its workflows in the
+  studio (they can still turn one off).
+- **History**: every version shows where it came from - the studio, a push, a promotion (`from Test v4`), a
+  rollback (`to v2`) or Git - and the API token it was made with. Every request made with a token is written to the
+  log with the token's name.
+- **For CI**: `--json` prints the studio's answer as one JSON document. Exit codes: `0` done; `1` failed (the studio
+  out of reach, a refusal); `2` refused before anything changed (a wrong file, something missing); `3` a push would
+  change something (`diff --exit-code`); `4` saved in part (the answer says which workflows were).
+- **Ready-made CI**: [examples/ci](../examples/ci) has a GitHub Actions workflow and a GitLab CI file: check and
+  test on every pull request, push to test after a merge, promote to production on a tag or by hand, each with the
+  released program or container and the tokens as the CI's secrets.
+
+### Git sync
+
+A workspace can keep its workflows in a repository on GitHub (or GitHub Enterprise Server), GitLab or Gitea, through
+their REST APIs (no git program). In Settings, Git: the repository's https address, a branch, a folder, and a bearer
+credential of the workspace holding a token that may read and write the repository.
+
+- **Save to Git** writes each workflow as `pull` does and commits the files that changed, in one commit: to the
+  branch, or (with "as a pull request") to a new branch with a pull request (merge request) into it.
+- **Deploy from Git** reads the branch's folder and pushes it as `push` does: by hand, or on each push to the branch.
+  For the latter, make the webhook's secret in Settings and add the webhook to the repository (address
+  `https://<studio>/hooks/git/<workspace>`, push events, JSON, the secret). GitHub's and Gitea's deliveries are
+  checked against their HMAC-SHA256 signature; GitLab's against its signing token when given (`webhook-signature`,
+  at most five minutes old), else its secret token. An unsigned or forged delivery is refused.
+- The last deploy - when, which commit, whether it was done or what was wrong - is shown in Settings.
+
+What Git sync does not do yet: it never deletes a file (the file of a workflow deleted in the studio stays until
+removed in the repository), a deploy never turns off the workflows the folder lacks (use `push --prune` from CI), a
+commit to a branch that moved meanwhile is refused rather than merged, it signs in with a token only (no GitHub App),
+Bitbucket and Azure DevOps are not among its hosts, and a delivery is answered once its deploy is done (a folder of
+many files takes as many requests to read). Limits: 500 workflow files a folder, 512 KiB a file, and 1 MiB a push.
+
 ## When a copy is lost
 
 A broker checks every copy before it serves it. Its replication log holds nothing before the last snapshot, so a copy
@@ -364,4 +469,5 @@ and five for the requests in flight, then stops whatever is left. Give it at lea
 
 A broker that comes back gets its partitions back: each goes to its first broker two minutes after another broker took
 it over, once the returning broker has caught up - long enough that a broker that is only stopping is never handed
-anything.
+anything. The wait is `--hand-back-after-secs` (`OPENDUCT_HAND_BACK_AFTER_SECS`; 120 by default, 1 to 3,600):
+keep it longer than a broker takes to stop.

@@ -1,0 +1,44 @@
+description: A message's events
+action: get_message_history
+credential:
+  api_key: test-key
+  secret_key: test-secret
+input:
+  message_id: '288230376151711744'
+exchanges:
+- sent:
+    method: GET
+    url: https://api.mailjet.com/v3/REST/messagehistory/288230376151711744
+    headers:
+      authorization: Basic dGVzdC1rZXk6dGVzdC1zZWNyZXQ=
+  answer:
+    status: 200
+    body:
+      Count: 2
+      Data:
+      - EventAt: 1763625600
+        EventType: sent
+        State: ''
+        Comment: ''
+        Useragent: ''
+        UseragentID: 0
+      - EventAt: 1763629200
+        EventType: opened
+        State: ''
+        Comment: ''
+        Useragent: Mozilla/5.0
+        UseragentID: 3
+      Total: 2
+result:
+- EventAt: 1763625600
+  EventType: sent
+  State: ''
+  Comment: ''
+  Useragent: ''
+  UseragentID: 0
+- EventAt: 1763629200
+  EventType: opened
+  State: ''
+  Comment: ''
+  Useragent: Mozilla/5.0
+  UseragentID: 3

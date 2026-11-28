@@ -1,0 +1,6 @@
+action: get_settings
+credential: { site: acme, content_key: 22444f78447824223cefc48aaa }
+exchanges:
+  - sent: { method: GET, url: https://acme.ghost.io/ghost/api/content/settings/, query: { key: 22444f78447824223cefc48aaa } }
+    answer: { body: { settings: { title: Acme Shop, description: News from the shop, url: "https://acme.ghost.io/", locale: en, timezone: Europe/London }, meta: {} } }
+result: { title: Acme Shop, description: News from the shop, url: "https://acme.ghost.io/", locale: en, timezone: Europe/London }

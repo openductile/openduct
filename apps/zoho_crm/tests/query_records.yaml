@@ -1,0 +1,10 @@
+action: query_records
+credential: { access_token: 1000.test.token }
+input: { query: "select Last_Name, Email from Contacts where Lead_Source = 'Web' limit 200" }
+exchanges:
+  - sent:
+      method: POST
+      url: https://www.zohoapis.com/crm/v8/coql
+      body: { select_query: "select Last_Name, Email from Contacts where Lead_Source = 'Web' limit 200" }
+    answer: { body: { data: [{ Last_Name: Lee, Email: ann@example.com, id: "1000000000000000201" }], info: { count: 1, more_records: false } } }
+result: [{ Last_Name: Lee, Email: ann@example.com, id: "1000000000000000201" }]

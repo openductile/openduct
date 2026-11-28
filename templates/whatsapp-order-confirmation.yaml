@@ -2,7 +2,7 @@ name: Confirm orders on WhatsApp
 description: >-
   When an order comes in over a webhook ({"id", "name", "phone", "total"}), send the customer a WhatsApp message
   confirming it, through your WhatsApp Business account.
-category: Messaging
+category: E-commerce
 trigger:
   webhook: {}
 # What a test runs on: an event as this trigger gives it.

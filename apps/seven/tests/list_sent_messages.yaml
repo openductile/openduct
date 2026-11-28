@@ -1,0 +1,38 @@
+# Made by `openduct app from-openapi`: Get outbound messages.
+description: "Get outbound messages, made from the API description's schemas"
+action: list_sent_messages
+credential: { api_key: test-key }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://gateway.seven.io/api/journal/outbound"
+      query: { limit: "100" }
+      headers: { x-api-key: test-key }
+    answer:
+      status: 200
+      body:
+        - channel: example
+          dlr: example
+          dlr_timestamp: example
+          mccmnc: example
+          latency: example
+          type: example
+          connection: example
+          label: example
+          foreign_id: foreign_1
+          to: example
+          from: example
+          text: example
+result:
+  - channel: example
+    dlr: example
+    dlr_timestamp: example
+    mccmnc: example
+    latency: example
+    type: example
+    connection: example
+    label: example
+    foreign_id: foreign_1
+    to: example
+    from: example
+    text: example

@@ -1,0 +1,6 @@
+# Made by `openduct app from-openapi`: a refusal.
+description: "Resend refuses list_inboxes: the step fails in its words"
+action: list_inboxes
+credential: { token: test-token }
+exchanges: [{ answer: { status: 404, body: { message: "Not found" } } }]
+error: "Resend answered 404: Not found"

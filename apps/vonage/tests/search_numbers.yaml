@@ -1,0 +1,40 @@
+description: Numbers to buy in a country
+action: search_numbers
+credential:
+  api_key: abcd1234
+  api_secret: test-secret
+input:
+  country: US
+  features: SMS,VOICE
+exchanges:
+- sent:
+    method: GET
+    url: https://rest.nexmo.com/number/search
+    query:
+      country: US
+      features: SMS,VOICE
+      size: '100'
+    headers:
+      authorization: Basic YWJjZDEyMzQ6dGVzdC1zZWNyZXQ=
+  answer:
+    status: 200
+    body:
+      count: 1234
+      numbers:
+      - country: US
+        msisdn: '14155550123'
+        type: mobile-lvn
+        cost: '1.25'
+        initialPrice: '0.00'
+        features:
+        - SMS
+        - VOICE
+result:
+- country: US
+  msisdn: '14155550123'
+  type: mobile-lvn
+  cost: '1.25'
+  initialPrice: '0.00'
+  features:
+  - SMS
+  - VOICE

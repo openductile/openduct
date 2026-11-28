@@ -1,0 +1,8 @@
+description: Only the unread messages and replies, left unread
+action: list_inbox
+credential: { access_token: test-reddit-token }
+input: { unread_only: true }
+exchanges:
+  - sent: { method: GET, url: https://oauth.reddit.com/message/unread, query: { limit: "100", mark: "false" } }
+    answer: { body: { kind: Listing, data: { after: null, children: [{ kind: t4, data: { id: 2k3l4m, name: t4_2k3l4m, author: example_buyer, subject: Your order, body: Thanks!, new: true, was_comment: false } }] } } }
+result: [{ id: 2k3l4m, name: t4_2k3l4m, author: example_buyer, subject: Your order, body: Thanks!, new: true, was_comment: false }]

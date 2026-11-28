@@ -51,3 +51,39 @@ actions:
       - { name: role, label: "reader, commenter or writer", required: true }
     query: { sendNotificationEmail: "true" }
     send: { type: user, emailAddress: "{{ input.email }}", role: "{{ input.role }}" }
+triggers:
+  new_file:
+    label: A new file
+    description: Each file added to the Drive, or to one folder of it, the newest asked for every few minutes.
+    inputs:
+      - { name: folder_id, label: "Only in this folder (its id, the end of its address)" }
+    poll:
+      method: GET
+      path: /files
+      query:
+        q: 'trashed = false{{ input.folder_id == null ? "" : " and ''" + input.folder_id + "'' in parents" }}'
+        orderBy: createdTime desc
+        pageSize: "50"
+        fields: "nextPageToken, files(id, name, mimeType, createdTime, modifiedTime, webViewLink, parents, size)"
+      items: value.files
+      next: "value.nextPageToken == null ? null : {'pageToken': value.nextPageToken}"
+      newest_first: true
+      id: item.id
+  changed_file:
+    label: A file changed
+    description: Each file added or changed in the Drive, or in one folder of it, asked for every few minutes.
+    inputs:
+      - { name: folder_id, label: "Only in this folder (its id, the end of its address)" }
+    poll:
+      method: GET
+      path: /files
+      query:
+        q: 'trashed = false{{ input.folder_id == null ? "" : " and ''" + input.folder_id + "'' in parents" }}'
+        orderBy: modifiedTime desc
+        pageSize: "50"
+        fields: "nextPageToken, files(id, name, mimeType, createdTime, modifiedTime, webViewLink, parents, size)"
+      items: value.files
+      next: "value.nextPageToken == null ? null : {'pageToken': value.nextPageToken}"
+      newest_first: true
+      id: item.id
+      version: item.modifiedTime

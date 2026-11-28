@@ -1,0 +1,39 @@
+description: A contact's phone changed
+action: update_contact
+credential:
+  account: shopexample
+  api_key: test-key
+input:
+  contact_id: '113'
+  phone: '+15555550199'
+exchanges:
+- sent:
+    method: PUT
+    url: https://shopexample.api-us1.com/api/3/contacts/113
+    headers:
+      api-token: test-key
+    body:
+      contact:
+        phone: '+15555550199'
+  answer:
+    status: 200
+    body:
+      fieldValues: []
+      contact:
+        id: '113'
+        email: ann@example.com
+        firstName: Ann
+        lastName: Example
+        phone: '+15555550199'
+        cdate: '2026-11-27T10:00:00-06:00'
+        udate: '2026-11-27T10:00:00-06:00'
+        orgid: '0'
+result:
+  id: '113'
+  email: ann@example.com
+  firstName: Ann
+  lastName: Example
+  phone: '+15555550199'
+  cdate: '2026-11-27T10:00:00-06:00'
+  udate: '2026-11-27T10:00:00-06:00'
+  orgid: '0'

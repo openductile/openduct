@@ -1,0 +1,12 @@
+description: A task due on a day, given as a day alone
+action: create_task
+credential: { access_token: ya29.test }
+input: { list_id: "@default", title: Send the March invoices, notes: All retainer clients., due: "2026-12-01" }
+exchanges:
+  - sent:
+      method: POST
+      url: https://tasks.googleapis.com/tasks/v1/lists/@default/tasks
+      query: {}
+      body: { title: Send the March invoices, notes: All retainer clients., due: "2026-12-01T00:00:00.000Z" }
+    answer: { body: { kind: tasks#task, id: dGFzazM, title: Send the March invoices, notes: All retainer clients., status: needsAction, due: "2026-12-01T00:00:00.000Z" } }
+result: { kind: tasks#task, id: dGFzazM, title: Send the March invoices, notes: All retainer clients., status: needsAction, due: "2026-12-01T00:00:00.000Z" }

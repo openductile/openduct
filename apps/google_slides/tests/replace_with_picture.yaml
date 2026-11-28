@@ -1,0 +1,11 @@
+description: A logo placeholder made a picture, fitted inside the shape
+action: replace_with_picture
+credential: { access_token: ya29.test }
+input: { presentation: 1CoPyOfTheTemplate0123456789abcdefg, find: "{{logo}}", picture_url: "https://cdn.example.com/logo.png" }
+exchanges:
+  - sent:
+      body:
+        requests:
+          - replaceAllShapesWithImage: { containsText: { text: "{{logo}}", matchCase: true }, imageUrl: "https://cdn.example.com/logo.png", imageReplaceMethod: CENTER_INSIDE }
+    answer: { body: { presentationId: 1CoPyOfTheTemplate0123456789abcdefg, replies: [{ replaceAllShapesWithImage: { occurrencesChanged: 1 } }] } }
+result: { id: 1CoPyOfTheTemplate0123456789abcdefg, replaced: 1 }

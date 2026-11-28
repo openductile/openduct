@@ -1,0 +1,482 @@
+# Copyright 2026 Ductile AI, Inc
+# SPDX-License-Identifier: Apache-2.0
+# BambooHR: started with `openduct app from-openapi` from BambooHR's own API description,
+# https://github.com/BambooHR/bhr-api-python/blob/9dfad95472650b7d84c42e444c7d4844e50bafe4/specs/public.yaml
+# (MIT licence; BambooHR API 1.0, OpenAPI 3.1), then finished by hand.
+app: bamboohr
+name: BambooHR
+category: hr
+description: Employees, time off, timesheets and hiring in BambooHR.
+docs: https://documentation.bamboohr.com/reference
+hosts: ["*.bamboohr.com"]
+base_url: "https://{{ credential.company_domain }}.bamboohr.com"
+sign_in:
+  - id: bamboohr
+    label: An API key
+    fields:
+      - { name: company_domain, label: "The company's name in its address, as in mycompany.bamboohr.com" }
+      - { name: api_key, label: The API key, secret: true }
+    # BambooHR takes the key as the user name of HTTP basic sign-in, and any password.
+    basic: { username: "{{ credential.api_key }}", password: x }
+    headers: { Accept: application/json }
+# BambooHR says why it refused in a header, and some answers in a problem record.
+error: >-
+  status < 400 ? null
+  : ('x-bamboohr-error-message' in headers ? headers['x-bamboohr-error-message']
+  : (has(value.detail) ? value.detail : (has(value.message) ? value.message : null)))
+actions:
+  list_employees:
+    label: List employees
+    description: Everyone in the company directory, with their job title, department, work email and phone.
+    method: GET
+    path: /api/v1/employees/directory
+    inputs:
+      - name: only_current
+        label: Only current employees
+        description: "true (the default) leaves out people whose hire date is still to come."
+        kind: boolean
+    query: { onlyCurrent: "{{ input.only_current }}" }
+    items: value.employees
+    output:
+      id: text
+      displayName: text
+      firstName: text
+      lastName: text
+      preferredName: text
+      jobTitle: text
+      workEmail: text
+      workPhone: text
+      mobilePhone: text
+      department: text
+      division: text
+      location: text
+      supervisor: text
+      photoUrl: text
+  get_employee:
+    label: Get an employee
+    description: One employee's record, with the fields asked for.
+    method: GET
+    path: "/api/v1/employees/{{ input.employee_id }}"
+    inputs:
+      - { name: employee_id, label: "The employee's ID", required: true }
+      - name: fields
+        label: Which fields, with commas
+        description: "Such as firstName,lastName,workEmail,jobTitle (List fields gives every name). By default the name, work email, job, department, location, hire date and status."
+    query:
+      fields: "{{ has(input.fields) && input.fields != null ? input.fields : 'firstName,lastName,preferredName,workEmail,jobTitle,department,division,location,hireDate,status,supervisor' }}"
+    output:
+      id: text
+      firstName: text
+      lastName: text
+      preferredName: text
+      workEmail: text
+      jobTitle: text
+      department: text
+      division: text
+      location: text
+      hireDate: text
+      status: text
+      supervisor: text
+  create_employee:
+    label: Add an employee
+    description: A new employee record; it gives the new employee's ID.
+    write: true
+    method: POST
+    path: /api/v1/employees
+    inputs:
+      - { name: first_name, label: First name, required: true }
+      - { name: last_name, label: Last name, required: true }
+      - { name: work_email, label: Work email }
+      - { name: job_title, label: Job title }
+      - { name: department, label: Department }
+      - { name: hire_date, label: "Hire date (YYYY-MM-DD)" }
+    send:
+      firstName: "{{ input.first_name }}"
+      lastName: "{{ input.last_name }}"
+      workEmail: "{{ input.work_email }}"
+      jobTitle: "{{ input.job_title }}"
+      department: "{{ input.department }}"
+      hireDate: "{{ input.hire_date }}"
+    # No answer body: the new employee's address is in the Location header.
+    result: >-
+      'location' in headers
+      ? {'id': headers.location.substring(headers.location.lastIndexOf('/') + 1), 'location': headers.location}
+      : {'id': null}
+    output: { id: text, location: text }
+  update_employee:
+    label: Change an employee
+    description: Changes the fields given on an employee's record; the others stay as they are.
+    write: true
+    method: POST
+    path: "/api/v1/employees/{{ input.employee_id }}"
+    inputs:
+      - { name: employee_id, label: "The employee's ID", required: true }
+      - { name: first_name, label: First name }
+      - { name: last_name, label: Last name }
+      - { name: work_email, label: Work email }
+      - { name: job_title, label: Job title }
+      - { name: department, label: Department }
+      - { name: division, label: Division }
+      - { name: location, label: Location }
+      - { name: hire_date, label: "Hire date (YYYY-MM-DD)" }
+      - { name: mobile_phone, label: Mobile phone }
+      - { name: work_phone, label: Work phone }
+      - { name: address1, label: Street address }
+      - { name: city, label: City }
+      - { name: state, label: State or province }
+      - { name: zipcode, label: ZIP or postal code }
+      - { name: country, label: Country }
+    send:
+      firstName: "{{ input.first_name }}"
+      lastName: "{{ input.last_name }}"
+      workEmail: "{{ input.work_email }}"
+      jobTitle: "{{ input.job_title }}"
+      department: "{{ input.department }}"
+      division: "{{ input.division }}"
+      location: "{{ input.location }}"
+      hireDate: "{{ input.hire_date }}"
+      mobilePhone: "{{ input.mobile_phone }}"
+      workPhone: "{{ input.work_phone }}"
+      address1: "{{ input.address1 }}"
+      city: "{{ input.city }}"
+      state: "{{ input.state }}"
+      zipcode: "{{ input.zipcode }}"
+      country: "{{ input.country }}"
+    result: "{'updated': true}"
+    output: { updated: boolean }
+  list_changed_employees:
+    label: List employees changed since a time
+    description: The employees added, changed or removed since a time, each with what happened and when.
+    method: GET
+    path: /api/v1/employees/changed
+    inputs:
+      - { name: since, label: "Since when (such as 2026-11-01T00:00:00Z)", required: true }
+      - { name: type, label: "Only these: inserted, updated or deleted" }
+    query: { since: "{{ input.since }}", type: "{{ input.type }}" }
+    items: "value.employees == null ? [] : value.employees.map(k, value.employees[k])"
+    output: { id: text, action: text, lastChanged: text }
+  get_table_rows:
+    label: Get an employee's table rows
+    description: "The rows of one of an employee's tables, such as jobInfo, compensation or employmentStatus."
+    method: GET
+    path: "/api/v1/employees/{{ input.employee_id }}/tables/{{ input.table }}"
+    inputs:
+      - { name: employee_id, label: "The employee's ID (all: everyone you may see)", required: true }
+      - { name: table, label: "The table, such as jobInfo, compensation or employmentStatus", required: true }
+    items: value
+    output: { id: text, employeeId: text, date: text, jobTitle: text, department: text, location: text, reportsTo: text }
+  add_table_row:
+    label: Add a row to an employee's table
+    description: "A new row in one of an employee's tables, such as a new job (jobInfo) from a date."
+    write: true
+    method: POST
+    path: "/api/v1/employees/{{ input.employee_id }}/tables/{{ input.table }}"
+    inputs:
+      - { name: employee_id, label: "The employee's ID", required: true }
+      - { name: table, label: "The table, such as jobInfo", required: true }
+      - { name: date, label: "From when (YYYY-MM-DD)" }
+      - { name: job_title, label: Job title }
+      - { name: department, label: Department }
+      - { name: division, label: Division }
+      - { name: location, label: Location }
+      - { name: reports_to, label: Who they report to }
+    send:
+      date: "{{ input.date }}"
+      jobTitle: "{{ input.job_title }}"
+      department: "{{ input.department }}"
+      division: "{{ input.division }}"
+      location: "{{ input.location }}"
+      reportsTo: "{{ input.reports_to }}"
+    result: "{'added': true}"
+    output: { added: boolean }
+  list_time_off_requests:
+    label: List time off requests
+    description: The time off requests between two dates, with their type, amount and status.
+    method: GET
+    path: /api/v1/time_off/requests
+    inputs:
+      - { name: start, label: "From (YYYY-MM-DD)", required: true }
+      - { name: end, label: "To (YYYY-MM-DD)", required: true }
+      - { name: status, label: "Only these statuses, with commas: approved, denied, requested, canceled" }
+      - { name: employee_id, label: "Only this employee's (their ID)" }
+      - { name: type, label: "Only these time off types (their IDs, with commas)" }
+    query:
+      start: "{{ input.start }}"
+      end: "{{ input.end }}"
+      status: "{{ input.status }}"
+      employeeId: "{{ input.employee_id }}"
+      type: "{{ input.type }}"
+    items: value
+    output:
+      id: number
+      employeeId: number
+      name: text
+      start: text
+      end: text
+      created: text
+      status: record
+      type: record
+      amount: record
+      notes: record
+  request_time_off:
+    label: Request time off
+    description: "A time off request for an employee: requested (to be approved), or recorded as approved or denied."
+    write: true
+    method: PUT
+    path: "/api/v1/employees/{{ input.employee_id }}/time_off/request"
+    inputs:
+      - { name: employee_id, label: "The employee's ID", required: true }
+      - { name: time_off_type_id, label: "The time off type's ID (List time off types)", required: true, kind: number }
+      - { name: start, label: "From (YYYY-MM-DD)", required: true }
+      - { name: end, label: "To (YYYY-MM-DD)", required: true }
+      - name: status
+        label: "requested, approved or denied"
+        description: requested by default.
+      - { name: amount, label: How many hours or days, kind: number }
+      - { name: note, label: "A note from the employee" }
+    send:
+      status: "{{ has(input.status) && input.status != null ? input.status : 'requested' }}"
+      start: "{{ input.start }}"
+      end: "{{ input.end }}"
+      timeOffTypeId: "{{ input.time_off_type_id }}"
+      amount: "{{ input.amount }}"
+      notes: "{{ has(input.note) && input.note != null ? [{'from': 'employee', 'note': input.note}] : null }}"
+    output: { id: number, employeeId: number, start: text, end: text, status: record, type: record, amount: record }
+  set_time_off_status:
+    label: Approve or deny a time off request
+    description: "Sets a time off request's status: approved, denied or canceled, with a note."
+    write: true
+    method: PUT
+    path: "/api/v1/time_off/requests/{{ input.request_id }}/status"
+    inputs:
+      - { name: request_id, label: "The request's ID", required: true }
+      - { name: status, label: "approved, denied or canceled", required: true }
+      - { name: note, label: A note }
+    send: { status: "{{ input.status }}", note: "{{ input.note }}" }
+    result: "{'updated': true}"
+    output: { updated: boolean }
+  whos_out:
+    label: "List who's out"
+    description: "Who is off, and the company holidays, between two dates (today and the next 14 days by default)."
+    method: GET
+    path: /api/v1/time_off/whos_out
+    inputs:
+      - { name: start, label: "From (YYYY-MM-DD)" }
+      - { name: end, label: "To (YYYY-MM-DD)" }
+    query: { start: "{{ input.start }}", end: "{{ input.end }}" }
+    items: value
+    output: { id: number, type: text, employeeId: number, name: text, start: text, end: text }
+  list_time_off_types:
+    label: List time off types
+    description: "The kinds of time off the company has (vacation, sick ...), with their IDs and units."
+    method: GET
+    path: /api/v1/meta/time_off/types
+    items: value.timeOffTypes
+    output: { id: number, name: text, units: text, color: text, icon: text }
+  list_time_off_policies:
+    label: List time off policies
+    description: "The company's time off policies, each with its time off type and kind."
+    method: GET
+    path: /api/v1/meta/time_off/policies
+    items: value
+    output: { id: number, timeOffTypeId: number, name: text, effectiveDate: text, type: text }
+  get_time_off_balances:
+    label: "Get an employee's time off balances"
+    description: How much time off of each kind an employee has left, and has used this year, on a date.
+    method: GET
+    path: "/api/v1/employees/{{ input.employee_id }}/time_off/calculator"
+    inputs:
+      - { name: employee_id, label: "The employee's ID", required: true }
+      - { name: end, label: "On which date (YYYY-MM-DD; today by default)" }
+    query: { end: "{{ input.end }}" }
+    items: value
+    output: { timeOffType: text, name: text, units: text, balance: text, end: text, policyType: text, usedYearToDate: text }
+  list_employee_files:
+    label: "List an employee's files"
+    description: "The folders of an employee's files and the files in each."
+    method: GET
+    path: "/api/v1/employees/{{ input.employee_id }}/files/view"
+    inputs:
+      - { name: employee_id, label: "The employee's ID", required: true }
+    items: value.categories
+    output: { id: number, name: text, canUploadFiles: text, files: list }
+  list_fields:
+    label: List fields
+    description: "Every field an employee record has, with the name to ask for it by."
+    method: GET
+    path: /api/v1/meta/fields
+    items: value
+    output: { id: text, name: text, type: text, alias: text, deprecated: boolean }
+  get_company:
+    label: Get the company's details
+    description: "The company's legal and display names, address and phone."
+    method: GET
+    path: /api/v1/company_information
+    output: { legalName: text, displayName: text, address: record, phone: text }
+  list_applications:
+    label: List job applications
+    description: "Job applications, each with the applicant, the job and its status, newest first by default."
+    method: GET
+    path: /api/v1/applicant_tracking/applications
+    inputs:
+      - { name: job_id, label: "Only for this job (its ID)" }
+      - { name: application_status, label: "Only these, with commas: NEW, ACTIVE, INACTIVE, HIRED, ALL" }
+      - { name: search, label: "Words to look for" }
+      - { name: new_since, label: "Only those sent after (such as 2026-11-01 13:00:00, UTC)" }
+    query:
+      jobId: "{{ input.job_id }}"
+      applicationStatus: "{{ input.application_status }}"
+      searchString: "{{ input.search }}"
+      newSince: "{{ input.new_since }}"
+      sortBy: created_date
+      sortOrder: DESC
+    items: value.applications
+    next: "value.nextPageUrl == null || value.nextPageUrl == '' ? null : value.nextPageUrl"
+    output: { id: number, appliedDate: text, status: record, rating: number, applicant: record, job: record }
+  get_application:
+    label: Get a job application
+    description: "One application in full: the applicant, the job, their answers, and its status history."
+    method: GET
+    path: "/api/v1/applicant_tracking/applications/{{ input.application_id }}"
+    inputs:
+      - { name: application_id, label: "The application's ID", required: true }
+    output:
+      id: number
+      appliedDate: text
+      status: record
+      rating: number
+      applicant: record
+      job: record
+      questionsAndAnswers: list
+      desiredSalary: text
+      referredBy: text
+      resumeFileId: number
+  set_application_status:
+    label: Move a job application to a status
+    description: "Sets an application's status, such as reviewed, interviewing or hired, by the status's ID."
+    write: true
+    method: POST
+    path: "/api/v1/applicant_tracking/applications/{{ input.application_id }}/status"
+    inputs:
+      - { name: application_id, label: "The application's ID", required: true }
+      - { name: status_id, label: "The status's ID", required: true, kind: number }
+    send: { status: "{{ input.status_id }}" }
+    output: { type: text, id: number }
+  comment_on_application:
+    label: Comment on a job application
+    description: A comment on an application, for the hiring team.
+    write: true
+    method: POST
+    path: "/api/v1/applicant_tracking/applications/{{ input.application_id }}/comments"
+    inputs:
+      - { name: application_id, label: "The application's ID", required: true }
+      - { name: comment, label: The comment, required: true }
+    send: { type: comment, comment: "{{ input.comment }}" }
+    output: { type: text, id: number }
+  list_job_openings:
+    label: List job openings
+    description: "The company's job openings, with where they are, who leads the hiring and how many have applied."
+    method: GET
+    path: /api/v1/applicant_tracking/jobs
+    inputs:
+      - { name: status_groups, label: "Only these, with commas: Open, Draft, Filled, On Hold, Canceled, ALL" }
+    query: { statusGroups: "{{ input.status_groups }}" }
+    items: value
+    output:
+      id: number
+      title: record
+      postedDate: text
+      location: record
+      department: record
+      status: record
+      hiringLead: record
+      newApplicantsCount: number
+      totalApplicantsCount: number
+      postingUrl: text
+  list_timesheet_entries:
+    label: List timesheet entries
+    description: "The hours worked between two dates in the last year, clocked or entered, for everyone or some."
+    method: GET
+    path: /api/v1/time_tracking/timesheet_entries
+    inputs:
+      - { name: start, label: "From (YYYY-MM-DD)", required: true }
+      - { name: end, label: "To (YYYY-MM-DD)", required: true }
+      - { name: employee_ids, label: "Only these employees (their IDs, with commas)" }
+    query: { start: "{{ input.start }}", end: "{{ input.end }}", employeeIds: "{{ input.employee_ids }}" }
+    items: value
+    output:
+      id: number
+      employeeId: number
+      type: text
+      date: text
+      start: text
+      end: text
+      timezone: text
+      hours: number
+      note: text
+      approved: boolean
+  clock_in:
+    label: Clock an employee in
+    description: "Starts an employee's timesheet entry now, or at the time given, with a project and a note."
+    write: true
+    method: POST
+    path: "/api/v1/time_tracking/employees/{{ input.employee_id }}/clock_in"
+    inputs:
+      - { name: employee_id, label: "The employee's ID", required: true }
+      - { name: project_id, label: "A project's ID", kind: number }
+      - { name: task_id, label: "A task's ID", kind: number }
+      - { name: note, label: A note }
+      - { name: date, label: "The date (YYYY-MM-DD)" }
+      - { name: start, label: "The time (HH:MM)" }
+      - { name: timezone, label: "The time zone, such as America/Denver" }
+    send:
+      projectId: "{{ input.project_id }}"
+      taskId: "{{ input.task_id }}"
+      note: "{{ input.note }}"
+      date: "{{ input.date }}"
+      start: "{{ input.start }}"
+      timezone: "{{ input.timezone }}"
+    output: { id: number, employeeId: number, type: text, date: text, start: text, end: text, timezone: text, hours: number, note: text }
+  clock_out:
+    label: Clock an employee out
+    description: "Ends the employee's open timesheet entry now, or at the time given."
+    write: true
+    method: POST
+    path: "/api/v1/time_tracking/employees/{{ input.employee_id }}/clock_out"
+    inputs:
+      - { name: employee_id, label: "The employee's ID", required: true }
+      - { name: date, label: "The date (YYYY-MM-DD)" }
+      - { name: end, label: "The time (HH:MM)" }
+      - { name: timezone, label: "The time zone, such as America/Denver" }
+    send: { date: "{{ input.date }}", end: "{{ input.end }}", timezone: "{{ input.timezone }}" }
+    output: { id: number, employeeId: number, type: text, date: text, start: text, end: text, timezone: text, hours: number, note: text }
+triggers:
+  new_employee:
+    label: A new employee
+    description: Each employee added, asked for every few minutes (what changed in the week before each poll).
+    poll:
+      method: GET
+      path: /api/v1/employees/changed
+      query: { since: "{{ string(timestamp(input.now) - duration('168h')) }}", type: inserted }
+      items: "value.employees == null ? [] : value.employees.map(k, value.employees[k])"
+      id: item.id
+  changed_employee:
+    label: An employee changed
+    description: "Each employee whose record changed (any field, job, pay or status), asked for every few minutes."
+    poll:
+      method: GET
+      path: /api/v1/employees/changed
+      query: { since: "{{ string(timestamp(input.now) - duration('168h')) }}", type: updated }
+      items: "value.employees == null ? [] : value.employees.map(k, value.employees[k])"
+      id: item.id
+      version: item.lastChanged
+  new_application:
+    label: A new job application
+    description: Each job application sent, the newest asked for every few minutes.
+    inputs:
+      - { name: job_id, label: "Only for this job (its ID)" }
+    poll:
+      action: list_applications
+      input: { job_id: "{{ input.job_id }}" }
+      newest_first: true
+      id: string(item.id)

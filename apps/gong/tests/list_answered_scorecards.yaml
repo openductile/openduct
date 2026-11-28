@@ -1,0 +1,30 @@
+description: Scorecards filled in for November's calls
+action: list_answered_scorecards
+credential: {access_key: ann, access_key_secret: test-password, api_url: 'https://us-12345.api.gong.io/'}
+input: {call_from_date: '2026-11-01', call_to_date: '2026-12-01'}
+exchanges:
+- sent:
+    method: POST
+    url: https://us-12345.api.gong.io/v2/stats/activity/scorecards
+    headers: {authorization: Basic YW5uOnRlc3QtcGFzc3dvcmQ=}
+    body:
+      filter: {callFromDate: '2026-11-01', callToDate: '2026-12-01'}
+  answer:
+    status: 200
+    body:
+      requestId: 4al018gzaztcr8nbukw
+      records: {totalRecords: 1, currentPageSize: 1, currentPageNumber: 0}
+      answeredScorecards:
+      - &id001
+        answeredScorecardId: 1102
+        scorecardId: 77
+        scorecardName: Discovery call
+        callId: 7782342274025937895
+        callStartTime: '2026-11-27T10:00:00Z'
+        reviewedUserId: 234599484848423
+        reviewerUserId: 563515258458745
+        reviewTime: '2026-11-27T16:00:00Z'
+        answers:
+        - {questionId: 5, score: 4}
+result:
+- *id001

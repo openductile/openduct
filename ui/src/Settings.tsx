@@ -7,10 +7,12 @@
 
 import { AppSignIns } from "./AppSignIns";
 import { Sym } from "./Sym";
+import { ApiTokens, EnvironmentSettings, GitSync } from "./Delivery"; // developer CI/CD
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { api, type CredentialSummary, type FileSummary, type Session, type WorkflowSummary } from "./api";
 import { Glyph, useFolded, useTheme, type Theme } from "./Sidebar";
 import { AlertSettings } from "./AlertSettings";
+import { McpSettings } from "./McpSettings"; // MCP
 
 const THEMES: { theme: Theme; label: string }[] = [
   { theme: "light", label: "Light" },
@@ -168,10 +170,35 @@ export function Settings(props: { session: Session; workspace: string; onRenamed
               )}
             </section>
           )}
+          {mine && mine.role !== "viewer" && ( // MCP
+            <section className="set-group" aria-label="Tools for AI assistants">
+              <h2>Tools for AI assistants (MCP)</h2>
+              <McpSettings workspace={mine.id} onGo={props.onGo} />
+            </section>
+          )}
           {mine?.role === "admin" && (
             <section className="set-group" aria-label="Alerts">
               <h2>Alerts</h2>
               <AlertSettings workspace={mine.id} onGo={props.onGo} />
+            </section>
+          )}
+          {/* developer CI/CD: API tokens, the workspace's environment, and Git sync */}
+          {mine?.role === "admin" && (
+            <section className="set-group" aria-label="API tokens">
+              <h2>API tokens</h2>
+              <ApiTokens workspace={mine.id} role={mine.role} />
+            </section>
+          )}
+          {mine && (
+            <section className="set-group" aria-label="Environment">
+              <h2>Environment</h2>
+              <EnvironmentSettings workspace={mine.id} admin={mine.role === "admin"} />
+            </section>
+          )}
+          {mine && mine.role !== "viewer" && (
+            <section className="set-group" aria-label="Git">
+              <h2>Git</h2>
+              <GitSync workspace={mine.id} admin={mine.role === "admin"} />
             </section>
           )}
           {account.admin && (

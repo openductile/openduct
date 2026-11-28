@@ -1,0 +1,10 @@
+action: create_user
+credential: { workspace: acme, user_id: uAdmin1, token: rc_admin }
+input: { email: dan@example.com, name: Dan Cole, username: dan, password: "Welcome-2026-x7", require_password_change: true }
+exchanges:
+  - sent:
+      method: POST
+      url: https://acme.rocket.chat/api/v1/users.create
+      body: { email: dan@example.com, name: Dan Cole, username: dan, password: "Welcome-2026-x7", requirePasswordChange: true }
+    answer: { body: { user: { _id: uDan4, username: dan, name: Dan Cole, active: true, roles: [user] }, success: true } }
+result: { _id: uDan4, username: dan, name: Dan Cole, active: true, roles: [user] }

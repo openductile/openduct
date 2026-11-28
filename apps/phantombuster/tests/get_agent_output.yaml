@@ -1,0 +1,25 @@
+description: The latest launch of a Phantom, still running
+action: get_agent_output
+credential: { api_key: pb_test_key_1 }
+input: { id: "7345678901234567" }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://api.phantombuster.com/api/v2/agents/fetch-output"
+      query: { id: "7345678901234567" }
+    answer:
+      status: 200
+      body:
+        containerId: "4512345678901234"
+        status: running
+        output: "Searching for coffee roasters in Portland\n12 places found so far\n"
+        outputPos: 64
+        progress: 0.6
+        isAgentRunning: true
+result:
+  containerId: "4512345678901234"
+  status: running
+  output: "Searching for coffee roasters in Portland\n12 places found so far\n"
+  outputPos: 64
+  progress: 0.6
+  isAgentRunning: true

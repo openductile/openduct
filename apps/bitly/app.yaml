@@ -1,0 +1,608 @@
+# Copyright 2026 Ductile AI, Inc
+# SPDX-License-Identifier: Apache-2.0
+# Bitly: made by `openduct app from-openapi` from https://dev.bitly.com/v4/v4.json, fetched 2026-11-27 (Apache 2.0) (Bitly API 4.0.0, OpenAPI 3.0).
+# Checked as made. Change what you like, then run `openduct app check` and `openduct app test` again.
+app: bitly
+name: Bitly
+category: marketing
+description: "Short links, QR codes and campaigns, and how often each is clicked."
+docs: "https://dev.bitly.com/api-reference"
+hosts: [api-ssl.bitly.com]
+base_url: "https://api-ssl.bitly.com/v4"
+sign_in:
+  - id: bitly
+    label: "An access token"
+    fields: [{ name: token, label: "An access token from Bitly's Settings → Developer settings → API", secret: true }]
+    headers: { Authorization: "Bearer {{ credential.token }}" }
+  - id: bitly_oauth
+    label: "Sign in with Bitly"
+    oauth2:
+      authorize: https://bitly.com/oauth/authorize
+      token: https://api-ssl.bitly.com/oauth/access_token
+    headers: { Authorization: "Bearer {{ credential.access_token }}" }
+actions:
+  list_groups:
+    label: "List groups"
+    description: "Returns a list of groups in the organization."
+    method: GET
+    path: "/groups"
+    inputs: [{ name: organization_guid, label: "A GUID for a Bitly organization" }]
+    query: { organization_guid: "{{ input.organization_guid }}" }
+    items: value.groups
+    output:
+      references: record
+      name: text
+      guid: text
+      created: text
+      modified: text
+      is_active: boolean
+      role: text
+      organization_guid: text
+      bsds: list
+  list_organizations:
+    label: "List organizations"
+    description: "Retrieve a list of organizations for the authenticated user."
+    method: GET
+    path: "/organizations"
+    inputs:
+      - name: include_all
+        label: "When set to true, returns all of the user's organizations regardless of the…"
+        kind: boolean
+        description: "When set to true, returns all of the user's organizations regardless of the token's allowed_orgs restrictions."
+    query: { include_all: "{{ input.include_all }}" }
+    items: value.organizations
+    output:
+      references: record
+      name: text
+      is_active: boolean
+      guid: text
+      tier: text
+      tier_family: text
+      tier_display_name: text
+      role: text
+      created: text
+      modified: text
+      bsds: list
+      require_sso: text
+      require_2fa: text
+  list_link_clicks:
+    label: "List a short link's clicks by day"
+    description: "Returns the click counts for the specified link in an array based on a date."
+    method: GET
+    path: "/bitlinks/{{ input.bitlink }}/clicks"
+    inputs:
+      - { name: bitlink, label: "The short link, as bit.ly/abc123", required: true }
+      - name: unit_reference
+        label: "An ISO-8601 timestamp, indicating the most recent time for which to pull…"
+    query: { unit: day, units: "-1", unit_reference: "{{ input.unit_reference }}" }
+    items: value.link_clicks
+    output: { clicks: number, date: text }
+  list_link_countries:
+    label: "A short link's clicks by country"
+    description: "Returns the country origins of click traffic for the specified link."
+    method: GET
+    path: "/bitlinks/{{ input.bitlink }}/countries"
+    inputs:
+      - { name: bitlink, label: "The short link, as bit.ly/abc123", required: true }
+      - { name: size, label: "The quantity of items to be be returned", kind: number }
+      - name: unit_reference
+        label: "An ISO-8601 timestamp, indicating the most recent time for which to pull…"
+    query: { unit: day, units: "-1", size: "{{ input.size }}", unit_reference: "{{ input.unit_reference }}" }
+    items: value.metrics
+    output: { clicks: number, value: text }
+  list_link_referrers:
+    label: "A short link's clicks by referrer"
+    description: "Returns referrer click counts for the specified link."
+    method: GET
+    path: "/bitlinks/{{ input.bitlink }}/referrers"
+    inputs:
+      - { name: bitlink, label: "The short link, as bit.ly/abc123", required: true }
+      - { name: size, label: "The quantity of items to be be returned", kind: number }
+      - name: unit_reference
+        label: "An ISO-8601 timestamp, indicating the most recent time for which to pull…"
+    query: { unit: day, units: "-1", size: "{{ input.size }}", unit_reference: "{{ input.unit_reference }}" }
+    items: value.metrics
+    output: { clicks: number, value: text }
+  list_tags:
+    label: "List a group's tags"
+    description: "Returns the tags currently used in the specified group."
+    method: GET
+    path: "/groups/{{ input.group_guid }}/tags"
+    inputs:
+      - { name: group_guid, label: "A GUID for a Bitly group", required: true }
+      - { name: type, label: "Tag set to return; defaults to bitlink" }
+    query: { type: "{{ input.type }}" }
+    output: { tags: list }
+  list_links:
+    label: "List a group's short links"
+    description: "Returns a paginated collection of Bitlinks for a group."
+    method: GET
+    path: "/groups/{{ input.group_guid }}/bitlinks"
+    inputs:
+      - { name: group_guid, label: "A GUID for a Bitly group", required: true }
+      - name: search_after
+        label: "Token used to search next batch, only use response from API as input value"
+      - { name: query, label: "The value that you would like to search" }
+      - name: hostname_path_query
+        label: "The hostname and/or path you would like to search (case-insensitive)"
+      - { name: created_before, label: "Timestamp as an integer unix epoch (seconds only)", kind: number }
+      - { name: created_after, label: "Timestamp as an integer unix epoch (seconds only)", kind: number }
+      - { name: archived, label: "Whether or not to include archived resources" }
+      - { name: deeplinks, label: "Filter to only Bitlinks that contain deeplinks" }
+      - name: domain_deeplinks
+        label: "Filter to only Bitlinks that contain deeplinks configured with a custom domain"
+      - name: campaign_guid
+        label: "Filter to return only links for the given campaign GUID, can be provided"
+      - name: channel_guid
+        label: "Filter to return only links for the given channel GUID, can be provided,…"
+        description: "Filter to return only links for the given channel GUID, can be provided, overrides all other parameters"
+      - { name: custom_bitlink, label: "Custom bitlink" }
+      - { name: has_qr_codes, label: "a filter value if the resource has any QR codes" }
+      - { name: is_expired, label: "filter bitlinks by expiration status" }
+      - { name: has_expiration, label: "filter bitlinks by presence of expiration" }
+      - { name: has_dynamic_routing, label: "filter bitlinks by presence of dynamic routing rules" }
+    query:
+      search_after: "{{ input.search_after }}"
+      query: "{{ input.query }}"
+      hostname_path_query: "{{ input.hostname_path_query }}"
+      created_before: "{{ input.created_before }}"
+      created_after: "{{ input.created_after }}"
+      archived: "{{ input.archived }}"
+      deeplinks: "{{ input.deeplinks }}"
+      domain_deeplinks: "{{ input.domain_deeplinks }}"
+      campaign_guid: "{{ input.campaign_guid }}"
+      channel_guid: "{{ input.channel_guid }}"
+      custom_bitlink: "{{ input.custom_bitlink }}"
+      has_qr_codes: "{{ input.has_qr_codes }}"
+      is_expired: "{{ input.is_expired }}"
+      has_expiration: "{{ input.has_expiration }}"
+      has_dynamic_routing: "{{ input.has_dynamic_routing }}"
+      size: "50"
+    items: value.links
+    next: "value.pagination.next == null || value.pagination.next == '' ? null : (value.pagination.next.startsWith('http') ? value.pagination.next : 'https://api-ssl.bitly.com' + value.pagination.next)"
+    output:
+      references: record
+      link: text
+      id: text
+      long_url: text
+      title: text
+      archived: boolean
+      created_at: text
+      created_by: text
+      client_id: text
+      custom_bitlinks: list
+      tags: list
+      launchpad_ids: list
+      qr_code_ids: list
+      deeplinks: list
+      is_deleted: boolean
+      campaign_ids: list
+      expiration_at: text
+      dynamic_routing: list
+  list_shorten_counts:
+    label: "How many links a group shortened, by day"
+    description: "Returns all the shorten counts for a group."
+    method: GET
+    path: "/groups/{{ input.group_guid }}/shorten_counts"
+    inputs:
+      - { name: group_guid, label: "A GUID for a Bitly group", required: true }
+      - name: unit_reference
+        label: "An ISO-8601 timestamp, indicating the most recent time for which to pull…"
+    query: { unit: day, units: "-1", unit_reference: "{{ input.unit_reference }}" }
+    items: value.metrics
+    output: { key: text, value: number }
+  list_group_clicks:
+    label: "A group's clicks by day"
+    description: "The clicks on all the short links of a group, by day."
+    method: GET
+    path: "/groups/{{ input.group_guid }}/clicks"
+    inputs:
+      - { name: group_guid, label: "A GUID for a Bitly group", required: true }
+      - name: unit_reference
+        label: "An ISO-8601 timestamp, indicating the most recent time for which to pull…"
+    query: { unit: day, units: "-1", unit_reference: "{{ input.unit_reference }}" }
+    items: value.data
+    output: { ts: text, count: number }
+  list_qr_codes:
+    label: "List a group's QR codes"
+    description: "Retrieves a list of QR codes matching the filter settings."
+    method: GET
+    path: "/groups/{{ input.group_guid }}/qr-codes"
+    inputs:
+      - { name: group_guid, label: "A GUID for a Bitly group", required: true }
+      - name: has_render_customizations
+        label: "Whether or not QRCode has any render customizations (like color or shape…"
+      - name: search_after
+        label: "Token used to search next batch of qr codes, only use response from API as…"
+      - { name: query, label: "The value that you would like to search" }
+      - name: hostname_path_query
+        label: "The hostname and/or path you would like to search (case-insensitive)"
+      - { name: created_before, label: "Timestamp as an integer unix epoch (seconds only)", kind: number }
+      - { name: created_after, label: "Timestamp as an integer unix epoch (seconds only)", kind: number }
+      - { name: archived, label: "Whether or not to include archived resources" }
+      - { name: is_gs1, label: "a filter value if the resource is a GS1 QR code" }
+      - { name: is_expired, label: "filter bitlinks by expiration status" }
+      - { name: has_expiration, label: "filter bitlinks by presence of expiration" }
+      - { name: has_dynamic_routing, label: "filter bitlinks by presence of dynamic routing rules" }
+    query:
+      has_render_customizations: "{{ input.has_render_customizations }}"
+      search_after: "{{ input.search_after }}"
+      query: "{{ input.query }}"
+      hostname_path_query: "{{ input.hostname_path_query }}"
+      created_before: "{{ input.created_before }}"
+      created_after: "{{ input.created_after }}"
+      archived: "{{ input.archived }}"
+      is_gs1: "{{ input.is_gs1 }}"
+      is_expired: "{{ input.is_expired }}"
+      has_expiration: "{{ input.has_expiration }}"
+      has_dynamic_routing: "{{ input.has_dynamic_routing }}"
+      size: "50"
+    items: value.qr_codes
+    next: "value.pagination.next == null || value.pagination.next == '' ? null : (value.pagination.next.startsWith('http') ? value.pagination.next : 'https://api-ssl.bitly.com' + value.pagination.next)"
+    output:
+      qrcode_id: text
+      group_guid: text
+      title: text
+      is_customized: boolean
+      serialized_content: text
+      qr_code_type: text
+      long_urls: list
+      bitlink_id: text
+      domain: text
+      is_gs1: boolean
+      created_by: text
+      tags: list
+      archived: boolean
+      expiration_at: text
+      dynamic_routing: list
+      created: text
+      modified: text
+  list_campaigns:
+    label: "List campaigns"
+    description: "Returns the campaigns for the current authenticated user."
+    method: GET
+    path: "/campaigns"
+    inputs: [{ name: group_guid, label: "A GUID for a Bitly group" }]
+    query: { group_guid: "{{ input.group_guid }}" }
+    items: value.campaigns
+    output:
+      references: record
+      guid: text
+      group_guid: text
+      created_by: text
+      name: text
+      description: text
+      created: text
+      modified: text
+  create_link:
+    label: "Create a short link, with a title, tags or a keyword"
+    description: "Converts a long url to a Bitlink and sets additional parameters."
+    write: true
+    method: POST
+    path: "/bitlinks"
+    inputs:
+      - { name: long_url, label: "The long link to shorten" }
+      - { name: domain, label: Domain }
+      - { name: group_guid, label: "Always include a specific group and custom domain in your shorten calls" }
+      - { name: title, label: Title }
+      - { name: tags, label: Tags, kind: list }
+      - { name: deeplinks, label: Deeplinks, kind: list }
+      - { name: force_new_link, label: "Force new link", kind: boolean }
+      - { name: keyword, label: "Custom keyword for creating keyword overrides" }
+      - { name: bitlink_id, label: "Existing bitlink ID to add a keyword override to" }
+      - name: expiration_at
+        label: "Optional expiration timestamp for the bitlink (e.g., 2025-01-28T14:30:00+0000)"
+      - { name: dynamic_routing, label: "dynamic routing rules for this bitlink", kind: list }
+    send:
+      long_url: "{{ input.long_url }}"
+      domain: "{{ input.domain }}"
+      group_guid: "{{ input.group_guid }}"
+      title: "{{ input.title }}"
+      tags: "{{ input.tags }}"
+      deeplinks: "{{ input.deeplinks }}"
+      force_new_link: "{{ input.force_new_link }}"
+      keyword: "{{ input.keyword }}"
+      bitlink_id: "{{ input.bitlink_id }}"
+      expiration_at: "{{ input.expiration_at }}"
+      dynamic_routing: "{{ input.dynamic_routing }}"
+    output:
+      references: record
+      link: text
+      id: text
+      long_url: text
+      title: text
+      archived: boolean
+      created_at: text
+      created_by: text
+      client_id: text
+      custom_bitlinks: list
+      tags: list
+      launchpad_ids: list
+      qr_code_ids: list
+      deeplinks: list
+      is_deleted: boolean
+      campaign_ids: list
+      expiration_at: text
+      dynamic_routing: list
+  create_qr_code:
+    label: "Create a QR code"
+    description: "Create a new QR Code and return its metadata"
+    write: true
+    method: POST
+    path: "/qr-codes"
+    inputs:
+      - { name: title, label: "The title of the QR Code" }
+      - { name: group_guid, label: "Identify which group to place the QR Code", required: true }
+      - { name: render_customizations, label: "Options for customizing a QR Code's appearance", kind: record }
+      - name: archived
+        label: "A boolean representing if the QR code should be archived (hidden from the UI)…"
+        kind: boolean
+        description: "A boolean representing if the QR code should be archived (hidden from the UI) upon creation"
+      - { name: destination, label: Destination, required: true, kind: record }
+      - { name: gs1, label: "Contains GS1 related metadata", kind: record }
+      - name: expiration_at
+        label: "Optional expiration timestamp for the QR code's bitlink (e.g.,…"
+        description: "Optional expiration timestamp for the QR code's bitlink (e.g., 2025-01-28T14:30:00+0000)."
+      - { name: tags, label: "A list of tags to add to the QR code", kind: list }
+      - name: dynamic_routing
+        label: "Optional dynamic routing rules for this decoupled QR code"
+        kind: list
+      - { name: domain, label: Domain }
+    send:
+      title: "{{ input.title }}"
+      group_guid: "{{ input.group_guid }}"
+      render_customizations: "{{ input.render_customizations }}"
+      archived: "{{ input.archived }}"
+      destination: "{{ input.destination }}"
+      gs1: "{{ input.gs1 }}"
+      expiration_at: "{{ input.expiration_at }}"
+      tags: "{{ input.tags }}"
+      dynamic_routing: "{{ input.dynamic_routing }}"
+      domain: "{{ input.domain }}"
+    output:
+      qrcode_id: text
+      group_guid: text
+      title: text
+      is_customized: boolean
+      serialized_content: text
+      qr_code_type: text
+      long_urls: list
+      bitlink_id: text
+      domain: text
+      is_gs1: boolean
+      created_by: text
+      tags: list
+      archived: boolean
+      expiration_at: text
+      dynamic_routing: list
+      created: text
+      modified: text
+  get_user:
+    label: "Get the signed-in user"
+    description: "Returns information for the current authenticated user."
+    method: GET
+    path: "/user"
+    output:
+      login: text
+      name: text
+      is_active: boolean
+      created: text
+      modified: text
+      is_sso_user: boolean
+      emails: list
+      is_2fa_enabled: boolean
+      default_group_guid: text
+  get_link:
+    label: "Get a short link"
+    description: "Returns information for the specified link."
+    method: GET
+    path: "/bitlinks/{{ input.bitlink }}"
+    inputs: [{ name: bitlink, label: "The short link, as bit.ly/abc123", required: true }]
+    output:
+      references: record
+      link: text
+      id: text
+      long_url: text
+      title: text
+      archived: boolean
+      created_at: text
+      created_by: text
+      client_id: text
+      custom_bitlinks: list
+      tags: list
+      launchpad_ids: list
+      qr_code_ids: list
+      deeplinks: list
+      is_deleted: boolean
+      campaign_ids: list
+      expiration_at: text
+      dynamic_routing: list
+  add_custom_back_half:
+    label: "Give a short link a custom back-half"
+    description: "Add a keyword (or \"custom back-half\") to a Bitlink with a Custom Domain (domains must match)."
+    write: true
+    method: POST
+    path: "/custom_bitlinks"
+    inputs:
+      - { name: custom_bitlink, label: "The custom link, as yourdomain.example/spring-sale", required: true }
+      - { name: bitlink_id, label: "The short link it points to, on the same domain", required: true }
+    send: { custom_bitlink: "{{ input.custom_bitlink }}", bitlink_id: "{{ input.bitlink_id }}" }
+    output: { custom_bitlink: text, bitlink: record, bitlink_history: list }
+  get_group:
+    label: "Get a group"
+    description: "Returns details for a group."
+    method: GET
+    path: "/groups/{{ input.group_guid }}"
+    inputs: [{ name: group_guid, label: "A GUID for a Bitly group", required: true }]
+    output:
+      references: record
+      name: text
+      guid: text
+      created: text
+      modified: text
+      is_active: boolean
+      role: text
+      organization_guid: text
+      bsds: list
+  get_qr_code:
+    label: "Get a QR code"
+    description: "Gets the QR code with a matching id."
+    method: GET
+    path: "/qr-codes/{{ input.qrcode_id }}"
+    inputs: [{ name: qrcode_id, label: "The QR Code ID", required: true }]
+    output:
+      qrcode_id: text
+      group_guid: text
+      title: text
+      gs1: record
+      render_customizations: record
+      qr_code_type: text
+      bitlink_id: text
+      domain: text
+      long_urls: list
+      serialized_content: text
+      archived: boolean
+      created: text
+      modified: text
+      expiration_at: text
+      tags: list
+      dynamic_routing: list
+  list_domains:
+    label: "List the custom domains you can shorten with"
+    description: "Fetch the names of the custom domains the authenticated user can shorten links with, across every organization and group they belong to."
+    method: GET
+    path: "/bsds"
+    output: { bsds: list }
+  create_campaign:
+    label: "Create a campaign"
+    description: "Creates a new campaign."
+    write: true
+    method: POST
+    path: "/campaigns"
+    inputs:
+      - { name: group_guid, label: "Group guid" }
+      - { name: name, label: Name }
+      - { name: description, label: Description }
+      - { name: channel_guids, label: "Channel guids", kind: list }
+    send:
+      group_guid: "{{ input.group_guid }}"
+      name: "{{ input.name }}"
+      description: "{{ input.description }}"
+      channel_guids: "{{ input.channel_guids }}"
+    output:
+      references: record
+      guid: text
+      group_guid: text
+      created_by: text
+      name: text
+      description: text
+      created: text
+      modified: text
+  update_link:
+    label: "Change a short link"
+    description: "Updates fields in the specified link."
+    write: true
+    method: PATCH
+    path: "/bitlinks/{{ input.bitlink }}"
+    inputs:
+      - { name: bitlink, label: "The short link, as bit.ly/abc123", required: true }
+      - { name: title, label: Title }
+      - { name: archived, label: Archived, kind: boolean }
+      - { name: tags, label: Tags, kind: list }
+      - { name: deeplinks, label: Deeplinks, kind: list }
+      - { name: long_url, label: "Long url" }
+      - name: expiration_at
+        label: "Optional expiration timestamp for the bitlink (e.g., 2025-01-28T14:30:00+0000)"
+      - { name: dynamic_routing, label: "Dynamic routing rules for this bitlink", kind: list }
+    send:
+      title: "{{ input.title }}"
+      archived: "{{ input.archived }}"
+      tags: "{{ input.tags }}"
+      deeplinks: "{{ input.deeplinks }}"
+      long_url: "{{ input.long_url }}"
+      expiration_at: "{{ input.expiration_at }}"
+      dynamic_routing: "{{ input.dynamic_routing }}"
+    output:
+      references: record
+      link: text
+      id: text
+      long_url: text
+      title: text
+      archived: boolean
+      created_at: text
+      created_by: text
+      client_id: text
+      custom_bitlinks: list
+      tags: list
+      launchpad_ids: list
+      qr_code_ids: list
+      deeplinks: list
+      is_deleted: boolean
+      campaign_ids: list
+      expiration_at: text
+      dynamic_routing: list
+  get_clicks_summary:
+    label: "A short link's total clicks"
+    description: "Returns the click counts for the specified link rolled up into a single field."
+    method: GET
+    path: "/bitlinks/{{ input.bitlink }}/clicks/summary"
+    inputs:
+      - { name: bitlink, label: "The short link, as bit.ly/abc123", required: true }
+      - name: unit_reference
+        label: "An ISO-8601 timestamp, indicating the most recent time for which to pull…"
+    query: { unit: day, units: "-1", unit_reference: "{{ input.unit_reference }}" }
+    output: { total_clicks: number, units: number, unit: text, unit_reference: text }
+  delete_link:
+    label: "Delete a short link"
+    description: "Delete an unedited hash Bitlink."
+    write: true
+    method: DELETE
+    path: "/bitlinks/{{ input.bitlink }}"
+    inputs: [{ name: bitlink, label: "The short link, as bit.ly/abc123", required: true }]
+    output: { links_deleted: list }
+  shorten_link:
+    label: "Shorten a link"
+    description: "Converts a long url to a Bitlink."
+    write: true
+    method: POST
+    path: "/shorten"
+    inputs:
+      - { name: long_url, label: "The long link to shorten", required: true }
+      - { name: domain, label: Domain }
+      - { name: group_guid, label: "Group guid" }
+      - { name: force_new_link, label: "Force new link", kind: boolean }
+    send:
+      long_url: "{{ input.long_url }}"
+      domain: "{{ input.domain }}"
+      group_guid: "{{ input.group_guid }}"
+      force_new_link: "{{ input.force_new_link }}"
+    output:
+      references: record
+      link: text
+      id: text
+      long_url: text
+      archived: boolean
+      created_at: text
+      custom_bitlinks: list
+      tags: list
+      deeplinks: list
+  expand_link:
+    label: "Expand a short link"
+    description: "Returns the short link and long URL for the specified link."
+    method: POST
+    path: "/expand"
+    inputs: [{ name: bitlink_id, label: "The short link, as bit.ly/abc123", required: true }]
+    send: { bitlink_id: "{{ input.bitlink_id }}" }
+    output: { link: text, id: text, long_url: text, long_urls: list, created_at: text }
+triggers:
+  new_link:
+    label: A new short link
+    description: Each short link made in a group, the newest asked for every few minutes.
+    inputs:
+      - { name: group_guid, label: "The group's GUID (List groups gives it)", required: true }
+    poll:
+      action: list_links
+      input: { group_guid: "{{ input.group_guid }}" }
+      id: item.id
+      newest_first: true
+      every: 5m

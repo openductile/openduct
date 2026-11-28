@@ -1,0 +1,49 @@
+description: A ticket's replies and notes
+action: list_conversations
+credential:
+  domain: acme
+  api_key: test-key
+input:
+  ticket_id: '20'
+exchanges:
+- sent:
+    method: GET
+    url: https://acme.freshdesk.com/api/v2/tickets/20/conversations
+    query:
+      per_page: '100'
+    headers:
+      authorization: Basic dGVzdC1rZXk6WA==
+  answer:
+    status: 200
+    body:
+    - &id001
+      id: 4
+      ticket_id: 20
+      body_text: A new lid is on its way.
+      body: <div>A new lid is on its way.</div>
+      user_id: 1
+      from_email: support@example.com
+      cc_emails: []
+      bcc_emails: []
+      replied_to:
+      - pat@example.com
+      attachments: []
+      created_at: '2026-11-17T13:36:42Z'
+      updated_at: '2026-11-17T13:36:42Z'
+    - &id002
+      id: 5
+      ticket_id: 20
+      body_text: Ships Monday.
+      body: <div>Ships Monday.</div>
+      incoming: false
+      private: true
+      user_id: 1
+      support_email: null
+      notified_to:
+      - lee@example.com
+      attachments: []
+      created_at: '2026-11-17T13:49:37Z'
+      updated_at: '2026-11-17T13:49:37Z'
+result:
+- *id001
+- *id002

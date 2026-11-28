@@ -1,0 +1,17 @@
+description: Every 20 minutes the subscription is given another 55 minutes
+trigger: new_message
+renew: true
+workflow: wf1
+sign_in: teams
+credential:
+  access_token: eyJ0.teams
+  "client_state@wf1": s3cr3t
+  "subscription_id@wf1": 7f105c7d-2dc5-4530-97cd-4e7ae6534c07
+  "address@wf1": https://studio.example/hooks/h1
+input: { team_id: fbe2bf47-16c8-47cf-b4a5-4b9b187c508b, channel_id: "19:4a95f7d8db4c4e7fae857bcebe0623e6@thread.tacv2" }
+exchanges:
+  - sent:
+      method: PATCH
+      url: https://graph.microsoft.com/v1.0/subscriptions/7f105c7d-2dc5-4530-97cd-4e7ae6534c07
+      body: { expirationDateTime: "2023-11-14T23:08:20Z" }
+    answer: { body: { id: 7f105c7d-2dc5-4530-97cd-4e7ae6534c07, expirationDateTime: "2023-11-14T23:08:20Z" } }

@@ -1,0 +1,18 @@
+description: "The books on a user's public shelf"
+action: list_public_bookshelf_books
+sign_in: google_books_key
+credential: { api_key: test-key }
+input: { user_id: "1112223334445556667", shelf: "0" }
+exchanges:
+  - sent:
+      method: GET
+      url: https://books.googleapis.com/books/v1/users/1112223334445556667/bookshelves/0/volumes
+      query: { maxResults: "40", key: test-key }
+    answer:
+      body:
+        kind: "books#volumes"
+        totalItems: 1
+        items:
+          - { kind: "books#volume", id: zyTCAlFPjgYC, volumeInfo: { title: The Example Garden, authors: [Ann Example] } }
+result:
+  - { kind: "books#volume", id: zyTCAlFPjgYC, volumeInfo: { title: The Example Garden, authors: [Ann Example] } }

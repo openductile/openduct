@@ -1,0 +1,434 @@
+# Copyright 2026 Ductile AI, Inc
+# SPDX-License-Identifier: Apache-2.0
+# Mailjet: written by hand from Mailjet's own API description (OpenAPI 3.1, "Mailjet API 1.0.0"),
+# https://dev.mailjet.com/_spec/openapi/openapi-mailjet.json (fetched 2026-11-27; no licence stated), and its
+# reference pages, https://dev.mailjet.com/docs/api-reference.
+app: mailjet
+name: Mailjet
+category: email
+description: "Emails sent, contacts and lists, campaigns, templates and what happened to each message, in Mailjet."
+docs: https://dev.mailjet.com/docs/api-reference
+hosts: [api.mailjet.com]
+base_url: https://api.mailjet.com
+sign_in:
+  - id: mailjet
+    label: An API key and secret key
+    fields:
+      - { name: api_key, label: The API key }
+      - { name: secret_key, label: The secret key, secret: true }
+    basic: { username: "{{ credential.api_key }}", password: "{{ credential.secret_key }}" }
+# Mailjet says why in ErrorMessage; the Send API, message by message.
+error: >-
+  status < 400 ? null
+  : (has(value.ErrorMessage) ? value.ErrorMessage
+  : (has(value.Messages) ? value.Messages.map(m, has(m.Errors) ? m.Errors.map(e, e.ErrorMessage).join('; ') : '').join('; ')
+  : null))
+actions:
+  send_email:
+    label: Send an email
+    description: "An email to one or more people, written here or from a Mailjet template filled with values."
+    write: true
+    method: POST
+    path: /v3.1/send
+    inputs:
+      - { name: from_email, label: "From: an address you may send from", required: true }
+      - { name: from_name, label: "From: the name shown" }
+      - { name: to, label: "To: their emails, with commas", required: true }
+      - { name: subject, label: Subject }
+      - { name: text, label: The email as plain text }
+      - { name: html, label: The email as HTML }
+      - { name: template_id, label: "Or a Mailjet template's ID", kind: number }
+      - { name: variables, label: "Values the template's blanks are filled with (a record)", kind: record }
+      - { name: reply_to, label: Replies go to (an email) }
+      - { name: custom_id, label: "A reference of your own, given back in its events" }
+    send:
+      Messages:
+        - From: { Email: "{{ input.from_email }}", Name: "{{ input.from_name }}" }
+          To: "{{ input.to.split(',').map(e, {'Email': e.trim()}) }}"
+          Subject: "{{ input.subject }}"
+          TextPart: "{{ input.text }}"
+          HTMLPart: "{{ input.html }}"
+          TemplateID: "{{ input.template_id }}"
+          TemplateLanguage: "{{ has(input.template_id) && input.template_id != null ? true : null }}"
+          Variables: "{{ input.variables }}"
+          ReplyTo: "{{ has(input.reply_to) && input.reply_to != null ? {'Email': input.reply_to} : null }}"
+          CustomID: "{{ input.custom_id }}"
+    result: value.Messages[0]
+    output: { Status: text, CustomID: text, To: list, Cc: list, Bcc: list, Errors: list }
+  list_contacts:
+    label: List contacts
+    description: "Contacts, or those of a list, each with when they last did something; every page."
+    method: GET
+    path: /v3/REST/contact
+    inputs:
+      - { name: list_id, label: "Only this list's (its ID)", kind: number }
+      - { name: excluded, label: "Only those kept from campaigns (true), or only the others (false)", kind: boolean }
+    query: { ContactsList: "{{ input.list_id }}", IsExcludedFromCampaigns: "{{ input.excluded }}", Limit: "1000" }
+    items: value.Data
+    next: "size(value.Data) < 1000 ? null : {'Offset': string((page == null ? 0 : int(page.Offset)) + 1000)}"
+    output: &contact
+      ID: number
+      Email: text
+      Name: text
+      CreatedAt: text
+      LastActivityAt: text
+      LastUpdateAt: text
+      DeliveredCount: number
+      IsExcludedFromCampaigns: boolean
+      IsOptInPending: boolean
+      IsSpamComplaining: boolean
+      UnsubscribedAt: text
+  get_contact:
+    label: Get a contact
+    description: One contact by their ID.
+    method: GET
+    path: "/v3/REST/contact/{{ input.contact_id }}"
+    inputs:
+      - { name: contact_id, label: "The contact's ID", required: true }
+    result: value.Data[0]
+    output: *contact
+  create_contact:
+    label: Add a contact
+    description: "A new contact, kept from campaigns if asked (they still get transactional emails)."
+    write: true
+    method: POST
+    path: /v3/REST/contact
+    inputs:
+      - { name: email, label: Email, required: true }
+      - { name: name, label: Name }
+      - { name: excluded, label: "Kept from campaigns", kind: boolean }
+    send: { Email: "{{ input.email }}", Name: "{{ input.name }}", IsExcludedFromCampaigns: "{{ input.excluded }}" }
+    result: value.Data[0]
+    output: *contact
+  update_contact:
+    label: Change a contact
+    description: "A contact's name, or whether they are kept from campaigns."
+    write: true
+    method: PUT
+    path: "/v3/REST/contact/{{ input.contact_id }}"
+    inputs:
+      - { name: contact_id, label: "The contact's ID", required: true }
+      - { name: name, label: Name }
+      - { name: excluded, label: "Kept from campaigns", kind: boolean }
+    send: { Name: "{{ input.name }}", IsExcludedFromCampaigns: "{{ input.excluded }}" }
+    result: value.Data[0]
+    output: *contact
+  get_contact_properties:
+    label: "Get a contact's properties"
+    description: "The values a contact has for the account's contact properties (first name, country ...)."
+    method: GET
+    path: "/v3/REST/contactdata/{{ input.contact_id }}"
+    inputs:
+      - { name: contact_id, label: "The contact's ID", required: true }
+    result: value.Data[0]
+    output: &contactdata { ContactID: number, ID: number, Data: list }
+  set_contact_properties:
+    label: "Set a contact's properties"
+    description: "Sets the contact properties given (a record of names and values); the others stay as they are."
+    write: true
+    method: PUT
+    path: "/v3/REST/contactdata/{{ input.contact_id }}"
+    inputs:
+      - { name: contact_id, label: "The contact's ID", required: true }
+      - name: properties
+        label: "The properties and their values"
+        required: true
+        description: "A record, such as {\"firstname\": \"Pat\", \"country\": \"US\"}: each name must be a contact property of the account."
+        kind: record
+    send: { Data: "{{ input.properties.map(k, {'Name': k, 'Value': input.properties[k]}) }}" }
+    result: value.Data[0]
+    output: *contactdata
+  list_contact_lists:
+    label: List contact lists
+    description: "The account's contact lists, with how many are subscribed to each; every page."
+    method: GET
+    path: /v3/REST/contactslist
+    inputs:
+      - { name: name, label: "Only the one of this name" }
+    query: { Name: "{{ input.name }}", IsDeleted: "false", Limit: "1000" }
+    items: value.Data
+    next: "size(value.Data) < 1000 ? null : {'Offset': string((page == null ? 0 : int(page.Offset)) + 1000)}"
+    output: &list { ID: number, Name: text, Address: text, SubscriberCount: number, CreatedAt: text, IsDeleted: boolean }
+  get_contact_list:
+    label: Get a contact list
+    description: One contact list by its ID.
+    method: GET
+    path: "/v3/REST/contactslist/{{ input.list_id }}"
+    inputs:
+      - { name: list_id, label: "The list's ID", required: true }
+    result: value.Data[0]
+    output: *list
+  create_contact_list:
+    label: Add a contact list
+    description: A new contact list (its name must be new).
+    write: true
+    method: POST
+    path: /v3/REST/contactslist
+    inputs:
+      - { name: name, label: Name, required: true }
+    send: { Name: "{{ input.name }}" }
+    result: value.Data[0]
+    output: *list
+  delete_contact_list:
+    label: Delete a contact list
+    description: "Deletes a contact list; its contacts stay in the account."
+    write: true
+    method: DELETE
+    path: "/v3/REST/contactslist/{{ input.list_id }}"
+    inputs:
+      - { name: list_id, label: "The list's ID", required: true }
+    result: "{'deleted': true}"
+    output: { deleted: boolean }
+  add_to_list:
+    label: Add a contact to a list
+    description: "Subscribes an email to a list, adding the contact if new, with their properties."
+    write: true
+    method: POST
+    path: "/v3/REST/contactslist/{{ input.list_id }}/managecontact"
+    inputs:
+      - { name: list_id, label: "The list's ID", required: true }
+      - { name: email, label: Email, required: true }
+      - { name: name, label: Name }
+      - { name: properties, label: "Their properties (a record of names and values)", kind: record }
+      - name: keep_unsubscribed
+        label: "Leave them unsubscribed if they had unsubscribed"
+        description: "true adds them only if they are not on the list already; by default they are subscribed again."
+        kind: boolean
+    send:
+      Action: "{{ has(input.keep_unsubscribed) && input.keep_unsubscribed == true ? 'addnoforce' : 'addforce' }}"
+      Email: "{{ input.email }}"
+      Name: "{{ input.name }}"
+      Properties: "{{ input.properties }}"
+    result: value.Data[0]
+    output: &managed { Action: text, Email: text, Name: text, Properties: record }
+  remove_from_list:
+    label: Take a contact off a list
+    description: "Unsubscribes a contact from a list (they stay on it, unsubscribed), or takes them off it."
+    write: true
+    method: POST
+    path: "/v3/REST/contactslist/{{ input.list_id }}/managecontact"
+    inputs:
+      - { name: list_id, label: "The list's ID", required: true }
+      - { name: email, label: Email, required: true }
+      - { name: remove, label: "Take them off the list rather than unsubscribe them", kind: boolean }
+    send:
+      Action: "{{ has(input.remove) && input.remove == true ? 'remove' : 'unsub' }}"
+      Email: "{{ input.email }}"
+    result: value.Data[0]
+    output: *managed
+  list_contact_subscriptions:
+    label: "List a contact's lists"
+    description: "The lists a contact is on, and whether they are subscribed to each."
+    method: GET
+    path: "/v3/REST/contact/{{ input.contact_id }}/getcontactslists"
+    inputs:
+      - { name: contact_id, label: "The contact's ID", required: true }
+    items: value.Data
+    output: { ListID: number, IsActive: boolean, IsUnsub: boolean, SubscribedAt: text }
+  list_messages:
+    label: List messages
+    description: "Emails sent, with their subject and status, between two times, to a contact or of a campaign; every page."
+    method: GET
+    path: /v3/REST/message
+    inputs:
+      - { name: from_time, label: "Sent after (such as 2026-11-01T00:00:00)" }
+      - { name: to_time, label: "Sent before" }
+      - { name: contact_id, label: "Only to this contact (their ID)", kind: number }
+      - { name: campaign_id, label: "Only of this campaign (its ID)", kind: number }
+      - { name: custom_id, label: "Only with this reference of your own" }
+    query:
+      FromTS: "{{ input.from_time }}"
+      ToTS: "{{ input.to_time }}"
+      Contact: "{{ input.contact_id }}"
+      Campaign: "{{ input.campaign_id }}"
+      CustomID: "{{ input.custom_id }}"
+      ShowSubject: "true"
+      ShowContactAlt: "true"
+      Limit: "1000"
+    items: value.Data
+    next: "size(value.Data) < 1000 ? null : {'Offset': string((page == null ? 0 : int(page.Offset)) + 1000)}"
+    output: &message
+      ID: number
+      UUID: text
+      Status: text
+      Subject: text
+      ContactAlt: text
+      ContactID: number
+      CampaignID: number
+      ArrivedAt: text
+      AttemptCount: number
+      MessageSize: number
+      IsOpenTracked: boolean
+      IsClickTracked: boolean
+      SpamassassinScore: number
+  get_message:
+    label: Get a message
+    description: "One email sent: its status (sent, opened, clicked, bounced ...), size and tracking."
+    method: GET
+    path: "/v3/REST/message/{{ input.message_id }}"
+    inputs:
+      - { name: message_id, label: "The message's ID", required: true }
+    result: value.Data[0]
+    output: *message
+  get_message_history:
+    label: "Get a message's events"
+    description: "What happened to an email sent, event by event: sent, opened, clicked, bounced."
+    method: GET
+    path: "/v3/REST/messagehistory/{{ input.message_id }}"
+    inputs:
+      - { name: message_id, label: "The message's ID", required: true }
+    items: value.Data
+    output: { EventAt: number, EventType: text, State: text, Comment: text, Useragent: text }
+  list_templates:
+    label: List templates
+    description: "The account's email templates (those made by you by default)."
+    method: GET
+    path: /v3/REST/template
+    inputs:
+      - { name: owner_type, label: "Whose: user (yours, the default), apikey or all" }
+      - { name: name, label: "Only the one of this name" }
+    query:
+      OwnerType: "{{ has(input.owner_type) && input.owner_type != null ? input.owner_type : 'user' }}"
+      Name: "{{ input.name }}"
+      Limit: "1000"
+    items: value.Data
+    next: "size(value.Data) < 1000 ? null : {'Offset': string((page == null ? 0 : int(page.Offset)) + 1000)}"
+    output: &template
+      ID: number
+      Name: text
+      Description: text
+      Author: text
+      Locale: text
+      EditMode: number
+      OwnerType: text
+      Purposes: list
+      CreatedAt: text
+      LastUpdatedAt: text
+  get_template:
+    label: Get a template
+    description: One email template by its ID.
+    method: GET
+    path: "/v3/REST/template/{{ input.template_id }}"
+    inputs:
+      - { name: template_id, label: "The template's ID", required: true }
+    result: value.Data[0]
+    output: *template
+  list_campaign_drafts:
+    label: List campaign drafts
+    description: "Campaigns being written or scheduled, each with its subject, sender and list."
+    method: GET
+    path: /v3/REST/campaigndraft
+    inputs:
+      - { name: list_id, label: "Only to this list (its ID)", kind: number }
+    query: { ContactsList: "{{ input.list_id }}", Limit: "1000" }
+    items: value.Data
+    next: "size(value.Data) < 1000 ? null : {'Offset': string((page == null ? 0 : int(page.Offset)) + 1000)}"
+    output: &draft
+      ID: number
+      Title: text
+      Subject: text
+      SenderName: text
+      SenderEmail: text
+      ContactsListID: number
+      Locale: text
+      Status: number
+      CampaignID: number
+      CreatedAt: text
+      ModifiedAt: text
+      DeliveredAt: text
+  create_campaign_draft:
+    label: Draft a campaign
+    description: "A new campaign to a list, with its subject and sender; its email is set with Set a campaign draft's email."
+    write: true
+    method: POST
+    path: /v3/REST/campaigndraft
+    inputs:
+      - { name: title, label: "Its name, for you" }
+      - { name: subject, label: Subject, required: true }
+      - { name: sender_email, label: "Sender's email (allowed in Mailjet)", required: true }
+      - { name: sender_name, label: "Sender's name" }
+      - { name: list_id, label: "Send to this list (its ID)", required: true, kind: number }
+      - { name: locale, label: "Language, such as en_US", required: true }
+      - { name: reply_email, label: Replies go to }
+      - { name: template_id, label: "Start from this template (its ID)", kind: number }
+    send:
+      Title: "{{ input.title }}"
+      Subject: "{{ input.subject }}"
+      SenderEmail: "{{ input.sender_email }}"
+      SenderName: "{{ input.sender_name }}"
+      ContactsListID: "{{ input.list_id }}"
+      Locale: "{{ input.locale }}"
+      ReplyEmail: "{{ input.reply_email }}"
+      TemplateID: "{{ input.template_id }}"
+    result: value.Data[0]
+    output: *draft
+  set_campaign_draft_email:
+    label: "Set a campaign draft's email"
+    description: "The HTML and plain text of a campaign draft's email."
+    write: true
+    method: POST
+    path: "/v3/REST/campaigndraft/{{ input.draft_id }}/detailcontent"
+    inputs:
+      - { name: draft_id, label: "The draft's ID", required: true }
+      - { name: html, label: The email as HTML }
+      - { name: text, label: The email as plain text }
+    send: { Html-part: "{{ input.html }}", Text-part: "{{ input.text }}" }
+    result: value.Data[0]
+    output: { Html-part: text, Text-part: text, Headers: record }
+  send_campaign_draft:
+    label: Send a campaign now
+    description: A campaign draft sent at once to its list.
+    write: true
+    method: POST
+    path: "/v3/REST/campaigndraft/{{ input.draft_id }}/send"
+    inputs:
+      - { name: draft_id, label: "The draft's ID", required: true }
+    result: value.Data[0]
+    output: { Status: text }
+  schedule_campaign_draft:
+    label: Schedule a campaign
+    description: A campaign draft to be sent at a time.
+    write: true
+    method: POST
+    path: "/v3/REST/campaigndraft/{{ input.draft_id }}/schedule"
+    inputs:
+      - { name: draft_id, label: "The draft's ID", required: true }
+      - { name: date, label: "When (such as 2026-12-01T09:00:00Z)", required: true }
+    send: { Date: "{{ input.date }}" }
+    result: value.Data[0]
+    output: { Date: text, Status: text }
+  list_senders:
+    label: List sender addresses
+    description: "The addresses and domains the account may send from, and whether each is checked."
+    method: GET
+    path: /v3/REST/sender
+    query: { Limit: "1000" }
+    items: value.Data
+    next: "size(value.Data) < 1000 ? null : {'Offset': string((page == null ? 0 : int(page.Offset)) + 1000)}"
+    output: { ID: number, Email: text, Name: text, Status: text, EmailType: text, IsDefaultSender: boolean, CreatedAt: text }
+triggers:
+  email_event:
+    label: An email opened, clicked, bounced ...
+    description: "Each event of the kind asked for on the emails you send (sent, open, click, bounce, spam, blocked, unsub), as Mailjet sends it."
+    inputs:
+      - { name: event, label: "Which: sent, open, click, bounce, spam, blocked or unsub", required: true }
+    webhook:
+      # Mailjet does not sign its deliveries: it calls back with the user name and password in the address it was
+      # given, so the Authorization header it sends carries the secret made for this workflow.
+      signature: { header: authorization, algorithm: token }
+      secret: webhook_secret
+      id: "string(value.MessageID) + '/' + value.event + '/' + string(value.time)"
+      only: "value.event == input.event"
+      event: value
+      register:
+        - method: POST
+          path: /v3/REST/eventcallbackurl
+          send:
+            Url: "{{ input.address.replace('https://', 'https://openduct:' + input.secret + '@') }}"
+            EventType: "{{ input.event }}"
+            Status: alive
+      keep:
+        webhook_secret: "'Basic ' + base64.encode(bytes('openduct:' + input.secret))"
+        webhook_id: string(value.Data[0].ID)
+      unregister:
+        - { method: DELETE, path: "/v3/REST/eventcallbackurl/{{ input.registered.webhook_id }}" }

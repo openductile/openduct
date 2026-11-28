@@ -1,0 +1,17 @@
+description: A code cancelled
+action: cancel_verification
+credential:
+  api_key: abcd1234
+  api_secret: test-secret
+input:
+  request_id: c11236f4-00bf-4b89-84ba-88b25df97315
+exchanges:
+- sent:
+    method: DELETE
+    url: https://api.nexmo.com/v2/verify/c11236f4-00bf-4b89-84ba-88b25df97315
+    headers:
+      authorization: Basic YWJjZDEyMzQ6dGVzdC1zZWNyZXQ=
+  answer:
+    status: 204
+result:
+  cancelled: true

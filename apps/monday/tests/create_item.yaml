@@ -1,0 +1,54 @@
+description: An item in a group, with a status and a date, made from a record of column values
+action: create_item
+credential:
+  token: monday-test-token
+input:
+  board_id: '1234567890'
+  name: Order 1042
+  group_id: topics
+  column_values:
+    date4: '2026-12-01'
+exchanges:
+- sent:
+    method: POST
+    url: https://api.monday.com/v2
+    headers:
+      authorization: monday-test-token
+      api-version: 2026-10
+    body:
+      query: 'mutation ($board: ID!, $group: String, $name: String!, $values: JSON, $labels: Boolean) { create_item(board_id:
+        $board, group_id: $group, item_name: $name, column_values: $values, create_labels_if_missing: $labels) { id name state
+        created_at updated_at url creator_id group { id title } board { id name } column_values { id type text value } } }'
+      variables:
+        board: '1234567890'
+        group: topics
+        name: Order 1042
+        values: '{"date4":"2026-12-01"}'
+  answer:
+    body:
+      data:
+        create_item: &id001
+          id: '9876543210'
+          name: Order 1042
+          state: active
+          created_at: '2026-11-27T09:00:00Z'
+          updated_at: '2026-11-27T09:00:00Z'
+          url: https://example-co.monday.com/boards/1234567890/pulses/9876543210
+          creator_id: '55500001'
+          group:
+            id: topics
+            title: New orders
+          board:
+            id: '1234567890'
+            name: Orders
+          column_values:
+          - id: status
+            type: status
+            text: Working on it
+            value: '{"index":0}'
+          - id: date4
+            type: date
+            text: '2026-12-01'
+            value: '{"date":"2026-12-01"}'
+      account_id: 9000001
+result: *id001

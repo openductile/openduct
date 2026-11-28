@@ -1,0 +1,187 @@
+# Copyright 2026 Ductile AI, Inc
+# SPDX-License-Identifier: Apache-2.0
+app: google_bigquery
+name: Google BigQuery
+category: data
+description: Questions asked of Google BigQuery in SQL, rows added to its tables, and its projects, datasets and tables listed.
+docs: https://cloud.google.com/bigquery/docs/reference/rest
+hosts: [bigquery.googleapis.com]
+base_url: https://bigquery.googleapis.com/bigquery/v2
+sign_in:
+  - id: google_bigquery
+    label: Sign in with Google
+    oauth2:
+      authorize: https://accounts.google.com/o/oauth2/v2/auth
+      token: https://oauth2.googleapis.com/token
+      scopes: [https://www.googleapis.com/auth/bigquery]
+      extra: { access_type: offline, prompt: consent }
+    headers:
+      Authorization: "Bearer {{ credential.access_token }}"
+error: value.error.message
+default_action: run_query
+actions:
+  run_query:
+    label: Run a query
+    description: >-
+      A SQL query (GoogleSQL) run in a project, waiting up to about 3 minutes for it; each row of its answer a record
+      of the columns' names. Statements that change data (INSERT, UPDATE, DELETE, MERGE) run too.
+    method: POST
+    path: "/projects/{{ input.project_id }}/queries"
+    timeout: 240
+    inputs:
+      - { name: project_id, label: "The Google Cloud project to run it in (and bill), by its id", required: true }
+      - { name: query, label: "The query, such as SELECT name, total FROM shop.orders WHERE day = CURRENT_DATE()", required: true }
+      - { name: location, label: "Where the data is, when not US or EU, such as europe-west2" }
+      - { name: max_rows, label: "At most this many rows (10,000 when empty)", kind: number }
+      - { name: max_bytes_billed, label: "Refuse to run it if it would bill more than this many bytes", kind: number }
+    send:
+      query: "{{ input.query }}"
+      useLegacySql: false
+      location: "{{ input.location }}"
+      maxResults: "{{ has(input.max_rows) && input.max_rows != null ? int(input.max_rows) : 10000 }}"
+      maximumBytesBilled: "{{ string(int(input.max_bytes_billed)) }}"
+      timeoutMs: 180000
+      formatOptions: { timestampOutputFormat: ISO8601_STRING }
+    error: >-
+      has(value.error) ? value.error.message
+      : (has(value.jobComplete) && value.jobComplete == false
+         ? "the query was still running after the wait: get its rows later with Get a query's rows, job " + value.jobReference.jobId
+         : null)
+    # Each row as a record of the columns' names - {name: "Ann", total: 120} - numbers and true/false as such, a
+    # column of several values as a list; a column that is itself a record (STRUCT) comes empty: name its fields.
+    items: &rows >-
+      value.rows.map(r, json.decode('{' + [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12,
+      13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41,
+      42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59].map(i, i < size(value.schema.fields),
+      '"' + value.schema.fields[i].name + '":' + (r.f[i].v == null ? 'null'
+      : (type(r.f[i].v) == string
+         ? (value.schema.fields[i].type.matches('^(INTEGER|INT64|FLOAT|FLOAT64|NUMERIC|BIGNUMERIC|BOOLEAN|BOOL)$')
+            && !r.f[i].v.matches('^(NaN|-?Infinity)$')
+            ? r.f[i].v
+            : '"' + r.f[i].v.replace('\\', '\\\\').replace('"', '\\"').replace('\n', '\\n').replace('\r', '\\r').replace('\t', '\\t') + '"')
+         : (type(r.f[i].v) == list
+            ? '[' + r.f[i].v.map(e, type(e.v) == string
+                ? '"' + e.v.replace('\\', '\\\\').replace('"', '\\"').replace('\n', '\\n').replace('\r', '\\r').replace('\t', '\\t') + '"'
+                : 'null').join(',') + ']'
+            : 'null')))).join(',') + '}'))
+    output: { name: text, total: number }
+  get_query_results:
+    label: Get a query's rows
+    description: >-
+      The rows of a query run before, by its job's id - one that took longer than Run a query waits, or all the
+      pages of a large answer.
+    method: GET
+    path: "/projects/{{ input.project_id }}/queries/{{ input.job_id }}"
+    timeout: 60
+    inputs:
+      - { name: project_id, label: "The project it ran in", required: true }
+      - { name: job_id, label: "The query's job id", required: true }
+      - { name: location, label: "Where it ran, when not US or EU" }
+    query:
+      location: "{{ input.location }}"
+      maxResults: "10000"
+      timeoutMs: "30000"
+      formatOptions.timestampOutputFormat: ISO8601_STRING
+    error: >-
+      has(value.error) ? value.error.message
+      : (has(value.jobComplete) && value.jobComplete == false ? 'the query is still running: ask again later' : null)
+    items: *rows
+    next: "has(value.pageToken) && value.pageToken != '' ? {'pageToken': value.pageToken} : null"
+    output: { name: text, total: number }
+  add_rows:
+    label: Add rows to a table
+    description: >-
+      Rows streamed into a table - one record, or a list of them - each by its columns' names; a row the table
+      refuses fails the step with why.
+    write: true
+    method: POST
+    path: "/projects/{{ input.project_id }}/datasets/{{ input.dataset_id }}/tables/{{ input.table_id }}/insertAll"
+    inputs:
+      - { name: project_id, label: "The table's project", required: true }
+      - { name: dataset_id, label: "Its dataset", required: true }
+      - { name: table_id, label: "The table", required: true }
+      - { name: row, label: "A row, by its columns' names (as JSON): {\"name\": \"Ann\", \"total\": 120}", kind: record }
+      - { name: rows, label: "Or several rows: a list of them", kind: list }
+      - { name: ignore_unknown, label: "Leave out values of columns the table does not have", kind: boolean }
+    send:
+      rows: "{{ has(input.rows) && input.rows != null ? input.rows.map(r, {'json': r}) : [{'json': input.row}] }}"
+      ignoreUnknownValues: "{{ input.ignore_unknown }}"
+    error: >-
+      has(value.error) ? value.error.message
+      : (has(value.insertErrors) && size(value.insertErrors) > 0
+         ? 'row ' + string(value.insertErrors[0].index) + ': ' + value.insertErrors[0].errors[0].message
+         : null)
+    result: "{'added': true}"
+    output: { added: boolean }
+  list_projects:
+    label: List projects
+    description: The Google Cloud projects the account may use BigQuery in, each with its id; every page.
+    method: GET
+    path: /projects
+    query: { maxResults: "50" }
+    items: "has(value.projects) ? value.projects.map(p, {'id': p.projectReference.projectId, 'name': p.friendlyName}) : []"
+    next: "has(value.nextPageToken) && value.nextPageToken != '' ? {'pageToken': value.nextPageToken} : null"
+    output: { id: text, name: text }
+  list_datasets:
+    label: List datasets
+    description: The datasets of a project, each with its id and where it is kept; every page.
+    method: GET
+    path: "/projects/{{ input.project_id }}/datasets"
+    inputs:
+      - { name: project_id, label: "The project", required: true }
+    query: { maxResults: "1000" }
+    items: "has(value.datasets) ? value.datasets.map(d, {'id': d.datasetReference.datasetId, 'location': d.location, 'name': has(d.friendlyName) ? d.friendlyName : null}) : []"
+    next: "has(value.nextPageToken) && value.nextPageToken != '' ? {'pageToken': value.nextPageToken} : null"
+    output: { id: text, location: text, name: text }
+  list_tables:
+    label: List tables
+    description: The tables and views of a dataset, each with its id and kind; every page.
+    method: GET
+    path: "/projects/{{ input.project_id }}/datasets/{{ input.dataset_id }}/tables"
+    inputs:
+      - { name: project_id, label: "The project", required: true }
+      - { name: dataset_id, label: "The dataset", required: true }
+    query: { maxResults: "1000" }
+    items: "has(value.tables) ? value.tables.map(t, {'id': t.tableReference.tableId, 'kind': t.type, 'created': t.creationTime}) : []"
+    next: "has(value.nextPageToken) && value.nextPageToken != '' ? {'pageToken': value.nextPageToken} : null"
+    output: { id: text, kind: text, created: text }
+  get_table:
+    label: Get a table
+    description: A table's columns (name, kind, mode), how many rows and bytes it holds, and when it last changed.
+    method: GET
+    path: "/projects/{{ input.project_id }}/datasets/{{ input.dataset_id }}/tables/{{ input.table_id }}"
+    inputs:
+      - { name: project_id, label: "The project", required: true }
+      - { name: dataset_id, label: "The dataset", required: true }
+      - { name: table_id, label: "The table", required: true }
+    result: >-
+      {'id': value.tableReference.tableId, 'kind': value.type, 'rows': has(value.numRows) ? int(value.numRows) : null,
+      'bytes': has(value.numBytes) ? int(value.numBytes) : null, 'modified': has(value.lastModifiedTime) ? value.lastModifiedTime : null,
+      'columns': has(value.schema) ? value.schema.fields.map(f, {'name': f.name, 'type': f.type, 'mode': has(f.mode) ? f.mode : 'NULLABLE'}) : []}
+    output: { id: text, kind: text, rows: number, bytes: number, modified: text, columns: list }
+triggers:
+  new_row:
+    label: A new row in a query's answer
+    description: >-
+      Each row a query gives that it did not give before - such as the newest orders - told apart by one column, the
+      query run every 15 minutes (each run is billed as BigQuery bills queries).
+    inputs:
+      - { name: project_id, label: "The project to run it in", required: true }
+      - { name: query, label: "The query, newest first: SELECT * FROM shop.orders ORDER BY created_at DESC LIMIT 500", required: true }
+      - { name: id_column, label: "The column that tells one row from another, such as order_id", required: true }
+      - { name: location, label: "Where the data is, when not US or EU" }
+    poll:
+      method: POST
+      path: "/projects/{{ input.project_id }}/queries"
+      timeout: 240
+      send:
+        query: "{{ input.query }}"
+        useLegacySql: false
+        location: "{{ input.location }}"
+        maxResults: 5000
+        timeoutMs: 180000
+        formatOptions: { timestampOutputFormat: ISO8601_STRING }
+      error: "has(value.error) ? value.error.message : (has(value.jobComplete) && value.jobComplete == false ? 'the query was still running after the wait' : null)"
+      items: *rows
+      id: string(item[input.id_column])
+      every: 15m

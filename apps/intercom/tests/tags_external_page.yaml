@@ -1,0 +1,26 @@
+# Made by `openduct app from-openapi`: Add a tag to an external page.
+description: "Add a tag to an external page, made from the API description's schemas"
+action: tags_external_page
+credential: { token: test-token }
+input: { external_page_id: external_page_1, id: "7522907" }
+exchanges:
+  - sent:
+      method: POST
+      url: "https://api.intercom.io/ai/external_pages/external_page_1/tags"
+      query: {}
+      headers: { authorization: "Bearer test-token" }
+      body: { id: "7522907" }
+    answer:
+      status: 200
+      body:
+        type: tag
+        id: "123456"
+        name: example
+        applied_at: 1663597223
+        applied_by: { type: contact, id: "1a2b3c" }
+result:
+  type: tag
+  id: "123456"
+  name: example
+  applied_at: 1663597223
+  applied_by: { type: contact, id: "1a2b3c" }

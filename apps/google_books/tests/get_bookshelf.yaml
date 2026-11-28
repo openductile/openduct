@@ -1,0 +1,11 @@
+description: "The To read shelf"
+action: get_bookshelf
+credential: { access_token: ya29.test }
+input: { shelf: "2" }
+exchanges:
+  - sent:
+      method: GET
+      url: https://books.googleapis.com/books/v1/mylibrary/bookshelves/2
+    answer:
+      body: { kind: "books#bookshelf", id: 2, title: To read, access: PRIVATE, volumeCount: 5, updated: "2026-11-26T08:00:00.000Z", volumesLastUpdated: "2026-11-26T08:00:00.000Z" }
+result: { kind: "books#bookshelf", id: 2, title: To read, access: PRIVATE, volumeCount: 5, updated: "2026-11-26T08:00:00.000Z", volumesLastUpdated: "2026-11-26T08:00:00.000Z" }

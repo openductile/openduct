@@ -1,0 +1,6 @@
+action: list_platforms
+credential: { api_key: CG-test1 }
+exchanges:
+  - sent: { method: GET, url: https://api.coingecko.com/api/v3/asset_platforms }
+    answer: { body: [{ id: ethereum, chain_identifier: 1, name: Ethereum, shortname: Ethereum, native_coin_id: ethereum }] }
+result: [{ id: ethereum, chain_identifier: 1, name: Ethereum, shortname: Ethereum, native_coin_id: ethereum }]

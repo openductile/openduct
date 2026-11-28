@@ -1,0 +1,28 @@
+description: Pending calls
+action: list_tasks
+credential: {domain: shopexample, email: dana@shop.example, api_key: agile-test-key}
+input: {criteria: CATEGORY, type: CALL, pending: true}
+exchanges:
+- sent:
+    method: GET
+    url: https://shopexample.agilecrm.com/dev/api/tasks/based
+    headers: {authorization: Basic ZGFuYUBzaG9wLmV4YW1wbGU6YWdpbGUtdGVzdC1rZXk=, accept: application/json}
+    query: {criteria: CATEGORY, type: CALL, pending: 'true', page_size: '100'}
+  answer:
+    status: 200
+    body:
+    - &id001
+      id: 5690477483393024
+      type: CALL
+      priority_type: HIGH
+      due: 1796115600
+      created_time: 1764237600
+      is_complete: false
+      subject: Call Ann about the proposal
+      taskDescription: ''
+      status: YET_TO_START
+      progress: 0
+      contacts: []
+      taskOwner: {id: 6263975862861824}
+result:
+- *id001

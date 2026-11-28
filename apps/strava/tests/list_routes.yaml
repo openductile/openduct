@@ -1,0 +1,7 @@
+action: list_routes
+credential: { access_token: st_test_1 }
+input: { id: "1234567" }
+exchanges:
+  - sent: { method: GET, url: https://www.strava.com/api/v3/athletes/1234567/routes, query: { per_page: "200" } }
+    answer: { body: [{ id: 8001, id_str: "8001", name: Harbour loop, distance: 10200.0, elevation_gain: 85.0, type: 2 }] }
+result: [{ id: 8001, id_str: "8001", name: Harbour loop, distance: 10200.0, elevation_gain: 85.0, type: 2 }]

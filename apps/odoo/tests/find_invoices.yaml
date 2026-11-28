@@ -1,0 +1,14 @@
+description: Customer invoices not yet paid
+action: find_invoices
+credential: { address: "https://mycompany.example.com", api_key: 6578616d706c65206b6579 }
+input: { payment_state: not_paid }
+exchanges:
+  - sent:
+      url: https://mycompany.example.com/json/2/account.move/search_read
+      body:
+        domain: [[move_type, "=", out_invoice], [payment_state, "=", not_paid]]
+        fields: [name, partner_id, invoice_date, invoice_date_due, state, payment_state, amount_untaxed, amount_tax, amount_total, amount_residual, currency_id, create_date, write_date]
+        order: invoice_date desc
+        limit: 100
+    answer: { body: [{ id: 7, name: INV/2026/00007, partner_id: [25, Example Deco], invoice_date_due: "2026-12-10", payment_state: not_paid, amount_residual: 2760 }] }
+result: [{ id: 7, name: INV/2026/00007, partner_id: [25, Example Deco], invoice_date_due: "2026-12-10", payment_state: not_paid, amount_residual: 2760 }]

@@ -1,0 +1,7 @@
+action: create_deal
+credential: { api_key: xkeysib-test-1 }
+input: { name: Shelving for Example Ltd, attributes: { amount: 4800 }, contact_ids: "42" }
+exchanges:
+  - sent: { method: POST, url: https://api.brevo.com/v3/crm/deals, body: { name: Shelving for Example Ltd, attributes: { amount: 4800 }, linkedContactsIds: [42] } }
+    answer: { status: 201, body: { id: 61a5ce58c5d4795761045990 } }
+result: { id: 61a5ce58c5d4795761045990 }

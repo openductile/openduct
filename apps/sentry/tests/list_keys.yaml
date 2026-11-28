@@ -1,0 +1,63 @@
+# Made by `openduct app from-openapi`: List a project's client keys.
+description: "List a project's client keys, made from the API description's schemas"
+action: list_keys
+credential: { token: test-token }
+input: { organization_id_or_slug: example, project_id_or_slug: example }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://us.sentry.io/api/0/projects/example/example/keys/"
+      query: {}
+      headers: { authorization: "Bearer test-token" }
+    answer:
+      status: 200
+      body:
+        - id: id_1
+          name: example
+          label: example
+          public: example
+          secret: example
+          projectId: 1
+          isActive: true
+          rateLimit: { window: 1, count: 1 }
+          dsn:
+            secret: "https://example.com/1"
+            public: "https://example.com/1"
+            csp: "https://example.com/1"
+            security: "https://example.com/1"
+            minidump: "https://example.com/1"
+            nel: "https://example.com/1"
+            unreal: "https://example.com/1"
+            crons: "https://example.com/1"
+            cdn: "https://example.com/1"
+            playstation: "https://example.com/1"
+            integration: "https://example.com/1"
+            otlp_traces: "https://example.com/1"
+          browserSdkVersion: example
+          browserSdk: { choices: [[example]] }
+          dateCreated: "2026-01-15T09:30:00Z"
+result:
+  - id: id_1
+    name: example
+    label: example
+    public: example
+    secret: example
+    projectId: 1
+    isActive: true
+    rateLimit: { window: 1, count: 1 }
+    dsn:
+      secret: "https://example.com/1"
+      public: "https://example.com/1"
+      csp: "https://example.com/1"
+      security: "https://example.com/1"
+      minidump: "https://example.com/1"
+      nel: "https://example.com/1"
+      unreal: "https://example.com/1"
+      crons: "https://example.com/1"
+      cdn: "https://example.com/1"
+      playstation: "https://example.com/1"
+      integration: "https://example.com/1"
+      otlp_traces: "https://example.com/1"
+    browserSdkVersion: example
+    browserSdk: { choices: [[example]] }
+    dateCreated: "2026-01-15T09:30:00Z"

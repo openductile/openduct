@@ -1,0 +1,12 @@
+description: "A template email sent to a contact with a token filled in"
+action: send_email
+credential: {"site_url": "https://mautic.example.com", "username": "admin", "password": "pw-test"}
+input: {"email_id": 5, "contact_id": 47, "tokens": {"{order}": "1042"}}
+exchanges:
+  - sent:
+      method: POST
+      url: "https://mautic.example.com/api/emails/5/contact/47/send"
+      headers: {"authorization": "Basic YWRtaW46cHctdGVzdA=="}
+      body: {"tokens": {"{order}": "1042"}}
+    answer: {"status": 200, "body": {"success": true}}
+result: {"success": true}

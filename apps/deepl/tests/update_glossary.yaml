@@ -1,0 +1,21 @@
+description: A glossary renamed
+action: update_glossary
+credential: { api_key: 0f6a2c1e-5b7d-4e2a-9c3f-1a2b3c4d5e6f }
+input: { glossary_id: def3a26b-3e84-45b3-84ae-0c0aaf3525f7, name: Shop words }
+exchanges:
+  - sent:
+      method: PATCH
+      url: "https://api.deepl.com/v3/glossaries/def3a26b-3e84-45b3-84ae-0c0aaf3525f7"
+      body: { name: Shop words }
+    answer:
+      status: 200
+      body:
+        glossary_id: def3a26b-3e84-45b3-84ae-0c0aaf3525f7
+        name: Shop words
+        dictionaries: [{ source_lang: en, target_lang: de, entry_count: 12 }]
+        creation_time: "2026-10-15T09:30:00Z"
+result:
+  glossary_id: def3a26b-3e84-45b3-84ae-0c0aaf3525f7
+  name: Shop words
+  dictionaries: [{ source_lang: en, target_lang: de, entry_count: 12 }]
+  creation_time: "2026-10-15T09:30:00Z"

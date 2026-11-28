@@ -1,0 +1,9 @@
+description: A contact on no list - the list ids are left out
+action: add_or_update_contact
+credential: { token: SG.test-key }
+input: { email: bo@example.com }
+exchanges:
+  - sent:
+      body: { contacts: [{ email: bo@example.com }] }
+    answer: { status: 202, body: { job_id: 0a1b2c3d-0000-4000-8000-000000000001 } }
+result: { job_id: 0a1b2c3d-0000-4000-8000-000000000001 }

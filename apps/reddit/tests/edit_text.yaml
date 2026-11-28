@@ -1,0 +1,11 @@
+description: A comment's text changed
+action: edit_text
+credential: { access_token: test-reddit-token }
+input: { thing_id: t1_m1x2y3z, text: "We charge by the hour plus materials, and a small design fee." }
+exchanges:
+  - sent:
+      method: POST
+      url: https://oauth.reddit.com/api/editusertext
+      body: { thing_id: t1_m1x2y3z, text: "We charge by the hour plus materials, and a small design fee.", api_type: json }
+    answer: { body: { json: { errors: [], data: { things: [{ kind: t1, data: { id: m1x2y3z, name: t1_m1x2y3z, body: "We charge by the hour plus materials, and a small design fee." } }] } } } }
+result: { id: m1x2y3z, name: t1_m1x2y3z, body: "We charge by the hour plus materials, and a small design fee." }

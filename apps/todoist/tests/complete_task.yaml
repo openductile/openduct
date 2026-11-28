@@ -1,0 +1,7 @@
+action: complete_task
+credential: { token: todoist-test-token }
+input: { task_id: 6Xtest0000000001 }
+exchanges:
+  - sent: { method: POST, url: https://api.todoist.com/api/v1/tasks/6Xtest0000000001/close }
+    answer: { status: 204 }
+result: { completed: true }

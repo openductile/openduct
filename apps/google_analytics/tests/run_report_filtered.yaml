@@ -1,0 +1,27 @@
+description: The last 7 days by page in one country, a page title with quotes in it kept as it is
+action: run_report
+credential: { access_token: ya29.a0 }
+input: { property_id: properties/123456789, metrics: screenPageViews, dimensions: pageTitle, filter_dimension: country, filter_value: Canada, limit: 50 }
+exchanges:
+  - sent:
+      method: POST
+      url: "https://analyticsdata.googleapis.com/v1beta/properties/123456789:runReport"
+      body:
+        metrics: [{ name: screenPageViews }]
+        dimensions: [{ name: pageTitle }]
+        dateRanges: [{ startDate: 7daysAgo, endDate: today }]
+        dimensionFilter: { filter: { fieldName: country, stringFilter: { matchType: EXACT, value: Canada } } }
+        limit: "50"
+    answer:
+      body:
+        dimensionHeaders: [{ name: pageTitle }]
+        metricHeaders: [{ name: screenPageViews, type: TYPE_INTEGER }]
+        rows:
+          - dimensionValues: [{ value: 'The "Spring" sale \ Shop' }]
+            metricValues: [{ value: "42" }]
+          - dimensionValues: [{ value: "Two\nlines\tand a tab" }]
+            metricValues: [{ value: "3" }]
+        rowCount: 2
+result:
+  - { pageTitle: 'The "Spring" sale \ Shop', screenPageViews: 42 }
+  - { pageTitle: "Two\nlines\tand a tab", screenPageViews: 3 }

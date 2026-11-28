@@ -1,0 +1,29 @@
+# Made by `openduct app from-openapi`: Lookup Format.
+description: "Lookup Format, made from the API description's schemas"
+action: check_number_format
+credential: { api_key: test-key }
+input: { number: example }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://gateway.seven.io/api/lookup/format"
+      query: { number: example }
+      headers: { x-api-key: test-key }
+    answer:
+      status: 200
+      body:
+        success: true
+        international: example
+        international_formatted: example
+        national: example
+        country_iso: example
+        country_name: example
+        country_code: example
+result:
+  success: true
+  international: example
+  international_formatted: example
+  national: example
+  country_iso: example
+  country_name: example
+  country_code: example

@@ -1,0 +1,109 @@
+name: Minutes for each meeting transcript saved to a folder
+description: >-
+  When a meeting's transcript lands in the transcripts folder (a .vtt, .txt or .md file, as video-call tools export
+  them), a script strips the timings, a model writes the minutes - summary, decisions, actions with owner and date -
+  and they are saved beside it in the minutes folder as Markdown. The transcript is also cut into pieces and kept in
+  Postgres with pgvector, so "what did we decide about pricing?" can be answered later. Needs: a folder the admin
+  allows, named meetings (or an S3 or SFTP credential in its place), an AI credential (model) and a PostgreSQL
+  database with pgvector (notes_db).
+category: Documents
+trigger:
+  storage: { root: meetings, folder: transcripts, pattern: "*.vtt, *.txt, *.md", every: 5m }
+# What a test runs on: a new file as this trigger gives it.
+sample:
+  name: 2026-11-27-weekly-sales.vtt
+  path: transcripts/2026-11-27-weekly-sales.vtt
+  kind: file
+  size: 18240
+  modified: "2026-11-27T15:02:00Z"
+  change: new
+steps:
+  - name: file
+    storage: { action: read, root: meetings, path: "{{ value.path }}" }
+  - name: raw
+    extract_file: { file: steps.file, format: text }
+  - name: clean
+    javascript: |
+      // A WebVTT file is cues: a number, a timing line, then who spoke and what. Keep only the words, one speaker's
+      // run of lines joined, so the model reads a conversation, not timings.
+      const lines = String(steps.raw.text || "").split(/\r?\n/);
+      const out = [];
+      for (const line of lines) {
+        const t = line.trim();
+        if (!t || t === "WEBVTT" || /^\d+$/.test(t) || /-->/.test(t) || /^NOTE\b/.test(t)) continue;
+        const said = t.replace(/^<v\s+([^>]+)>(.*?)(<\/v>)?$/, "$1: $2");
+        const prev = out[out.length - 1];
+        const who = said.includes(": ") ? said.split(": ")[0] : null;
+        if (prev && who && prev.startsWith(who + ": ")) out[out.length - 1] = prev + " " + said.slice(who.length + 2);
+        else out.push(said);
+      }
+      const text = out.join("\n");
+      return { text, words: text ? text.split(/\s+/).length : 0 };
+  - name: minutes
+    ai:
+      credential: model
+      system: >-
+        You write meeting minutes from a transcript. Keep to what was said. Actions name who does them and by when,
+        only when the transcript says so.
+      prompt: "The meeting {{ value.name }}:\n\n{{ steps.clean.text }}"
+      max_tokens: 1200
+      schema:
+        type: object
+        properties:
+          title: { type: string, description: "The meeting's subject, in a few words" }
+          summary: { type: string, description: "What it was about and what came of it, in at most five sentences" }
+          decisions: { type: array, items: { type: string } }
+          actions:
+            type: array
+            items:
+              type: object
+              properties:
+                who: { type: string }
+                what: { type: string }
+                due: { type: string, description: "As 2026-12-01, or empty when none was said" }
+              required: [who, what]
+        required: [title, summary, decisions, actions]
+  - name: page
+    javascript: |
+      // The minutes as Markdown; a list the model left empty says so.
+      const m = steps.minutes.json || {};
+      const list = (items, line) => (items && items.length ? items.map(line).join("\n") : "- none");
+      const md = [
+        `# ${m.title || value.name}`,
+        "",
+        m.summary || "",
+        "",
+        "## Decisions",
+        list(m.decisions, d => `- ${d}`),
+        "",
+        "## Actions",
+        list(m.actions, a => `- [ ] ${a.who}: ${a.what}${a.due ? ` (by ${a.due})` : ""}`),
+        "",
+        `_From ${value.name}, ${steps.clean.words} words._`,
+      ].join("\n");
+      return { md, name: value.name.replace(/\.[^.]+$/, "") + ".md" };
+  - name: save
+    storage:
+      action: write
+      root: meetings
+      path: "minutes/{{ steps.page.name }}"
+      file: steps.page.md
+      overwrite: true
+  - name: pieces
+    split_text:
+      text: "{{ steps.clean.text }}"
+      source: "{{ value.name }}"
+      by: paragraphs
+      size: 1200
+      overlap: 150
+      metadata:
+        kind: meeting
+        day: "{{ value.modified.substring(0, 10) }}"
+  - name: keep
+    vector_store:
+      action: add
+      credential: notes_db
+      table: meeting_pieces
+      create: true
+      embed_with: model
+      pieces: steps.pieces.pieces

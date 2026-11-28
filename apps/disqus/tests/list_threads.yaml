@@ -1,0 +1,33 @@
+description: A site's open threads
+action: list_threads
+credential: {api_key: pubkey-test-1, api_secret: secret-test-1, access_token: token-test-1}
+input: {forum: shop-example, include: open}
+exchanges:
+- sent:
+    method: GET
+    url: https://disqus.com/api/3.0/forums/listThreads.json
+    query: {api_key: pubkey-test-1, api_secret: secret-test-1, access_token: token-test-1, forum: shop-example, include: open,
+      limit: '100'}
+  answer:
+    status: 200
+    body:
+      cursor: {prev: null, hasNext: false, next: '1764237600000000:0:0', hasPrev: false, total: null, id: '1764237600000000:0:0',
+        more: false}
+      code: 0
+      response:
+      - &id001
+        id: '7001'
+        forum: shop-example
+        title: How to care for your boots
+        link: https://shop.example/guides/boots
+        identifiers: [guide-boots]
+        author: '101'
+        createdAt: '2026-11-20T09:00:00'
+        isClosed: false
+        isDeleted: false
+        posts: 12
+        likes: 3
+        dislikes: 0
+        message: ''
+result:
+- *id001

@@ -1,0 +1,11 @@
+description: The bot's reaction on a message; Discord answers 204 with nothing
+action: react
+sign_in: discord_bot
+credential: { bot_token: test-bot-token }
+input: { channel_id: "910000000000000001", message_id: "950000000000000002", emoji: "👍" }
+exchanges:
+  - sent:
+      method: PUT
+      url: "https://discord.com/api/v10/channels/910000000000000001/messages/950000000000000002/reactions/👍/@me"
+    answer: { status: 204 }
+result: { reacted: true }

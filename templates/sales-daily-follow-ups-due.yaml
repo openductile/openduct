@@ -1,0 +1,71 @@
+name: Each salesperson's follow-ups for today, in Slack
+description: >-
+  For small sales teams who run their pipeline in a Google Sheet: every weekday at 9:00, find the deals whose follow-up
+  day is today or past (deals won or lost left out), and send each owner one Slack message with theirs - the most
+  overdue first, with how many working days late, the next step and the deal's value. An owner with nothing due gets
+  nothing. Needs: a Google Sheets sign-in called sheets, and a Slack credential called slack (a bot in the channels or
+  able to message the people named).
+category: Sales
+trigger:
+  schedule: { every: weekday, at: "09:00", timezone: America/New_York }
+# What a test runs on: an event as this trigger gives it.
+sample:
+  scheduled_at: "2026-11-27T14:00:00Z"
+steps:
+  - name: settings
+    set:
+      # Change these to your own. The sheet's columns A to G: deal, contact, owner (a Slack member id as U012ABCDEF,
+      # or a #channel), stage, next step, follow-up day (as 2026-11-27), value.
+      spreadsheet: "'your-spreadsheet-id'"
+      # Where a deal with no owner goes.
+      no_owner: "'#sales'"
+  - name: pipeline
+    google_sheets:
+      credential: sheets
+      action: read_rows
+      spreadsheet_id: "{{ steps.settings.spreadsheet }}"
+      range: Pipeline!A2:G
+    retry: { attempts: 3, wait: 10s }
+  - name: today
+    # Today, on the team's clock (the same zone as the schedule's).
+    datetime: { value: value.scheduled_at, timezone: America/New_York }
+  - name: due
+    javascript: |
+      // Working days between two days (Monday to Friday), counting from the day after the first.
+      const workingDaysLate = (from, to) => {
+        let n = 0;
+        for (let d = new Date(from.getTime()); d < to; d.setUTCDate(d.getUTCDate() + 1)) {
+          const next = new Date(d.getTime()); next.setUTCDate(next.getUTCDate() + 1);
+          if (next <= to && next.getUTCDay() % 6 !== 0) n++;
+        }
+        return n;
+      };
+      const today = new Date(steps.today.date + "T00:00:00Z");
+      const byOwner = {};
+      for (const r of steps.pipeline || []) {
+        const [deal, contact, owner, stage, next, day, worth] = [...r.map(c => String(c ?? "").trim()), "", "", "", "", "", "", ""];
+        if (!deal || /^(won|lost|closed)/i.test(stage) || !/^\d{4}-\d{2}-\d{2}$/.test(day)) continue;
+        const when = new Date(day + "T00:00:00Z");
+        if (when > today) continue;
+        const late = workingDaysLate(when, today);
+        const to = owner || steps.settings.no_owner;
+        (byOwner[to] = byOwner[to] || []).push({ deal, contact, next: next || "(no next step written)", late, worth });
+      }
+      return Object.entries(byOwner).map(([owner, deals]) => {
+        deals.sort((a, b) => b.late - a.late);
+        const lines = deals.map(d => `- ${d.deal} (${d.contact}): ${d.next}` +
+          `${d.late > 0 ? `, ${d.late} working day${d.late > 1 ? "s" : ""} late` : ", due today"}${d.worth ? `, ${d.worth}` : ""}`);
+        return { owner, count: deals.length, text: `Your follow-ups for today (${deals.length}):\n${lines.join("\n")}` };
+      });
+  - name: each_owner
+    for_each:
+      items: steps.due
+      steps:
+        - name: tell
+          slack:
+            credential: slack
+            channel: "{{ item.owner }}"
+            text: "{{ item.text }}"
+          retry: { attempts: 3, wait: 10s }
+          # One owner Slack cannot reach should not keep the others from their list.
+          on_error: continue

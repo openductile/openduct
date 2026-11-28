@@ -1,0 +1,122 @@
+name: Expense receipts from a phone photo
+description: >-
+  Staff photograph a receipt and send it with a short form. OCR.space reads the photo, a model pulls out the shop,
+  the day, the total and the tax, and a row goes into your Expenses sheet. The team's receipts folder in Google Drive
+  is shared with the sender so the original can be filed, and an expense over 250 waits for the finance lead's
+  approval (three days at most) before it is marked approved. Needs: ocr_space (header: apikey and your OCR.space
+  key), model (ai), drive (google_drive), sheets (google_sheets), mail (smtp).
+category: Finance
+trigger:
+  form:
+    title: Send an expense receipt
+    description: A clear photo of the whole receipt, please.
+    fields:
+      - { name: email, label: Your work e-mail, type: email, required: true }
+      - { name: team, label: Your team, type: dropdown, options: [Sales, Operations, Engineering, Marketing, Other], required: true }
+      - { name: what_for, label: "What was it for?", type: text, required: true, max_length: 200 }
+      - { name: receipt, label: The receipt, type: file, accept: "image/*,.pdf", max_size: 2MB, required: true }
+    thanks: Thank you - your receipt is in. Expenses over 250 are approved by finance within three days.
+# What a test runs on: an answer as the form gives it (a tiny image as the receipt).
+sample:
+  email: theo.martin@example.com
+  team: Sales
+  what_for: Lunch with a customer
+  receipt:
+    name: receipt.png
+    type: image/png
+    size: 68
+    base64: iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==
+steps:
+  - name: photo
+    convert:
+      format: base64
+      base64: value.receipt.base64
+      name: "{{ value.receipt.name }}"
+  - name: ocr
+    http:
+      method: POST
+      url: https://api.ocr.space/parse/image
+      credential: ocr_space
+      multipart:
+        file: { file: steps.photo }
+        OCREngine: "2"
+        scale: "true"
+        isTable: "true"
+      sample:
+        IsErroredOnProcessing: false
+        ParsedResults:
+          - ParsedText: "HARBOR GRILL\n41 Pier Road\n2026-11-24 13:05\n2 x Lunch special 38.00\nSparkling water 4.50\nSubtotal 42.50\nTax 8% 3.40\nTOTAL USD 45.90\nCard ****1234"
+    retry: { attempts: 3, wait: 15s }
+  - name: unreadable
+    if:
+      when: steps.ocr.body.IsErroredOnProcessing == true || size(steps.ocr.body.ParsedResults) == 0
+      then:
+        - stop: { error: "OCR.space could not read the receipt from {{ value.email }}: {{ steps.ocr.body.ErrorMessage }}" }
+  - name: receipt
+    extract:
+      credential: model
+      text: "{{ steps.ocr.body.ParsedResults[0].ParsedText }}"
+      instructions: The text was read from a photo of a receipt; ignore card numbers.
+      fields:
+        - { name: shop, type: string, description: "the shop's or restaurant's name" }
+        - { name: day, type: date, description: the day on the receipt }
+        - { name: total, type: number, description: the total paid }
+        - { name: tax, type: number, description: "the tax included, if shown" }
+        - { name: currency, type: string, description: "the currency, as USD or EUR" }
+  - name: folder
+    google_drive:
+      action: find_files
+      credential: drive
+      q: "name = 'Receipts - {{ value.team }}' and mimeType = 'application/vnd.google-apps.folder' and trashed = false"
+    retry: { attempts: 3, wait: 10s }
+  - name: share
+    if:
+      when: size(steps.folder) > 0
+      then:
+        - name: shared
+          google_drive:
+            action: share_file
+            credential: drive
+            file_id: "{{ steps.folder[0].id }}"
+            email: "{{ value.email }}"
+            role: writer
+          retry: { attempts: 3, wait: 10s }
+  - name: big
+    if:
+      when: steps.receipt.json.total != null && steps.receipt.json.total > 250
+      then:
+        - name: ask_finance
+          email:
+            credential: mail
+            to: finance-lead@example.com
+            subject: "Expense of {{ steps.receipt.json.total }} {{ steps.receipt.json.currency }} from {{ value.email }}"
+            text: "{{ value.email }} ({{ value.team }}) spent {{ steps.receipt.json.total }} {{ steps.receipt.json.currency }} at {{ steps.receipt.json.shop }} on {{ steps.receipt.json.day }}: {{ value.what_for }}.\n\nApprove or reject it here (the link works once): {{ links.decide }}"
+        - name: decide
+          approval:
+            title: "Expense {{ steps.receipt.json.total }} {{ steps.receipt.json.currency }} - {{ value.what_for }}"
+            description: "{{ value.email }}, {{ value.team }}: {{ steps.receipt.json.shop }} on {{ steps.receipt.json.day }}"
+            comment: true
+            timeout: 3d
+            on_timeout: continue
+  - name: status
+    set:
+      text: >-
+        steps.receipt.json.total == null || steps.receipt.json.total <= 250 ? 'under the limit'
+        : steps.decide.approved == true ? 'approved' : steps.decide.timed_out == true ? 'no answer in time' : 'rejected'
+  - name: log
+    google_sheets:
+      action: add_row
+      credential: sheets
+      spreadsheet_id: your-spreadsheet-id
+      sheet: Expenses
+      values:
+        - "{{ steps.receipt.json.day }}"
+        - "{{ value.email }}"
+        - "{{ value.team }}"
+        - "{{ value.what_for }}"
+        - "{{ steps.receipt.json.shop }}"
+        - "{{ steps.receipt.json.total }}"
+        - "{{ steps.receipt.json.tax }}"
+        - "{{ steps.receipt.json.currency }}"
+        - "{{ steps.status.text }}"
+    retry: { attempts: 3, wait: 30s }

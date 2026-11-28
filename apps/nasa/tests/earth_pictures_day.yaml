@@ -1,0 +1,11 @@
+description: One day's enhanced-color pictures - the day goes in the address
+action: earth_pictures
+credential: { api_key: nasa-test-key }
+input: { collection: enhanced, date: "2026-11-20" }
+exchanges:
+  - sent:
+      method: GET
+      url: https://api.nasa.gov/EPIC/api/enhanced/date/2026-11-20
+      query: { api_key: nasa-test-key }
+    answer: { status: 200, body: [] }
+result: []

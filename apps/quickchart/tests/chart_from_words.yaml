@@ -1,0 +1,25 @@
+description: A chart from a sentence - its configuration and both links
+action: chart_from_words
+credential: { api_key: "" }
+input: { description: "Bar chart of orders by month: Sep 30, Oct 42, Nov 51" }
+exchanges:
+  - sent:
+      method: POST
+      url: https://quickchart.io/natural/config
+      body: { description: "Bar chart of orders by month: Sep 30, Oct 42, Nov 51" }
+    answer:
+      status: 200
+      body:
+        success: true
+        description: "Bar chart of orders by month: Sep 30, Oct 42, Nov 51"
+        chart: "{type:'bar',data:{labels:['Sep','Oct','Nov'],datasets:[{label:'Orders',data:[30,42,51]}]}}"
+        chartUrl: "https://quickchart.io/chart/render/zf-ghi789example"
+        chartMakerUrl: "https://quickchart.io/chart-maker/edit/zf-ghi789example"
+        warnings: []
+result:
+  success: true
+  description: "Bar chart of orders by month: Sep 30, Oct 42, Nov 51"
+  chart: "{type:'bar',data:{labels:['Sep','Oct','Nov'],datasets:[{label:'Orders',data:[30,42,51]}]}}"
+  chartUrl: "https://quickchart.io/chart/render/zf-ghi789example"
+  chartMakerUrl: "https://quickchart.io/chart-maker/edit/zf-ghi789example"
+  warnings: []

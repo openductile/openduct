@@ -1,0 +1,11 @@
+description: "A message removed"
+action: delete_message
+sign_in: gotify_client
+credential: { base_url: "https://gotify.example.com", token: CzyoeNS.D4iJLVb }
+input: { message_id: 25 }
+exchanges:
+  - sent:
+      method: DELETE
+      url: "https://gotify.example.com/message/25"
+    answer: { status: 200 }
+result: { removed: true }

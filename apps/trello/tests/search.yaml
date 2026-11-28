@@ -1,0 +1,11 @@
+description: Cards that hold the words, on one board
+action: search
+credential: { api_key: testkey0123456789, token: ATTAtesttoken0123 }
+input: { query: supplier, board_ids: 6567a1b2c3d4e5f6000000b1, limit: 20 }
+exchanges:
+  - sent:
+      method: GET
+      url: https://api.trello.com/1/search
+      query: { key: testkey0123456789, token: ATTAtesttoken0123, query: supplier, idBoards: 6567a1b2c3d4e5f6000000b1, modelTypes: cards, cards_limit: "20" }
+    answer: { body: { options: { terms: [{ text: supplier }] }, cards: [{ id: 6567a1b2c3d4e5f600000001, name: Call the supplier, desc: About the oak order, idList: 6567a1b2c3d4e5f6000000a1, idBoard: 6567a1b2c3d4e5f6000000b1, idMembers: [], idLabels: [], due: null, closed: false, url: "https://trello.com/c/AbCdEf12/1-call-the-supplier", shortUrl: "https://trello.com/c/AbCdEf12" }] } }
+result: [{ id: 6567a1b2c3d4e5f600000001, name: Call the supplier, desc: About the oak order, idList: 6567a1b2c3d4e5f6000000a1, idBoard: 6567a1b2c3d4e5f6000000b1, idMembers: [], idLabels: [], due: null, closed: false, url: "https://trello.com/c/AbCdEf12/1-call-the-supplier", shortUrl: "https://trello.com/c/AbCdEf12" }]

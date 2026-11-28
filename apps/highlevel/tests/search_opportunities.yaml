@@ -1,0 +1,18 @@
+description: "Open opportunities of a pipeline; a page short of 100 is the last"
+action: search_opportunities
+credential: { token: pit-test-token, location_id: i2SpAtBVHSVea1sL6oah }
+input: { pipeline_id: VDm7RPYC2GLUvdpKmBfC, status: open }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://services.leadconnectorhq.com/opportunities/search"
+      query: { pipeline_id: VDm7RPYC2GLUvdpKmBfC, status: open, location_id: i2SpAtBVHSVea1sL6oah, limit: "100" }
+      headers: { authorization: "Bearer pit-test-token", version: "2021-07-28" }
+    answer:
+      status: 200
+      body:
+        opportunities:
+          - { id: yWQobCRIhRguQtD2llvk, name: Example Co - website refresh, monetaryValue: 500, pipelineId: VDm7RPYC2GLUvdpKmBfC, status: open }
+        meta: { total: 1, nextPageUrl: null, startAfterId: yWQobCRIhRguQtD2llvk, startAfter: 1764230400000, currentPage: 1 }
+result:
+  - { id: yWQobCRIhRguQtD2llvk, name: Example Co - website refresh, monetaryValue: 500, pipelineId: VDm7RPYC2GLUvdpKmBfC, status: open }

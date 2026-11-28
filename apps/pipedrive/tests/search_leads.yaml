@@ -1,0 +1,14 @@
+description: "Search leads: each match out of Pipedrive's wrapping, over two pages by its cursor"
+action: search_leads
+credential: { api_key: test-pipedrive-token }
+input: { term: website }
+exchanges:
+  - sent:
+      method: GET
+      url: https://api.pipedrive.com/api/v2/leads/search
+      query: { term: website, limit: "100" }
+      headers: { x-api-token: test-pipedrive-token }
+    answer: { body: { success: true, data: { items: [{ result_score: 0.9, item: { id: 9f2c0c1e-0000-4000-8000-000000000001, type: lead, title: Website refresh } }] }, additional_data: { next_cursor: eyJmaWVsZCI6ImlkIiwiaWQiOjJ9 } } }
+  - sent: { method: GET, url: https://api.pipedrive.com/api/v2/leads/search, query: { term: website, limit: "100", cursor: eyJmaWVsZCI6ImlkIiwiaWQiOjJ9 } }
+    answer: { body: { success: true, data: { items: [{ result_score: 0.5, item: { id: 9f2c0c1e-0000-4000-8000-000000000002, type: lead, title: Website hosting } }] }, additional_data: { next_cursor: null } } }
+result: [{ id: 9f2c0c1e-0000-4000-8000-000000000001, type: lead, title: Website refresh }, { id: 9f2c0c1e-0000-4000-8000-000000000002, type: lead, title: Website hosting }]

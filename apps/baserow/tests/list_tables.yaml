@@ -1,0 +1,7 @@
+description: The tables a token may reach
+action: list_tables
+credential: { token: br-test-token }
+exchanges:
+  - sent: { method: GET, url: https://api.baserow.io/api/database/tables/all-tables/ }
+    answer: { body: [{ id: 1203, name: Customers, order: 1, database_id: 262 }] }
+result: [{ id: 1203, name: Customers, order: 1, database_id: 262 }]

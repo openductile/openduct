@@ -1,0 +1,9 @@
+description: Turning the workflow off removes the subscription
+trigger: incident_changed
+unregister: true
+workflow: wf1
+credential: { api_key: pd_test_1, "webhook_secret@wf1": pd_whsec_test_1, "webhook_id@wf1": PWHSUB1 }
+exchanges:
+  - sent: { method: DELETE, url: https://api.pagerduty.com/webhook_subscriptions/PWHSUB1 }
+    answer: { status: 204 }
+kept: { webhook_secret: "", webhook_id: "" }

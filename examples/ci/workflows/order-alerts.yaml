@@ -1,0 +1,23 @@
+name: Order alerts
+on: true
+description: >-
+  Each order the shop posts to this workflow's webhook: a large one is sent on to the team's chat as a short line.
+trigger:
+  webhook: {}
+# What `openduct workflow test` runs on: an event as the webhook gives it.
+sample:
+  id: A-1042
+  total: 480
+  customer: Ada
+steps:
+  - where: value.total >= 250
+  - name: line
+    set:
+      text: "'Order ' + value.id + ' from ' + value.customer + ': ' + string(value.total)"
+  - name: notify
+    http:
+      method: POST
+      url: https://chat.example.com/hooks/orders
+      credential: team-chat
+      json:
+        text: "{{ steps.line.text }}"

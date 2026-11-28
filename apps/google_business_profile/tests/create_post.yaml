@@ -1,0 +1,12 @@
+description: "A post with a button and a photo"
+action: create_post
+credential: {"access_token": "ya29.test"}
+input: {"account_id": "1001", "location_id": "2002", "summary": "New winter menu - book a table.", "button": "BOOK", "button_url": "https://cafe.example.com/book", "photo_url": "https://cafe.example.com/menu.jpg", "language_code": "en"}
+exchanges:
+  - sent:
+      method: POST
+      url: "https://mybusiness.googleapis.com/v4/accounts/1001/locations/2002/localPosts"
+      headers: {"authorization": "Bearer ya29.test"}
+      body: {"topicType": "STANDARD", "summary": "New winter menu - book a table.", "languageCode": "en", "callToAction": {"actionType": "BOOK", "url": "https://cafe.example.com/book"}, "media": [{"mediaFormat": "PHOTO", "sourceUrl": "https://cafe.example.com/menu.jpg"}]}
+    answer: {"status": 200, "body": {"name": "accounts/1001/locations/2002/localPosts/lp2", "languageCode": "en", "summary": "New winter menu - book a table.", "state": "PROCESSING", "topicType": "STANDARD", "callToAction": {"actionType": "BOOK", "url": "https://cafe.example.com/book"}, "media": [{"mediaFormat": "PHOTO", "sourceUrl": "https://cafe.example.com/menu.jpg"}]}}
+result: {"name": "accounts/1001/locations/2002/localPosts/lp2", "languageCode": "en", "summary": "New winter menu - book a table.", "state": "PROCESSING", "topicType": "STANDARD", "callToAction": {"actionType": "BOOK", "url": "https://cafe.example.com/book"}, "media": [{"mediaFormat": "PHOTO", "sourceUrl": "https://cafe.example.com/menu.jpg"}]}

@@ -238,6 +238,8 @@ async fn kinds(state: &State, call: &Call) -> Answer {
             })
         })
         .collect();
+    let mut kinds = kinds;
+    kinds.extend(crate::custom_apps::credential_kinds(state, call).await); // app generator: the workspace's own apps
     json(StatusCode::OK, &json!({ "kinds": kinds }))
 }
 
@@ -406,6 +408,13 @@ async fn create(state: &State, call: &Call) -> Answer {
         .and_then(Value::as_str)
         .unwrap_or_default()
         .to_owned();
+    // app generator: a custom app's kind of credential is its own workspace's alone.
+    if crate::custom_apps::kind_of_another(&kind, &access.workspace.id) {
+        return problem(
+            StatusCode::UNPROCESSABLE_ENTITY,
+            &format!("{kind:?} is not a kind of credential"),
+        );
+    }
     let fields = match fields_of(&kind, &call.body, None) {
         Ok(f) => f,
         Err(e) => return problem(StatusCode::UNPROCESSABLE_ENTITY, &e),

@@ -1,0 +1,41 @@
+description: A case's tasks
+action: list_case_tasks
+credential:
+  url: https://thehive.example.com
+  api_key: test-key
+input:
+  case_id: ~8192
+  limit: 10
+exchanges:
+- sent:
+    method: POST
+    url: https://thehive.example.com/api/v1/query
+    headers:
+      authorization: Bearer test-key
+    body:
+      query:
+      - _name: getCase
+        idOrName: ~8192
+      - _name: tasks
+      - _name: page
+        from: 0
+        to: 10
+  answer:
+    status: 200
+    body:
+    - &id001
+      _id: ~12288
+      _type: Task
+      _createdAt: 1795161600000
+      title: Block the sender
+      group: Containment
+      description: Add the sender to the block list.
+      status: Waiting
+      flag: false
+      startDate: null
+      endDate: null
+      assignee: analyst@example.com
+      dueDate: 1796144400000
+      mandatory: true
+result:
+- *id001

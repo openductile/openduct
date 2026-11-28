@@ -1,0 +1,13 @@
+description: A search Google has no results for gives none (SerpApi answers 200 with an error)
+action: google_search
+credential: { api_key: serp_test_key_1 }
+input: { q: "zzqxexamplenothing", start: 10 }
+exchanges:
+  - sent:
+      query: { api_key: serp_test_key_1, engine: google, q: "zzqxexamplenothing", start: "10" }
+    answer:
+      status: 200
+      body:
+        search_metadata: { id: 6745a1b2c3d4e5f600000002, status: Success }
+        error: "Google hasn't returned any results for this query."
+result: []

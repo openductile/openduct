@@ -1,0 +1,89 @@
+name: A gentle e-mail sequence for leads in Airtable
+description: >-
+  Every weekday at 10:00 New York time, find the leads in your Airtable base whose stage is Nurture and whose next
+  touch is due, send each the next e-mail of a four-step sequence through Brevo, and move them on: the touch counted,
+  the next one set a few working days later (never on a weekend), and the stage set to Done after the last. A lead
+  marked Unsubscribed is never written to. Write your sequence in the first step. Needs: an Airtable token
+  (airtable) and a Brevo API key as a header credential named api-key (brevo).
+category: Sales
+trigger:
+  schedule: { every: weekday, at: "10:00", timezone: America/New_York }
+# What a test runs on: an event as this trigger gives it.
+sample:
+  scheduled_at: '2026-11-27T15:00:00Z'
+steps:
+  - name: sequence
+    set:
+      # Each e-mail, and how many working days after it the next one goes. {first_name} and {company} are filled in.
+      steps: >-
+        [{'subject': 'A quick idea for {company}', 'text': 'Hi {first_name},\n\nThanks for your interest in our route planner. Most teams like yours save an hour a day on dispatch in the first week. Would a 15-minute look help?\n\nAlex', 'wait': 3},
+         {'subject': 'How Lee Bakery plans 40 deliveries a morning', 'text': 'Hi {first_name},\n\nA short story from a customer much like {company}: they went from paper lists to planned routes in a day. Here is how: https://www.example.com/stories/bakery\n\nAlex', 'wait': 4},
+         {'subject': 'Your questions, answered', 'text': 'Hi {first_name},\n\nThe three things people ask most - price, set-up time, and the phone app - are answered here: https://www.example.com/faq\n\nAlex', 'wait': 5},
+         {'subject': 'Shall I close your file?', 'text': 'Hi {first_name},\n\nI have not heard back, so I will stop writing after this. If the timing is wrong, just reply later and I will pick it up.\n\nAlex', 'wait': 0}]
+  - name: due
+    airtable:
+      action: list_records
+      credential: airtable
+      base_id: appYourBaseId
+      table: Leads
+      formula: "AND({Stage} = 'Nurture', NOT({Unsubscribed}), IS_BEFORE({Next touch}, DATEADD(TODAY(), 1, 'days')))"
+    retry: { attempts: 3, wait: 30s }
+  - name: plan
+    javascript: |
+      // For each lead due: the next e-mail of the sequence, filled in, and when the one after it goes -
+      // counted in working days, Saturdays and Sundays skipped.
+      const today = new Date(value.scheduled_at.slice(0, 10) + "T00:00:00Z");
+      const addWorkingDays = (from, n) => {
+        const d = new Date(from);
+        while (n > 0) {
+          d.setUTCDate(d.getUTCDate() + 1);
+          if (d.getUTCDay() !== 0 && d.getUTCDay() !== 6) n--;
+        }
+        return d.toISOString().slice(0, 10);
+      };
+      const fill = (t, f) => t.replace(/\{first_name\}/g, f.first_name).replace(/\{company\}/g, f.company);
+      const sends = [], skipped = [];
+      for (const r of steps.due || []) {
+        const f = r.fields || {};
+        const email = String(f.Email || "").trim();
+        const touches = Number(f.Touches || 0);
+        if (!/^[^@\s]+@[^@\s]+\.[a-z]{2,}$/i.test(email)) { skipped.push(`${r.id}: no e-mail address`); continue; }
+        if (touches >= steps.sequence.steps.length) { skipped.push(`${r.id}: sequence done`); continue; }
+        const step = steps.sequence.steps[touches];
+        const who = { first_name: String(f["First name"] || "there").trim(), company: String(f.Company || "your team").trim() };
+        const last = touches + 1 >= steps.sequence.steps.length;
+        sends.push({
+          id: r.id, email, name: who.first_name,
+          subject: fill(step.subject, who), text: fill(step.text, who),
+          fields: last
+            ? { Touches: touches + 1, "Last touch": today.toISOString().slice(0, 10), Stage: "Done" }
+            : { Touches: touches + 1, "Last touch": today.toISOString().slice(0, 10), "Next touch": addWorkingDays(today, step.wait) },
+        });
+      }
+      return { sends, count: sends.length, skipped };
+  - name: each
+    for_each:
+      items: steps.plan.sends
+      steps:
+        - name: send
+          http:
+            method: POST
+            credential: brevo
+            url: https://api.brevo.com/v3/smtp/email
+            json:
+              sender: { name: Alex at Example Routes, email: alex@example.com }
+              to: [{ email: "{{ item.email }}", name: "{{ item.name }}" }]
+              subject: "{{ item.subject }}"
+              textContent: "{{ item.text }}"
+              tags: [nurture]
+            sample: { messageId: "<202611271000.1234567890@smtp-relay.example>" }
+          retry: { attempts: 3, wait: 30s }
+        - name: moved_on
+          airtable:
+            action: update_record
+            credential: airtable
+            base_id: appYourBaseId
+            table: Leads
+            record_id: "{{ item.id }}"
+            fields: "{{ item.fields }}"
+          retry: { attempts: 3, wait: 30s }

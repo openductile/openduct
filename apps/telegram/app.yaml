@@ -26,8 +26,160 @@ actions:
       - { name: chat_id, label: The chat, required: true, description: "Its id, or @channelname" }
       - { name: text, label: The message, required: true }
       - { name: parse_mode, label: How the text is marked up, description: "MarkdownV2 or HTML" }
+      - { name: buttons, label: "Buttons under it: rows of {text, callback_data} or {text, url}", kind: list }
     send:
       chat_id: "{{ input.chat_id }}"
       text: "{{ input.text }}"
       parse_mode: "{{ input.parse_mode }}"
+      reply_markup: "{{ has(input.buttons) && input.buttons != null ? {'inline_keyboard': input.buttons} : null }}"
     result: "{'sent': true, 'message': value.result}"
+    description: A message to a chat, with buttons under it (an inline keyboard) when given.
+    output: { sent: boolean, message: record }
+  send_photo:
+    label: Send a photo
+    description: A photo by its address on the internet or its Telegram file_id, with a caption and buttons.
+    write: true
+    method: POST
+    path: "/bot{{ credential.bot_token }}/sendPhoto"
+    inputs:
+      - { name: chat_id, label: The chat, required: true, description: "Its id, or @channelname" }
+      - { name: photo, label: "The photo: its address (https://...) or file_id", required: true }
+      - { name: caption, label: A caption }
+      - { name: parse_mode, label: How the caption is marked up, description: "MarkdownV2 or HTML" }
+      - { name: buttons, label: "Buttons under it: rows of {text, callback_data} or {text, url}", kind: list }
+    send:
+      chat_id: "{{ input.chat_id }}"
+      photo: "{{ input.photo }}"
+      caption: "{{ input.caption }}"
+      parse_mode: "{{ input.parse_mode }}"
+      reply_markup: "{{ has(input.buttons) && input.buttons != null ? {'inline_keyboard': input.buttons} : null }}"
+    result: value.result
+    output: { message_id: number, chat: record, photo: list, caption: text }
+  send_document:
+    label: Send a document
+    description: A file by its address on the internet or its Telegram file_id, with a caption and buttons.
+    write: true
+    method: POST
+    path: "/bot{{ credential.bot_token }}/sendDocument"
+    inputs:
+      - { name: chat_id, label: The chat, required: true, description: "Its id, or @channelname" }
+      - { name: document, label: "The file: its address (https://...) or file_id", required: true }
+      - { name: caption, label: A caption }
+      - { name: parse_mode, label: How the caption is marked up, description: "MarkdownV2 or HTML" }
+      - { name: buttons, label: "Buttons under it: rows of {text, callback_data} or {text, url}", kind: list }
+    send:
+      chat_id: "{{ input.chat_id }}"
+      document: "{{ input.document }}"
+      caption: "{{ input.caption }}"
+      parse_mode: "{{ input.parse_mode }}"
+      reply_markup: "{{ has(input.buttons) && input.buttons != null ? {'inline_keyboard': input.buttons} : null }}"
+    result: value.result
+    output: { message_id: number, chat: record, document: record, caption: text }
+  edit_message:
+    label: Edit a message
+    description: The text (and buttons) of a message the bot sent, changed - after a button is pressed, say.
+    write: true
+    method: POST
+    path: "/bot{{ credential.bot_token }}/editMessageText"
+    inputs:
+      - { name: chat_id, label: The chat, required: true }
+      - { name: message_id, label: "The message's id", required: true, kind: number }
+      - { name: text, label: The new text, required: true }
+      - { name: parse_mode, label: How the text is marked up, description: "MarkdownV2 or HTML" }
+      - { name: buttons, label: "Buttons under it (an empty list takes them away)", kind: list }
+    send:
+      chat_id: "{{ input.chat_id }}"
+      message_id: "{{ input.message_id }}"
+      text: "{{ input.text }}"
+      parse_mode: "{{ input.parse_mode }}"
+      reply_markup: "{{ has(input.buttons) && input.buttons != null ? {'inline_keyboard': input.buttons} : null }}"
+    result: value.result
+    output: { message_id: number, chat: record, text: text, edit_date: number }
+  answer_button:
+    label: Answer a button press
+    description: >-
+      The answer Telegram waits for after a button is pressed (its callback query): a short notice at the top of the
+      chat, or an alert.
+    write: true
+    method: POST
+    path: "/bot{{ credential.bot_token }}/answerCallbackQuery"
+    inputs:
+      - { name: callback_query_id, label: "The press's id (the trigger gives it)", required: true }
+      - { name: text, label: "The notice (up to 200 characters)" }
+      - { name: alert, label: "Shown as an alert, not a notice", kind: boolean }
+    send:
+      callback_query_id: "{{ input.callback_query_id }}"
+      text: "{{ input.text }}"
+      show_alert: "{{ input.alert }}"
+    result: "{'answered': value.result}"
+    output: { answered: boolean }
+triggers:
+  new_message:
+    label: A new message to the bot
+    description: >-
+      Each message people send the bot, asked for every minute. A bot is either asked for its messages or sent them:
+      while a workflow with "A new message to the bot, as it comes" is on, Telegram refuses this one.
+    poll:
+      method: GET
+      path: "/bot{{ credential.bot_token }}/getUpdates"
+      query: { offset: "{{ input.cursor }}", limit: "100", timeout: "0", allowed_updates: '["message"]' }
+      items: value.result
+      id: string(item.update_id)
+      # Telegram forgets what comes before the offset asked for: the next poll asks from after the last one dealt with.
+      cursor: "items[size(items) - 1].update_id + 1"
+      event: "has(item.message) ? item.message : item"
+      every: 1m
+  message:
+    label: A new message to the bot, as it comes
+    description: >-
+      Telegram sends each message to the workflow's address as it comes. Turning the workflow on gives Telegram the
+      address (and a secret it sends with each delivery); turning it off takes it away.
+    webhook:
+      signature: { header: x-telegram-bot-api-secret-token, algorithm: token }
+      secret: webhook_secret
+      id: string(value.update_id)
+      only: has(value.message)
+      event: value.message
+      register:
+        - method: POST
+          path: "/bot{{ credential.bot_token }}/setWebhook"
+          send: { url: "{{ input.address }}", secret_token: "{{ input.secret }}", allowed_updates: ["message"] }
+          error: "value.ok == false ? value.description : null"
+      keep: { webhook_secret: input.secret }
+      unregister:
+        - method: POST
+          path: "/bot{{ credential.bot_token }}/deleteWebhook"
+          send: { drop_pending_updates: false }
+          error: "value.ok == false ? value.description : null"
+  update:
+    label: A message or a button pressed, as it comes
+    description: >-
+      Each message people send the bot and each press of a button under its messages, sent to the workflow's
+      address. A bot has one address: this trigger takes the place of "A new message to the bot, as it comes", for a
+      workflow that answers both (switch on kind).
+    webhook:
+      signature: { header: x-telegram-bot-api-secret-token, algorithm: token }
+      secret: webhook_secret
+      id: string(value.update_id)
+      only: has(value.message) || has(value.callback_query)
+      event: >-
+        has(value.callback_query) ?
+          {'kind': 'button', 'data': has(value.callback_query.data) ? value.callback_query.data : '',
+           'callback_query_id': value.callback_query.id, 'from': value.callback_query.from,
+           'chat_id': has(value.callback_query.message) ? value.callback_query.message.chat.id : null,
+           'message_id': has(value.callback_query.message) ? value.callback_query.message.message_id : null,
+           'text': '', 'message': has(value.callback_query.message) ? value.callback_query.message : null}
+        : {'kind': 'message', 'data': '', 'callback_query_id': '', 'from': has(value.message.from) ? value.message.from : null,
+           'chat_id': value.message.chat.id, 'message_id': value.message.message_id,
+           'text': has(value.message.text) ? value.message.text : '', 'message': value.message}
+      register:
+        - method: POST
+          path: "/bot{{ credential.bot_token }}/setWebhook"
+          send: { url: "{{ input.address }}", secret_token: "{{ input.secret }}", allowed_updates: ["message", "callback_query"] }
+          error: "value.ok == false ? value.description : null"
+      keep: { webhook_secret: input.secret }
+      unregister:
+        - method: POST
+          path: "/bot{{ credential.bot_token }}/deleteWebhook"
+          send: { drop_pending_updates: false }
+          error: "value.ok == false ? value.description : null"

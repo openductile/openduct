@@ -1,0 +1,7 @@
+action: get_upload
+credential: { access_token: st_test_1 }
+input: { id: "4401" }
+exchanges:
+  - sent: { method: GET, url: https://www.strava.com/api/v3/uploads/4401 }
+    answer: { body: { id: 4401, id_str: "4401", external_id: watch-1.fit, status: Your activity is ready., error: null, activity_id: 99003 } }
+result: { id: 4401, id_str: "4401", external_id: watch-1.fit, status: Your activity is ready., error: null, activity_id: 99003 }

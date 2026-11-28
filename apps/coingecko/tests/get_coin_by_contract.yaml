@@ -1,0 +1,7 @@
+action: get_coin_by_contract
+credential: { api_key: CG-test1 }
+input: { platform: ethereum, contract_address: "0x00000000000000000000000000000000000000aa" }
+exchanges:
+  - sent: { method: GET, url: "https://api.coingecko.com/api/v3/coins/ethereum/contract/0x00000000000000000000000000000000000000aa" }
+    answer: { body: { id: example-token, symbol: ext, name: Example Token, market_data: { current_price: { usd: 1.0002 } } } }
+result: { id: example-token, symbol: ext, name: Example Token, market_data: { current_price: { usd: 1.0002 } } }

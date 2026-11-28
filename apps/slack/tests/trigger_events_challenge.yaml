@@ -1,0 +1,8 @@
+description: Slack checks the address with a signed challenge, and is answered with it
+trigger: message
+credential: { bot_token: xoxb-1, signing_secret: 8f742231b10e8888abcd99yyyzzz85a5 }
+delivery:
+  headers: { x-slack-signature: "v0=fab8ad79f59cde46a86d8f3c12610029777325e816a67122a5254098dc9afb0d", x-slack-request-timestamp: "1700000000" }
+  body: '{"token":"t","challenge":"3eZbrw1aBm2rZgRNFdxV2595E9CY3gmdALWMmHkvFXO7tYXAYM8P","type":"url_verification"}'
+  at: 1700000030
+answer: { challenge: 3eZbrw1aBm2rZgRNFdxV2595E9CY3gmdALWMmHkvFXO7tYXAYM8P }

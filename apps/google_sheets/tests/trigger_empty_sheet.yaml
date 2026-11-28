@@ -1,0 +1,8 @@
+description: A sheet with nothing in it yet starts no runs
+trigger: new_row
+credential: { access_token: ya29.test }
+input: { spreadsheet_id: s1, sheet: Orders }
+seen: { items: [] }
+exchanges:
+  - answer: { body: { range: Orders!A1:Z1000 } }
+runs: []

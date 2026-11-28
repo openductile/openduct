@@ -1,0 +1,11 @@
+description: "A search that finds nothing: Google leaves items out, the step gives an empty list"
+action: search_books
+credential: { access_token: ya29.test }
+input: { q: "isbn:9780000000001" }
+exchanges:
+  - sent:
+      url: https://books.googleapis.com/books/v1/volumes
+      query: { q: "isbn:9780000000001", maxResults: "40" }
+      headers: { authorization: Bearer ya29.test }
+    answer: { body: { kind: "books#volumes", totalItems: 0 } }
+result: []

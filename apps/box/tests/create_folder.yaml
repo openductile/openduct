@@ -1,0 +1,44 @@
+# Made by `openduct app from-openapi`: Create folder.
+description: "Create folder, made from the API description's schemas"
+action: create_folder
+credential: { access_token: test-access-token }
+input: { name: example, parent: { id: "0" } }
+exchanges:
+  - sent:
+      method: POST
+      url: "https://api.box.com/2.0/folders"
+      query: {}
+      headers: { authorization: "Bearer test-access-token" }
+      body: { name: example, parent: { id: "0" } }
+    answer:
+      status: 201
+      body:
+        id: "12345"
+        etag: "1"
+        type: folder
+        sequence_id: "3"
+        name: Contracts
+        created_at: "2012-12-12T10:53:43-08:00"
+        modified_at: "2012-12-12T10:53:43-08:00"
+        description: example
+        size: 629644
+        path_collection:
+          total_count: 1
+          entries: [{ id: "12345", etag: "1", type: folder, sequence_id: "3", name: Contracts }]
+        created_by: { id: "11446498", type: user, name: example, login: "ann@example.com" }
+        modified_by: { id: "11446498", type: user, name: example, login: "ann@example.com" }
+result:
+  id: "12345"
+  etag: "1"
+  type: folder
+  sequence_id: "3"
+  name: Contracts
+  created_at: "2012-12-12T10:53:43-08:00"
+  modified_at: "2012-12-12T10:53:43-08:00"
+  description: example
+  size: 629644
+  path_collection:
+    total_count: 1
+    entries: [{ id: "12345", etag: "1", type: folder, sequence_id: "3", name: Contracts }]
+  created_by: { id: "11446498", type: user, name: example, login: "ann@example.com" }
+  modified_by: { id: "11446498", type: user, name: example, login: "ann@example.com" }

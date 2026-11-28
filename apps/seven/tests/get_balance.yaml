@@ -1,0 +1,12 @@
+# Made by `openduct app from-openapi`: Get Balance.
+description: "Get Balance, made from the API description's schemas"
+action: get_balance
+credential: { api_key: test-key }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://gateway.seven.io/api/balance"
+      query: {}
+      headers: { x-api-key: test-key }
+    answer: { status: 200, body: { amount: 1, currency: example } }
+result: { amount: 1, currency: example }

@@ -1,0 +1,12 @@
+description: Turning the workflow off ends the subscription
+trigger: event
+unregister: true
+workflow: wf1
+credential: { api_key: lin_api_test1, "webhook_secret@wf1": k, "webhook_id@wf1": wh-test-1 }
+exchanges:
+  - sent:
+      method: POST
+      url: https://api.linear.app/graphql
+      body: { query: "mutation($id: String!) { webhookDelete(id: $id) { success } }", variables: { id: wh-test-1 } }
+    answer: { body: { data: { webhookDelete: { success: true } } } }
+kept: { webhook_secret: "", webhook_id: "" }

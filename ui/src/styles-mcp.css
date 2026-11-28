@@ -1,0 +1,15 @@
+/* Copyright 2026 Ductile AI, Inc */
+/* SPDX-License-Identifier: Apache-2.0 */
+
+/* MCP: the workspace's MCP server on the settings page, and a workflow offered as a tool. */
+
+.mcp-tools, .mcp-tokens { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.35rem; width: 100%; }
+.mcp-tokens li { display: flex; align-items: center; flex-wrap: wrap; gap: 0.45rem; }
+.mcp-tokens li .quiet { margin-left: auto; height: 28px; padding: 0 0.6rem; }
+.mcp-made { display: grid; gap: 0.3rem; width: 100%; padding: 0.55rem 0.7rem; border: 1px solid var(--line); border-radius: 6px; }
+.mcp-made code { word-break: break-all; }
+.mcp-new { width: 100%; }
+.mcp-new .narrow input { width: 5.5rem; }
+.mcp-settings .tg-copyable code { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 28rem; }
+.tool-offer .tool-input { display: flex; align-items: center; flex-wrap: wrap; gap: 0.4rem; }
+.tool-offer .tool-input input:not([type]) { flex: 1 1 8rem; min-width: 0; }

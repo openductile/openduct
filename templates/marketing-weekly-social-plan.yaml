@@ -1,0 +1,102 @@
+name: A week of social posts planned, with photos
+description: >-
+  Every Monday at 8:00, Los Angeles time, an AI agent plans the week's five social posts for your business: it checks
+  the public holidays coming up (Nager.Date's free API) and finds a fitting free photo for each post on Pexels, with
+  its photographer's credit. A model then writes each caption in your brand's voice, and each post becomes a row of the
+  Content calendar sheet in Google Sheets - day, caption, photo, credit and the photo's description for screen
+  readers - ready for you to check. Needs: model (an AI credential), pexels (a header credential: Authorization and
+  your Pexels API key), google_sheets.
+category: Marketing
+trigger:
+  schedule: { every: week, on: [monday], at: "08:00", timezone: America/Los_Angeles }
+# What a test runs on: an event as this trigger gives it.
+sample:
+  scheduled_at: '2026-11-30T16:00:00Z'
+steps:
+  - name: week
+    datetime: { value: value.scheduled_at, timezone: America/Los_Angeles }
+  - name: plan
+    agent:
+      credential: model
+      instructions: >-
+        You plan a week of social posts for a neighborhood coffee shop that roasts its own beans. Plan one post for
+        each day from Monday to Friday. Look at the public holidays in the next two weeks and use one if it fits.
+        For each post find a photo on Pexels that shows the idea - search in plain words, and take the photo's own
+        address, its photographer and its description from the results; never make up a photo. Keep the ideas warm
+        and simple: the coffee, the people, the place, the season.
+      input: "The week starting {{ steps.week.date }}. The year: {{ steps.week.date.substring(0, 4) }}."
+      tools:
+        - name: holidays
+          description: The public holidays of a year in a country, each with its date and name.
+          parameters:
+            type: object
+            properties:
+              year: { type: integer, description: "The year, as 2026" }
+              country: { type: string, description: "The country's two-letter code, as US" }
+            required: [year, country]
+          http:
+            url: "https://date.nager.at/api/v3/PublicHolidays/{{ args.year }}/{{ args.country }}"
+        - name: find_photo
+          description: Free photos on Pexels for a few words; gives each photo's address, photographer and description.
+          parameters:
+            type: object
+            properties:
+              words: { type: string, description: "What the photo shows, as latte art on a wooden table" }
+            required: [words]
+          http:
+            url: https://api.pexels.com/v1/search
+            credential: pexels
+            query: { query: "{{ args.words }}", per_page: "5", orientation: square }
+      allow: [holidays, find_photo]
+      output:
+        schema:
+          type: object
+          properties:
+            posts:
+              type: array
+              minItems: 1
+              maxItems: 5
+              items:
+                type: object
+                properties:
+                  day: { type: string, description: "Monday to Friday" }
+                  idea: { type: string }
+                  photo: { type: string, description: "The photo's page on Pexels" }
+                  photographer: { type: string }
+                  photo_alt: { type: string, description: "What the photo shows, for screen readers" }
+                required: [day, idea, photo, photographer, photo_alt]
+          required: [posts]
+      max_turns: 12
+      max_tool_calls: 12
+  - name: captions
+    ai:
+      credential: model
+      system: >-
+        You write social media captions for a neighborhood coffee shop: friendly, short (at most 220 characters), one
+        or two emoji at most, and up to three hashtags at the end. Answer with JSON only.
+      prompt: "Write one caption for each of these posts, in the same order:\n{{ steps.plan.json }}"
+      schema:
+        type: object
+        properties:
+          captions: { type: array, items: { type: string } }
+        required: [captions]
+      max_tokens: 900
+  - name: rows
+    for_each:
+      items: "has(steps.plan.json) && steps.plan.json != null && has(steps.plan.json.posts) ? steps.plan.json.posts : []"
+      steps:
+        - name: row
+          google_sheets:
+            action: add_row
+            credential: google_sheets
+            spreadsheet_id: your-spreadsheet-id
+            sheet: Content calendar
+            values:
+              - "{{ steps.week.date }}"
+              - "{{ item.day }}"
+              - "{{ has(steps.captions.json.captions) && size(steps.captions.json.captions) > index ? steps.captions.json.captions[index] : item.idea }}"
+              - "{{ item.photo }}"
+              - "Photo: {{ item.photographer }} on Pexels"
+              - "{{ item.photo_alt }}"
+              - To check
+          retry: { attempts: 3, wait: 10s }

@@ -1,0 +1,11 @@
+description: One item of a list with its columns
+action: get_list_item
+credential: { access_token: eyJ0 }
+input: { site_id: "example.sharepoint.com,da60e844-ba1d-49bc-b4d4-d5e36bae9019,712a596e-90a1-49e3-9b48-bfa80bee8740", list_id: Orders, item_id: "1" }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://graph.microsoft.com/v1.0/sites/example.sharepoint.com,da60e844-ba1d-49bc-b4d4-d5e36bae9019,712a596e-90a1-49e3-9b48-bfa80bee8740/lists/Orders/items/1"
+      query: { expand: fields }
+    answer: { body: { id: "1", fields: { Title: Order 1042, Status: Open, Amount: 120 }, webUrl: "https://example.sharepoint.com/sites/sales/Lists/Orders/1_.000" } }
+result: { id: "1", fields: { Title: Order 1042, Status: Open, Amount: 120 }, webUrl: "https://example.sharepoint.com/sites/sales/Lists/Orders/1_.000" }

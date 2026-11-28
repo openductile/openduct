@@ -1,0 +1,8 @@
+description: A channel the person may not post in - in Graph's words
+action: send_channel_message
+sign_in: teams
+credential: { access_token: eyJ0.teams }
+input: { team_id: t9, channel_id: c9, text: Hi }
+exchanges:
+  - answer: { status: 403, body: { error: { code: Forbidden, message: "Missing scope permissions on the request." } } }
+error: "Microsoft Teams answered 403: Missing scope permissions on the request."

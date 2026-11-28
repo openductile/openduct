@@ -1,0 +1,21 @@
+description: A list to choose from, in a section
+action: send_list
+credential: { access_token: EAAG1, phone_number_id: "1234", api_version: v21.0 }
+input:
+  to: "16505551234"
+  text: "Which store?"
+  button: Stores
+  sections: [{ title: Nearby, rows: [{ id: s1, title: Riverside, description: Open till 9 }, { id: s2, title: Old Town }] }]
+exchanges:
+  - sent:
+      body:
+        messaging_product: whatsapp
+        recipient_type: individual
+        to: "16505551234"
+        type: interactive
+        interactive:
+          type: list
+          body: { text: "Which store?" }
+          action: { button: Stores, sections: [{ title: Nearby, rows: [{ id: s1, title: Riverside, description: Open till 9 }, { id: s2, title: Old Town }] }] }
+    answer: { body: { messaging_product: whatsapp, messages: [{ id: wamid.L1 }] } }
+result: { messaging_product: whatsapp, messages: [{ id: wamid.L1 }] }

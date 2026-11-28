@@ -1,0 +1,17 @@
+description: "A user's public shelves, with an API key"
+action: list_public_bookshelves
+sign_in: google_books_key
+credential: { api_key: test-key }
+input: { user_id: "1112223334445556667" }
+exchanges:
+  - sent:
+      method: GET
+      url: https://books.googleapis.com/books/v1/users/1112223334445556667/bookshelves
+      query: { key: test-key }
+    answer:
+      body:
+        kind: "books#bookshelves"
+        items:
+          - { kind: "books#bookshelf", id: 0, title: Favorites, access: PUBLIC, volumeCount: 3 }
+result:
+  - { kind: "books#bookshelf", id: 0, title: Favorites, access: PUBLIC, volumeCount: 3 }

@@ -1,0 +1,32 @@
+description: An update written on an item
+action: add_update
+credential:
+  token: monday-test-token
+input:
+  item_id: '9876543210'
+  text: The customer paid.
+exchanges:
+- sent:
+    body:
+      query: 'mutation ($item: ID, $body: String!, $parent: ID) { create_update(item_id: $item, body: $body, parent_id: $parent)
+        { id body text_body created_at creator_id item_id } }'
+      variables:
+        item: '9876543210'
+        body: The customer paid.
+  answer:
+    body:
+      data:
+        create_update:
+          id: '3300000001'
+          body: <p>The customer paid.</p>
+          text_body: The customer paid.
+          created_at: '2026-11-27T11:00:00Z'
+          creator_id: '55500001'
+          item_id: '9876543210'
+result:
+  id: '3300000001'
+  body: <p>The customer paid.</p>
+  text_body: The customer paid.
+  created_at: '2026-11-27T11:00:00Z'
+  creator_id: '55500001'
+  item_id: '9876543210'

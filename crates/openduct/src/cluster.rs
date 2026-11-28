@@ -35,6 +35,12 @@ pub(crate) struct ClusterArgs {
     /// them, and leaders spread over the brokers.
     #[arg(long, env = "OPENDUCT_REPLICATION_FACTOR", default_value_t = 3, value_parser = clap::value_parser!(u64).range(1..=7))]
     replication_factor: u64,
+    /// How long a broker leads a partition it took over before it may hand it back to the partition's first broker,
+    /// in seconds. Keep it longer than a broker takes to stop: a broker that has just given its partitions away is
+    /// stopping, and handing them straight back makes it lead while it is being stopped. A broker that restarts gets
+    /// its partitions back this long after it went.
+    #[arg(long, env = "OPENDUCT_HAND_BACK_AFTER_SECS", default_value_t = 120, value_parser = clap::value_parser!(u64).range(1..=3600))]
+    hand_back_after_secs: u64,
     /// For recovery, by a person's decision: where most copies of a partition were lost, take the copies that kept
     /// their log as they are. Give the recovery a name of your choosing (a date will do) and start every broker
     /// with it. A broker that lost its copy sets it aside and is caught up from the others by itself; it votes for
@@ -245,6 +251,7 @@ pub(crate) async fn start(
         },
     );
     config.store = store;
+    config.timing.hand_back_after = std::time::Duration::from_secs(args.hand_back_after_secs);
     if let Some(bucket) = &args.tier_s3_bucket {
         if args.tier_s3_access_key_file.is_none() {
             refuse_old("AWS_ACCESS_KEY_ID", "--tier-s3-access-key-file")?;

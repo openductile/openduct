@@ -1,0 +1,7 @@
+description: A request Dropbox cannot read - it answers in plain text
+action: get_metadata
+credential: { access_token: sl.test-token }
+input: { path: "no-slash.pdf" }
+exchanges:
+  - answer: { status: 400, headers: { content-type: text/plain }, body: "Error in call to API function \"files/get_metadata\": request body: path: 'no-slash.pdf' did not match pattern" }
+error: "Dropbox answered 400"

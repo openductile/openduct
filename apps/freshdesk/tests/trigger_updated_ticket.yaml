@@ -1,0 +1,38 @@
+description: A ticket changed since the poll before runs again
+trigger: updated_ticket
+credential:
+  domain: acme
+  api_key: test-key
+seen:
+  items:
+  - - '20'
+    - '"2026-11-17T12:02:51Z"'
+exchanges:
+- sent:
+    query:
+      order_by: updated_at
+      order_type: desc
+      per_page: '100'
+  answer:
+    status: 200
+    body:
+    - id: 20
+      subject: Cracked lid
+      description_text: The lid of my mug is cracked.
+      status: 4
+      priority: 1
+      source: 2
+      type: null
+      requester_id: 5001
+      responder_id: null
+      group_id: null
+      company_id: null
+      tags: []
+      cc_emails: []
+      custom_fields: {}
+      due_by: '2026-11-20T11:30:00Z'
+      fr_due_by: '2026-11-18T11:30:00Z'
+      created_at: '2026-11-17T12:02:50Z'
+      updated_at: '2026-11-17T14:00:00Z'
+ids:
+- '20'

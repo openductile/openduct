@@ -1,0 +1,36 @@
+description: The account's numbers
+action: list_numbers
+credential:
+  api_key: abcd1234
+  api_secret: test-secret
+input:
+  country: US
+exchanges:
+- sent:
+    method: GET
+    url: https://rest.nexmo.com/account/numbers
+    query:
+      country: US
+      size: '100'
+    headers:
+      authorization: Basic YWJjZDEyMzQ6dGVzdC1zZWNyZXQ=
+  answer:
+    status: 200
+    body:
+      count: 1
+      numbers:
+      - &id001
+        country: US
+        msisdn: '14155550199'
+        type: mobile-lvn
+        features:
+        - SMS
+        - VOICE
+        - MMS
+        app_id: aaaaaaaa-bbbb-cccc-dddd-0123456789ab
+        messagesCallbackType: app
+        messagesCallbackValue: aaaaaaaa-bbbb-cccc-dddd-0123456789ab
+        voiceCallbackType: app
+        voiceCallbackValue: aaaaaaaa-bbbb-cccc-dddd-0123456789ab
+result:
+- *id001

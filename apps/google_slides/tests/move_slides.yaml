@@ -1,0 +1,9 @@
+description: Two slides moved to the front
+action: move_slides
+credential: { access_token: ya29.test }
+input: { presentation: 1CoPyOfTheTemplate0123456789abcdefg, slide_ids: "g2, g3", position: 0 }
+exchanges:
+  - sent:
+      body: { requests: [{ updateSlidesPosition: { slideObjectIds: [g2, g3], insertionIndex: 0 } }] }
+    answer: { body: { presentationId: 1CoPyOfTheTemplate0123456789abcdefg, replies: [{}] } }
+result: { id: 1CoPyOfTheTemplate0123456789abcdefg, moved: true }

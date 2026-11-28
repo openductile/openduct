@@ -1,0 +1,12 @@
+description: A booking Calendly sends as it is made, signed with the subscription's key
+trigger: new_booking
+workflow: wf1
+credential: { token: cal_1, "webhook_secret@wf1": a3f1c0ffee }
+delivery:
+  headers: { calendly-webhook-signature: "t=1700000000,v1=ee522965690429bec4bc227f7181a068785bdbeb72f5887d85e4ab51c928af29" }
+  body: '{"event":"invitee.created","created_at":"2026-11-27T10:00:00.000000Z","payload":{"uri":"https://api.calendly.com/scheduled_events/E1/invitees/I1","email":"ann@example.com","name":"Ann","event":"https://api.calendly.com/scheduled_events/E1"}}'
+  at: 1700000060
+runs:
+  - event: invitee.created
+    invitee: { uri: "https://api.calendly.com/scheduled_events/E1/invitees/I1", email: ann@example.com, name: Ann, event: "https://api.calendly.com/scheduled_events/E1" }
+ids: ["https://api.calendly.com/scheduled_events/E1/invitees/I1#invitee.created"]

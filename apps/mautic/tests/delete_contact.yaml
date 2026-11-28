@@ -1,0 +1,11 @@
+description: "A contact deleted"
+action: delete_contact
+credential: {"site_url": "https://mautic.example.com", "username": "admin", "password": "pw-test"}
+input: {"contact_id": 48}
+exchanges:
+  - sent:
+      method: DELETE
+      url: "https://mautic.example.com/api/contacts/48/delete"
+      headers: {"authorization": "Basic YWRtaW46cHctdGVzdA=="}
+    answer: {"status": 200, "body": {"contact": {"id": 48, "isPublished": true, "dateAdded": "2026-11-26T09:00:00+00:00", "dateModified": "2026-11-27T10:00:00+00:00", "points": 0, "tags": [], "fields": {"core": {"firstname": {"alias": "firstname", "value": "Cy"}}, "all": {"id": 48, "firstname": "Cy", "lastname": "Park", "email": "cy@example.com", "company": "Contoso Example", "phone": null}}}}}
+result: {"deleted": true}

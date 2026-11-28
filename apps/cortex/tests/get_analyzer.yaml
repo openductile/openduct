@@ -1,0 +1,11 @@
+description: "One analyzer"
+action: get_analyzer
+credential: { base_url: "https://cortex.example.com:9001", api_key: test-key }
+input: { analyzer_id: 220483fde9608c580fb6a2508ff3d2d3 }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://cortex.example.com:9001/api/analyzer/220483fde9608c580fb6a2508ff3d2d3"
+    answer:
+      body: { id: 220483fde9608c580fb6a2508ff3d2d3, name: Abuse_Finder_3_0, version: "3.0", dataTypeList: [ip, domain, fqdn, url, mail], jobCache: 10 }
+result: { id: 220483fde9608c580fb6a2508ff3d2d3, name: Abuse_Finder_3_0, version: "3.0", dataTypeList: [ip, domain, fqdn, url, mail], jobCache: 10 }

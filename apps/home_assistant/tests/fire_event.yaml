@@ -1,0 +1,11 @@
+description: An event fired for automations waiting on it
+action: fire_event
+credential: { url: "http://home.example:8123", token: ha-test-token }
+input: { event_type: order_shipped, data: { order: A-1042 } }
+exchanges:
+  - sent:
+      method: POST
+      url: "http://home.example:8123/api/events/order_shipped"
+      body: { order: A-1042 }
+    answer: { status: 200, body: { message: Event order_shipped fired. } }
+result: { message: Event order_shipped fired. }

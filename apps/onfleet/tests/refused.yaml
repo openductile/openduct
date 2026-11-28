@@ -1,0 +1,15 @@
+description: 'Onfleet refuses: the step fails in its words'
+action: get_organization
+credential:
+  api_key: test-key
+exchanges:
+- answer:
+    status: 401
+    body:
+      code: InvalidCredentials
+      message:
+        error: 1102
+        message: The API key provided is invalid.
+        cause: The API key provided is not valid.
+        request: f133921e-89e2-4303-9d53-7f02e7f6a752
+error: 'Onfleet answered 401: The API key provided is invalid. The API key provided is not valid.'

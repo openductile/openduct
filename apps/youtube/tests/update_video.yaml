@@ -1,0 +1,11 @@
+action: update_video
+credential: { access_token: ya29.a0 }
+input: { video_id: v1, title: Our winter collection, category_id: "22", description: Totes and caps for the cold., tags: [winter, tote] }
+exchanges:
+  - sent:
+      method: PUT
+      url: https://www.googleapis.com/youtube/v3/videos
+      query: { part: snippet }
+      body: { id: v1, snippet: { title: Our winter collection, categoryId: "22", description: Totes and caps for the cold., tags: [winter, tote] } }
+    answer: { body: { id: v1, snippet: { title: Our winter collection } } }
+result: { id: v1, snippet: { title: Our winter collection } }

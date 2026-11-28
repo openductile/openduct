@@ -1,0 +1,17 @@
+description: A public link to a file, with a password and an end date, on the Nextcloud's own address
+action: create_share
+credential: { url: "https://cloud.example.com", username: ann, password: app-pass-1 }
+input: { path: /Invoices/2026-11.pdf, password: s3cret-link, expire_date: "2026-12-31" }
+exchanges:
+  - sent:
+      method: POST
+      url: "https://cloud.example.com/ocs/v2.php/apps/files_sharing/api/v1/shares"
+      headers: { authorization: "Basic YW5uOmFwcC1wYXNzLTE=", ocs-apirequest: "true", accept: application/json }
+      body: { path: /Invoices/2026-11.pdf, shareType: 3, password: s3cret-link, expireDate: "2026-12-31" }
+    answer:
+      status: 200
+      body:
+        ocs:
+          meta: { status: ok, statuscode: 200, message: OK }
+          data: { id: "42", share_type: 3, path: /Invoices/2026-11.pdf, item_type: file, mimetype: application/pdf, permissions: 1, url: "https://cloud.example.com/s/AbCdEf123", token: AbCdEf123, expiration: "2026-12-31 00:00:00", uid_owner: ann, stime: 1795600000 }
+result: { id: "42", share_type: 3, path: /Invoices/2026-11.pdf, item_type: file, mimetype: application/pdf, permissions: 1, url: "https://cloud.example.com/s/AbCdEf123", token: AbCdEf123, expiration: "2026-12-31 00:00:00", uid_owner: ann, stime: 1795600000 }

@@ -1,0 +1,15 @@
+description: Without a key - QuickChart's free use - no key is sent at all
+action: create_chart_link
+credential: { api_key: "" }
+input:
+  chart: "{type:'pie',data:{labels:['Paid','Unpaid'],datasets:[{data:[8,2]}]}}"
+exchanges:
+  - sent:
+      method: POST
+      url: https://quickchart.io/chart/create
+      query: {}
+      body: { chart: "{type:'pie',data:{labels:['Paid','Unpaid'],datasets:[{data:[8,2]}]}}" }
+    answer:
+      status: 200
+      body: { success: true, url: "https://quickchart.io/chart/render/zf-def456example" }
+result: { success: true, url: "https://quickchart.io/chart/render/zf-def456example" }

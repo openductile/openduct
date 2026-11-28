@@ -1,0 +1,14 @@
+description: A card with text above it, through a space's webhook
+action: send_card
+credential: { url: "https://chat.googleapis.com/v1/spaces/AAA/messages?key=k&token=t" }
+input:
+  text: New order
+  card: { header: { title: Order A-1 }, sections: [{ widgets: [{ textParagraph: { text: "Total: 120.00" } }] }] }
+exchanges:
+  - sent:
+      method: POST
+      url: "https://chat.googleapis.com/v1/spaces/AAA/messages?key=k&token=t"
+      query: {}
+      body: { text: New order, cardsV2: [{ cardId: card, card: { header: { title: Order A-1 }, sections: [{ widgets: [{ textParagraph: { text: "Total: 120.00" } }] }] } }] }
+    answer: { body: { name: spaces/AAA/messages/m4, cardsV2: [{ cardId: card }], createTime: "2026-11-23T10:01:00Z" } }
+result: { name: spaces/AAA/messages/m4, cardsV2: [{ cardId: card }], createTime: "2026-11-23T10:01:00Z" }

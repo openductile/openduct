@@ -1,0 +1,17 @@
+description: Every page of forms, followed by the pagination Webflow gives
+action: list_forms
+credential: { token: test-token }
+input: { site_id: site_1 }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://api.webflow.com/v2/sites/site_1/forms"
+      query: { limit: "100" }
+      headers: { authorization: "Bearer test-token" }
+    answer: { status: 200, body: { forms: [{ id: frm_1, displayName: Contact Us, pageName: Contact }], pagination: { limit: 1, offset: 0, total: 2 } } }
+  - sent:
+      method: GET
+      url: "https://api.webflow.com/v2/sites/site_1/forms"
+      query: { limit: "100", offset: "1" }
+    answer: { status: 200, body: { forms: [{ id: frm_2, displayName: Newsletter, pageName: Home }], pagination: { limit: 1, offset: 1, total: 2 } } }
+result: [{ id: frm_1, displayName: Contact Us, pageName: Contact }, { id: frm_2, displayName: Newsletter, pageName: Home }]

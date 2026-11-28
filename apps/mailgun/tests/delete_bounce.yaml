@@ -1,0 +1,11 @@
+description: "A bounce cleared"
+action: delete_bounce
+credential: {"api_key": "key-test", "domain": "mg.example.com"}
+input: {"address": "zed@example.com"}
+exchanges:
+  - sent:
+      method: DELETE
+      url: "https://api.mailgun.net/v3/mg.example.com/bounces/zed@example.com"
+      headers: {"authorization": "Basic YXBpOmtleS10ZXN0"}
+    answer: {"status": 200, "body": {"message": "Bounced addresses for this domain have been removed", "address": "zed@example.com"}}
+result: {"message": "Bounced addresses for this domain have been removed", "address": "zed@example.com"}

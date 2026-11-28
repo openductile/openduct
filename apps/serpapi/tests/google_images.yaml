@@ -1,0 +1,16 @@
+description: Large photos for a search
+action: google_images
+credential: { api_key: serp_test_key_1 }
+input: { q: terracotta pots, tbs: "itp:photos,isz:l" }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://serpapi.com/search"
+      query: { api_key: serp_test_key_1, engine: google_images, q: terracotta pots, tbs: "itp:photos,isz:l" }
+    answer:
+      status: 200
+      body:
+        images_results:
+          - { position: 1, title: Terracotta pots in a row, link: "https://pots.example/terracotta", source: pots.example, original: "https://images.example.com/terracotta.jpg", original_width: 2000, original_height: 1333, thumbnail: "https://images.example.com/t.jpg", is_product: false }
+result:
+  - { position: 1, title: Terracotta pots in a row, link: "https://pots.example/terracotta", source: pots.example, original: "https://images.example.com/terracotta.jpg", original_width: 2000, original_height: 1333, thumbnail: "https://images.example.com/t.jpg", is_product: false }

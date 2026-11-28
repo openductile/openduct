@@ -1,0 +1,10 @@
+description: A check that asks back for markup is refused, not echoed
+trigger: new_message
+workflow: wf1
+sign_in: teams
+credential: { access_token: eyJ0.teams }
+delivery:
+  query: "validationToken=%3Cscript%3Ealert(1)%3C%2Fscript%3E"
+  body: ""
+  at: 1700000000
+refused: "400 the address check asks back for what is not a plain token"

@@ -1,0 +1,18 @@
+description: A customer added, as Help Scout sends it, signed
+trigger: customer_event
+workflow: wf2
+credential: {access_token: hs-test-token, webhook_secret@wf2: c0ffee00c0ffee00c0ffee00c0ffee00c0ffee00c0ffee00}
+delivery:
+  headers: {x-helpscout-event: customer.created, x-helpscout-signature: ++djs8eh5+dptRJyIHmvg/c5goI=}
+  body: '{"id":29419,"firstName":"Bob","lastName":"Example","createdAt":"2026-11-27T10:00:00Z","_embedded":{"emails":[{"id":1,"type":"work","value":"bob@example.com"}]}}'
+  at: 1764237600
+runs:
+- event: customer.created
+  customer:
+    id: 29419
+    firstName: Bob
+    lastName: Example
+    createdAt: '2026-11-27T10:00:00Z'
+    _embedded:
+      emails:
+      - {id: 1, type: work, value: bob@example.com}

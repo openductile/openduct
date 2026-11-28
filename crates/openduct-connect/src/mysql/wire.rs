@@ -33,7 +33,7 @@ const SECURE_CONNECTION: u32 = 0x8000;
 const MULTI_RESULTS: u32 = 0x2_0000;
 const PLUGIN_AUTH: u32 = 0x8_0000;
 const PLUGIN_AUTH_LENENC_DATA: u32 = 0x20_0000;
-const DEPRECATE_EOF: u32 = 0x100_0000;
+pub(super) const DEPRECATE_EOF: u32 = 0x100_0000;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(super) enum Failure {
@@ -59,6 +59,8 @@ pub(super) struct Options {
     pub(super) username: String,
     pub(super) password: Option<String>,
     pub(super) tls: Option<Arc<rustls::ClientConfig>>,
+    /// The address to connect to, when the caller resolved the host to check where it leads. // sql databases
+    pub(super) address: Option<std::net::SocketAddr>,
 }
 
 impl std::fmt::Debug for Options {
@@ -91,7 +93,7 @@ pub(super) struct Connection {
     /// `the MySQL server at host:port`, for messages.
     pub(super) what: String,
     pub(super) server_version: String,
-    capabilities: u32,
+    pub(super) capabilities: u32,
     /// The columns of a result still being read a row at a time.
     reading: Option<Vec<ResultColumn>>,
 }
@@ -114,7 +116,7 @@ fn error_code(body: &[u8]) -> Option<u16> {
 }
 
 /// An error packet's code and message, as words for a person.
-fn server_error(what: &str, mut body: Bytes) -> Failure {
+pub(super) fn server_error(what: &str, mut body: Bytes) -> Failure {
     if body.remaining() < 3 {
         return Failure::Lasting(format!("{what} refused, without saying why"));
     }
@@ -143,9 +145,12 @@ impl Connection {
     }
 
     async fn handshake(o: &Options, what: String) -> Result<Self, Failure> {
-        let tcp = TcpStream::connect((o.host.as_str(), o.port))
-            .await
-            .map_err(|e| Failure::Passing(format!("cannot connect to {what}: {e}")))?;
+        // sql databases: the address the caller checked, when it gave one.
+        let tcp = match o.address {
+            Some(address) => TcpStream::connect(address).await,
+            None => TcpStream::connect((o.host.as_str(), o.port)).await,
+        }
+        .map_err(|e| Failure::Passing(format!("cannot connect to {what}: {e}")))?;
         let _ = tcp.set_nodelay(true);
         let mut conn = Self {
             stream: Box::new(tcp),
@@ -289,7 +294,7 @@ impl Connection {
     }
 
     /// The next whole packet's payload (packets of 16 MiB - 1 bytes continue in the next). Safe to stop part way.
-    async fn read_packet(&mut self) -> Result<Bytes, Failure> {
+    pub(super) async fn read_packet(&mut self) -> Result<Bytes, Failure> {
         let mut whole = BytesMut::new();
         loop {
             let part = self.read_part().await?;
@@ -370,7 +375,7 @@ impl Connection {
     }
 
     /// Send a command (its first byte is the command).
-    async fn command(&mut self, payload: &[u8]) -> Result<(), Failure> {
+    pub(super) async fn command(&mut self, payload: &[u8]) -> Result<(), Failure> {
         self.sequence = 0;
         self.write_packet(payload).await
     }
@@ -489,7 +494,7 @@ impl Connection {
         }
     }
 
-    fn not_understood(&self) -> Failure {
+    pub(super) fn not_understood(&self) -> Failure {
         Failure::Lasting(format!("{} sent something that is not understood", self.what))
     }
 }
@@ -616,7 +621,7 @@ pub(super) fn take_lenenc_bytes(b: &mut Bytes) -> Option<Bytes> {
     (b.remaining() >= length).then(|| b.split_to(length))
 }
 
-fn put_lenenc_bytes(out: &mut Vec<u8>, bytes: &[u8]) {
+pub(super) fn put_lenenc_bytes(out: &mut Vec<u8>, bytes: &[u8]) {
     let n = bytes.len();
     if n < 251 {
         out.push(n as u8);

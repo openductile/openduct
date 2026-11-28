@@ -1,0 +1,886 @@
+# Copyright 2026 Ductile AI, Inc
+# SPDX-License-Identifier: Apache-2.0
+# Box: made by `openduct app from-openapi` from https://github.com/box/box-openapi/blob/c9699f404395/openapi.json (Apache-2.0 licence) (Box Platform API 2024.0, OpenAPI 3.0).
+# Checked as made. Change what you like, then run `openduct app check` and `openduct app test` again.
+app: box
+name: Box
+category: files
+description: "Box Platform provides functionality to provide access to content stored within Box."
+docs: "https://developer.box.com"
+hosts: [api.box.com]
+base_url: "https://api.box.com/2.0"
+sign_in:
+  - id: box
+    label: "Sign in with Box"
+    oauth2:
+      authorize: "https://account.box.com/api/oauth2/authorize"
+      token: "https://api.box.com/oauth2/token"
+      scopes: []
+    headers: { Authorization: "Bearer {{ credential.access_token }}" }
+actions:
+  list_items:
+    label: "List trashed items"
+    description: "Retrieves the files and folders that have been moved to the trash."
+    method: GET
+    path: "/folders/trash/items"
+    inputs:
+      - { name: offset, label: "The offset of the item at which to begin the response", kind: number }
+      - name: usemarker
+        label: "Specifies whether to use marker-based pagination instead of offset-based…"
+        kind: boolean
+      - { name: direction, label: "The direction to sort results in" }
+      - { name: sort, label: "Defines the second attribute by which items are sorted" }
+    query:
+      offset: "{{ input.offset }}"
+      usemarker: "{{ input.usemarker }}"
+      direction: "{{ input.direction }}"
+      sort: "{{ input.sort }}"
+      limit: "100"
+    items: value.entries
+    next: "value.next_marker == null || value.next_marker == '' ? null : {'marker': value.next_marker}"
+  list_metadata_templates:
+    label: "Find metadata template by instance ID"
+    description: "Finds a metadata template by searching for the ID of an instance of the template."
+    method: GET
+    path: "/metadata_templates"
+    inputs:
+      - name: metadata_instance_id
+        label: "The ID of an instance of the metadata template to find"
+        required: true
+    query: { metadata_instance_id: "{{ input.metadata_instance_id }}", limit: "100" }
+    items: value.entries
+    next: "value.next_marker == null || value.next_marker == '' ? null : {'marker': value.next_marker}"
+    output:
+      id: text
+      type: text
+      scope: text
+      templateKey: text
+      displayName: text
+      hidden: boolean
+      fields: list
+      copyInstanceOnItemCopy: boolean
+  list_users:
+    label: "List enterprise users"
+    description: "Returns a list of all users for the Enterprise along with their user_id, public_name, and login."
+    method: GET
+    path: "/users"
+    inputs:
+      - name: filter_term
+        label: "Limits the results to only users who's name or login start with the search term"
+      - { name: user_type, label: "Limits the results to the kind of user specified" }
+      - name: external_app_user_id
+        label: "Limits the results to app users with the given external_app_user_id value"
+      - { name: offset, label: "The offset of the item at which to begin the response", kind: number }
+      - name: usemarker
+        label: "Specifies whether to use marker-based pagination instead of offset-based…"
+        kind: boolean
+    query:
+      filter_term: "{{ input.filter_term }}"
+      user_type: "{{ input.user_type }}"
+      external_app_user_id: "{{ input.external_app_user_id }}"
+      offset: "{{ input.offset }}"
+      usemarker: "{{ input.usemarker }}"
+      limit: "100"
+    items: value.entries
+    next: "value.next_marker == null || value.next_marker == '' ? null : {'marker': value.next_marker}"
+    output:
+      id: text
+      type: text
+      name: text
+      login: text
+      created_at: text
+      modified_at: text
+      language: text
+      timezone: text
+      space_amount: number
+      space_used: number
+      max_upload_size: number
+      status: text
+      job_title: text
+      phone: text
+      address: text
+      avatar_url: text
+      notification_email: record
+      role: text
+      tracking_codes: list
+      can_see_managed_users: boolean
+      is_sync_enabled: boolean
+      is_external_collab_restricted: boolean
+      is_exempt_from_device_limits: boolean
+      is_exempt_from_login_verification: boolean
+      is_collaborated_content_available_when_owner_inactive: boolean
+      enterprise: record
+      my_tags: list
+      hostname: text
+      is_platform_access_only: boolean
+      external_app_user_id: text
+  list_app_item_associations:
+    label: "List file app item associations"
+    description: "This is a beta feature, which means that its availability might be limited."
+    method: GET
+    path: "/files/{{ input.file_id }}/app_item_associations"
+    inputs:
+      - { name: file_id, label: "The unique identifier that represents a file", required: true }
+      - { name: application_type, label: "If given, only return app items for this application type" }
+    query: { application_type: "{{ input.application_type }}", limit: "100" }
+    items: value.entries
+    next: "value.next_marker == null || value.next_marker == '' ? null : {'marker': value.next_marker}"
+    output: { id: text, type: text, app_item: record, item: record }
+  create_upload_session:
+    label: "Create upload session"
+    description: "Creates an upload session for a new file."
+    write: true
+    method: POST
+    path: "/files/upload_sessions"
+    inputs:
+      - { name: folder_id, label: "The ID of the folder to upload the new file to", required: true }
+      - name: file_size
+        label: "The total number of bytes of the file to be uploaded"
+        required: true
+        kind: number
+      - { name: file_name, label: "The name of new file", required: true }
+    send:
+      folder_id: "{{ input.folder_id }}"
+      file_size: "{{ input.file_size }}"
+      file_name: "{{ input.file_name }}"
+    output:
+      id: text
+      type: text
+      session_expires_at: text
+      part_size: number
+      total_parts: number
+      num_parts_processed: number
+      session_endpoints: record
+  create_folder:
+    label: "Create folder"
+    description: "Creates a new empty folder within the specified parent folder."
+    write: true
+    method: POST
+    path: "/folders"
+    inputs:
+      - { name: name, label: "The name for the new folder", required: true }
+      - name: parent
+        label: "The parent folder to create the new folder within"
+        required: true
+        kind: record
+      - { name: folder_upload_email, label: "The Write Folder Upload Email object", kind: record }
+      - { name: sync_state, label: "Specifies whether a folder should be synced to a user's device or not" }
+    send:
+      name: "{{ input.name }}"
+      parent: "{{ input.parent }}"
+      folder_upload_email: "{{ input.folder_upload_email }}"
+      sync_state: "{{ input.sync_state }}"
+    output:
+      id: text
+      etag: text
+      type: text
+      sequence_id: text
+      name: text
+      created_at: text
+      modified_at: text
+      description: text
+      size: number
+      path_collection: record
+      created_by: record
+      modified_by: record
+      trashed_at: text
+      purged_at: text
+      content_created_at: text
+      content_modified_at: text
+      owned_by: record
+      shared_link: record
+      folder_upload_email: record
+      parent: record
+      item_status: text
+      item_collection: record
+      sync_state: text
+      has_collaborations: boolean
+      permissions: record
+      tags: list
+      can_non_owners_invite: boolean
+      is_externally_owned: boolean
+      metadata: record
+      is_collaboration_restricted_to_enterprise: boolean
+      allowed_shared_link_access_levels: list
+      allowed_invitee_roles: list
+      watermark_info: record
+      is_accessible_via_shared_link: boolean
+      can_non_owners_view_collaborators: boolean
+      classification: record
+      is_associated_with_app_item: boolean
+      collections: list
+  create_schema_classification:
+    label: "Add initial classifications"
+    description: "When an enterprise does not yet have any classifications, this API call initializes the classification template with an initial set of classifications."
+    write: true
+    method: POST
+    path: "/metadata_templates/schema#classifications"
+    inputs:
+      - name: hidden
+        label: "Determines if the classification template is hidden or available on web and…"
+        kind: boolean
+        description: "Determines if the classification template is hidden or available on web and mobile devices."
+      - name: copy_instance_on_item_copy
+        label: "Determines if classifications are copied along when the file or folder is…"
+        kind: boolean
+      - name: fields
+        label: "The classification template requires exactly one field, which holds all the…"
+        required: true
+        kind: list
+        description: "The classification template requires exactly one field, which holds all the valid classification values."
+    send:
+      scope: enterprise
+      templateKey: securityClassification-6VMVochwUWo
+      displayName: Classification
+      hidden: "{{ input.hidden }}"
+      copyInstanceOnItemCopy: "{{ input.copy_instance_on_item_copy }}"
+      fields: "{{ input.fields }}"
+    output:
+      id: text
+      type: text
+      scope: text
+      templateKey: text
+      displayName: text
+      hidden: boolean
+      copyInstanceOnItemCopy: boolean
+      fields: list
+  create_user:
+    label: "Create user"
+    description: "Creates a new managed user in an enterprise."
+    write: true
+    method: POST
+    path: "/users"
+    inputs:
+      - { name: name, label: "The name of the user", required: true }
+      - name: login
+        label: "The email address the user uses to log in Required, unless…"
+        description: "The email address the user uses to log in Required, unless is_platform_access_only is set to true."
+      - { name: is_platform_access_only, label: "Specifies that the user is an app user", kind: boolean }
+      - { name: role, label: "The user’s enterprise role" }
+      - name: language
+        label: "The language of the user, formatted in modified version of the ISO 639-1 format"
+      - { name: is_sync_enabled, label: "Whether the user can use Box Sync", kind: boolean }
+      - { name: job_title, label: "The user’s job title" }
+      - { name: phone, label: "The user’s phone number" }
+      - { name: address, label: "The user’s address" }
+      - { name: space_amount, label: "The user’s total available space in bytes", kind: number }
+      - name: tracking_codes
+        label: "Tracking codes allow an admin to generate reports from the admin console and…"
+        kind: list
+        description: "Tracking codes allow an admin to generate reports from the admin console and assign an attribute to a specific group of users."
+      - name: can_see_managed_users
+        label: "Whether the user can see other enterprise users in their contact list"
+        kind: boolean
+      - { name: timezone, label: "The user's timezone" }
+      - name: is_external_collab_restricted
+        label: "Whether the user is allowed to collaborate with users outside their enterprise"
+        kind: boolean
+      - name: is_exempt_from_device_limits
+        label: "Whether to exempt the user from enterprise device limits"
+        kind: boolean
+      - name: is_exempt_from_login_verification
+        label: "Whether the user must use two-factor authentication"
+        kind: boolean
+      - { name: status, label: "The user's account status" }
+      - name: external_app_user_id
+        label: "An external identifier for an app user, which can be used to look up the user"
+    send:
+      name: "{{ input.name }}"
+      login: "{{ input.login }}"
+      is_platform_access_only: "{{ input.is_platform_access_only }}"
+      role: "{{ input.role }}"
+      language: "{{ input.language }}"
+      is_sync_enabled: "{{ input.is_sync_enabled }}"
+      job_title: "{{ input.job_title }}"
+      phone: "{{ input.phone }}"
+      address: "{{ input.address }}"
+      space_amount: "{{ input.space_amount }}"
+      tracking_codes: "{{ input.tracking_codes }}"
+      can_see_managed_users: "{{ input.can_see_managed_users }}"
+      timezone: "{{ input.timezone }}"
+      is_external_collab_restricted: "{{ input.is_external_collab_restricted }}"
+      is_exempt_from_device_limits: "{{ input.is_exempt_from_device_limits }}"
+      is_exempt_from_login_verification: "{{ input.is_exempt_from_login_verification }}"
+      status: "{{ input.status }}"
+      external_app_user_id: "{{ input.external_app_user_id }}"
+    output:
+      id: text
+      type: text
+      name: text
+      login: text
+      created_at: text
+      modified_at: text
+      language: text
+      timezone: text
+      space_amount: number
+      space_used: number
+      max_upload_size: number
+      status: text
+      job_title: text
+      phone: text
+      address: text
+      avatar_url: text
+      notification_email: record
+      role: text
+      tracking_codes: list
+      can_see_managed_users: boolean
+      is_sync_enabled: boolean
+      is_external_collab_restricted: boolean
+      is_exempt_from_device_limits: boolean
+      is_exempt_from_login_verification: boolean
+      is_collaborated_content_available_when_owner_inactive: boolean
+      enterprise: record
+      my_tags: list
+      hostname: text
+      is_platform_access_only: boolean
+      external_app_user_id: text
+  create_metadata_taxonomy:
+    label: "Create metadata taxonomy"
+    description: "Creates a new metadata taxonomy that can be used in metadata templates."
+    write: true
+    method: POST
+    path: "/metadata_taxonomies"
+    inputs:
+      - { name: key, label: "The taxonomy key" }
+      - { name: display_name, label: "The display name of the taxonomy", required: true }
+      - { name: namespace, label: "The namespace of the metadata taxonomy to create", required: true }
+    send:
+      key: "{{ input.key }}"
+      displayName: "{{ input.display_name }}"
+      namespace: "{{ input['namespace'] }}"
+    output: { id: text, key: text, displayName: text, namespace: text, levels: list }
+  list_nodes:
+    label: "List metadata taxonomy nodes"
+    description: "Used to retrieve metadata taxonomy nodes based on the parameters specified."
+    method: GET
+    path: "/metadata_taxonomies/{{ input['namespace'] }}/{{ input.taxonomy_key }}/nodes"
+    inputs:
+      - { name: namespace, label: "The namespace of the metadata taxonomy", required: true }
+      - { name: taxonomy_key, label: "The key of the metadata taxonomy", required: true }
+      - { name: query, label: "Query text to search for the taxonomy nodes" }
+      - name: include_total_result_count
+        label: "When set to true this provides the total number of nodes that matched the query"
+        kind: boolean
+    query:
+      query: "{{ input.query }}"
+      include-total-result-count: "{{ input.include_total_result_count }}"
+      limit: "100"
+    items: value.entries
+    next: "value.next_marker == null || value.next_marker == '' ? null : {'marker': value.next_marker}"
+    output: { id: text, displayName: text, level: number, parentId: text, nodePath: list, ancestors: list }
+  get_file:
+    label: "Get file information"
+    description: "Retrieves the details about a file."
+    method: GET
+    path: "/files/{{ input.file_id }}"
+    inputs:
+      - { name: file_id, label: "The unique identifier that represents a file", required: true }
+      - { name: if_none_match, label: "Ensures an item is only returned if it has changed" }
+      - { name: boxapi, label: "The URL, and optional password, for the shared link of this item" }
+      - { name: x_rep_hints, label: "A header required to request specific representations of a file" }
+    headers:
+      if-none-match: "{{ input.if_none_match }}"
+      boxapi: "{{ input.boxapi }}"
+      x-rep-hints: "{{ input.x_rep_hints }}"
+    output:
+      id: text
+      etag: text
+      type: text
+      sequence_id: text
+      name: text
+      sha1: text
+      file_version: record
+      description: text
+      size: number
+      path_collection: record
+      created_at: text
+      modified_at: text
+      trashed_at: text
+      purged_at: text
+      content_created_at: text
+      content_modified_at: text
+      created_by: record
+      modified_by: record
+      owned_by: record
+      shared_link: record
+      parent: record
+      item_status: text
+      version_number: text
+      comment_count: number
+      permissions: record
+      tags: list
+      lock: record
+      extension: text
+      is_package: boolean
+      expiring_embed_link: record
+      watermark_info: record
+      is_accessible_via_shared_link: boolean
+      allowed_invitee_roles: list
+      is_externally_owned: boolean
+      has_collaborations: boolean
+      metadata: record
+      expires_at: text
+      representations: record
+      classification: record
+      uploader_display_name: text
+      disposition_at: text
+      shared_link_permission_options: list
+      is_associated_with_app_item: boolean
+      collections: list
+      is_download_available: boolean
+      download_url: text
+      authenticated_download_url: text
+      allowed_shared_link_access_levels: list
+  get_folder:
+    label: "Get folder information"
+    description: "Retrieves details for a folder, including the first 100 entries in the folder."
+    method: GET
+    path: "/folders/{{ input.folder_id }}"
+    inputs:
+      - { name: folder_id, label: "The unique identifier that represent a folder", required: true }
+      - { name: if_none_match, label: "Ensures an item is only returned if it has changed" }
+      - { name: boxapi, label: "The URL, and optional password, for the shared link of this item" }
+      - { name: sort, label: "Defines the second attribute by which items are sorted" }
+      - { name: direction, label: "The direction to sort results in" }
+      - { name: offset, label: "The offset of the item at which to begin the response", kind: number }
+      - { name: limit, label: "The maximum number of items to return per page", kind: number }
+    query:
+      sort: "{{ input.sort }}"
+      direction: "{{ input.direction }}"
+      offset: "{{ input.offset }}"
+      limit: "{{ input.limit }}"
+    headers: { if-none-match: "{{ input.if_none_match }}", boxapi: "{{ input.boxapi }}" }
+    output:
+      id: text
+      etag: text
+      type: text
+      sequence_id: text
+      name: text
+      created_at: text
+      modified_at: text
+      description: text
+      size: number
+      path_collection: record
+      created_by: record
+      modified_by: record
+      trashed_at: text
+      purged_at: text
+      content_created_at: text
+      content_modified_at: text
+      owned_by: record
+      shared_link: record
+      folder_upload_email: record
+      parent: record
+      item_status: text
+      item_collection: record
+      sync_state: text
+      has_collaborations: boolean
+      permissions: record
+      tags: list
+      can_non_owners_invite: boolean
+      is_externally_owned: boolean
+      metadata: record
+      is_collaboration_restricted_to_enterprise: boolean
+      allowed_shared_link_access_levels: list
+      allowed_invitee_roles: list
+      watermark_info: record
+      is_accessible_via_shared_link: boolean
+      can_non_owners_view_collaborators: boolean
+      classification: record
+      is_associated_with_app_item: boolean
+      collections: list
+  get_metadata_template:
+    label: "Get metadata template by ID"
+    description: "Retrieves a metadata template by its ID."
+    method: GET
+    path: "/metadata_templates/{{ input.template_id }}"
+    inputs: [{ name: template_id, label: "The ID of the template", required: true }]
+    output:
+      id: text
+      type: text
+      scope: text
+      templateKey: text
+      displayName: text
+      hidden: boolean
+      fields: list
+      copyInstanceOnItemCopy: boolean
+  get_user:
+    label: "Get user"
+    description: "Retrieves information about a user in the enterprise."
+    method: GET
+    path: "/users/{{ input.user_id }}"
+    inputs: [{ name: user_id, label: "The ID of the user", required: true }]
+    output:
+      id: text
+      type: text
+      name: text
+      login: text
+      created_at: text
+      modified_at: text
+      language: text
+      timezone: text
+      space_amount: number
+      space_used: number
+      max_upload_size: number
+      status: text
+      job_title: text
+      phone: text
+      address: text
+      avatar_url: text
+      notification_email: record
+      role: text
+      tracking_codes: list
+      can_see_managed_users: boolean
+      is_sync_enabled: boolean
+      is_external_collab_restricted: boolean
+      is_exempt_from_device_limits: boolean
+      is_exempt_from_login_verification: boolean
+      is_collaborated_content_available_when_owner_inactive: boolean
+      enterprise: record
+      my_tags: list
+      hostname: text
+      is_platform_access_only: boolean
+      external_app_user_id: text
+  get_metadata_taxonomy:
+    label: "Get metadata taxonomies for namespace"
+    description: "Used to retrieve all metadata taxonomies in a namespace."
+    method: GET
+    path: "/metadata_taxonomies/{{ input['namespace'] }}"
+    inputs:
+      - { name: namespace, label: "The namespace of the metadata taxonomy", required: true }
+      - { name: marker, label: "Defines the position marker at which to begin returning results" }
+      - { name: limit, label: "The maximum number of items to return per page", kind: number }
+    query: { marker: "{{ input.marker }}", limit: "{{ input.limit }}" }
+    output: { limit: number, next_marker: text, prev_marker: text, entries: list }
+  update_schema_add:
+    label: "Add classification"
+    description: "Adds one or more new classifications to the list of classifications available to the enterprise."
+    write: true
+    method: PUT
+    path: "/metadata_templates/enterprise/securityClassification-6VMVochwUWo/schema#add"
+    inputs:
+      - { name: body, label: "The whole body of the request, as the API reference describes it", kind: list }
+    send: "{{ input.body }}"
+    output:
+      id: text
+      type: text
+      scope: text
+      templateKey: text
+      displayName: text
+      hidden: boolean
+      copyInstanceOnItemCopy: boolean
+      fields: list
+  get_me:
+    label: "Get current user"
+    description: "Retrieves information about the user who is currently authenticated."
+    method: GET
+    path: "/users/me"
+    output:
+      id: text
+      type: text
+      name: text
+      login: text
+      created_at: text
+      modified_at: text
+      language: text
+      timezone: text
+      space_amount: number
+      space_used: number
+      max_upload_size: number
+      status: text
+      job_title: text
+      phone: text
+      address: text
+      avatar_url: text
+      notification_email: record
+      role: text
+      tracking_codes: list
+      can_see_managed_users: boolean
+      is_sync_enabled: boolean
+      is_external_collab_restricted: boolean
+      is_exempt_from_device_limits: boolean
+      is_exempt_from_login_verification: boolean
+      is_collaborated_content_available_when_owner_inactive: boolean
+      enterprise: record
+      my_tags: list
+      hostname: text
+      is_platform_access_only: boolean
+      external_app_user_id: text
+  update_file:
+    label: "Restore file"
+    description: "Restores a file that has been moved to the trash."
+    write: true
+    method: POST
+    path: "/files/{{ input.file_id }}"
+    inputs:
+      - { name: file_id, label: "The unique identifier that represents a file", required: true }
+      - { name: name, label: "An optional new name for the file" }
+      - { name: parent, label: "The parent for this item", kind: record }
+    send: { name: "{{ input.name }}", parent: "{{ input.parent }}" }
+    output:
+      id: text
+      etag: text
+      type: text
+      sequence_id: text
+      name: text
+      sha1: text
+      file_version: record
+      description: text
+      size: number
+      path_collection: record
+      created_at: text
+      modified_at: text
+      trashed_at: text
+      purged_at: text
+      content_created_at: text
+      content_modified_at: text
+      created_by: record
+      modified_by: record
+      owned_by: record
+      shared_link: text
+      parent: record
+      item_status: text
+  update_folder:
+    label: "Restore folder"
+    description: "Restores a folder that has been moved to the trash."
+    write: true
+    method: POST
+    path: "/folders/{{ input.folder_id }}"
+    inputs:
+      - { name: folder_id, label: "The unique identifier that represent a folder", required: true }
+      - { name: name, label: "An optional new name for the folder" }
+      - { name: parent, label: "The parent for this item", kind: record }
+    send: { name: "{{ input.name }}", parent: "{{ input.parent }}" }
+    output:
+      id: text
+      etag: text
+      type: text
+      sequence_id: text
+      name: text
+      created_at: text
+      modified_at: text
+      description: text
+      size: number
+      path_collection: record
+      created_by: record
+      modified_by: record
+      trashed_at: text
+      purged_at: text
+      content_created_at: text
+      content_modified_at: text
+      owned_by: record
+      shared_link: text
+      folder_upload_email: text
+      parent: record
+      item_status: text
+  update_user:
+    label: "Update user"
+    description: "Updates a managed or app user in an enterprise."
+    write: true
+    method: PUT
+    path: "/users/{{ input.user_id }}"
+    inputs:
+      - { name: user_id, label: "The ID of the user", required: true }
+      - name: enterprise
+        label: "Set this to null to roll the user out of the enterprise and make them a free…"
+      - name: notify
+        label: "Whether the user should receive an email when they are rolled out of an…"
+        kind: boolean
+      - { name: name, label: "The name of the user" }
+      - name: login
+        label: "The email address the user uses to log in Note: If the target user's email is…"
+        description: "The email address the user uses to log in Note: If the target user's email is not confirmed, then the primary login address cannot be changed."
+      - { name: role, label: "The user’s enterprise role" }
+      - name: language
+        label: "The language of the user, formatted in modified version of the ISO 639-1 format"
+      - { name: is_sync_enabled, label: "Whether the user can use Box Sync", kind: boolean }
+      - { name: job_title, label: "The user’s job title" }
+      - { name: phone, label: "The user’s phone number" }
+      - { name: address, label: "The user’s address" }
+      - name: tracking_codes
+        label: "Tracking codes allow an admin to generate reports from the admin console and…"
+        kind: list
+        description: "Tracking codes allow an admin to generate reports from the admin console and assign an attribute to a specific group of users."
+      - name: can_see_managed_users
+        label: "Whether the user can see other enterprise users in their contact list"
+        kind: boolean
+      - { name: timezone, label: "The user's timezone" }
+      - name: is_external_collab_restricted
+        label: "Whether the user is allowed to collaborate with users outside their enterprise"
+        kind: boolean
+      - name: is_exempt_from_device_limits
+        label: "Whether to exempt the user from enterprise device limits"
+        kind: boolean
+      - name: is_exempt_from_login_verification
+        label: "Whether the user must use two-factor authentication"
+        kind: boolean
+      - name: is_password_reset_required
+        label: "Whether the user is required to reset their password"
+        kind: boolean
+      - name: is_collaborated_content_available_when
+        label: "Whether collaborators can access content owned by the user when the user is…"
+        kind: boolean
+      - { name: status, label: "The user's account status" }
+      - { name: space_amount, label: "The user’s total available space in bytes", kind: number }
+      - name: notification_email
+        label: "An alternate notification email address to which email notifications are sent"
+        kind: record
+      - name: external_app_user_id
+        label: "An external identifier for an app user, which can be used to look up the user"
+    send:
+      enterprise: "{{ input.enterprise }}"
+      notify: "{{ input.notify }}"
+      name: "{{ input.name }}"
+      login: "{{ input.login }}"
+      role: "{{ input.role }}"
+      language: "{{ input.language }}"
+      is_sync_enabled: "{{ input.is_sync_enabled }}"
+      job_title: "{{ input.job_title }}"
+      phone: "{{ input.phone }}"
+      address: "{{ input.address }}"
+      tracking_codes: "{{ input.tracking_codes }}"
+      can_see_managed_users: "{{ input.can_see_managed_users }}"
+      timezone: "{{ input.timezone }}"
+      is_external_collab_restricted: "{{ input.is_external_collab_restricted }}"
+      is_exempt_from_device_limits: "{{ input.is_exempt_from_device_limits }}"
+      is_exempt_from_login_verification: "{{ input.is_exempt_from_login_verification }}"
+      is_password_reset_required: "{{ input.is_password_reset_required }}"
+      is_collaborated_content_available_when_owner_inactive: "{{ input.is_collaborated_content_available_when }}"
+      status: "{{ input.status }}"
+      space_amount: "{{ input.space_amount }}"
+      notification_email: "{{ input.notification_email }}"
+      external_app_user_id: "{{ input.external_app_user_id }}"
+    output:
+      id: text
+      type: text
+      name: text
+      login: text
+      created_at: text
+      modified_at: text
+      language: text
+      timezone: text
+      space_amount: number
+      space_used: number
+      max_upload_size: number
+      status: text
+      job_title: text
+      phone: text
+      address: text
+      avatar_url: text
+      notification_email: record
+      role: text
+      tracking_codes: list
+      can_see_managed_users: boolean
+      is_sync_enabled: boolean
+      is_external_collab_restricted: boolean
+      is_exempt_from_device_limits: boolean
+      is_exempt_from_login_verification: boolean
+      is_collaborated_content_available_when_owner_inactive: boolean
+      enterprise: record
+      my_tags: list
+      hostname: text
+      is_platform_access_only: boolean
+      external_app_user_id: text
+  get_content:
+    label: "Download file"
+    description: "Returns the contents of a file in binary format."
+    method: GET
+    path: "/files/{{ input.file_id }}/content"
+    inputs:
+      - { name: file_id, label: "The unique identifier that represents a file", required: true }
+      - { name: range, label: "The byte range of the content to download" }
+      - { name: boxapi, label: "The URL, and optional password, for the shared link of this item" }
+      - { name: version, label: "The file version to download" }
+      - name: access_token
+        label: "An optional access token that can be used to pre-authenticate this request,…"
+        description: "An optional access token that can be used to pre-authenticate this request, which means that a download link can be shared with a browser or a third party service without them needing to know how to handle the authentication."
+    query: { version: "{{ input.version }}", access_token: "{{ input.access_token }}" }
+    headers: { range: "{{ input.range }}", boxapi: "{{ input.boxapi }}" }
+  get_folder_trash:
+    label: "Get trashed folder"
+    description: "Retrieves a folder that has been moved to the trash."
+    method: GET
+    path: "/folders/{{ input.folder_id }}/trash"
+    inputs: [{ name: folder_id, label: "The unique identifier that represent a folder", required: true }]
+    output:
+      id: text
+      etag: text
+      type: text
+      sequence_id: text
+      name: text
+      created_at: text
+      modified_at: text
+      description: text
+      size: number
+      path_collection: record
+      created_by: record
+      modified_by: record
+      trashed_at: text
+      purged_at: text
+      content_created_at: text
+      content_modified_at: text
+      owned_by: record
+      shared_link: text
+      folder_upload_email: text
+      parent: record
+      item_status: text
+  update_metadata_taxonomy:
+    label: "Update metadata taxonomy"
+    description: "Updates an existing metadata taxonomy."
+    write: true
+    method: PATCH
+    path: "/metadata_taxonomies/{{ input['namespace'] }}/{{ input.taxonomy_key }}"
+    inputs:
+      - { name: namespace, label: "The namespace of the metadata taxonomy", required: true }
+      - { name: taxonomy_key, label: "The key of the metadata taxonomy", required: true }
+      - { name: display_name, label: "The display name of the taxonomy" }
+    send: { displayName: "{{ input.display_name }}" }
+    output: { id: text, key: text, displayName: text, namespace: text, levels: list }
+  schema_metadata_template:
+    label: "Create metadata template"
+    description: "Creates a new metadata template that can be applied to files and folders."
+    write: true
+    method: POST
+    path: "/metadata_templates/schema"
+    inputs:
+      - { name: scope, label: "The scope of the metadata template to create", required: true }
+      - { name: template_key, label: "A unique identifier for the template" }
+      - { name: display_name, label: "The display name of the template", required: true }
+      - name: hidden
+        label: "Defines if this template is visible in the Box web app UI, or if it is purely…"
+        kind: boolean
+        description: "Defines if this template is visible in the Box web app UI, or if it is purely intended for usage through the API."
+      - name: fields
+        label: "An ordered list of template fields which are part of the template"
+        kind: list
+      - name: copy_instance_on_item_copy
+        label: "Whether or not to copy any metadata attached to a file or folder when it is…"
+        kind: boolean
+    send:
+      scope: "{{ input.scope }}"
+      templateKey: "{{ input.template_key }}"
+      displayName: "{{ input.display_name }}"
+      hidden: "{{ input.hidden }}"
+      fields: "{{ input.fields }}"
+      copyInstanceOnItemCopy: "{{ input.copy_instance_on_item_copy }}"
+    output:
+      id: text
+      type: text
+      scope: text
+      templateKey: text
+      displayName: text
+      hidden: boolean
+      fields: list
+      copyInstanceOnItemCopy: boolean
+  levels_metadata_taxonomy:
+    label: "Create metadata taxonomy levels"
+    description: "Creates new metadata taxonomy levels."
+    write: true
+    method: POST
+    path: "/metadata_taxonomies/{{ input['namespace'] }}/{{ input.taxonomy_key }}/levels"
+    inputs:
+      - { name: namespace, label: "The namespace of the metadata taxonomy", required: true }
+      - { name: taxonomy_key, label: "The key of the metadata taxonomy", required: true }
+      - { name: body, label: "The whole body of the request, as the API reference describes it", kind: list }
+    send: "{{ input.body }}"
+    output: { entries: list }

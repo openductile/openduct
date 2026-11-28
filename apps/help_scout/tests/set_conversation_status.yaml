@@ -1,0 +1,13 @@
+description: A conversation set to pending
+action: set_conversation_status
+credential: {access_token: hs-test-token}
+input: {conversation_id: '3443157477', status: pending}
+exchanges:
+- sent:
+    method: PATCH
+    url: https://api.helpscout.net/v2/conversations/3443157477
+    query: {}
+    headers: {authorization: Bearer hs-test-token}
+    body: {op: replace, path: /status, value: pending}
+  answer: {status: 204}
+result: {changed: true}

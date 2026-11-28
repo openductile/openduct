@@ -1,0 +1,7 @@
+description: A room the account is not in - 403, in the homeserver's words
+action: send_message
+credential: { homeserver: "https://matrix.example.org", token: syt_test_token }
+input: { room_id: "!other:example.org", text: Hello, transaction_id: run-9z }
+exchanges:
+  - answer: { status: 403, body: { errcode: M_FORBIDDEN, error: User @shopbot:example.org not in room !other:example.org } }
+error: "Matrix answered 403: User @shopbot:example.org not in room !other:example.org"

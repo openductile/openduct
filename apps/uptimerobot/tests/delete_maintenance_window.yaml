@@ -1,0 +1,7 @@
+action: delete_maintenance_window
+credential: { api_key: ur_test_1 }
+input: { id: 51 }
+exchanges:
+  - sent: { method: DELETE, url: https://api.uptimerobot.com/v3/maintenance-windows/51 }
+    answer: { status: 200 }
+result: { deleted: true }

@@ -1,0 +1,12 @@
+description: One field of a row changed
+action: update_row
+credential: { token: br-test-token }
+input: { table_id: 1203, row_id: 8, fields: { Paid: false } }
+exchanges:
+  - sent:
+      method: PATCH
+      url: https://api.baserow.io/api/database/rows/table/1203/8/
+      query: { user_field_names: "true" }
+      body: { Paid: false }
+    answer: { body: { id: 8, order: "8.00000000000000000000", Name: Bo Example, Email: bo@example.com, Paid: false } }
+result: { id: 8, order: "8.00000000000000000000", Name: Bo Example, Email: bo@example.com, Paid: false }

@@ -1,0 +1,28 @@
+# Made by `openduct app from-openapi`: Record a deploy.
+description: "Record a deploy, made from the API description's schemas"
+action: create_deploy
+credential: { token: test-token }
+input: { organization_id_or_slug: example, version: example, environment: example }
+exchanges:
+  - sent:
+      method: POST
+      url: "https://us.sentry.io/api/0/organizations/example/releases/example/deploys/"
+      query: {}
+      headers: { authorization: "Bearer test-token" }
+      body: { environment: example }
+    answer:
+      status: 201
+      body:
+        id: id_1
+        environment: example
+        dateStarted: "2026-01-15T09:30:00Z"
+        dateFinished: "2026-01-15T09:30:00Z"
+        name: example
+        url: "https://example.com/1"
+result:
+  id: id_1
+  environment: example
+  dateStarted: "2026-01-15T09:30:00Z"
+  dateFinished: "2026-01-15T09:30:00Z"
+  name: example
+  url: "https://example.com/1"

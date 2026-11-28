@@ -1,0 +1,66 @@
+name: Set up a new client's folders in Google Drive
+description: >-
+  Press Run with a new client's name, their e-mail and the account manager's: a folder for the client is made in your
+  Clients folder with the same sub-folders every time (Contracts, Invoices, Deliverables, Meeting notes), the account
+  manager may edit all of it, and the client may see their Deliverables folder only. For agencies, studios and
+  consultancies that want every client filed the same way. Needs: google_drive.
+category: Operations
+trigger: manual
+# What a test runs on: what you give when you press Run.
+sample:
+  client: Bluebell Bakery
+  client_email: owner@bluebellbakery.example
+  manager_email: jordan.lee@example.com
+steps:
+  - where: has(value.client) && value.client.trim() != ''
+  - name: already
+    google_drive:
+      action: find_files
+      credential: google_drive
+      # Your Clients folder's id (the end of its address).
+      q: "name = '{{ value.client.trim() }}' and 'your-clients-folder-id' in parents and mimeType = 'application/vnd.google-apps.folder' and trashed = false"
+    retry: { attempts: 3, wait: 10s }
+  - name: exists
+    if:
+      when: steps.already.exists(f, f.name == value.client.trim())
+      then:
+        - stop: { error: "A folder for {{ value.client.trim() }} is already in Clients: nothing was made" }
+  - name: client
+    google_drive:
+      action: make_folder
+      credential: google_drive
+      name: "{{ value.client.trim() }}"
+      parent_id: your-clients-folder-id
+    retry: { attempts: 3, wait: 10s }
+  - name: parts
+    for_each:
+      items: "['Contracts', 'Invoices', 'Deliverables', 'Meeting notes']"
+      steps:
+        - name: folder
+          google_drive:
+            action: make_folder
+            credential: google_drive
+            name: "{{ item }}"
+            parent_id: "{{ steps.client.id }}"
+          retry: { attempts: 3, wait: 10s }
+  - name: manager
+    google_drive:
+      action: share_file
+      credential: google_drive
+      file_id: "{{ steps.client.id }}"
+      email: "{{ value.manager_email }}"
+      role: writer
+    retry: { attempts: 3, wait: 10s }
+  - name: for_client
+    if:
+      when: has(value.client_email) && value.client_email.contains('@')
+      then:
+        - name: deliverables
+          google_drive:
+            action: share_file
+            credential: google_drive
+            # The third sub-folder made: Deliverables.
+            file_id: "{{ steps.parts[2].folder.id }}"
+            email: "{{ value.client_email }}"
+            role: reader
+          retry: { attempts: 3, wait: 10s }

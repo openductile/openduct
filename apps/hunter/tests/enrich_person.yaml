@@ -1,0 +1,21 @@
+description: The person behind an address
+action: enrich_person
+credential: { api_key: hunter-test-key }
+input: { email: ann.example@example.com }
+exchanges:
+  - sent: { method: GET, url: https://api.hunter.io/v2/people/find, query: { email: ann.example@example.com } }
+    answer:
+      body:
+        data:
+          id: 0a1b2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d
+          name: { fullName: Ann Example, givenName: Ann, familyName: Example }
+          email: ann.example@example.com
+          location: Springfield, United States
+          employment: { domain: example.com, name: Example Inc, title: Head of Sales, role: sales, seniority: executive }
+        meta: { email: ann.example@example.com }
+result:
+  id: 0a1b2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d
+  name: { fullName: Ann Example, givenName: Ann, familyName: Example }
+  email: ann.example@example.com
+  location: Springfield, United States
+  employment: { domain: example.com, name: Example Inc, title: Head of Sales, role: sales, seniority: executive }

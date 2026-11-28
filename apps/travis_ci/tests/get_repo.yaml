@@ -1,0 +1,11 @@
+description: "One repository"
+action: get_repo
+credential: { token: test-token }
+input: { repo: shop-example/storefront }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://api.travis-ci.com/repo/shop-example%2Fstorefront"
+    answer:
+      body: { "@type": repository, id: 891, name: storefront, slug: shop-example/storefront, active: true, private: true, starred: false, default_branch: { name: main } }
+result: { "@type": repository, id: 891, name: storefront, slug: shop-example/storefront, active: true, private: true, starred: false, default_branch: { name: main } }

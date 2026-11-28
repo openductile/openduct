@@ -1,0 +1,8 @@
+description: The organization's top site, from its address alone
+action: get_site
+credential: { access_token: eyJ0 }
+input: { site: "https://example.sharepoint.com" }
+exchanges:
+  - sent: { method: GET, url: "https://graph.microsoft.com/v1.0/sites/example.sharepoint.com" }
+    answer: { body: { id: "example.sharepoint.com,11111111-1111-4111-8111-111111111111,22222222-2222-4222-8222-222222222222", name: "", displayName: Communication site, webUrl: "https://example.sharepoint.com" } }
+result: { id: "example.sharepoint.com,11111111-1111-4111-8111-111111111111,22222222-2222-4222-8222-222222222222", name: "", displayName: Communication site, webUrl: "https://example.sharepoint.com" }

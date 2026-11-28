@@ -28,8 +28,12 @@ const MAX_CONNECTIONS: usize = 1024;
 pub(crate) const MAX_BODY: usize = 1024 * 1024;
 /// How long a request's headers may take to arrive.
 const HEADER_TIMEOUT: Duration = Duration::from_secs(10);
+/// How many webhook deliveries with files are read at once: each may be as large as a file. // G6 files
+static UPLOADS: Semaphore = Semaphore::const_new(8);
 
 pub(crate) type Answer = Response<Full<Bytes>>;
+/// An answer whose body may come in parts (a chat's answer as it is made); every other answer is whole. // chat trigger (G8)
+pub(crate) type Streamed = Response<http_body_util::combinators::BoxBody<Bytes, Infallible>>;
 
 /// A request, read and checked.
 #[derive(Debug)]
@@ -92,10 +96,11 @@ pub(crate) async fn serve(listener: TcpListener, state: Arc<State>, stop: impl F
     }
 }
 
-async fn answer(state: &State, peer: SocketAddr, request: Request<Incoming>) -> Answer {
+async fn answer(state: &State, peer: SocketAddr, request: Request<Incoming>) -> Streamed {
     let mut response = match checked(state, peer, request).await {
-        Ok(call) => crate::api::route(state, call).await,
-        Err(refused) => refused,
+        Ok(call) if call.path.starts_with("/chat/") => crate::chat::route(state, call).await, // chat trigger (G8)
+        Ok(call) => crate::api::route(state, call).await.map(BodyExt::boxed),
+        Err(refused) => refused.map(BodyExt::boxed),
     };
     secure(response.headers_mut());
     response
@@ -105,7 +110,13 @@ async fn answer(state: &State, peer: SocketAddr, request: Request<Incoming>) -> 
 async fn checked(state: &State, peer: SocketAddr, request: Request<Incoming>) -> Result<Call, Answer> {
     // A webhook is called by another system, not the studio's page: it is reached by whatever name the caller
     // knows, sends what it sends, and is guarded by its workflow's own token instead.
-    let hook = request.uri().path().starts_with("/hooks/");
+    // MCP: a workspace's MCP server is called by AI assistants as a webhook is, guarded by the workspace's tokens.
+    // chat trigger (G8): a chat's page and its messages are reached as a webhook is.
+    // forms-and-resume: a form's page and a run's one-time address are reached as a webhook is.
+    let path = request.uri().path();
+    let outside = crate::forms::is_outside(path);
+    let hook =
+        path.starts_with("/hooks/") || path.starts_with("/mcp/") || path.starts_with("/chat/") || outside;
     let reached = request
         .headers()
         .get(header::HOST)
@@ -139,7 +150,13 @@ async fn checked(state: &State, peer: SocketAddr, request: Request<Incoming>) ->
             .filter_map(|(k, v)| v.to_str().ok().map(|v| (k.as_str().to_owned(), v.to_owned())))
             .collect()
     } else {
-        Vec::new()
+        // developer CI/CD: an API request may be signed with a token (`Authorization: Bearer odapi_...`).
+        request
+            .headers()
+            .get(header::AUTHORIZATION)
+            .and_then(|v| v.to_str().ok())
+            .map(|v| vec![("authorization".to_owned(), v.to_owned())])
+            .unwrap_or_default()
     };
     let cookie = session_cookie(request.headers());
     let csrf = request
@@ -156,12 +173,27 @@ async fn checked(state: &State, peer: SocketAddr, request: Request<Incoming>) ->
     let body = if method == Method::GET || method == Method::HEAD {
         Value::Null
     } else if hook {
-        raw = match Limited::new(request.into_body(), MAX_BODY).collect().await {
+        // forms-and-resume: a form's answers may be larger. G6 files: a webhook's upload may be larger, and a few such
+        // deliveries are read at once.
+        let upload = !outside && content_type.starts_with("multipart/form-data");
+        let limit = if outside {
+            crate::forms::MAX_BODY
+        } else if upload {
+            crate::run_files::MAX_UPLOAD
+        } else {
+            MAX_BODY
+        };
+        let _turn = if upload {
+            UPLOADS.acquire().await.ok()
+        } else {
+            None
+        };
+        raw = match Limited::new(request.into_body(), limit).collect().await {
             Ok(collected) => collected.to_bytes(),
             Err(_) => {
                 return Err(problem(
                     StatusCode::PAYLOAD_TOO_LARGE,
-                    &format!("a delivery of at most {MAX_BODY} bytes"),
+                    &format!("a delivery of at most {limit} bytes"),
                 ));
             }
         };
@@ -194,12 +226,22 @@ async fn checked(state: &State, peer: SocketAddr, request: Request<Incoming>) ->
                 "a change is sent as application/json",
             ));
         }
-        let bytes = match Limited::new(request.into_body(), MAX_BODY).collect().await {
+        // app generator: an API description for a custom app may be a few megabytes - for a signed-in session, and
+        // a few such requests read at once, as uploads are.
+        let signed = cookie.as_deref().and_then(|c| state.keys.check(c)).is_some();
+        let large = signed && path == "/api/apps/custom";
+        let most = if large {
+            crate::custom_apps::MAX_BODY
+        } else {
+            MAX_BODY
+        };
+        let _turn = if large { UPLOADS.acquire().await.ok() } else { None };
+        let bytes = match Limited::new(request.into_body(), most).collect().await {
             Ok(collected) => collected.to_bytes(),
             Err(_) => {
                 return Err(problem(
                     StatusCode::PAYLOAD_TOO_LARGE,
-                    &format!("a request of at most {MAX_BODY} bytes"),
+                    &format!("a request of at most {most} bytes"),
                 ));
             }
         };
@@ -227,7 +269,7 @@ async fn checked(state: &State, peer: SocketAddr, request: Request<Incoming>) ->
 }
 
 /// `name` of `name:port` or `[v6]:port`, in small letters.
-fn host_name(value: &str) -> String {
+pub(crate) fn host_name(value: &str) -> String {
     let value = value.trim();
     let name = if let Some(rest) = value.strip_prefix('[') {
         rest.split(']').next().unwrap_or(rest)
@@ -259,14 +301,17 @@ fn secure(headers: &mut hyper::HeaderMap) {
     let set = |headers: &mut hyper::HeaderMap, name: &'static str, value: &'static str| {
         headers.insert(name, HeaderValue::from_static(value));
     };
-    set(
-        headers,
-        "content-security-policy",
-        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; \
-         connect-src 'self'; frame-ancestors 'none'; object-src 'none'; base-uri 'none'; form-action 'self'",
-    );
+    // chat trigger (G8): a chat's page brings its own policy - framed only by the sites its workflow names.
+    if !headers.contains_key("content-security-policy") {
+        set(
+            headers,
+            "content-security-policy",
+            "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; \
+             connect-src 'self'; frame-ancestors 'none'; object-src 'none'; base-uri 'none'; form-action 'self'",
+        );
+        set(headers, "x-frame-options", "DENY");
+    }
     set(headers, "x-content-type-options", "nosniff");
-    set(headers, "x-frame-options", "DENY");
     set(headers, "referrer-policy", "no-referrer");
     set(headers, "cross-origin-opener-policy", "same-origin");
 }
@@ -306,7 +351,7 @@ impl Hosts {
         Self(names)
     }
 
-    fn allows(&self, name: &str) -> bool {
+    pub(crate) fn allows(&self, name: &str) -> bool {
         self.0.iter().any(|n| n == name)
     }
 }

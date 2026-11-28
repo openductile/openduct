@@ -1,0 +1,36 @@
+description: Places for a search around a point
+action: google_maps
+credential: { api_key: serp_test_key_1 }
+input: { q: coffee, ll: "@30.2672,-97.7431,14z" }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://serpapi.com/search"
+      query: { api_key: serp_test_key_1, engine: google_maps, type: search, q: coffee, ll: "@30.2672,-97.7431,14z" }
+    answer:
+      status: 200
+      body:
+        local_results:
+          - position: 1
+            title: Example Coffee
+            place_id: ChIJexample0001
+            data_id: "0x8644b5a0:0x1"
+            gps_coordinates: { latitude: 30.2672, longitude: -97.7431 }
+            rating: 4.6
+            reviews: 212
+            type: Coffee shop
+            address: "100 Example St, Austin, TX"
+            phone: "(512) 555-0100"
+            website: "https://coffee.example/"
+result:
+  - position: 1
+    title: Example Coffee
+    place_id: ChIJexample0001
+    data_id: "0x8644b5a0:0x1"
+    gps_coordinates: { latitude: 30.2672, longitude: -97.7431 }
+    rating: 4.6
+    reviews: 212
+    type: Coffee shop
+    address: "100 Example St, Austin, TX"
+    phone: "(512) 555-0100"
+    website: "https://coffee.example/"

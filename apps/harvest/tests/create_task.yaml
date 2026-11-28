@@ -1,0 +1,16 @@
+description: A task added
+action: create_task
+credential: {access_token: hv-test-token, account_id: '100200'}
+input: {name: Copywriting, default_hourly_rate: 80.0}
+exchanges:
+- sent:
+    method: POST
+    url: https://api.harvestapp.com/v2/tasks
+    headers: {authorization: Bearer hv-test-token, harvest-account-id: '100200', user-agent: 'OpenDuct (https://github.com/openductile/openduct)'}
+    query: {}
+    body: {name: Copywriting, default_hourly_rate: 80.0}
+  answer:
+    status: 201
+    body: &id001 {id: 8083800, name: Copywriting, billable_by_default: true, default_hourly_rate: 80.0, is_default: false,
+      is_active: true, created_at: '2026-11-27T10:00:00Z', updated_at: '2026-11-27T10:00:00Z'}
+result: *id001

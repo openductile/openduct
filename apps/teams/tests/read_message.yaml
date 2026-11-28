@@ -1,0 +1,11 @@
+description: A channel's reply read in full, from the ids the trigger gives
+action: read_message
+sign_in: teams
+credential: { access_token: eyJ0.teams }
+input: { team_id: fbe2bf47-16c8-47cf-b4a5-4b9b187c508b, channel_id: "19:4a95f7d8db4c4e7fae857bcebe0623e6@thread.tacv2", message_id: "1612509044972", reply_id: "1613671348387" }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://graph.microsoft.com/v1.0/teams/fbe2bf47-16c8-47cf-b4a5-4b9b187c508b/channels/19:4a95f7d8db4c4e7fae857bcebe0623e6@thread.tacv2/messages/1612509044972/replies/1613671348387"
+    answer: { body: { id: "1613671348387", replyToId: "1612509044972", body: { contentType: html, content: "<div>The till is down</div>" }, from: { user: { id: 8ea0e38b-efb3-4757-924a-5f94061cf8c2, displayName: Robin Kline } } } }
+result: { id: "1613671348387", replyToId: "1612509044972", body: { contentType: html, content: "<div>The till is down</div>" }, from: { user: { id: 8ea0e38b-efb3-4757-924a-5f94061cf8c2, displayName: Robin Kline } } }

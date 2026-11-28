@@ -1,0 +1,17 @@
+description: "An SMS received since the last poll starts a run"
+trigger: new_inbound_sms
+credential: { api_key: test-key }
+seen: { items: [["681590", ""]] }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://gateway.seven.io/api/journal/inbound"
+      query: { limit: "100" }
+      headers: { x-api-key: test-key }
+    answer:
+      status: 200
+      body:
+        - { id: "681591", from: "4915112345678", to: "491771783130", text: "STOP", timestamp: "2026-11-27 10:15:00", price: "0" }
+        - { id: "681590", from: "4915187654321", to: "491771783130", text: "Yes please", timestamp: "2026-11-27 09:55:44", price: "0" }
+runs:
+  - { id: "681591", from: "4915112345678", to: "491771783130", text: "STOP", timestamp: "2026-11-27 10:15:00", price: "0" }

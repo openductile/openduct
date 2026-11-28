@@ -1,0 +1,10 @@
+action: update_record
+credential: { access_token: 1000.test.token }
+input: { module: Deals, id: "1000000000000000401", record: { Stage: Closed Won, Amount: 4800 } }
+exchanges:
+  - sent:
+      method: PUT
+      url: https://www.zohoapis.com/crm/v8/Deals/1000000000000000401
+      body: { data: [{ Stage: Closed Won, Amount: 4800 }] }
+    answer: { body: { data: [{ code: SUCCESS, status: success, message: record updated, details: { id: "1000000000000000401", Modified_Time: "2026-11-27T10:00:00-05:00", Modified_By: { name: Sam Owner, id: "1000000000000000001" } } }] } }
+result: { id: "1000000000000000401", Modified_Time: "2026-11-27T10:00:00-05:00", Modified_By: { name: Sam Owner, id: "1000000000000000001" } }

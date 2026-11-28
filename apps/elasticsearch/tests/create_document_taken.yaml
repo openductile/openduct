@@ -1,0 +1,19 @@
+description: An id a document already has is refused, in Elasticsearch's words
+action: create_document
+credential: {url: 'https://search.example.com:9200', api_key: VnVhQ2ZHY0JDZGJrUW0tZTVhT3g6dWkybHAyYXhUTm1zeWFrdzl0dk5udw==}
+input:
+  index: orders
+  id: o-1001
+  document: {order: '1001', total: 25}
+exchanges:
+- answer:
+    status: 409
+    body:
+      error:
+        root_cause:
+        - {type: version_conflict_engine_exception, reason: '[o-1001]: version conflict, document already exists (current
+            version [1])'}
+        type: version_conflict_engine_exception
+        reason: '[o-1001]: version conflict, document already exists (current version [1])'
+      status: 409
+error: 'Elasticsearch answered 409: [o-1001]: version conflict, document already exists (current version [1])'

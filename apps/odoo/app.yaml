@@ -1,0 +1,352 @@
+# Copyright 2026 Ductile AI, Inc
+# SPDX-License-Identifier: Apache-2.0
+# Odoo: written by hand from Odoo's External JSON-2 API reference (Odoo 19.0,
+# https://github.com/odoo/documentation/blob/25dbca91214799bfdae08bef901dae76cba35dc7/content/developer/reference/external_api.rst,
+# CC BY-SA 4.0) and the ORM methods it calls (odoo/odoo 19.0 at e74fd9959692, LGPL-3.0), read 2026-11-27.
+app: odoo
+name: Odoo
+category: business
+description: Contacts, leads, sales orders, invoices and any other records of an Odoo database, through its JSON-2 API.
+docs: "https://www.odoo.com/documentation/19.0/developer/reference/external_api.html"
+base_url_field: address
+sign_in:
+  - id: odoo
+    label: "An API key"
+    fields:
+      - { name: address, label: "The database's address, such as https://mycompany.odoo.com" }
+      - { name: database, label: "The database's name (needed when the address serves several)", optional: true }
+      - { name: api_key, label: "The API key", secret: true }
+    headers:
+      Authorization: "bearer {{ credential.api_key }}"
+      X-Odoo-Database: "{{ credential.database }}"
+      User-Agent: OpenDuct
+error: "has(value.message) ? value.message : null"
+default_action: create_record
+actions:
+  search_records:
+    label: "Find records"
+    description: "The records of any kind (a model, such as res.partner for contacts) that match a filter, with the fields asked for, every page."
+    method: POST
+    path: "/json/2/{{ input.model }}/search_read"
+    inputs:
+      - &model { name: model, label: "Which kind of record: its model, such as res.partner, crm.lead, sale.order, account.move, product.template", required: true }
+      - { name: domain, label: "Which: an Odoo filter, such as [[\"is_company\", \"=\", true]] (all when empty)", kind: list }
+      - &fields { name: fields, label: "Which fields: their names, separated by commas (all when empty)" }
+      - { name: order, label: "In what order, such as create_date desc" }
+    send:
+      domain: "{{ has(input.domain) && input.domain != null ? input.domain : [] }}"
+      fields: &fields_send "{{ input.fields.split(',').map(f, f.trim()) }}"
+      order: "{{ input.order }}"
+      limit: 100
+    items: value
+    # Odoo says nothing of a next page: a full page means there may be one.
+    next: &next "size(value) < 100 ? null : {'offset': (page == null ? 0 : int(page.offset)) + 100}"
+    page_in: body
+    output: &record { id: number, display_name: text, create_date: text, write_date: text }
+  read_records:
+    label: "Read records"
+    description: "Records of any kind by their ids, with the fields asked for."
+    method: POST
+    path: "/json/2/{{ input.model }}/read"
+    inputs:
+      - *model
+      - &ids { name: ids, label: "Their ids, separated by commas", required: true }
+      - *fields
+    send:
+      ids: &ids_send "{{ input.ids.split(',').map(i, int(i.trim())) }}"
+      fields: *fields_send
+    items: value
+    output: *record
+  count_records:
+    label: "Count records"
+    description: "How many records of a kind match a filter."
+    method: POST
+    path: "/json/2/{{ input.model }}/search_count"
+    inputs:
+      - *model
+      - { name: domain, label: "Which: an Odoo filter (all when empty)", kind: list }
+    send: { domain: "{{ has(input.domain) && input.domain != null ? input.domain : [] }}" }
+    result: "{'count': value}"
+    output: { count: number }
+  create_record:
+    label: "Add a record"
+    description: "A new record of any kind, with its fields' values; gives its id."
+    write: true
+    method: POST
+    path: "/json/2/{{ input.model }}/create"
+    inputs:
+      - *model
+      - { name: values, label: "Its fields' values, by field name, as a record (such as name: Ann Example)", required: true, kind: record }
+    send: { vals_list: ["{{ input.values }}"] }
+    result: "{'id': value[0]}"
+    output: { id: number }
+  update_records:
+    label: "Change records"
+    description: "Records of any kind given new values for some fields; the others stay as they are."
+    write: true
+    method: POST
+    path: "/json/2/{{ input.model }}/write"
+    inputs:
+      - *model
+      - *ids
+      - { name: values, label: "The fields' new values, by field name, as a record", required: true, kind: record }
+    send: { ids: *ids_send, vals: "{{ input.values }}" }
+    result: "{'updated': value}"
+    output: { updated: boolean }
+  delete_records:
+    label: "Delete records"
+    description: "Records of any kind removed for good (many kinds can be archived instead, with active: false)."
+    write: true
+    method: POST
+    path: "/json/2/{{ input.model }}/unlink"
+    inputs:
+      - *model
+      - *ids
+    send: { ids: *ids_send }
+    result: "{'deleted': value}"
+    output: { deleted: boolean }
+  post_message:
+    label: "Post a message on a record"
+    description: "A note (seen inside the company) or a message (sent to the record's followers too) in a record's chatter."
+    write: true
+    method: POST
+    path: "/json/2/{{ input.model }}/message_post"
+    inputs:
+      - *model
+      - { name: id, label: "The record's id", required: true, kind: number }
+      - { name: text, label: "The message", required: true }
+      - { name: send_to_followers, label: "Send it to the followers (rather than a note)", kind: boolean }
+    send:
+      ids: ["{{ input.id }}"]
+      body: "{{ input.text }}"
+      message_type: comment
+      subtype_xmlid: "{{ has(input.send_to_followers) && input.send_to_followers == true ? 'mail.mt_comment' : 'mail.mt_note' }}"
+    result: "{'message_id': value[0]}"
+    output: { message_id: number }
+  find_contacts:
+    label: "Find contacts"
+    description: "Contacts (people and companies) whose name or email holds some words."
+    method: POST
+    path: /json/2/res.partner/search_read
+    inputs:
+      - { name: search, label: "Words in the name or email", required: true }
+    send:
+      domain: ["|", ["name", "ilike", "{{ input.search }}"], ["email", "ilike", "{{ input.search }}"]]
+      fields: &partner_fields [name, email, phone, is_company, company_name, parent_id, street, city, zip, country_id, vat, create_date, write_date]
+      limit: 100
+    items: value
+    next: *next
+    page_in: body
+    output: &partner
+      id: number
+      name: text
+      email: text
+      phone: text
+      is_company: boolean
+      company_name: text
+      parent_id: list
+      street: text
+      city: text
+      zip: text
+      country_id: list
+      vat: text
+      create_date: text
+      write_date: text
+  create_contact:
+    label: "Add a contact"
+    description: "A new contact, a person or a company; gives its id."
+    write: true
+    method: POST
+    path: /json/2/res.partner/create
+    inputs:
+      - { name: name, label: "Name", required: true }
+      - { name: email, label: "Email" }
+      - { name: phone, label: "Phone" }
+      - { name: is_company, label: "A company (not a person)", kind: boolean }
+      - { name: company_name, label: "The company a person works for (its name)" }
+      - { name: street, label: "Street" }
+      - { name: city, label: "City" }
+      - { name: zip, label: "Postal code" }
+      - { name: comment, label: "Notes" }
+    send:
+      vals_list:
+        - name: "{{ input.name }}"
+          email: "{{ input.email }}"
+          phone: "{{ input.phone }}"
+          is_company: "{{ input.is_company }}"
+          company_name: "{{ input.company_name }}"
+          street: "{{ input.street }}"
+          city: "{{ input.city }}"
+          zip: "{{ input.zip }}"
+          comment: "{{ input.comment }}"
+    result: "{'id': value[0]}"
+    output: { id: number }
+  create_lead:
+    label: "Add a lead"
+    description: "A new lead (or opportunity) in the CRM, with who it is from and what it may bring; gives its id."
+    write: true
+    method: POST
+    path: /json/2/crm.lead/create
+    inputs:
+      - { name: name, label: "What it is about, such as Website order for 20 chairs", required: true }
+      - { name: contact_name, label: "The person's name" }
+      - { name: partner_name, label: "Their company's name" }
+      - { name: email_from, label: "Their email" }
+      - { name: phone, label: "Their phone" }
+      - { name: expected_revenue, label: "What it may bring", kind: number }
+      - { name: description, label: "Notes" }
+      - { name: type, label: "lead or opportunity (the CRM's own choice when empty)" }
+    send:
+      vals_list:
+        - name: "{{ input.name }}"
+          contact_name: "{{ input.contact_name }}"
+          partner_name: "{{ input.partner_name }}"
+          email_from: "{{ input.email_from }}"
+          phone: "{{ input.phone }}"
+          expected_revenue: "{{ input.expected_revenue }}"
+          description: "{{ input.description }}"
+          type: "{{ input.type }}"
+    result: "{'id': value[0]}"
+    output: { id: number }
+  find_leads:
+    label: "Find leads"
+    description: "Leads and opportunities of the CRM, the newest first; only those whose name, contact or email holds some words, if given."
+    method: POST
+    path: /json/2/crm.lead/search_read
+    inputs:
+      - { name: search, label: "Words in its name, contact or email" }
+    send:
+      domain: "{{ has(input.search) && input.search != null ? ['|', '|', ['name', 'ilike', input.search], ['contact_name', 'ilike', input.search], ['email_from', 'ilike', input.search]] : [] }}"
+      fields: [name, type, contact_name, partner_name, email_from, phone, expected_revenue, probability, stage_id, user_id, partner_id, create_date, write_date]
+      order: create_date desc
+      limit: 100
+    items: value
+    next: *next
+    page_in: body
+    output: &lead
+      id: number
+      name: text
+      type: text
+      contact_name: text
+      partner_name: text
+      email_from: text
+      phone: text
+      expected_revenue: number
+      probability: number
+      stage_id: list
+      user_id: list
+      partner_id: list
+      create_date: text
+      write_date: text
+  find_sale_orders:
+    label: "Find sales orders"
+    description: "Quotations and sales orders, the newest first; only those of one status, if given."
+    method: POST
+    path: /json/2/sale.order/search_read
+    inputs:
+      - { name: state, label: "Which: draft (a quotation), sent, sale (confirmed) or cancel" }
+    send:
+      domain: "{{ has(input.state) && input.state != null ? [['state', '=', input.state]] : [] }}"
+      fields: &order_fields [name, partner_id, date_order, state, amount_untaxed, amount_tax, amount_total, currency_id, user_id, invoice_status, create_date, write_date]
+      order: date_order desc
+      limit: 100
+    items: value
+    next: *next
+    page_in: body
+    output: &order
+      id: number
+      name: text
+      partner_id: list
+      date_order: text
+      state: text
+      amount_untaxed: number
+      amount_tax: number
+      amount_total: number
+      currency_id: list
+      user_id: list
+      invoice_status: text
+      create_date: text
+      write_date: text
+  confirm_sale_order:
+    label: "Confirm a quotation"
+    description: "A quotation made a sales order, as its Confirm button does."
+    write: true
+    method: POST
+    path: /json/2/sale.order/action_confirm
+    inputs:
+      - { name: id, label: "The quotation's id", required: true, kind: number }
+    send: { ids: ["{{ input.id }}"] }
+    result: "{'confirmed': true}"
+    output: { confirmed: boolean }
+  find_invoices:
+    label: "Find customer invoices"
+    description: "Customer invoices, the newest first; only those of one payment status, if given."
+    method: POST
+    path: /json/2/account.move/search_read
+    inputs:
+      - { name: payment_state, label: "Which: not_paid, in_payment, paid, partial or reversed" }
+    send:
+      domain: "{{ has(input.payment_state) && input.payment_state != null ? [['move_type', '=', 'out_invoice'], ['payment_state', '=', input.payment_state]] : [['move_type', '=', 'out_invoice']] }}"
+      fields: [name, partner_id, invoice_date, invoice_date_due, state, payment_state, amount_untaxed, amount_tax, amount_total, amount_residual, currency_id, create_date, write_date]
+      order: invoice_date desc
+      limit: 100
+    items: value
+    next: *next
+    page_in: body
+    output:
+      id: number
+      name: text
+      partner_id: list
+      invoice_date: text
+      invoice_date_due: text
+      state: text
+      payment_state: text
+      amount_untaxed: number
+      amount_tax: number
+      amount_total: number
+      amount_residual: number
+      currency_id: list
+      create_date: text
+      write_date: text
+triggers:
+  new_record:
+    label: "A new record"
+    description: "Each record of a kind (a new contact, lead, order, invoice, ...) added to Odoo, asked for every few minutes."
+    inputs:
+      - *model
+      - { name: fields, label: "Which fields each run gets: their names, separated by commas (all when empty)" }
+    poll:
+      method: POST
+      path: "/json/2/{{ input.model }}/search_read"
+      send:
+        domain: []
+        fields: "{{ input.fields == null ? null : input.fields.split(',').map(f, f.trim()) }}"
+        order: id desc
+        limit: 100
+      items: value
+      next: *next
+      page_in: body
+      newest_first: true
+      id: "string(item.id)"
+      every: 5m
+  changed_record:
+    label: "A record added or changed"
+    description: "Each record of a kind added to Odoo or changed, asked for every few minutes."
+    inputs:
+      - *model
+      - { name: fields, label: "Which fields each run gets: their names, separated by commas (all when empty)" }
+    poll:
+      method: POST
+      path: "/json/2/{{ input.model }}/search_read"
+      send:
+        domain: []
+        fields: "{{ input.fields == null ? null : (input.fields + ',write_date').split(',').map(f, f.trim()) }}"
+        order: write_date desc
+        limit: 100
+      items: value
+      next: *next
+      page_in: body
+      newest_first: true
+      id: "string(item.id)"
+      version: item.write_date
+      every: 5m

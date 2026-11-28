@@ -1,0 +1,19 @@
+description: Pages are followed from the Link header while Sentry says results="true", for an organization kept in the de region
+action: list_issues
+credential: { token: sntrys_test, region: de }
+input: { organization_id_or_slug: acme, query: "is:unresolved level:error" }
+exchanges:
+  - sent:
+      method: GET
+      url: https://de.sentry.io/api/0/organizations/acme/issues/
+      query: { query: "is:unresolved level:error" }
+      headers: { authorization: Bearer sntrys_test }
+    answer:
+      headers: { Link: '<https://de.sentry.io/api/0/organizations/acme/issues/?query=is%3Aunresolved+level%3Aerror&cursor=0:0:1>; rel="previous"; results="false"; cursor="0:0:1", <https://de.sentry.io/api/0/organizations/acme/issues/?query=is%3Aunresolved+level%3Aerror&cursor=0:100:0>; rel="next"; results="true"; cursor="0:100:0"' }
+      body: [{ id: "4500000003", shortId: SHOP-WEB-5 }]
+  - sent:
+      url: "https://de.sentry.io/api/0/organizations/acme/issues/?query=is%3Aunresolved+level%3Aerror&cursor=0:100:0"
+    answer:
+      headers: { Link: '<https://de.sentry.io/api/0/organizations/acme/issues/?query=is%3Aunresolved+level%3Aerror&cursor=0:0:1>; rel="previous"; results="true"; cursor="0:0:1", <https://de.sentry.io/api/0/organizations/acme/issues/?query=is%3Aunresolved+level%3Aerror&cursor=0:200:0>; rel="next"; results="false"; cursor="0:200:0"' }
+      body: [{ id: "4500000001", shortId: SHOP-WEB-3 }]
+result: [{ id: "4500000003", shortId: SHOP-WEB-5 }, { id: "4500000001", shortId: SHOP-WEB-3 }]

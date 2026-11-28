@@ -1,0 +1,41 @@
+description: "One book's details"
+action: get_book
+credential: { access_token: ya29.test }
+input: { volume_id: zyTCAlFPjgYC }
+exchanges:
+  - sent:
+      method: GET
+      url: https://books.googleapis.com/books/v1/volumes/zyTCAlFPjgYC
+    answer:
+      body:
+        kind: "books#volume"
+        id: zyTCAlFPjgYC
+        selfLink: https://books.googleapis.com/books/v1/volumes/zyTCAlFPjgYC
+        volumeInfo:
+          title: The Example Garden
+          authors: [Ann Example]
+          publisher: Example Press
+          publishedDate: "2024-03-01"
+          industryIdentifiers: [{ type: ISBN_13, identifier: "9780000000001" }]
+          pageCount: 240
+          categories: [Gardening]
+          language: en
+          infoLink: https://books.example/zyTCAlFPjgYC
+        saleInfo: { country: US, saleability: NOT_FOR_SALE, isEbook: false }
+        accessInfo: { viewability: PARTIAL, publicDomain: false }
+result:
+  kind: "books#volume"
+  id: zyTCAlFPjgYC
+  selfLink: https://books.googleapis.com/books/v1/volumes/zyTCAlFPjgYC
+  volumeInfo:
+    title: The Example Garden
+    authors: [Ann Example]
+    publisher: Example Press
+    publishedDate: "2024-03-01"
+    industryIdentifiers: [{ type: ISBN_13, identifier: "9780000000001" }]
+    pageCount: 240
+    categories: [Gardening]
+    language: en
+    infoLink: https://books.example/zyTCAlFPjgYC
+  saleInfo: { country: US, saleability: NOT_FOR_SALE, isEbook: false }
+  accessInfo: { viewability: PARTIAL, publicDomain: false }

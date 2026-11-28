@@ -1,0 +1,10 @@
+action: check_instagram_media
+credential: { access_token: EAAB_test }
+input: { container_id: "17889455560051444" }
+exchanges:
+  - sent:
+      method: GET
+      url: https://graph.facebook.com/v25.0/17889455560051444
+      query: { fields: "status_code,status" }
+    answer: { body: { status_code: FINISHED, id: "17889455560051444" } }
+result: { status_code: FINISHED, id: "17889455560051444" }

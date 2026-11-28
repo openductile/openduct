@@ -1,0 +1,8 @@
+description: A table's fields and views
+action: get_table
+credential: { api_token: test-nocodb-token }
+input: { base_id: pexample0001, table_id: mexample0001 }
+exchanges:
+  - sent: { method: GET, url: https://app.nocodb.com/api/v3/meta/bases/pexample0001/tables/mexample0001 }
+    answer: { body: { id: mexample0001, title: Customers, base_id: pexample0001, fields: [{ id: cexample0002, title: Email, type: Email }], views: [{ id: vexample0001, title: Grid, type: grid }] } }
+result: { id: mexample0001, title: Customers, base_id: pexample0001, fields: [{ id: cexample0002, title: Email, type: Email }], views: [{ id: vexample0001, title: Grid, type: grid }] }

@@ -1,0 +1,12 @@
+description: Pages added to a database, the newest asked for
+trigger: new_item
+credential: { token: secret_1 }
+input: { database_id: db1 }
+seen: { items: [["p1", ""]] }
+exchanges:
+  - sent:
+      method: POST
+      url: https://api.notion.com/v1/databases/db1/query
+      body: { sorts: [{ timestamp: created_time, direction: descending }], page_size: 100 }
+    answer: { body: { results: [{ id: p2, object: page }, { id: p1, object: page }], has_more: false } }
+runs: [{ id: p2, object: page }]

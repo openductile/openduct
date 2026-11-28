@@ -1,0 +1,6 @@
+description: A person who is not an admin, refused in Google's words
+action: list_users
+credential: { access_token: ya29.notadmin }
+exchanges:
+  - answer: { status: 403, body: { error: { code: 403, message: Not Authorized to access this resource/api, status: PERMISSION_DENIED } } }
+error: "Google Workspace Admin answered 403: Not Authorized to access this resource/api"

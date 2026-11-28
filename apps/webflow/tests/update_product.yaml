@@ -1,0 +1,50 @@
+# Made by `openduct app from-openapi`: Update Product.
+description: "Update Product, made from the API description's schemas"
+action: update_product
+credential: { token: test-token }
+input: { site_id: site_1, product_id: product_1 }
+exchanges:
+  - sent:
+      method: PATCH
+      url: "https://api.webflow.com/v2/sites/site_1/products/product_1"
+      query: {}
+      headers: { authorization: "Bearer test-token" }
+      body: {}
+    answer:
+      status: 200
+      body:
+        id: "580e63fc8c9a982ac9b8b745"
+        cmsLocaleId: "653ad57de882f528b32e810e"
+        lastPublished: "2023-03-17T18:47:35.560Z"
+        lastUpdated: "2023-03-17T18:47:35.560Z"
+        createdOn: "2023-03-17T18:47:35.560Z"
+        isArchived: false
+        isDraft: false
+        fieldData:
+          name: T-Shirt
+          slug: t-shirt
+          description: example
+          shippable: true
+          sku-properties: [{ id: Color, name: Color, enum: [null] }]
+          category: [example]
+          tax-category: standard-taxable
+          default-sku: example
+          ec-product-type: ff42fee0113744f693a764e3431a9cc2
+result:
+  id: "580e63fc8c9a982ac9b8b745"
+  cmsLocaleId: "653ad57de882f528b32e810e"
+  lastPublished: "2023-03-17T18:47:35.560Z"
+  lastUpdated: "2023-03-17T18:47:35.560Z"
+  createdOn: "2023-03-17T18:47:35.560Z"
+  isArchived: false
+  isDraft: false
+  fieldData:
+    name: T-Shirt
+    slug: t-shirt
+    description: example
+    shippable: true
+    sku-properties: [{ id: Color, name: Color, enum: [null] }]
+    category: [example]
+    tax-category: standard-taxable
+    default-sku: example
+    ec-product-type: ff42fee0113744f693a764e3431a9cc2

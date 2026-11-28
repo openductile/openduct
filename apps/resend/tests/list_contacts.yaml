@@ -1,0 +1,52 @@
+# Made by `openduct app from-openapi`: Retrieve a list of contacts.
+description: "Retrieve a list of contacts, made from the API description's schemas"
+action: list_contacts
+credential: { token: test-token }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://api.resend.com/contacts"
+      query: { limit: "100" }
+      headers: { authorization: "Bearer test-token" }
+    answer:
+      status: 200
+      body:
+        object: list
+        has_more: true
+        data:
+          - id: e169aa45-1ecf-4183-9955-b1499d5701d3
+            email: "ann@example.com"
+            first_name: Steve
+            last_name: Wozniak
+            created_at: example
+            unsubscribed: false
+  - sent:
+      method: GET
+      url: "https://api.resend.com/contacts"
+      query: { limit: "100", after: e169aa45-1ecf-4183-9955-b1499d5701d3 }
+      headers: { authorization: "Bearer test-token" }
+    answer:
+      status: 200
+      body:
+        object: list
+        has_more: false
+        data:
+          - id: id_2
+            email: "ann@example.com"
+            first_name: Steve
+            last_name: Wozniak
+            created_at: example
+            unsubscribed: false
+result:
+  - id: e169aa45-1ecf-4183-9955-b1499d5701d3
+    email: "ann@example.com"
+    first_name: Steve
+    last_name: Wozniak
+    created_at: example
+    unsubscribed: false
+  - id: id_2
+    email: "ann@example.com"
+    first_name: Steve
+    last_name: Wozniak
+    created_at: example
+    unsubscribed: false

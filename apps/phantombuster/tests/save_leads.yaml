@@ -1,0 +1,23 @@
+description: Two leads saved at once, one of them refused
+action: save_leads
+credential: { api_key: pb_test_key_1 }
+input:
+  leads:
+    - { linkedinProfileUrl: "https://linkedin.example/in/ann-example", firstName: Ann }
+    - { linkedinProfileUrl: "not a profile" }
+exchanges:
+  - sent:
+      method: POST
+      url: "https://api.phantombuster.com/api/v2/org-storage/leads/save-many"
+      body:
+        leads:
+          - { linkedinProfileUrl: "https://linkedin.example/in/ann-example", firstName: Ann }
+          - { linkedinProfileUrl: "not a profile" }
+    answer:
+      status: 200
+      body:
+        - { linkedinProfileUrl: "https://linkedin.example/in/ann-example", status: success, isCreation: false, changedFields: [firstName] }
+        - { linkedinProfileUrl: "not a profile", status: error, error: "Invalid LinkedIn profile URL" }
+result:
+  - { linkedinProfileUrl: "https://linkedin.example/in/ann-example", status: success, isCreation: false, changedFields: [firstName] }
+  - { linkedinProfileUrl: "not a profile", status: error, error: "Invalid LinkedIn profile URL" }

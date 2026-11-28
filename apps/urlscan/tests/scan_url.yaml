@@ -1,0 +1,27 @@
+description: A web address sent to be scanned, unlisted, with two tags
+action: scan_url
+credential: { api_key: us_test_1 }
+input: { url: "https://shop.example.com/login", visibility: unlisted, tags: "phishing, brand-x" }
+exchanges:
+  - sent:
+      method: POST
+      url: https://urlscan.io/api/v1/scan
+      headers: { api-key: us_test_1 }
+      body: { url: "https://shop.example.com/login", visibility: unlisted, tags: [phishing, brand-x] }
+    answer:
+      body:
+        message: Submission successful
+        uuid: 0e37e828-a9d9-45c0-ac50-1ca579b86c72
+        result: https://urlscan.io/result/0e37e828-a9d9-45c0-ac50-1ca579b86c72/
+        api: https://urlscan.io/api/v1/result/0e37e828-a9d9-45c0-ac50-1ca579b86c72/
+        visibility: unlisted
+        url: "https://shop.example.com/login"
+        country: de
+result:
+  message: Submission successful
+  uuid: 0e37e828-a9d9-45c0-ac50-1ca579b86c72
+  result: https://urlscan.io/result/0e37e828-a9d9-45c0-ac50-1ca579b86c72/
+  api: https://urlscan.io/api/v1/result/0e37e828-a9d9-45c0-ac50-1ca579b86c72/
+  visibility: unlisted
+  url: "https://shop.example.com/login"
+  country: de

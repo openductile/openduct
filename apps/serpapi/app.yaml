@@ -1,0 +1,292 @@
+# Copyright 2026 Ductile AI, Inc
+# SPDX-License-Identifier: Apache-2.0
+# SerpApi, written by hand from its API reference (https://serpapi.com/search-api and the pages of each engine and of
+# the account, read 2026-11-27).
+app: serpapi
+name: SerpApi
+category: data
+description: Google's results as data - web search, news, maps and their reviews, shopping, jobs and images - through SerpApi.
+docs: "https://serpapi.com/search-api"
+hosts: [serpapi.com]
+base_url: "https://serpapi.com"
+sign_in:
+  - id: serpapi
+    label: "An API key"
+    fields:
+      - { name: api_key, label: "The API key (SerpApi, Your Account, API key)", secret: true }
+    query: { api_key: "{{ credential.api_key }}" }
+default_action: google_search
+actions:
+  google_search:
+    label: "Search Google"
+    description: "Google's web results for a search - each with its position, title, address and snippet - from where, and in the language, asked."
+    method: GET
+    path: /search
+    timeout: 60
+    inputs:
+      - { name: q, label: "What to search for (site:, intitle: and Google's other operators work)", required: true }
+      - { name: location, label: "As searched from this place, such as Austin, Texas, United States" }
+      - { name: gl, label: "The country, as a two-letter code such as us" }
+      - { name: hl, label: "The language, such as en or es" }
+      - { name: google_domain, label: "Google's site to search (google.com by default), such as google.co.uk" }
+      - { name: tbs, label: "Google's advanced filters, such as qdr:d (the past day) or qdr:w (the past week)" }
+      - { name: start, label: "Skip this many results (10 for the second page, 20 for the third)", kind: number }
+      - { name: device, label: "As searched on: desktop (by default), tablet or mobile" }
+      - { name: safe, label: "Leave out explicit results: active, or off" }
+      - { name: no_cache, label: "Search now, not a copy kept up to an hour (a copy is free)", kind: boolean }
+    query:
+      engine: google
+      q: "{{ input.q }}"
+      location: "{{ input.location }}"
+      gl: "{{ input.gl }}"
+      hl: "{{ input.hl }}"
+      google_domain: "{{ input.google_domain }}"
+      tbs: "{{ input.tbs }}"
+      start: "{{ input.start }}"
+      device: "{{ input.device }}"
+      safe: "{{ input.safe }}"
+      no_cache: "{{ input.no_cache }}"
+    # A search Google has no results for answers 200 with an error and no results: it gives none.
+    items: "has(value.organic_results) ? value.organic_results : []"
+    output:
+      position: number
+      title: text
+      link: text
+      displayed_link: text
+      snippet: text
+      source: text
+      date: text
+      favicon: text
+      sitelinks: record
+  google_news:
+    label: "Search Google News"
+    description: "News articles for a search, each with its title, address, source and date."
+    method: GET
+    path: /search
+    timeout: 60
+    inputs:
+      - { name: q, label: "What to search for", required: true }
+      - { name: gl, label: "News of this country, as a two-letter code (us by default)" }
+      - { name: hl, label: "In this language, such as en or en-gb" }
+      - { name: newest_first, label: "The newest first, not the most relevant", kind: boolean }
+    query:
+      engine: google_news
+      q: "{{ input.q }}"
+      gl: "{{ input.gl }}"
+      hl: "{{ input.hl }}"
+      so: "{{ has(input.newest_first) && input.newest_first == true ? '1' : '' }}"
+    items: "has(value.news_results) ? value.news_results : []"
+    output:
+      position: number
+      title: text
+      link: text
+      source: record
+      date: text
+      iso_date: text
+      thumbnail: text
+  google_maps:
+    label: "Search Google Maps"
+    description: "Places on Google Maps for a search - each with its address, phone, website, rating, reviews and hours."
+    method: GET
+    path: /search
+    timeout: 60
+    inputs:
+      - { name: q, label: "What to look for, such as coffee near Austin, Texas", required: true }
+      - { name: ll, label: "Around this point: @latitude,longitude,zoom, such as @30.2672,-97.7431,14z" }
+      - { name: hl, label: "In this language, such as en" }
+      - { name: start, label: "Skip this many places (20 for the second page)", kind: number }
+    query:
+      engine: google_maps
+      type: search
+      q: "{{ input.q }}"
+      ll: "{{ input.ll }}"
+      hl: "{{ input.hl }}"
+      start: "{{ input.start }}"
+    items: "has(value.local_results) ? value.local_results : []"
+    output:
+      position: number
+      title: text
+      place_id: text
+      data_id: text
+      data_cid: text
+      gps_coordinates: record
+      rating: number
+      reviews: number
+      type: text
+      types: list
+      address: text
+      open_state: text
+      hours: text
+      operating_hours: record
+      phone: text
+      website: text
+      thumbnail: text
+  google_maps_reviews:
+    label: "Get a place's Google reviews"
+    description: "The reviews of a place on Google Maps, newest or best first: each with its rating, date, words and who wrote it."
+    method: GET
+    path: /search
+    timeout: 60
+    inputs:
+      - { name: place_id, label: "The place's place_id (from Search Google Maps)" }
+      - { name: data_id, label: "Or its data_id (from Search Google Maps)" }
+      - { name: sort_by, label: "In what order: qualityScore (by default), newestFirst, ratingHigh or ratingLow" }
+      - { name: query, label: "Only reviews with these words (at most 5 of them)" }
+      - { name: num, label: "How many, up to 60 (10 by default)", kind: number }
+      - { name: next_page_token, label: "The next page's token, which a page before gave" }
+      - { name: hl, label: "In this language, such as en" }
+    query:
+      engine: google_maps_reviews
+      place_id: "{{ input.place_id }}"
+      data_id: "{{ input.data_id }}"
+      sort_by: "{{ input.sort_by }}"
+      query: "{{ input.query }}"
+      num: "{{ input.num }}"
+      next_page_token: "{{ input.next_page_token }}"
+      hl: "{{ input.hl }}"
+    output: { place_info: record, reviews: list, serpapi_pagination: record }
+  google_shopping:
+    label: "Search Google Shopping"
+    description: "Products on Google Shopping for a search, each with its price, shop, rating and delivery."
+    method: GET
+    path: /search
+    timeout: 60
+    inputs:
+      - { name: q, label: "What to look for", required: true }
+      - { name: location, label: "As searched from this place, such as Austin, Texas, United States" }
+      - { name: gl, label: "The country, as a two-letter code such as us" }
+      - { name: hl, label: "The language, such as en" }
+      - { name: min_price, label: "At least this price", kind: number }
+      - { name: max_price, label: "At most this price", kind: number }
+      - { name: sort_by, label: "In what order: 1 (price, lowest first) or 2 (highest first)" }
+    query:
+      engine: google_shopping
+      q: "{{ input.q }}"
+      location: "{{ input.location }}"
+      gl: "{{ input.gl }}"
+      hl: "{{ input.hl }}"
+      min_price: "{{ input.min_price }}"
+      max_price: "{{ input.max_price }}"
+      sort_by: "{{ input.sort_by }}"
+    items: "has(value.shopping_results) ? value.shopping_results : []"
+    output:
+      position: number
+      title: text
+      product_id: text
+      product_link: text
+      source: text
+      price: text
+      extracted_price: number
+      rating: number
+      reviews: number
+      snippet: text
+      extensions: list
+      thumbnail: text
+      delivery: text
+  google_jobs:
+    label: "Search Google Jobs"
+    description: "Job openings for a search, each with its company, place, where it was posted, how to apply and its description."
+    method: GET
+    path: /search
+    timeout: 60
+    inputs:
+      - { name: q, label: "What job to look for, such as barista", required: true }
+      - { name: location, label: "As searched from this place, such as Austin, Texas, United States" }
+      - { name: gl, label: "The country, as a two-letter code such as us" }
+      - { name: hl, label: "The language, such as en" }
+      - { name: lrad, label: "Within this many kilometers", kind: number }
+      - { name: next_page_token, label: "The next page's token, which a page before gave" }
+    query:
+      engine: google_jobs
+      q: "{{ input.q }}"
+      location: "{{ input.location }}"
+      gl: "{{ input.gl }}"
+      hl: "{{ input.hl }}"
+      lrad: "{{ input.lrad }}"
+      next_page_token: "{{ input.next_page_token }}"
+    items: "has(value.jobs_results) ? value.jobs_results : []"
+    output:
+      title: text
+      company_name: text
+      location: text
+      via: text
+      share_link: text
+      thumbnail: text
+      extensions: list
+      detected_extensions: record
+      description: text
+      job_highlights: list
+      apply_options: list
+      job_id: text
+  google_images:
+    label: "Search Google Images"
+    description: "Images for a search, 100 a page: each with its title, the page it is on, and the image's own address and size."
+    method: GET
+    path: /search
+    timeout: 60
+    inputs:
+      - { name: q, label: "What to look for", required: true }
+      - { name: gl, label: "The country, as a two-letter code such as us" }
+      - { name: hl, label: "The language, such as en" }
+      - { name: tbs, label: "Image filters, such as itp:photos,isz:l (large photos)" }
+      - { name: ijn, label: "Which page of images (0 is the first)", kind: number }
+    query:
+      engine: google_images
+      q: "{{ input.q }}"
+      gl: "{{ input.gl }}"
+      hl: "{{ input.hl }}"
+      tbs: "{{ input.tbs }}"
+      ijn: "{{ input.ijn }}"
+    items: "has(value.images_results) ? value.images_results : []"
+    output:
+      position: number
+      title: text
+      link: text
+      source: text
+      original: text
+      original_width: number
+      original_height: number
+      thumbnail: text
+      is_product: boolean
+  get_account:
+    label: "Check the account"
+    description: "The account's plan, and how many searches it has left this month and this hour."
+    method: GET
+    path: /account.json
+    # The answer holds the API key and the account's email too: the step gives only the plan and its counts.
+    result: >-
+      {'account_id': has(value.account_id) ? value.account_id : null,
+       'plan_name': has(value.plan_name) ? value.plan_name : null,
+       'searches_per_month': has(value.searches_per_month) ? value.searches_per_month : null,
+       'plan_searches_left': has(value.plan_searches_left) ? value.plan_searches_left : null,
+       'extra_credits': has(value.extra_credits) ? value.extra_credits : null,
+       'total_searches_left': has(value.total_searches_left) ? value.total_searches_left : null,
+       'this_month_usage': has(value.this_month_usage) ? value.this_month_usage : null,
+       'last_hour_searches': has(value.last_hour_searches) ? value.last_hour_searches : null,
+       'account_rate_limit_per_hour': has(value.account_rate_limit_per_hour) ? value.account_rate_limit_per_hour : null}
+    output:
+      account_id: text
+      plan_name: text
+      searches_per_month: number
+      plan_searches_left: number
+      extra_credits: number
+      total_searches_left: number
+      this_month_usage: number
+      last_hour_searches: number
+      account_rate_limit_per_hour: number
+triggers:
+  new_news_article:
+    label: A new news article
+    description: >-
+      Each news article Google News finds for a search, the newest asked for every hour (each look spends a search):
+      for an alert when a name or subject is in the news.
+    inputs:
+      - { name: q, label: "What to watch for, such as a company's name", required: true }
+      - { name: gl, label: "News of this country, as a two-letter code (us by default)" }
+      - { name: hl, label: "In this language, such as en" }
+    poll:
+      action: google_news
+      input: { q: "{{ input.q }}", gl: "{{ input.gl }}", hl: "{{ input.hl }}", newest_first: true }
+      newest_first: true
+      id: item.link
+      every: 1h

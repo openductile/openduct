@@ -1,0 +1,11 @@
+action: get_video
+credential: { access_token: ya29.a0 }
+input: { video_id: dQw4w9WgXcQ }
+exchanges:
+  - sent:
+      method: GET
+      url: https://www.googleapis.com/youtube/v3/videos
+      headers: { authorization: Bearer ya29.a0 }
+      query: { id: dQw4w9WgXcQ, part: "snippet,contentDetails,statistics" }
+    answer: { body: { kind: "youtube#videoListResponse", items: [{ id: dQw4w9WgXcQ, snippet: { title: A video, categoryId: "22" }, statistics: { viewCount: "1000" } }] } }
+result: { id: dQw4w9WgXcQ, snippet: { title: A video, categoryId: "22" }, statistics: { viewCount: "1000" } }

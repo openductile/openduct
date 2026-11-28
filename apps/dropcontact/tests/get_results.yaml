@@ -1,0 +1,36 @@
+description: A request's contacts, enriched
+action: get_results
+credential: { api_key: dc_test_key_1 }
+input: { request_id: qzmxkpvlrtdnhwa }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://api.dropcontact.com/v1/enrich/all/qzmxkpvlrtdnhwa"
+    answer:
+      status: 200
+      body:
+        error: false
+        success: true
+        credits_left: 1249
+        data:
+          - first_name: Ann
+            last_name: Example
+            full_name: Ann Example
+            civility: Mrs
+            email: [{ email: ann@coffee.example, qualification: nominative@pro }]
+            job: Owner
+            company: Example Coffee
+            website: www.coffee.example
+            country: United States
+            nb_employees: 10-19
+result:
+  - first_name: Ann
+    last_name: Example
+    full_name: Ann Example
+    civility: Mrs
+    email: [{ email: ann@coffee.example, qualification: nominative@pro }]
+    job: Owner
+    company: Example Coffee
+    website: www.coffee.example
+    country: United States
+    nb_employees: 10-19

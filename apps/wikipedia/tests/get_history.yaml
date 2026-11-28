@@ -1,0 +1,19 @@
+description: An article's changes over two pages, the older page by the whole address Wikipedia gives
+action: get_history
+credential: { contact: ops@example.com }
+input: { title: Jupiter, filter: minor }
+exchanges:
+  - sent: { method: GET, url: https://en.wikipedia.org/w/rest.php/v1/page/Jupiter/history, query: { filter: minor } }
+    answer:
+      body:
+        revisions: [{ id: 1300000002, timestamp: "2026-11-20T08:05:03Z", minor: true, size: 195291, comment: Typo, user: { id: 101, name: ExampleEditor }, delta: -2 }]
+        latest: "https://en.wikipedia.org/w/rest.php/v1/page/Jupiter/history"
+        older: "https://en.wikipedia.org/w/rest.php/v1/page/Jupiter/history?filter=minor&older_than=1300000002"
+  - sent: { method: GET, url: "https://en.wikipedia.org/w/rest.php/v1/page/Jupiter/history?filter=minor&older_than=1300000002" }
+    answer:
+      body:
+        revisions: [{ id: 1300000001, timestamp: "2026-11-19T08:05:03Z", minor: true, size: 195293, comment: Link, user: { id: 102, name: AnotherEditor }, delta: 12 }]
+        latest: "https://en.wikipedia.org/w/rest.php/v1/page/Jupiter/history"
+result:
+  - { id: 1300000002, timestamp: "2026-11-20T08:05:03Z", minor: true, size: 195291, comment: Typo, user: { id: 101, name: ExampleEditor }, delta: -2 }
+  - { id: 1300000001, timestamp: "2026-11-19T08:05:03Z", minor: true, size: 195293, comment: Link, user: { id: 102, name: AnotherEditor }, delta: 12 }

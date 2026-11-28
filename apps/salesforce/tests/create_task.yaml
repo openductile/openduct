@@ -1,0 +1,12 @@
+description: "A task with a lead, due on a day"
+action: create_task
+credential: { access_token: "00D000000000001!AQ.test", instance: examplecorp.my.salesforce.com }
+input: { subject: Call back about the quote, due_date: "2026-12-01", who_id: 00Q5e000001AbcDEAZ, priority: High }
+exchanges:
+  - sent:
+      method: POST
+      url: https://examplecorp.my.salesforce.com/services/data/v67.0/sobjects/Task/
+      headers: { authorization: Bearer 00D000000000001!AQ.test }
+      body: { Subject: Call back about the quote, ActivityDate: "2026-12-01", WhoId: 00Q5e000001AbcDEAZ, Priority: High }
+    answer: { status: 201, body: { id: 00T5e00000TaSkAAAV, success: true, errors: [] } }
+result: { id: 00T5e00000TaSkAAAV, success: true, errors: [] }

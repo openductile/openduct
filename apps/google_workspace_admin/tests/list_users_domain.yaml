@@ -1,0 +1,8 @@
+description: With a domain, the account is not named
+action: list_users
+credential: { access_token: ya29.test }
+input: { domain: shop.example.com }
+exchanges:
+  - sent: { method: GET, url: https://admin.googleapis.com/admin/directory/v1/users, query: { domain: shop.example.com, maxResults: "500" } }
+    answer: { body: { users: [{ id: "100000000000000000003", primaryEmail: cara@shop.example.com }] } }
+result: [{ id: "100000000000000000003", primaryEmail: cara@shop.example.com }]

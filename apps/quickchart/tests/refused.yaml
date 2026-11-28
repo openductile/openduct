@@ -1,0 +1,13 @@
+description: A chart QuickChart cannot draw - 400, and the step fails with QuickChart's errors
+action: check_chart
+credential: { api_key: "" }
+input: { chart: "{type:'bar',data:" }
+exchanges:
+  - answer:
+      status: 400
+      body:
+        success: false
+        errors: ["The chart configuration could not be read."]
+        warnings: []
+        normalized: {}
+error: "QuickChart answered 400: The chart configuration could not be read."

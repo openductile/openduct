@@ -55,26 +55,32 @@ pub(crate) async fn tail(client: &mut Routed, topic: &str, n: i64, from: i64) ->
             next = answer.log_start;
             continue;
         }
-        let mut batches = answer.batches;
         let before = next;
-        while !batches.is_empty() {
-            let Ok(set) =
-                RecordBatchDecoder::decode_with_custom_compression(&mut batches, Some(records::decompress))
-            else {
-                break;
-            };
-            for record in set.records {
-                if record.offset >= next && !record.control {
-                    next = record.offset + 1;
-                    out.push(record);
-                }
-            }
-        }
+        out.extend(records_from(answer.batches, &mut next));
         if next == before {
             break;
         }
     }
     Ok(out)
+}
+
+/// The records of a fetch's answer from offset `next` on, `next` moved past them.
+pub(crate) fn records_from(mut batches: bytes::Bytes, next: &mut i64) -> Vec<Record> {
+    let mut out = Vec::new();
+    while !batches.is_empty() {
+        let Ok(set) =
+            RecordBatchDecoder::decode_with_custom_compression(&mut batches, Some(records::decompress))
+        else {
+            break;
+        };
+        for record in set.records {
+            if record.offset >= *next && !record.control {
+                *next = record.offset + 1;
+                out.push(record);
+            }
+        }
+    }
+    out
 }
 
 /// The last `n` messages of one of a workflow's topics, the topics made first if they are missing.
@@ -102,6 +108,28 @@ pub(crate) fn runs_of(found: &[Record]) -> Vec<Value> {
         .filter_map(|r| r.value.as_ref().and_then(|v| serde_json::from_slice(v).ok()))
         .collect();
     runs.reverse();
+    // forms-and-resume: a run that waited is kept again each time it goes on: of its records, the one that got
+    // furthest is the run (each part has the steps of those before it), wherever it is in the history.
+    let furthest = |r: &Value| {
+        (
+            r["steps"].as_array().map_or(0, Vec::len),
+            r["status"] != "waiting",
+        )
+    };
+    let mut best: std::collections::HashMap<String, (usize, bool)> = std::collections::HashMap::new();
+    for r in &runs {
+        if let Some(id) = r["run"].as_str() {
+            let here = furthest(r);
+            best.entry(id.to_owned())
+                .and_modify(|b| *b = (*b).max(here))
+                .or_insert(here);
+        }
+    }
+    let mut shown = std::collections::HashSet::new();
+    runs.retain(|r| match r["run"].as_str() {
+        Some(id) => best.get(id) == Some(&furthest(r)) && shown.insert(id.to_owned()),
+        None => true,
+    });
     runs
 }
 

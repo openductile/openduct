@@ -1,0 +1,16 @@
+description: The largest coins in euros; a page of fewer than 250 is the last
+action: list_coin_markets
+credential: { api_key: CG-test1 }
+input: { vs_currency: eur, price_change_percentage: "24h,7d" }
+exchanges:
+  - sent:
+      method: GET
+      url: https://api.coingecko.com/api/v3/coins/markets
+      query: { vs_currency: eur, price_change_percentage: "24h,7d", per_page: "250" }
+    answer:
+      body:
+        - { id: bitcoin, symbol: btc, name: Bitcoin, current_price: 71020, market_cap: 1415000000000, market_cap_rank: 1 }
+        - { id: ethereum, symbol: eth, name: Ethereum, current_price: 2722.1, market_cap: 328000000000, market_cap_rank: 2 }
+result:
+  - { id: bitcoin, symbol: btc, name: Bitcoin, current_price: 71020, market_cap: 1415000000000, market_cap_rank: 1 }
+  - { id: ethereum, symbol: eth, name: Ethereum, current_price: 2722.1, market_cap: 328000000000, market_cap_rank: 2 }

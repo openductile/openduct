@@ -45,6 +45,37 @@ For reports, checks and anything to do at regular times.
   before" with `timestamp(value.scheduled_at) - duration('24h')`.
 - **In a cluster** each time runs once, on one node, and goes on while any node is up.
 
+## Schedule: at set times
+
+For the morning report, the Monday summary, the invoice run on the 1st.
+
+1. Choose **Schedule**, then how often: **Every hour** (at a minute past it), **Every day**, **Weekdays** (Monday to
+   Friday), **Weekly** (on the days you choose) or **Monthly** (on the dates you choose, or the last day), and the
+   time - or several times.
+2. Choose the **time zone** the times are in: UTC unless you choose, or *Use mine* for your browser's.
+3. **Next runs** shows the next five times, on that clock, as you change them - or what is wrong, in plain words.
+
+The same in a workflow file:
+
+```yaml
+trigger:
+  schedule:
+    every: week            # hour, day, weekday, week or month
+    on: [monday, thursday] # week: days; month: dates (1 to 31) or last
+    at: "08:30"            # or a list: ["08:30", "17:00"]; 9am and 5:30 pm work too
+    timezone: Europe/Berlin
+```
+
+**Cron**, for anything else: five fields - minute, hour, day of the month, month, day of the week - or six with the
+second first. `0 9 * * 1-5` is 09:00 on weekdays, `*/10 * * * *` every ten minutes, `0 0 L * *` midnight on each
+month's last day; `@daily` and `@hourly` work too. `cron:` takes a list as well, and `timezone:` as above.
+
+- **Clock changes:** a time the clock skips when it goes forward (02:30 on that night) runs once, as the clock jumps;
+  a time it passes twice when it goes back runs once, the first time. So a daily schedule runs once every day, and an
+  hourly one once for each hour the clock shows. `every: 15m` keeps to real time in every zone.
+- A month without the date chosen (the 31st in April) is passed over; choose **Last day** for every month's.
+- `openduct workflow check` prints when a schedule runs next.
+
 ## Topic: each message of a topic
 
 For events your own programs write with any Kafka client, or other workflows write with a **Write to a topic** step.

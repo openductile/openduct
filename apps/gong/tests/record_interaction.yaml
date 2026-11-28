@@ -1,0 +1,22 @@
+# Made by `openduct app from-openapi`: Record a digital interaction.
+description: "Record a digital interaction, made from the API description's schemas"
+action: record_interaction
+credential: { access_key: ann, access_key_secret: test-password }
+input:
+  event_id: event_1
+  timestamp: "2026-01-15T09:30:00Z"
+  event_type: example
+  content: { contentTitle: example }
+exchanges:
+  - sent:
+      method: POST
+      url: "https://api.gong.io/v2/digital-interaction"
+      query: {}
+      headers: { authorization: "Basic YW5uOnRlc3QtcGFzc3dvcmQ=" }
+      body:
+        eventId: event_1
+        timestamp: "2026-01-15T09:30:00Z"
+        eventType: example
+        content: { contentTitle: example }
+    answer: { status: 200, body: { requestId: "4al018gzaztcr8nbukw" } }
+result: { requestId: "4al018gzaztcr8nbukw" }

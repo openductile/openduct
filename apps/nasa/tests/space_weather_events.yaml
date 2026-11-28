@@ -1,0 +1,11 @@
+description: Solar flares of a quiet week - DONKI answers with an empty list
+action: space_weather_events
+credential: { api_key: nasa-test-key }
+input: { kind: FLR, start_date: "2026-11-20", end_date: "2026-11-27" }
+exchanges:
+  - sent:
+      method: GET
+      url: https://api.nasa.gov/DONKI/FLR
+      query: { api_key: nasa-test-key, startDate: "2026-11-20", endDate: "2026-11-27" }
+    answer: { status: 200, body: [] }
+result: []

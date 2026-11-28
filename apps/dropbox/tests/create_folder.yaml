@@ -1,0 +1,8 @@
+description: A folder for a client, renamed if the name is taken
+action: create_folder
+credential: { access_token: sl.test-token }
+input: { path: /Clients/Example Co, autorename: true }
+exchanges:
+  - sent: { url: https://api.dropboxapi.com/2/files/create_folder_v2, body: { path: /Clients/Example Co, autorename: true } }
+    answer: { body: { metadata: { id: "id:a4ayc_80_OEAAAAAAAAAZc", name: Example Co, path_display: /Clients/Example Co, path_lower: /clients/example co } } }
+result: { id: "id:a4ayc_80_OEAAAAAAAAAZc", name: Example Co, path_display: /Clients/Example Co, path_lower: /clients/example co }

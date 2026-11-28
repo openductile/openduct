@@ -1,0 +1,79 @@
+# Made by `openduct app from-openapi`: List tables.
+description: "List tables, made from the API description's schemas"
+action: list_tables
+credential: { token: test-token }
+input: { doc_id: doc_1 }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://docs.superhuman.com/apis/v1/docs/doc_1/tables"
+      query: { limit: "25" }
+      headers: { authorization: "Bearer test-token" }
+    answer:
+      status: 200
+      body:
+        items:
+          - id: grid-pqRst-U
+            type: table
+            tableType: table
+            href: "https://example.com/1"
+            browserLink: "https://example.com/1"
+            name: Tasks
+            parent:
+              id: canvas-IjkLmnO
+              type: page
+              href: "https://example.com/1"
+              browserLink: "https://example.com/1"
+              name: example
+        href: "https://example.com/1"
+        nextPageToken: token_2
+        nextPageLink: "https://example.com/1"
+  - sent:
+      method: GET
+      url: "https://docs.superhuman.com/apis/v1/docs/doc_1/tables"
+      query: { limit: "25", pageToken: token_2 }
+      headers: { authorization: "Bearer test-token" }
+    answer:
+      status: 200
+      body:
+        items:
+          - id: id_2
+            type: table
+            tableType: table
+            href: "https://example.com/1"
+            browserLink: "https://example.com/1"
+            name: Tasks
+            parent:
+              id: canvas-IjkLmnO
+              type: page
+              href: "https://example.com/1"
+              browserLink: "https://example.com/1"
+              name: example
+        href: "https://example.com/1"
+        nextPageToken: null
+        nextPageLink: "https://example.com/1"
+result:
+  - id: grid-pqRst-U
+    type: table
+    tableType: table
+    href: "https://example.com/1"
+    browserLink: "https://example.com/1"
+    name: Tasks
+    parent:
+      id: canvas-IjkLmnO
+      type: page
+      href: "https://example.com/1"
+      browserLink: "https://example.com/1"
+      name: example
+  - id: id_2
+    type: table
+    tableType: table
+    href: "https://example.com/1"
+    browserLink: "https://example.com/1"
+    name: Tasks
+    parent:
+      id: canvas-IjkLmnO
+      type: page
+      href: "https://example.com/1"
+      browserLink: "https://example.com/1"
+      name: example

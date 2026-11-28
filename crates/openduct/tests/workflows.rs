@@ -389,3 +389,74 @@ fn a_schedule_a_topic_and_a_person_start_runs_and_a_test_run_sends_nothing() {
     );
     stop(running);
 }
+
+// cron-schedules
+#[test]
+fn set_times_start_runs_and_the_studio_says_when_a_schedule_runs_next() {
+    let data = tempfile::tempdir().unwrap();
+    let running = start(data.path());
+    let studio = running.studio.clone();
+    let signed = owner(&studio);
+
+    // Every second, by a cron expression on a clock of its own: each run at its whole second, once.
+    let ticking = make(
+        &studio,
+        &signed,
+        &json!({ "name": "Seconds", "trigger": { "schedule": { "cron": "* * * * * *", "timezone": "Asia/Tokyo" } }, "steps": [ { "set": { "at": "value.scheduled_at" } } ] }),
+    );
+    until(30, "three runs at set times", || {
+        runs(&studio, &signed, &ticking).len() >= 3
+    });
+    call(
+        &studio,
+        &signed,
+        "POST",
+        &format!("/api/workflows/{ticking}/active"),
+        Some(r#"{"active": false}"#),
+    );
+    let mut slots: Vec<i64> = runs(&studio, &signed, &ticking)
+        .iter()
+        .map(|r| r["trigger"]["slot"].as_i64().unwrap())
+        .collect();
+    assert!(slots.iter().all(|s| s % 1000 == 0), "{slots:?}");
+    slots.sort_unstable();
+    let count = slots.len();
+    slots.dedup();
+    assert_eq!(slots.len(), count, "a time ran twice");
+
+    // The trigger's window asks when a schedule runs next, and is told what is wrong in plain words.
+    let next = call(
+        &studio,
+        &signed,
+        "POST",
+        "/api/schedule",
+        Some(r#"{"schedule": {"every": "weekday", "at": "09:00", "timezone": "Europe/Berlin"}, "count": 3}"#),
+    );
+    assert_eq!(next.status, 200, "{}", next.body);
+    assert_eq!(next.body["says"], "every weekday at 09:00 (Europe/Berlin)");
+    assert_eq!(next.body["local"].as_array().unwrap().len(), 3);
+    assert!(
+        next.body["local"][0].as_str().unwrap().contains("T09:00:00+0"),
+        "{}",
+        next.body
+    );
+    let wrong = call(
+        &studio,
+        &signed,
+        "POST",
+        "/api/schedule",
+        Some(r#"{"schedule": {"cron": "0 9 * *"}}"#),
+    );
+    assert_eq!(wrong.status, 422);
+    assert!(
+        wrong.body["error"].as_str().unwrap().contains("has 4 fields"),
+        "{}",
+        wrong.body
+    );
+    assert_eq!(
+        http(&studio, "POST", "/api/schedule", &[JSON], Some("{}")).status,
+        401,
+        "signed in only"
+    );
+    stop(running);
+}

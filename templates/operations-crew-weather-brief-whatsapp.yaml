@@ -1,0 +1,83 @@
+name: A morning weather brief for your crew on WhatsApp
+description: >-
+  Each weekday at 6:00, reads the day's hourly forecast for your job site from Open-Meteo (free, no key) and sends
+  the crew lead one WhatsApp message for the working hours: the high and low, when rain is likely, the strongest
+  gusts, and a plain warning when it is too hot, too cold or too windy to work safely aloft. For roofing, landscaping,
+  building and event crews. Needs: whatsapp.
+category: Operations
+trigger:
+  # The site's own time zone: 6:00 there, summer and winter.
+  schedule: { every: weekday, at: "06:00", timezone: America/Denver }
+# What a test runs on: an event as this trigger gives it.
+sample:
+  scheduled_at: "2026-11-30T13:00:00Z"
+steps:
+  - name: forecast
+    http:
+      url: https://api.open-meteo.com/v1/forecast
+      # The job site: set its latitude and longitude.
+      query:
+        latitude: "39.7392"
+        longitude: "-104.9903"
+        hourly: temperature_2m,precipitation_probability,wind_gusts_10m
+        forecast_days: "1"
+        timezone: America/Denver
+        temperature_unit: fahrenheit
+        wind_speed_unit: mph
+      sample:
+        hourly:
+          time: ["2026-11-30T06:00", "2026-11-30T07:00", "2026-11-30T08:00", "2026-11-30T09:00", "2026-11-30T10:00", "2026-11-30T11:00", "2026-11-30T12:00", "2026-11-30T13:00", "2026-11-30T14:00", "2026-11-30T15:00", "2026-11-30T16:00", "2026-11-30T17:00"]
+          temperature_2m: [28, 30, 33, 37, 41, 44, 46, 47, 46, 44, 40, 36]
+          precipitation_probability: [5, 5, 10, 10, 15, 20, 35, 60, 70, 55, 30, 10]
+          wind_gusts_10m: [8, 9, 12, 15, 19, 24, 31, 33, 28, 22, 16, 12]
+    retry: { attempts: 3, wait: 1m }
+  # The working day's figures, and the warnings worth sending, by your own limits.
+  - name: brief
+    python: |
+      START, END = 7, 17                      # working hours, on the site's clock
+      HOT, COLD, GUSTS, RAIN = 95, 32, 30, 50 # warn above / below these
+
+      hourly = (steps["forecast"].get("body") or {}).get("hourly") or {}
+      hours = []
+      for i, t in enumerate(hourly.get("time", [])):
+          hour = int(t[11:13])
+          if START <= hour <= END:
+              hours.append({
+                  "hour": hour,
+                  "temp": hourly["temperature_2m"][i],
+                  "rain": hourly["precipitation_probability"][i],
+                  "gust": hourly["wind_gusts_10m"][i],
+              })
+      if not hours:
+          result = {"send": False, "text": ""}
+      else:
+          def clock(h):
+              return f"{(h - 1) % 12 + 1}{'am' if h < 12 else 'pm'}"
+          high = max(h["temp"] for h in hours)
+          low = min(h["temp"] for h in hours)
+          gust = max(hours, key=lambda h: h["gust"])
+          wet = [h["hour"] for h in hours if h["rain"] >= RAIN]
+          warnings = []
+          if high >= HOT:
+              warnings.append(f"heat: up to {high}F - water and shade breaks")
+          if low <= COLD:
+              warnings.append(f"freezing at {low}F - watch for ice on ladders and decks")
+          if gust["gust"] >= GUSTS:
+              warnings.append(f"gusts of {gust['gust']} mph around {clock(gust['hour'])} - no work aloft then")
+          lines = [
+              f"Today {clock(START)}-{clock(END)}: {low}F to {high}F.",
+              f"Rain likely from {clock(wet[0])} to {clock(wet[-1] + 1)}." if wet else "Rain unlikely.",
+              f"Strongest gusts {gust['gust']} mph around {clock(gust['hour'])}.",
+          ]
+          if warnings:
+              lines.append("Careful: " + "; ".join(warnings) + ".")
+          result = {"send": True, "text": "\n".join(lines), "warnings": len(warnings)}
+  - where: steps.brief.send == true
+  - name: tell
+    whatsapp:
+      action: send
+      credential: whatsapp
+      # The crew lead's number, with its country code, digits only.
+      to: "15555550123"
+      text: "{{ steps.brief.text }}"
+    retry: { attempts: 3, wait: 30s }

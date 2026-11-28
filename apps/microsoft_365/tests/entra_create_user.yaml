@@ -1,0 +1,35 @@
+description: A user added, who must change the first password at first sign-in
+action: create_user
+sign_in: microsoft_entra_admin
+credential: {access_token: eyJ0-admin}
+input: {display_name: Cleo Example, user_principal_name: cleo@contoso.example, mail_nickname: cleo, password: Test-Password-1,
+  given_name: Cleo, usage_location: US}
+exchanges:
+- sent:
+    method: POST
+    url: https://graph.microsoft.com/v1.0/users
+    headers: {authorization: Bearer eyJ0-admin}
+    query: {}
+    body:
+      accountEnabled: true
+      displayName: Cleo Example
+      userPrincipalName: cleo@contoso.example
+      mailNickname: cleo
+      passwordProfile: {password: Test-Password-1, forceChangePasswordNextSignIn: true}
+      givenName: Cleo
+      usageLocation: US
+  answer:
+    status: 201
+    body: &id001
+      id: 87d349ed-44d7-43e1-9a83-5f2406dee5bd
+      displayName: Cleo Example
+      givenName: Cleo
+      surname: Example
+      mail: null
+      userPrincipalName: cleo@contoso.example
+      jobTitle: null
+      officeLocation: Main office
+      mobilePhone: null
+      businessPhones: [+1 555 0100]
+      preferredLanguage: en-US
+result: *id001

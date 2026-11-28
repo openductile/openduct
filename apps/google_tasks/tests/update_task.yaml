@@ -1,0 +1,8 @@
+description: A task moved to another day; nothing else is sent
+action: update_task
+credential: { access_token: ya29.test }
+input: { list_id: "@default", task_id: dGFzazM, due: "2026-12-05T00:00:00.000Z" }
+exchanges:
+  - sent: { method: PATCH, url: https://tasks.googleapis.com/tasks/v1/lists/@default/tasks/dGFzazM, body: { due: "2026-12-05T00:00:00.000Z" } }
+    answer: { body: { kind: tasks#task, id: dGFzazM, title: Send the March invoices, status: needsAction, due: "2026-12-05T00:00:00.000Z" } }
+result: { kind: tasks#task, id: dGFzazM, title: Send the March invoices, status: needsAction, due: "2026-12-05T00:00:00.000Z" }

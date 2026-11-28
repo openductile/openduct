@@ -1,0 +1,8 @@
+description: A list with no tasks - Google leaves the items out
+action: list_tasks
+credential: { access_token: ya29.test }
+input: { list_id: WjFoQ2VqVW1aV3hR, due_from: "2026-12-01T00:00:00Z", due_until: "2026-12-08T00:00:00Z" }
+exchanges:
+  - sent: { query: { dueMin: "2026-12-01T00:00:00Z", dueMax: "2026-12-08T00:00:00Z", maxResults: "100" } }
+    answer: { body: { kind: tasks#tasks, etag: "\"LTEyMzQ1\"" } }
+result: []

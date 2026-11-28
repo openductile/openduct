@@ -1,0 +1,10 @@
+description: Turning the workflow off removes the webhook
+trigger: task_event
+unregister: true
+workflow: wf1
+credential: { api_key: pk_1_TEST, "webhook_secret@wf1": O94IM25S7PXBPYTMNXLLET230SRP0S89, "webhook_id@wf1": 7fa3ec74-69a8-4530-a251-8a13730bd204 }
+input: { team_id: "108" }
+exchanges:
+  - sent: { method: DELETE, url: https://api.clickup.com/api/v2/webhook/7fa3ec74-69a8-4530-a251-8a13730bd204 }
+    answer: { status: 200, body: {} }
+kept: { webhook_secret: "", webhook_id: "" }

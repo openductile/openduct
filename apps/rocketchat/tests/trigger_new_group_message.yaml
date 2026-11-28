@@ -1,0 +1,8 @@
+trigger: new_group_message
+credential: { workspace: acme, user_id: uAbC123, token: rc_test_1 }
+input: { room_id: gMgmt1 }
+seen: { items: [[mSg020, ""]] }
+exchanges:
+  - sent: { method: GET, url: https://acme.rocket.chat/api/v1/groups.history, query: { roomId: gMgmt1, count: "100" } }
+    answer: { body: { messages: [{ _id: mSg021, msg: Meeting moved to 3pm }, { _id: mSg020, msg: Budget agreed }], success: true } }
+runs: [{ _id: mSg021, msg: Meeting moved to 3pm }]

@@ -1,0 +1,12 @@
+description: "A person's leads, by email"
+action: get_lead
+credential: {"api_key": "test-key"}
+input: {"email": "ann@example.com"}
+exchanges:
+  - sent:
+      method: GET
+      url: "https://api.lemlist.com/api/leads/ann@example.com"
+      query: {"version": "v2"}
+      headers: {"authorization": "Basic OnRlc3Qta2V5"}
+    answer: {"status": 200, "body": [{"_id": "lea_L1", "contactId": "ctc_C1", "state": "emailsOpened", "status": "running", "isPaused": false, "source": "api", "variables": {"email": "ann@example.com", "firstName": "Ann"}, "campaign": {"id": "cam_A1", "name": "Autumn outreach", "status": "running"}, "createdAt": "2026-11-02T08:00:00.000Z"}]}
+result: [{"_id": "lea_L1", "contactId": "ctc_C1", "state": "emailsOpened", "status": "running", "isPaused": false, "source": "api", "variables": {"email": "ann@example.com", "firstName": "Ann"}, "campaign": {"id": "cam_A1", "name": "Autumn outreach", "status": "running"}, "createdAt": "2026-11-02T08:00:00.000Z"}]

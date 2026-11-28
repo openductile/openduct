@@ -1,0 +1,7 @@
+description: "A contact HighLevel cannot take: its reasons, a list, are joined"
+action: create_contact
+credential: { token: pit-test-token, location_id: i2SpAtBVHSVea1sL6oah }
+input: { email: not-an-address }
+exchanges:
+  - answer: { status: 422, body: { statusCode: 422, message: [email must be an email], error: Unprocessable Entity } }
+error: "HighLevel answered 422: email must be an email"

@@ -1,0 +1,28 @@
+description: One deal
+action: get_deal
+credential:
+  account: shopexample
+  api_key: test-key
+input:
+  deal_id: '7'
+exchanges:
+- sent:
+    method: GET
+    url: https://shopexample.api-us1.com/api/3/deals/7
+    headers:
+      api-token: test-key
+  answer:
+    status: 200
+    body:
+      deal: &id001
+        id: '7'
+        title: Spring order
+        value: '45678'
+        currency: usd
+        status: '0'
+        contact: '113'
+        group: '1'
+        stage: '2'
+        owner: '1'
+        cdate: '2026-11-27T10:05:00-06:00'
+result: *id001

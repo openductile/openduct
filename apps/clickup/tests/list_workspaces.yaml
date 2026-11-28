@@ -1,0 +1,44 @@
+description: "List your workspaces"
+action: list_workspaces
+credential: { api_key: test-key }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://api.clickup.com/api/v2/team"
+      query: {}
+      headers: { authorization: test-key }
+    answer:
+      status: 200
+      body:
+        teams:
+          - id: id_1
+            name: example
+            color: example
+            avatar: example
+            members:
+              - user:
+                  id: 1
+                  username: example
+                  email: "ann@example.com"
+                  color: example
+                  profilePicture: example
+                  initials: example
+                  week_start_day: 1
+                  global_font_support: true
+                  timezeone: example
+result:
+  - id: id_1
+    name: example
+    color: example
+    avatar: example
+    members:
+      - user:
+          id: 1
+          username: example
+          email: "ann@example.com"
+          color: example
+          profilePicture: example
+          initials: example
+          week_start_day: 1
+          global_font_support: true
+          timezeone: example

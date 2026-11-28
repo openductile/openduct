@@ -1,0 +1,98 @@
+name: Start the review of each resolved high-urgency incident
+description: >-
+  When PagerDuty tells this workflow's webhook that a high-urgency incident is resolved, the incident's log is read
+  from PagerDuty's API, a short script lays out the timeline and works out the minutes to acknowledge and to resolve,
+  and a model drafts the first paragraph of the review. The incident is added to your Incidents sheet, your incidents
+  channel in Slack hears the figures, and the review owners get the draft and the timeline from Gmail. Add the
+  webhook's token to the PagerDuty subscription as a custom header. Needs: pagerduty (header: Authorization, as
+  Token token= and your API key), model (ai), sheets (google_sheets), team (slack), mail (gmail).
+category: Engineering
+trigger:
+  # Left empty here: each workflow made from the template is given a token of its own.
+  webhook: { token: "" }
+# What a test runs on: a delivery as PagerDuty's webhooks send it.
+sample:
+  event:
+    id: 01DEN7K4Q2W8V9
+    event_type: incident.resolved
+    resource_type: incident
+    occurred_at: '2026-11-27T10:41:08Z'
+    data:
+      id: Q2W8V9K4N7DEN
+      number: 4127
+      title: Checkout API error rate above 5%
+      urgency: high
+      status: resolved
+      html_url: https://your-company.pagerduty.com/incidents/Q2W8V9K4N7DEN
+      service: { summary: Checkout API }
+steps:
+  - where: value.event.event_type == 'incident.resolved' && value.event.data.urgency == 'high'
+  - name: log
+    http:
+      url: "https://api.pagerduty.com/incidents/{{ value.event.data.id }}/log_entries"
+      credential: pagerduty
+      headers: { Accept: application/vnd.pagerduty+json;version=2 }
+      query: { is_overview: "true", limit: "100" }
+      sample:
+        log_entries:
+          - { type: resolve_log_entry, created_at: '2026-11-27T10:41:08Z', summary: Resolved by Ines Ortega }
+          - { type: annotate_log_entry, created_at: '2026-11-27T10:30:12Z', summary: "Note added: rolled back release 2026.11.27-2" }
+          - { type: acknowledge_log_entry, created_at: '2026-11-27T10:06:40Z', summary: Acknowledged by Ines Ortega }
+          - { type: trigger_log_entry, created_at: '2026-11-27T10:02:55Z', summary: Triggered through the API }
+    retry: { attempts: 3, wait: 20s }
+  - name: timeline
+    javascript: |
+      // Oldest first, and the minutes from the trigger to the first acknowledgement and to the resolution.
+      const entries = ((steps.log.body || {}).log_entries || [])
+        .filter((e) => e.created_at)
+        .sort((a, b) => a.created_at.localeCompare(b.created_at));
+      const first = (type) => entries.find((e) => e.type === type);
+      const minutes = (from, to) => (from && to ? Math.round((Date.parse(to.created_at) - Date.parse(from.created_at)) / 60000) : null);
+      const triggered = first("trigger_log_entry");
+      const acked = first("acknowledge_log_entry");
+      const resolved = entries.filter((e) => e.type === "resolve_log_entry").pop();
+      const lines = entries.map((e) => `${e.created_at.slice(11, 16)} UTC  ${e.summary}`);
+      return {
+        lines,
+        started: triggered ? triggered.created_at : "",
+        to_acknowledge: minutes(triggered, acked),
+        to_resolve: minutes(triggered, resolved),
+      };
+  - name: draft
+    ai:
+      credential: model
+      system: >-
+        You draft the opening paragraph of an incident review: what happened, when, how long it lasted and how it
+        was resolved, from the timeline given. Four sentences at most, factual, no blame, no guesses about causes the
+        timeline does not show.
+      prompt: "Incident {{ value.event.data.number }}: {{ value.event.data.title }} ({{ value.event.data.service.summary }}).\n{{ steps.timeline.lines.join('\\n') }}"
+      max_tokens: 300
+  - name: sheet
+    google_sheets:
+      action: add_row
+      credential: sheets
+      spreadsheet_id: your-spreadsheet-id
+      sheet: Incidents
+      values:
+        - "{{ value.event.data.number }}"
+        - "{{ value.event.data.title }}"
+        - "{{ value.event.data.service.summary }}"
+        - "{{ steps.timeline.started }}"
+        - "{{ steps.timeline.to_acknowledge }}"
+        - "{{ steps.timeline.to_resolve }}"
+        - "{{ value.event.data.html_url }}"
+    retry: { attempts: 3, wait: 30s }
+  - name: post
+    slack:
+      credential: team
+      channel: "#incidents"
+      text: "Resolved #{{ value.event.data.number }} {{ value.event.data.title }}: acknowledged in {{ steps.timeline.to_acknowledge }} min, resolved in {{ steps.timeline.to_resolve }} min. Review draft sent to the review owners. {{ value.event.data.html_url }}"
+    retry: { attempts: 3, wait: 10s }
+  - name: review
+    gmail:
+      action: send_email
+      credential: mail
+      to: incident-reviews@example.com
+      subject: "Review: #{{ value.event.data.number }} {{ value.event.data.title }}"
+      text: "A first draft:\n\n{{ steps.draft.text }}\n\nTimeline:\n{{ steps.timeline.lines.join('\\n') }}\n\nAcknowledged in {{ steps.timeline.to_acknowledge }} min, resolved in {{ steps.timeline.to_resolve }} min.\n{{ value.event.data.html_url }}"
+    retry: { attempts: 3, wait: 10s }

@@ -1,0 +1,12 @@
+action: list_comments
+credential: { site: examplecorp, email: ann@example.com, api_token: ATATT_test }
+input: { issue: SUP-13 }
+exchanges:
+  - sent:
+      url: https://examplecorp.atlassian.net/rest/api/3/issue/SUP-13/comment
+      query: { maxResults: "100" }
+    answer: { body: { startAt: 0, maxResults: 1, total: 2, comments: [{ id: "10010" }] } }
+  - sent:
+      query: { maxResults: "100", startAt: "1" }
+    answer: { body: { startAt: 1, maxResults: 1, total: 2, comments: [{ id: "10011" }] } }
+result: [{ id: "10010" }, { id: "10011" }]

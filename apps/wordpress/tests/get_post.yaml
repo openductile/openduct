@@ -1,0 +1,9 @@
+action: get_post
+credential: { site_url: "https://blog.example.com", username: ann, application_password: "abcd efgh ijkl mnop" }
+input: { post_id: 42 }
+exchanges:
+  - sent:
+      method: GET
+      url: https://blog.example.com/wp-json/wp/v2/posts/42
+    answer: { body: { id: 42, status: publish, slug: winter-opening-hours } }
+result: { id: 42, status: publish, slug: winter-opening-hours }

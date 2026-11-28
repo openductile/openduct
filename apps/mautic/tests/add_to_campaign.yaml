@@ -1,0 +1,11 @@
+description: "A contact put in a campaign"
+action: add_to_campaign
+credential: {"site_url": "https://mautic.example.com", "username": "admin", "password": "pw-test"}
+input: {"campaign_id": 2, "contact_id": 47}
+exchanges:
+  - sent:
+      method: POST
+      url: "https://mautic.example.com/api/campaigns/2/contact/47/add"
+      headers: {"authorization": "Basic YWRtaW46cHctdGVzdA=="}
+    answer: {"status": 200, "body": {"success": true}}
+result: {"success": true}

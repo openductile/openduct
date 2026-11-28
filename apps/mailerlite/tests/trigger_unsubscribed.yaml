@@ -1,0 +1,42 @@
+description: A subscriber who unsubscribed
+trigger: subscriber_unsubscribed
+credential:
+  api_key: test-key
+  webhook_secret: ybmcD7PQ9R
+delivery:
+  headers:
+    signature: 7ffbe04dd5f84a0ee6b44998858a2d57b78c29bc5da9a02fa9ffe2e5690e5642
+  body: '{"id":"31986843064993537","email":"pat@example.com","status":"unsubscribed","source":"api","sent":3,"opens_count":2,"clicks_count":1,"open_rate":66.67,"click_rate":33.33,"ip_address":null,"subscribed_at":"2026-11-01
+    14:03:50","unsubscribed_at":"2026-11-20T10:00:00.000000Z","created_at":"2026-11-01 14:03:50","updated_at":"2026-11-02
+    09:00:00","fields":{"name":"Pat","last_name":"Sample","company":"Sample Supplies","city":null,"country":null,"phone":null,"state":null,"z_i_p":null},"opted_in_at":null,"optin_ip":null,"deleted_at":null,"forget_at":null,"event":"subscriber.unsubscribed","account_id":1}'
+  at: 1700000000
+runs:
+- id: '31986843064993537'
+  email: pat@example.com
+  status: unsubscribed
+  source: api
+  sent: 3
+  opens_count: 2
+  clicks_count: 1
+  open_rate: 66.67
+  click_rate: 33.33
+  ip_address: null
+  subscribed_at: '2026-11-01 14:03:50'
+  unsubscribed_at: '2026-11-20T10:00:00.000000Z'
+  created_at: '2026-11-01 14:03:50'
+  updated_at: '2026-11-02 09:00:00'
+  fields:
+    name: Pat
+    last_name: Sample
+    company: Sample Supplies
+    city: null
+    country: null
+    phone: null
+    state: null
+    z_i_p: null
+  opted_in_at: null
+  optin_ip: null
+  deleted_at: null
+  forget_at: null
+  event: subscriber.unsubscribed
+  account_id: 1

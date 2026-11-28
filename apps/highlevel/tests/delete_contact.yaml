@@ -1,0 +1,12 @@
+description: "Remove a contact"
+action: delete_contact
+credential: { token: test-token }
+input: { contact_id: ocQHyuzHvysMo5N5VsXc }
+exchanges:
+  - sent:
+      method: DELETE
+      url: "https://services.leadconnectorhq.com/contacts/ocQHyuzHvysMo5N5VsXc"
+      query: {}
+      headers: { authorization: "Bearer test-token", version: "2021-07-28" }
+    answer: { status: 200, body: { succeded: true } }
+result: { succeded: true }

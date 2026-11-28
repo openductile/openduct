@@ -1,0 +1,116 @@
+# Copyright 2026 Ductile AI, Inc
+# SPDX-License-Identifier: Apache-2.0
+# Snowflake: started with `openduct app from-openapi` from Snowflake's SQL API description,
+# https://github.com/snowflakedb/snowflake-rest-api-specs/blob/990e25d97236a11826c9eed40e587c2b859e5680/specifications/sqlapi.yaml
+# (Apache 2.0), then finished by hand. OpenDuct's pipeline connector for Snowflake is separate (crates/openduct-connect).
+app: snowflake
+name: Snowflake
+category: database
+description: Run SQL in a Snowflake account through its SQL API - queries, inserts and updates - and follow or cancel a statement.
+docs: "https://docs.snowflake.com/en/developer-guide/sql-api/index"
+hosts: ["*.snowflakecomputing.com"]
+base_url: "https://{{ credential.account }}.snowflakecomputing.com"
+sign_in:
+  - id: snowflake
+    label: "A programmatic access token"
+    fields:
+      - { name: account, label: "The account identifier, as in its address: myorg-myaccount (myorg-myaccount.snowflakecomputing.com)" }
+      - { name: token, label: "The programmatic access token", secret: true }
+    headers:
+      Authorization: "Bearer {{ credential.token }}"
+      X-Snowflake-Authorization-Token-Type: PROGRAMMATIC_ACCESS_TOKEN
+actions:
+  run_sql:
+    label: "Run SQL"
+    description: >-
+      Runs one statement (or several, with the count given) and gives its columns and rows - the first part of the
+      rows for a large result. One still running after 45 seconds gives its handle instead: check it later.
+    write: true
+    method: POST
+    path: "/api/v2/statements"
+    timeout: 60
+    inputs:
+      - { name: statement, label: "The SQL, with ? for each value given in bindings", required: true }
+      - { name: bindings, label: "Values for the ?s, such as {'1': {type: TEXT, value: ann@example.com}}", kind: record }
+      - { name: warehouse, label: "Warehouse (the user's default if left out)" }
+      - { name: database, label: "Database" }
+      - { name: schema, label: "Schema" }
+      - { name: role, label: "Role" }
+      - { name: timeout, label: "Most seconds it may run before Snowflake cancels it", kind: number }
+      - { name: statement_count, label: "How many statements the SQL holds, when more than one (0: any number)", kind: number }
+      - { name: query_tag, label: "A tag to find it by in the query history" }
+      - { name: run_in_background, label: "Give the handle at once, without waiting for the result", kind: boolean }
+      - { name: request_id, label: "A request id of your own, so a retried request is not run twice" }
+    query: { async: "{{ input.run_in_background }}", requestId: "{{ input.request_id }}" }
+    headers: { User-Agent: OpenDuct/1.0, Accept: application/json }
+    send:
+      statement: "{{ input.statement }}"
+      bindings: "{{ input.bindings }}"
+      warehouse: "{{ input.warehouse }}"
+      database: "{{ input.database }}"
+      schema: "{{ input.schema }}"
+      role: "{{ input.role }}"
+      timeout: "{{ input.timeout }}"
+      parameters:
+        multi_statement_count: "{{ input.statement_count }}"
+        query_tag: "{{ input.query_tag }}"
+    result: >-
+      {'statement_handle': has(value.statementHandle) ? value.statementHandle : null,
+       'code': has(value.code) ? value.code : null, 'message': has(value.message) ? value.message : null,
+       'columns': has(value.resultSetMetaData) ? value.resultSetMetaData.rowType.map(c, c.name) : [],
+       'rows': has(value.data) ? value.data : [],
+       'row_count': has(value.resultSetMetaData) ? value.resultSetMetaData.numRows : 0,
+       'partitions': has(value.resultSetMetaData) && has(value.resultSetMetaData.partitionInfo)
+         ? size(value.resultSetMetaData.partitionInfo) : 0,
+       'stats': has(value.stats) ? value.stats : null}
+    output:
+      statement_handle: text
+      code: text
+      message: text
+      columns: list
+      rows: list
+      row_count: number
+      partitions: number
+      stats: record
+  check_statement:
+    label: "Check a statement"
+    description: >-
+      Whether a statement has finished, and its columns and rows when it has; a partition number gives that part of a
+      large result (its rows only).
+    method: GET
+    path: "/api/v2/statements/{{ input.statement_handle }}"
+    timeout: 60
+    inputs:
+      - { name: statement_handle, label: "The statement's handle (Run SQL gives it)", required: true }
+      - { name: partition, label: "Which part of a large result, from 0", kind: number }
+    query: { partition: "{{ input.partition }}" }
+    headers: { User-Agent: OpenDuct/1.0, Accept: application/json }
+    result: >-
+      {'statement_handle': has(value.statementHandle) ? value.statementHandle : null,
+       'code': has(value.code) ? value.code : null, 'message': has(value.message) ? value.message : null,
+       'columns': has(value.resultSetMetaData) ? value.resultSetMetaData.rowType.map(c, c.name) : [],
+       'rows': has(value.data) ? value.data : [],
+       'row_count': has(value.resultSetMetaData) ? value.resultSetMetaData.numRows : 0,
+       'partitions': has(value.resultSetMetaData) && has(value.resultSetMetaData.partitionInfo)
+         ? size(value.resultSetMetaData.partitionInfo) : 0,
+       'stats': has(value.stats) ? value.stats : null}
+    output:
+      statement_handle: text
+      code: text
+      message: text
+      columns: list
+      rows: list
+      row_count: number
+      partitions: number
+      stats: record
+  cancel_statement:
+    label: "Cancel a statement"
+    description: "Stops a statement that is still running."
+    write: true
+    method: POST
+    path: "/api/v2/statements/{{ input.statement_handle }}/cancel"
+    body: none
+    inputs:
+      - { name: statement_handle, label: "The statement's handle (Run SQL gives it)", required: true }
+    headers: { User-Agent: OpenDuct/1.0, Accept: application/json }
+    output: { code: text, sqlState: text, message: text, statementHandle: text, statementStatusUrl: text }

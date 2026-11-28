@@ -1,0 +1,315 @@
+# Copyright 2026 Ductile AI, Inc
+# SPDX-License-Identifier: Apache-2.0
+# Linear's public API is GraphQL: every action is a POST to /graphql with a query and its variables. A list's next
+# page goes in the body's `extensions` (the standard place a GraphQL request carries extra values), read back into the
+# query's `after` variable.
+app: linear
+name: Linear
+category: development
+description: Issues in Linear - opened, found, changed, moved along and commented on - and the teams, statuses, people, labels and projects they belong to.
+docs: https://linear.app/developers/graphql
+hosts: [api.linear.app]
+base_url: https://api.linear.app
+sign_in:
+  - id: linear
+    label: A personal API key
+    fields:
+      - { name: api_key, label: "The API key (Settings → Security & access → Personal API keys)", secret: true }
+    headers: { Authorization: "{{ credential.api_key }}" }
+  - id: linear_oauth
+    label: Sign in with Linear
+    oauth2:
+      authorize: https://linear.app/oauth/authorize
+      token: https://api.linear.app/oauth/token
+      scopes: ["read,write"]
+    headers: { Authorization: "Bearer {{ credential.access_token }}" }
+error: "has(value.errors) && type(value.errors) == list && size(value.errors) > 0 ? value.errors[0].message : null"
+default_action: create_issue
+actions:
+  me:
+    label: Who I am
+    description: The signed-in person's id and name, and their workspace's.
+    method: POST
+    path: /graphql
+    send:
+      query: "query { viewer { id name displayName admin organization { id name urlKey } } }"
+    result: value.data.viewer
+    output: { id: text, name: text, displayName: text, admin: boolean, organization: record }
+  list_teams:
+    label: List teams
+    description: Each team's id (for adding issues), key (as in ENG-123) and name.
+    method: POST
+    path: /graphql
+    page_in: body
+    send:
+      query: "query($after: String) { teams(first: 100, after: $after) { nodes { id key name description } pageInfo { hasNextPage endCursor } } }"
+      variables: { after: "{{ page.extensions.after }}" }
+    items: value.data.teams.nodes
+    next: "value.data.teams.pageInfo.hasNextPage ? {'extensions': {'after': value.data.teams.pageInfo.endCursor}} : null"
+    output: { id: text, key: text, name: text, description: text }
+  list_statuses:
+    label: List a team's statuses
+    description: The statuses issues move through - Backlog, Todo, In Progress, Done... - each with its id and kind.
+    method: POST
+    path: /graphql
+    inputs:
+      - { name: team, label: "The team's key, such as ENG", required: true }
+    send:
+      query: "query($filter: WorkflowStateFilter) { workflowStates(first: 100, filter: $filter) { nodes { id name type position team { key } } } }"
+      variables: { filter: { team: { key: { eq: "{{ input.team }}" } } } }
+    items: value.data.workflowStates.nodes
+    output: { id: text, name: text, type: text, position: number, team: record }
+  list_users:
+    label: List people
+    description: The workspace's members, each with their id (to assign an issue to them), name and email.
+    method: POST
+    path: /graphql
+    page_in: body
+    send:
+      query: "query($after: String) { users(first: 100, after: $after) { nodes { id name displayName email active admin } pageInfo { hasNextPage endCursor } } }"
+      variables: { after: "{{ page.extensions.after }}" }
+    items: value.data.users.nodes
+    next: "value.data.users.pageInfo.hasNextPage ? {'extensions': {'after': value.data.users.pageInfo.endCursor}} : null"
+    output: { id: text, name: text, displayName: text, email: text, active: boolean, admin: boolean }
+  list_labels:
+    label: List labels
+    description: The labels issues may have, each with its id, name and team.
+    method: POST
+    path: /graphql
+    page_in: body
+    send:
+      query: "query($after: String) { issueLabels(first: 100, after: $after) { nodes { id name color team { key } } pageInfo { hasNextPage endCursor } } }"
+      variables: { after: "{{ page.extensions.after }}" }
+    items: value.data.issueLabels.nodes
+    next: "value.data.issueLabels.pageInfo.hasNextPage ? {'extensions': {'after': value.data.issueLabels.pageInfo.endCursor}} : null"
+    output: { id: text, name: text, color: text, team: record }
+  list_projects:
+    label: List projects
+    description: Each project's id, name, status, progress and target date.
+    method: POST
+    path: /graphql
+    page_in: body
+    send:
+      query: "query($after: String) { projects(first: 100, after: $after) { nodes { id name status { name type } progress startDate targetDate url } pageInfo { hasNextPage endCursor } } }"
+      variables: { after: "{{ page.extensions.after }}" }
+    items: value.data.projects.nodes
+    next: "value.data.projects.pageInfo.hasNextPage ? {'extensions': {'after': value.data.projects.pageInfo.endCursor}} : null"
+    output: { id: text, name: text, status: record, progress: number, startDate: text, targetDate: text, url: text }
+  list_issues:
+    label: List issues
+    description: >-
+      Issues newest first, of one team, status, assignee, label or project if given; every page, up to 1,000.
+    method: POST
+    path: /graphql
+    page_in: body
+    inputs:
+      - { name: team, label: "Of this team (its key, such as ENG)" }
+      - { name: status, label: "In this status, such as In Progress" }
+      - { name: assignee_email, label: "Assigned to the person with this email" }
+      - { name: label, label: "With this label" }
+      - { name: project, label: "In the project of this name" }
+    send:
+      query: "query($filter: IssueFilter, $after: String) { issues(first: 100, after: $after, filter: $filter) { nodes { id identifier title description priority priorityLabel url dueDate estimate createdAt updatedAt completedAt state { id name type } assignee { id name } team { id key } project { id name } labels { nodes { id name } } } pageInfo { hasNextPage endCursor } } }"
+      variables:
+        after: "{{ page.extensions.after }}"
+        filter:
+          team: { key: { eq: "{{ input.team }}" } }
+          state: { name: { eq: "{{ input.status }}" } }
+          assignee: { email: { eq: "{{ input.assignee_email }}" } }
+          labels: { some: { name: { eq: "{{ input.label }}" } } }
+          project: { name: { eq: "{{ input.project }}" } }
+    items: value.data.issues.nodes
+    next: "value.data.issues.pageInfo.hasNextPage ? {'extensions': {'after': value.data.issues.pageInfo.endCursor}} : null"
+    output: { id: text, identifier: text, title: text, description: text, priority: number, priorityLabel: text, url: text, dueDate: text, state: record, assignee: record, team: record, project: record, labels: record, createdAt: text, updatedAt: text }
+  get_issue:
+    label: Get an issue
+    description: One issue by its key (ENG-123) or id, with its status, assignee, labels, project and comments.
+    method: POST
+    path: /graphql
+    inputs:
+      - { name: issue, label: "The issue: its key, such as ENG-123, or its id", required: true }
+    send:
+      query: "query($id: String!) { issue(id: $id) { id identifier title description priority priorityLabel url dueDate estimate createdAt updatedAt completedAt state { id name type } assignee { id name } creator { id name } team { id key } project { id name } labels { nodes { id name } } comments(first: 50) { nodes { id body createdAt user { id name } } } } }"
+      variables: { id: "{{ input.issue }}" }
+    result: value.data.issue
+    output: { id: text, identifier: text, title: text, description: text, priority: number, priorityLabel: text, url: text, state: record, assignee: record, creator: record, team: record, project: record, labels: record, comments: record }
+  search_issues:
+    label: Find issues
+    description: Issues whose words match a search, best match first, in one team or all; up to 50.
+    method: POST
+    path: /graphql
+    inputs:
+      - { name: term, label: "What to look for", required: true }
+      - { name: team_id, label: "Only in this team (its id)" }
+      - { name: include_comments, label: Search the comments too, kind: boolean }
+    send:
+      query: "query($term: String!, $teamId: String, $includeComments: Boolean) { searchIssues(term: $term, teamId: $teamId, includeComments: $includeComments, first: 50) { nodes { id identifier title priorityLabel url state { name } assignee { name } team { key } } } }"
+      variables: { term: "{{ input.term }}", teamId: "{{ input.team_id }}", includeComments: "{{ input.include_comments }}" }
+    items: value.data.searchIssues.nodes
+    output: { id: text, identifier: text, title: text, priorityLabel: text, url: text, state: record, assignee: record, team: record }
+  create_issue:
+    label: Open an issue
+    description: A new issue in a team, with a title and optionally a description, status, assignee, priority, labels, project and due date; gives its key and address.
+    write: true
+    method: POST
+    path: /graphql
+    inputs:
+      - { name: team_id, label: "The team's id (from List teams)", required: true }
+      - { name: title, label: Its title, required: true }
+      - { name: description, label: "Its description (Markdown)" }
+      - { name: status_id, label: "In this status (its id, from List a team's statuses); the team's first when empty" }
+      - { name: assignee_id, label: "Assigned to (their id, from List people)" }
+      - { name: priority, label: "Priority: 1 urgent, 2 high, 3 medium, 4 low (0 none)", kind: number }
+      - { name: label_ids, label: "With these labels (their ids, separated by commas)" }
+      - { name: project_id, label: "In this project (its id)" }
+      - { name: due_date, label: "Due on (2026-12-31)" }
+    send:
+      query: "mutation($input: IssueCreateInput!) { issueCreate(input: $input) { success issue { id identifier title url priorityLabel state { name } assignee { name } team { key } } } }"
+      variables:
+        input:
+          teamId: "{{ input.team_id }}"
+          title: "{{ input.title }}"
+          description: "{{ input.description }}"
+          stateId: "{{ input.status_id }}"
+          assigneeId: "{{ input.assignee_id }}"
+          priority: "{{ input.priority }}"
+          labelIds: "{{ input.label_ids.split(',').map(l, l.trim()) }}"
+          projectId: "{{ input.project_id }}"
+          dueDate: "{{ input.due_date }}"
+    result: value.data.issueCreate.issue
+    output: { id: text, identifier: text, title: text, url: text, priorityLabel: text, state: record, assignee: record, team: record }
+  update_issue:
+    label: Change an issue
+    description: The title, description, status, assignee, priority, project or due date of an issue; what is left empty stays.
+    write: true
+    method: POST
+    path: /graphql
+    inputs:
+      - { name: issue, label: "The issue: its key, such as ENG-123, or its id", required: true }
+      - { name: title, label: Its new title }
+      - { name: description, label: "Its new description (Markdown)" }
+      - { name: status_id, label: "Move it to this status (its id)" }
+      - { name: assignee_id, label: "Assign it to (their id)" }
+      - { name: priority, label: "Priority: 1 urgent, 2 high, 3 medium, 4 low (0 none)", kind: number }
+      - { name: add_label_ids, label: "Add these labels (their ids, separated by commas)" }
+      - { name: project_id, label: "Move it to this project (its id)" }
+      - { name: due_date, label: "Due on (2026-12-31)" }
+    send:
+      query: "mutation($id: String!, $input: IssueUpdateInput!) { issueUpdate(id: $id, input: $input) { success issue { id identifier title url priorityLabel state { name } assignee { name } } } }"
+      variables:
+        id: "{{ input.issue }}"
+        input:
+          title: "{{ input.title }}"
+          description: "{{ input.description }}"
+          stateId: "{{ input.status_id }}"
+          assigneeId: "{{ input.assignee_id }}"
+          priority: "{{ input.priority }}"
+          addedLabelIds: "{{ input.add_label_ids.split(',').map(l, l.trim()) }}"
+          projectId: "{{ input.project_id }}"
+          dueDate: "{{ input.due_date }}"
+    result: value.data.issueUpdate.issue
+    output: { id: text, identifier: text, title: text, url: text, priorityLabel: text, state: record, assignee: record }
+  add_comment:
+    label: Comment on an issue
+    description: A comment (Markdown) on an issue, as the signed-in person.
+    write: true
+    method: POST
+    path: /graphql
+    inputs:
+      - { name: issue, label: "The issue: its key, such as ENG-123, or its id", required: true }
+      - { name: body, label: "The comment (Markdown)", required: true }
+    send:
+      query: "mutation($input: CommentCreateInput!) { commentCreate(input: $input) { success comment { id body url createdAt } } }"
+      variables: { input: { issueId: "{{ input.issue }}", body: "{{ input.body }}" } }
+    result: value.data.commentCreate.comment
+    output: { id: text, body: text, url: text, createdAt: text }
+  archive_issue:
+    label: Archive an issue
+    description: An issue (and its sub-issues) archived - out of the lists, and back again when restored.
+    write: true
+    method: POST
+    path: /graphql
+    inputs:
+      - { name: issue, label: "The issue: its key, such as ENG-123, or its id", required: true }
+    send:
+      query: "mutation($id: String!) { issueArchive(id: $id) { success entity { id identifier archivedAt } } }"
+      variables: { id: "{{ input.issue }}" }
+    result: value.data.issueArchive.entity
+    output: { id: text, identifier: text, archivedAt: text }
+triggers:
+  new_issue:
+    label: A new issue
+    description: Each issue opened, in every team or one, asked for every few minutes.
+    inputs:
+      - { name: team, label: "Only in this team (its key, such as ENG)" }
+    poll:
+      method: POST
+      path: /graphql
+      page_in: body
+      send:
+        query: "query($filter: IssueFilter, $after: String) { issues(first: 50, after: $after, orderBy: createdAt, filter: $filter) { nodes { id identifier title description priority priorityLabel url dueDate createdAt updatedAt state { id name type } assignee { id name } creator { id name } team { id key } project { id name } labels { nodes { id name } } } pageInfo { hasNextPage endCursor } } }"
+        variables:
+          after: "{{ page.extensions.after }}"
+          filter: { team: { key: { eq: "{{ input.team }}" } } }
+      items: value.data.issues.nodes
+      next: "value.data.issues.pageInfo.hasNextPage ? {'extensions': {'after': value.data.issues.pageInfo.endCursor}} : null"
+      newest_first: true
+      id: item.id
+      every: 5m
+  changed_issue:
+    label: An issue opened or changed
+    description: Each issue opened or changed - moved along, reassigned, retitled - in every team or one, asked for every few minutes.
+    inputs:
+      - { name: team, label: "Only in this team (its key, such as ENG)" }
+    poll:
+      method: POST
+      path: /graphql
+      page_in: body
+      send:
+        query: "query($filter: IssueFilter, $after: String) { issues(first: 50, after: $after, orderBy: updatedAt, filter: $filter) { nodes { id identifier title description priority priorityLabel url dueDate createdAt updatedAt completedAt state { id name type } assignee { id name } team { id key } project { id name } labels { nodes { id name } } } pageInfo { hasNextPage endCursor } } }"
+        variables:
+          after: "{{ page.extensions.after }}"
+          filter: { team: { key: { eq: "{{ input.team }}" } } }
+      items: value.data.issues.nodes
+      next: "value.data.issues.pageInfo.hasNextPage ? {'extensions': {'after': value.data.issues.pageInfo.endCursor}} : null"
+      newest_first: true
+      id: item.id
+      version: item.updatedAt
+      every: 5m
+  event:
+    label: Something changed (as it happens)
+    description: >-
+      Each issue, comment, project or other change Linear sends as it happens, signed. Turning the workflow on
+      subscribes its address (which needs a workspace admin's sign-in), and turning it off ends the subscription.
+    inputs:
+      - { name: resources, label: "Which, separated by commas: Issue, Comment, Project, ProjectUpdate, Cycle, IssueLabel...", description: Issue when empty }
+      - { name: actions, label: "Only these, separated by commas: create, update, remove", description: every one when empty }
+      - { name: team_id, label: "Only in this team (its id); every public team when empty" }
+    webhook:
+      signature: { header: linear-signature, encoding: hex }
+      secret: webhook_secret
+      id: "headers['linear-delivery']"
+      only: "input.actions == null || input.actions.split(',').map(a, a.trim()).exists(a, a == value.action)"
+      event: "{'action': value.action, 'type': value.type, 'data': value.data, 'url': value.url, 'updatedFrom': has(value.updatedFrom) ? value.updatedFrom : null, 'actor': value.actor, 'createdAt': value.createdAt}"
+      register:
+        - method: POST
+          path: /graphql
+          send:
+            query: "mutation($input: WebhookCreateInput!) { webhookCreate(input: $input) { success webhook { id enabled } } }"
+            variables:
+              input:
+                url: "{{ input.address }}"
+                secret: "{{ input.secret }}"
+                label: OpenDuct workflow
+                resourceTypes: "{{ input.resources == null ? ['Issue'] : input.resources.split(',').map(r, r.trim()) }}"
+                teamId: "{{ input.team_id }}"
+                allPublicTeams: "{{ input.team_id == null ? true : null }}"
+      keep:
+        webhook_secret: input.secret
+        webhook_id: value.data.webhookCreate.webhook.id
+      unregister:
+        - method: POST
+          path: /graphql
+          send:
+            query: "mutation($id: String!) { webhookDelete(id: $id) { success } }"
+            variables: { id: "{{ input.registered.webhook_id }}" }

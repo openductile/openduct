@@ -1,0 +1,9 @@
+description: A team-only edit link that ends, without downloads
+action: create_shared_link
+credential: { access_token: sl.test-token }
+input: { path: /Plans.docx, audience: team, access: editor, allow_download: false, expires: "2026-12-31T23:59:59Z" }
+exchanges:
+  - sent:
+      body: { path: /Plans.docx, settings: { audience: { ".tag": team }, access: { ".tag": editor }, allow_download: false, expires: "2026-12-31T23:59:59Z" } }
+    answer: { body: { ".tag": file, url: "https://www.dropbox.com/scl/fi/def456/Plans.docx?rlkey=uvw&dl=0", name: Plans.docx, expires: "2026-12-31T23:59:59Z" } }
+result: { ".tag": file, url: "https://www.dropbox.com/scl/fi/def456/Plans.docx?rlkey=uvw&dl=0", name: Plans.docx, expires: "2026-12-31T23:59:59Z" }

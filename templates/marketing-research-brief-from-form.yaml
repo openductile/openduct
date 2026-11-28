@@ -1,0 +1,64 @@
+name: A research brief for a blog post, from a form
+description: >-
+  A writer fills in a form - the topic, who it is for, and their e-mail - and an AI agent looks the topic up on
+  Wikipedia through its public API (searching, then reading the pages that fit), and e-mails back a one-page brief:
+  the key facts with their sources, the questions readers ask, and an outline. Good for content teams that want
+  facts first and a draft after. Needs: model (an AI credential), mail (your mail server).
+category: Marketing
+trigger:
+  form:
+    title: Ask for a research brief
+    description: We e-mail you a one-page brief, usually within a few minutes.
+    fields:
+      - { name: topic, label: The topic, type: text, required: true, max_length: 200 }
+      - { name: audience, label: Who it is for, type: dropdown, options: [Customers, Beginners, Experts, Our team], required: true }
+      - { name: angle, label: "Anything it should cover (optional)", type: long_text, max_length: 1000 }
+      - { name: email, label: Your e-mail, type: email, required: true }
+    thanks: Thank you - your brief is on its way.
+# What a test runs on: an answer as the form gives it.
+sample:
+  topic: Composting at home
+  audience: Beginners
+  angle: Small flats with no garden.
+  email: writer@example.com
+steps:
+  - name: research
+    agent:
+      credential: model
+      instructions: >-
+        You prepare a research brief for a writer. Search Wikipedia for the topic, read the two or three pages that
+        fit best, and use only what they say. Write: five key facts, each with the page it came from; three questions
+        readers of this audience ask; and an outline of five headings. Plain words, at most 400 words.
+      input: "Topic: {{ value.topic }}. Audience: {{ value.audience }}. {{ value.angle == null ? '' : 'Cover: ' + value.angle }}"
+      tools:
+        - name: search_pages
+          description: Search Wikipedia's articles; gives up to five titles with a short description each.
+          parameters:
+            type: object
+            properties:
+              query: { type: string, description: "What to search for, in a few words" }
+            required: [query]
+          http:
+            url: https://en.wikipedia.org/w/rest.php/v1/search/page
+            query: { q: "{{ args.query }}", limit: "5" }
+            # Wikipedia asks every program to say who it is.
+            headers: { User-Agent: "ResearchBrief/1.0 (writer-team@example.com)" }
+        - name: read_page
+          description: "The summary of one Wikipedia article, by its exact title (as the search gives it)."
+          parameters:
+            type: object
+            properties:
+              title: { type: string, description: "The article's title, as Composting" }
+            required: [title]
+          http:
+            url: "https://en.wikipedia.org/api/rest_v1/page/summary/{{ args.title.replace(' ', '_') }}"
+            headers: { User-Agent: "ResearchBrief/1.0 (writer-team@example.com)" }
+      allow: [search_pages, read_page]
+      max_turns: 8
+      max_tool_calls: 8
+  - name: send
+    email:
+      credential: mail
+      to: "{{ value.email }}"
+      subject: "Your research brief: {{ value.topic }}"
+      text: "{{ steps.research.text }}\n\n- Written for {{ value.audience }} from Wikipedia's articles. Check each fact before you publish."

@@ -1,0 +1,29 @@
+description: Every deal
+action: list_deals
+credential: {domain: shopexample, email: dana@shop.example, api_key: agile-test-key}
+exchanges:
+- sent:
+    method: GET
+    url: https://shopexample.agilecrm.com/dev/api/opportunity
+    headers: {authorization: Basic ZGFuYUBzaG9wLmV4YW1wbGU6YWdpbGUtdGVzdC1rZXk=, accept: application/json}
+    query: {page_size: '100'}
+  answer:
+    status: 200
+    body:
+    - &id001
+      id: '5717827835133952'
+      name: Ten seats
+      description: ''
+      expected_value: 600.0
+      probability: 50
+      milestone: Proposal
+      pipeline_id: '5730082031140864'
+      close_date: 1798675200
+      created_time: 1764237600
+      owner_id: '6263975862861824'
+      contact_ids: ['5629585249009664']
+      contacts: []
+      custom_data: []
+      archived: false
+result:
+- *id001

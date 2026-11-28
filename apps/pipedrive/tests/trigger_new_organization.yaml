@@ -1,0 +1,7 @@
+description: The first poll notes what is there and runs nothing
+trigger: new_organization
+credential: { api_key: test-pipedrive-token }
+exchanges:
+  - sent: { method: GET, url: https://api.pipedrive.com/api/v2/organizations, query: { sort_by: add_time, sort_direction: desc, limit: "100" } }
+    answer: { body: { success: true, data: [{ id: 3, name: Example Co }], additional_data: { next_cursor: null } } }
+runs: []

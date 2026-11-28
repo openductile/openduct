@@ -1,0 +1,43 @@
+description: How many match a field
+action: count_documents
+credential:
+  access_token: ya29.test
+input:
+  project_id: sample-shop
+  collection: orders
+  field: items
+  value: '3'
+  value_kind: integer
+exchanges:
+- sent:
+    method: POST
+    url: https://firestore.googleapis.com/v1/projects/sample-shop/databases/(default)/documents:runAggregationQuery
+    headers:
+      authorization: Bearer ya29.test
+    body:
+      structuredAggregationQuery:
+        structuredQuery:
+          from:
+          - collectionId: orders
+          where:
+            fieldFilter:
+              field:
+                fieldPath: items
+              op: EQUAL
+              value:
+                integerValue: '3'
+        aggregations:
+        - alias: count
+          count:
+            upTo: '9223372036854775807'
+  answer:
+    status: 200
+    body:
+    - result:
+        aggregateFields:
+          count:
+            integerValue: '7'
+      readTime: '2026-11-21T08:00:00.000000Z'
+result:
+  count: 7
+  readTime: '2026-11-21T08:00:00.000000Z'

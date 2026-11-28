@@ -1,0 +1,12 @@
+description: "A job cancelled"
+action: cancel_job
+credential: { token: test-token }
+input: { job_id: 86601348 }
+exchanges:
+  - sent:
+      method: POST
+      url: "https://api.travis-ci.com/job/86601348/cancel"
+    answer:
+      status: 202
+      body: { "@type": pending, job: { "@type": job, id: 86601348, state: started }, state_change: cancel, resource_type: job }
+result: { "@type": pending, job: { "@type": job, id: 86601348, state: started }, state_change: cancel, resource_type: job }

@@ -1,0 +1,112 @@
+name: Competitor news each morning, one row a story
+description: >-
+  For marketing and founders keeping an eye on rivals: every morning at 7:00, look up yesterday's news about each
+  competitor named in column A of a Competitors sheet, set aside the copies of one story that many outlets ran (their
+  titles are compared by meaning, with embeddings, not word for word), and add one row a story to a Mentions sheet - the
+  competitor, the title, the outlet, the link and the day. Needs: a Google Sheets sign-in called sheets, a NewsAPI key
+  as a header credential called newsapi (X-Api-Key), and an AI credential called model with an embedding model.
+category: Marketing
+trigger:
+  schedule: { every: day, at: "07:00", timezone: America/New_York }
+# What a test runs on: an event as this trigger gives it.
+sample:
+  scheduled_at: "2026-11-27T12:00:00Z"
+steps:
+  - name: settings
+    set:
+      # Change this to your own spreadsheet.
+      spreadsheet: "'your-spreadsheet-id'"
+      # Stories whose titles are at least this close in meaning (0 to 1) are one story.
+      same_story: "0.9"
+      since: string(timestamp(value.scheduled_at) - duration('24h')).substring(0, 10)
+  - name: competitors
+    google_sheets:
+      credential: sheets
+      action: read_rows
+      spreadsheet_id: "{{ steps.settings.spreadsheet }}"
+      range: Competitors!A2:A
+    retry: { attempts: 3, wait: 10s }
+  - name: each_competitor
+    for_each:
+      items: steps.competitors.filter(r, size(r) > 0 && string(r[0]).trim() != '').map(r, string(r[0]).trim())
+      steps:
+        - name: competitor
+          set: { name: item }
+        - name: news
+          http:
+            method: GET
+            url: https://newsapi.org/v2/everything
+            credential: newsapi
+            query:
+              q: "\"{{ steps.competitor.name }}\""
+              from: "{{ steps.settings.since }}"
+              sortBy: publishedAt
+              language: en
+              pageSize: "20"
+            sample:
+              status: ok
+              totalResults: 3
+              articles:
+                - source: { name: Daily Trade Example }
+                  title: Northwind Bikes opens its first store in Denver
+                  url: https://news.example.com/northwind-denver
+                  publishedAt: "2026-11-26T15:04:00Z"
+                - source: { name: Retail Wire Example }
+                  title: Northwind Bikes opening first Denver store this week
+                  url: https://retail.example.org/northwind-store
+                  publishedAt: "2026-11-26T17:30:00Z"
+                - source: { name: Tech Notes Example }
+                  title: Northwind Bikes adds a repair subscription
+                  url: https://technotes.example.net/northwind-repairs
+                  publishedAt: "2026-11-26T09:12:00Z"
+          retry: { attempts: 3, wait: 10s }
+          on_error: continue
+  - name: stories
+    javascript: |
+      // Every article found, one list, each with the competitor it is about; a story's link once.
+      const seen = new Set();
+      const out = [];
+      steps.each_competitor.forEach(r => {
+        const articles = (r.news && r.news.body && r.news.body.articles) || [];
+        for (const a of articles) {
+          if (!a.title || !a.url || seen.has(a.url)) continue;
+          seen.add(a.url);
+          out.push({ competitor: r.competitor.name, title: a.title, outlet: (a.source && a.source.name) || "",
+                     url: a.url, day: (a.publishedAt || "").slice(0, 10) });
+        }
+      });
+      return { articles: out, count: out.length };
+  - where: steps.stories.count > 0
+  - name: meaning
+    embed:
+      credential: model
+      input: steps.stories.articles.map(a, a.title)
+  - name: one_each
+    javascript: |
+      // Keeps the first of each group of titles that mean the same (cosine similarity at or above the setting).
+      const vectors = steps.meaning.embeddings || [];
+      const limit = steps.settings.same_story;
+      const cosine = (a, b) => {
+        let dot = 0, na = 0, nb = 0;
+        for (let i = 0; i < a.length; i++) { dot += a[i] * b[i]; na += a[i] * a[i]; nb += b[i] * b[i]; }
+        return na && nb ? dot / Math.sqrt(na * nb) : 0;
+      };
+      const kept = [];
+      steps.stories.articles.forEach((a, i) => {
+        const v = vectors[i];
+        const twin = v && kept.find(k => k.v && cosine(k.v, v) >= limit);
+        if (!twin) kept.push({ a, v });
+      });
+      return { stories: kept.map(k => k.a), set_aside: steps.stories.count - kept.length };
+  - name: each_story
+    for_each:
+      items: steps.one_each.stories
+      steps:
+        - name: add
+          google_sheets:
+            credential: sheets
+            action: add_row
+            spreadsheet_id: "{{ steps.settings.spreadsheet }}"
+            sheet: Mentions
+            values: ["{{ item.competitor }}", "{{ item.title }}", "{{ item.outlet }}", "{{ item.url }}", "{{ item.day }}"]
+          retry: { attempts: 3, wait: 10s }

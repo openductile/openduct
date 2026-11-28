@@ -1,0 +1,17 @@
+description: Tracks played after the last one seen, oldest first; the next poll asks for those after the newest
+trigger: new_played_track
+credential: { access_token: BQ-test-token }
+seen: { cursor: "1795770000000", items: [["2026-11-27T09:00:00.500Z", ""]] }
+exchanges:
+  - sent: { method: GET, url: https://api.spotify.com/v1/me/player/recently-played, query: { limit: "50", after: "1795770000000" } }
+    answer:
+      body:
+        items:
+          - { played_at: "2026-11-27T09:12:00.120Z", track: { id: 0TestTrack000000000002, name: Second Song, uri: "spotify:track:0TestTrack000000000002", duration_ms: 185000 } }
+          - { played_at: "2026-11-27T09:05:30.000Z", track: { id: 0TestTrack000000000001, name: Example Song, uri: "spotify:track:0TestTrack000000000001", duration_ms: 201000, explicit: false, popularity: 41, artists: [{ id: 0TestArtist00000000001, name: Example Band }], album: { id: 0TestAlbum000000000001, name: Example Album } } }
+        cursors: { after: "1795770720120", before: "1795770330000" }
+        next: null
+runs:
+  - { played_at: "2026-11-27T09:05:30.000Z", track: { id: 0TestTrack000000000001, name: Example Song, uri: "spotify:track:0TestTrack000000000001", duration_ms: 201000, explicit: false, popularity: 41, artists: [{ id: 0TestArtist00000000001, name: Example Band }], album: { id: 0TestAlbum000000000001, name: Example Album } } }
+  - { played_at: "2026-11-27T09:12:00.120Z", track: { id: 0TestTrack000000000002, name: Second Song, uri: "spotify:track:0TestTrack000000000002", duration_ms: 185000 } }
+cursor: "1795770720000"

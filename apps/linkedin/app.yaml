@@ -1,0 +1,78 @@
+# Copyright 2026 Ductile AI, Inc
+# SPDX-License-Identifier: Apache-2.0
+app: linkedin
+name: LinkedIn
+category: social
+description: Posts on LinkedIn, as yourself or as a company page you look after.
+docs: https://learn.microsoft.com/en-us/linkedin/marketing/community-management/shares/posts-api
+hosts: [api.linkedin.com]
+base_url: https://api.linkedin.com
+sign_in:
+  - id: linkedin
+    label: Sign in with LinkedIn
+    oauth2:
+      authorize: https://www.linkedin.com/oauth/v2/authorization
+      token: https://www.linkedin.com/oauth/v2/accessToken
+      # Who you are (openid, profile) and posting as yourself (w_member_social).
+      scopes: [openid, profile, w_member_social]
+      # The member's id, to post as them (urn:li:person:<id>).
+      after_connect: { url: "https://api.linkedin.com/v2/userinfo", keep: { person_id: value.sub } }
+    headers:
+      Authorization: "Bearer {{ credential.access_token }}"
+  # The same registration, asking also to post for the company pages the member looks after
+  # (w_organization_social, which LinkedIn grants to apps it has approved for its Community Management API).
+  - id: linkedin_pages
+    label: Sign in with LinkedIn, for company pages too
+    oauth2:
+      authorize: https://www.linkedin.com/oauth/v2/authorization
+      token: https://www.linkedin.com/oauth/v2/accessToken
+      scopes: [openid, profile, w_member_social, w_organization_social]
+      after_connect: { url: "https://api.linkedin.com/v2/userinfo", keep: { person_id: value.sub } }
+    headers:
+      Authorization: "Bearer {{ credential.access_token }}"
+error: value.message
+default_action: post
+actions:
+  post:
+    label: Post
+    description: >-
+      A post on LinkedIn, by you or by a company page (its organization id), with a link to an article if given.
+      Gives the post's id.
+    write: true
+    method: POST
+    path: /rest/posts
+    headers: { LinkedIn-Version: "202611", X-Restli-Protocol-Version: 2.0.0 }
+    inputs:
+      - { name: text, label: "What the post says", required: true }
+      - { name: organization_id, label: "As this company page: its organization id (yourself when empty)" }
+      - { name: link, label: "A link to an article, shown under the text" }
+      - { name: link_title, label: "The article's title (needed with a link)" }
+      - { name: link_description, label: "A line about the article" }
+      - { name: visibility, label: "PUBLIC (the default) or CONNECTIONS" }
+    send:
+      author: "{{ has(input.organization_id) && input.organization_id != null ? 'urn:li:organization:' + input.organization_id : 'urn:li:person:' + credential.person_id }}"
+      commentary: "{{ input.text }}"
+      visibility: "{{ has(input.visibility) && input.visibility != null ? input.visibility : 'PUBLIC' }}"
+      distribution:
+        feedDistribution: MAIN_FEED
+        targetEntities: []
+        thirdPartyDistributionChannels: []
+      content: "{{ !has(input.link) || input.link == null ? null : {'article': {'source': input.link, 'title': has(input.link_title) ? input.link_title : null, 'description': has(input.link_description) ? input.link_description : null} } }}"
+      lifecycleState: PUBLISHED
+      isReshareDisabledByAuthor: false
+    # LinkedIn answers 201 with nothing but the new post's id, in a header.
+    result: "{'id': headers['x-restli-id']}"
+  delete_post:
+    label: Remove a post
+    write: true
+    method: DELETE
+    path: "/rest/posts/{{ input.post_id.replace(':', '%3A') }}"
+    headers: { LinkedIn-Version: "202611", X-Restli-Protocol-Version: 2.0.0, X-RestLi-Method: DELETE }
+    inputs:
+      - { name: post_id, label: "The post's id, such as urn:li:share:6844785523593134080", required: true }
+    result: "{'deleted': status == 204}"
+  me:
+    label: Who is signed in
+    description: The member's id (sub), name and picture, as LinkedIn gives them to this app.
+    method: GET
+    path: /v2/userinfo

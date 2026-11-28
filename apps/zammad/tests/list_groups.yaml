@@ -1,0 +1,6 @@
+action: list_groups
+credential: { subdomain: acme, token: zm_test_1 }
+exchanges:
+  - sent: { method: GET, url: https://acme.zammad.com/api/v1/groups, query: { per_page: "100" } }
+    answer: { body: [{ id: 1, name: Users, active: true }, { id: 2, name: Sales, active: true }] }
+result: [{ id: 1, name: Users, active: true }, { id: 2, name: Sales, active: true }]

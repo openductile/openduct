@@ -1,0 +1,12 @@
+description: "uProc refuses with success false, in its words, though the status is 200"
+action: run_tool
+credential: {"api_key": "up-test-key"}
+input: {"tool": "get-company-by-name", "params": {}}
+exchanges:
+  - sent:
+      method: POST
+      url: "https://api.uproc.io/api/v1/external/modules/data-process/actions/execute"
+      headers: {"authorization": "Bearer up-test-key"}
+      body: {"processor": "get-company-by-name"}
+    answer: {"status": 200, "body": {"success": false, "message": "validation.failed", "data": {"errors": [{"field": "name", "reason": "required"}]}}}
+error: "validation.failed"

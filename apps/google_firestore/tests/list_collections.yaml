@@ -1,0 +1,34 @@
+description: The collections at the top, over two pages
+action: list_collections
+credential:
+  access_token: ya29.test
+input:
+  project_id: sample-shop
+exchanges:
+- sent:
+    method: POST
+    url: https://firestore.googleapis.com/v1/projects/sample-shop/databases/(default)/documents:listCollectionIds
+    headers:
+      authorization: Bearer ya29.test
+    body:
+      pageSize: 300
+  answer:
+    status: 200
+    body:
+      collectionIds:
+      - customers
+      - orders
+      nextPageToken: next1
+- sent:
+    body:
+      pageSize: 300
+      pageToken: next1
+  answer:
+    status: 200
+    body:
+      collectionIds:
+      - products
+result:
+- id: customers
+- id: orders
+- id: products

@@ -1,0 +1,43 @@
+description: The first poll notes the invoices changed in the last five minutes and runs none
+trigger: invoice_changed
+credential: {access_token: hv-test-token, account_id: '100200'}
+exchanges:
+- sent:
+    method: GET
+    url: https://api.harvestapp.com/v2/invoices
+    headers: {authorization: Bearer hv-test-token, harvest-account-id: '100200', user-agent: 'OpenDuct (https://github.com/openductile/openduct)'}
+    query: {updated_since: '2023-11-14T22:08:20Z'}
+  answer:
+    status: 200
+    body:
+      invoices:
+      - id: 13150403
+        client: {id: 5735776, name: Shop Example}
+        number: '1001'
+        purchase_order: ''
+        amount: 300.0
+        due_amount: 300.0
+        tax: null
+        discount: null
+        subject: November work
+        notes: ''
+        currency: USD
+        state: draft
+        issue_date: '2026-11-27'
+        due_date: '2026-12-27'
+        payment_term: net 30
+        sent_at: null
+        paid_at: null
+        line_items:
+        - {id: 53341602, kind: Service, description: Website design, quantity: 3.0, unit_price: 100.0, amount: 300.0}
+        created_at: '2026-11-27T10:00:00Z'
+        updated_at: '2026-11-27T10:00:00Z'
+      per_page: 2000
+      total_pages: 1
+      total_entries: 1
+      next_page: null
+      previous_page: null
+      page: 1
+      links: {first: 'https://api.harvestapp.com/v2/invoices?page=1&per_page=2000', next: null, previous: null, last: 'https://api.harvestapp.com/v2/invoices?page=1&per_page=2000'}
+runs: []
+cursor: '2023-11-14T22:13:20Z'

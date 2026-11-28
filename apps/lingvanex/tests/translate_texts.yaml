@@ -1,0 +1,33 @@
+description: Several texts at once, in order
+action: translate_texts
+credential:
+  api_key: test-key
+input:
+  texts:
+  - Good morning
+  - Thank you
+  from: en_GB
+  to: es_ES
+exchanges:
+- sent:
+    method: POST
+    url: https://api-b2b.backenster.com/b1/api/v3/translate
+    headers:
+      authorization: test-key
+    body:
+      platform: api
+      from: en_GB
+      to: es_ES
+      data:
+      - Good morning
+      - Thank you
+  answer:
+    status: 200
+    body:
+      err: null
+      result:
+      - Buenos días
+      - Gracias
+result:
+- text: Buenos días
+- text: Gracias

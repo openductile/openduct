@@ -1,0 +1,611 @@
+# A cut-down of Docusign's eSignature REST API description (Swagger 2.0): five operations of the 213, their
+# schemas flattened. Source: https://github.com/docusign/OpenAPI-Specifications/blob/
+# 858a3ae59b0edbc8beea4fa3a6d7fe803833dd68/esignature.rest.swagger-v2.1.json (MIT licence, Copyright (c) Docusign
+# Inc.), fetched 2026-11-27. Kept as a test, not an app: the description says nothing of how to sign in (its
+# securityDefinitions is empty), so the generator asks for --sign-in and the app would not meet the bar unaided.
+{
+ "swagger": "2.0",
+ "info": {
+  "title": "Docusign eSignature REST API",
+  "version": "v2.1",
+  "description": "The Docusign eSignature REST API provides you with a powerful, convenient, and simple Web services API for interacting with Docusign."
+ },
+ "host": "www.docusign.net",
+ "basePath": "/restapi",
+ "schemes": [
+  "https"
+ ],
+ "consumes": [
+  "application/json"
+ ],
+ "produces": [
+  "application/json"
+ ],
+ "externalDocs": {
+  "description": "See the Docusign eSignature REST API Guide for more information.",
+  "url": "https://docs.docusign.com/esign"
+ },
+ "securityDefinitions": {},
+ "paths": {
+  "/v2.1/accounts/{accountId}/envelopes": {
+   "get": {
+    "tags": [
+     "Envelopes"
+    ],
+    "summary": "Search for specific sets of envelopes by using search filters.",
+    "description": "This method lets you [search for envelopes](/docs/esign-rest-api/esign101/concepts/envelopes/search/) in your accounts. A large set of filters let you narrow the scope of your search by date, by envelope ID, or by status codes. Your request must include one or more of the following parameters:",
+    "operationId": "Envelopes_GetEnvelopes",
+    "parameters": [
+     {
+      "name": "accountId",
+      "in": "path",
+      "description": "The external account number (int) or account ID GUID.",
+      "required": true,
+      "type": "string"
+     },
+     {
+      "name": "ac_status",
+      "in": "query",
+      "description": "Specifies the authoritative copy status for the envelopes. Valid values: ",
+      "required": false,
+      "type": "string"
+     },
+     {
+      "name": "block",
+      "in": "query",
+      "required": false,
+      "type": "string",
+      "description": "Reserved for Docusign."
+     },
+     {
+      "name": "cdse_mode",
+      "in": "query",
+      "required": false,
+      "type": "string",
+      "description": "Reserved for Docusign."
+     },
+     {
+      "name": "continuation_token",
+      "in": "query",
+      "required": false,
+      "type": "string",
+      "description": "Reserved for Docusign."
+     },
+     {
+      "name": "count",
+      "in": "query",
+      "required": false,
+      "type": "string",
+      "description": "The maximum number of results to return."
+     },
+     {
+      "name": "custom_field",
+      "in": "query",
+      "description": "Optional. Specifies an envelope custom field name and value searched for in the envelopes. Format: `custom_envelope_field_name=desired_value`",
+      "required": false,
+      "type": "string"
+     },
+     {
+      "name": "email",
+      "in": "query",
+      "required": false,
+      "type": "string",
+      "description": "Limit results to envelopes"
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful response.",
+      "schema": {
+       "$ref": "#/definitions/envelopesInformation"
+      }
+     }
+    }
+   },
+   "post": {
+    "tags": [
+     "Envelopes"
+    ],
+    "summary": "Creates an envelope.",
+    "description": "Creates and sends an envelope or creates a draft envelope.",
+    "operationId": "Envelopes_PostEnvelopes",
+    "parameters": [
+     {
+      "name": "accountId",
+      "in": "path",
+      "description": "The external account number (int) or account ID GUID.",
+      "required": true,
+      "type": "string"
+     },
+     {
+      "name": "cdse_mode",
+      "in": "query",
+      "required": false,
+      "type": "string",
+      "description": "Reserved for Docusign."
+     },
+     {
+      "name": "change_routing_order",
+      "in": "query",
+      "required": false,
+      "type": "string",
+      "description": "When true, users can define the routing order of recipients while sending documents for signature."
+     },
+     {
+      "name": "completed_documents_only",
+      "in": "query",
+      "description": "Reserved for Docusign.",
+      "required": false,
+      "type": "string"
+     },
+     {
+      "name": "merge_roles_on_draft",
+      "in": "query",
+      "description": "When **true,** template roles will be merged, and empty recipients will be removed. This parameter applies when you create a draft envelope with multiple templa",
+      "required": false,
+      "type": "string"
+     },
+     {
+      "name": "envelopeDefinition",
+      "in": "body",
+      "required": false,
+      "schema": {
+       "$ref": "#/definitions/envelopeDefinition"
+      },
+      "description": ""
+     }
+    ],
+    "responses": {
+     "201": {
+      "description": "Successful response.",
+      "schema": {
+       "$ref": "#/definitions/envelopeSummary"
+      }
+     }
+    }
+   }
+  },
+  "/v2.1/accounts/{accountId}/envelopes/{envelopeId}": {
+   "get": {
+    "tags": [
+     "Envelopes"
+    ],
+    "summary": "Gets the status of a single envelope.",
+    "description": "Retrieves the overall status for the specified envelope.",
+    "operationId": "Envelopes_GetEnvelope",
+    "parameters": [
+     {
+      "name": "accountId",
+      "in": "path",
+      "description": "The external account number (int) or account ID GUID.",
+      "required": true,
+      "type": "string"
+     },
+     {
+      "name": "envelopeId",
+      "in": "path",
+      "description": "The envelope's GUID. ",
+      "required": true,
+      "type": "string"
+     },
+     {
+      "name": "advanced_update",
+      "in": "query",
+      "description": "When **true,** envelope information can be added or modified.",
+      "required": false,
+      "type": "string"
+     },
+     {
+      "name": "include",
+      "in": "query",
+      "required": false,
+      "type": "string",
+      "description": "Specifies additional information about the envelope to return. Enter a comma-separated list, such as `tabs,recipients`. Valid values are:"
+     },
+     {
+      "name": "include_anchor_tab_locations",
+      "in": "query",
+      "required": false,
+      "type": "string",
+      "description": "When **true,** all tabs with anchor tab properties are included in the response. The default value is **false.**"
+     },
+     {
+      "name": "user_id",
+      "in": "query",
+      "required": false,
+      "type": "string",
+      "description": ""
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful response.",
+      "schema": {
+       "$ref": "#/definitions/envelope"
+      }
+     }
+    }
+   },
+   "put": {
+    "tags": [
+     "Envelopes"
+    ],
+    "summary": "Send, void, or modify a draft envelope. Purge documents from a completed envelope.",
+    "description": "This method enables you to make changes to an envelope.",
+    "operationId": "Envelopes_PutEnvelope",
+    "parameters": [
+     {
+      "name": "accountId",
+      "in": "path",
+      "description": "The external account number (int) or account ID GUID.",
+      "required": true,
+      "type": "string"
+     },
+     {
+      "name": "envelopeId",
+      "in": "path",
+      "description": "The envelope's GUID. ",
+      "required": true,
+      "type": "string"
+     },
+     {
+      "name": "advanced_update",
+      "in": "query",
+      "description": "When **true,** allows the caller to update recipients, tabs, custom fields, notification, email settings and other envelope attributes.",
+      "required": false,
+      "type": "string"
+     },
+     {
+      "name": "recycle_on_void",
+      "in": "query",
+      "required": false,
+      "type": "string",
+      "description": ""
+     },
+     {
+      "name": "resend_envelope",
+      "in": "query",
+      "description": "When **true,**",
+      "required": false,
+      "type": "string"
+     },
+     {
+      "name": "envelope",
+      "in": "body",
+      "required": false,
+      "schema": {
+       "$ref": "#/definitions/envelope"
+      },
+      "description": "A container used to send documents to recipients. The envelope carries information about the sender and timestamps to indicate the progress of the delivery proc"
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful response.",
+      "schema": {
+       "$ref": "#/definitions/envelopeUpdateSummary"
+      }
+     }
+    }
+   }
+  },
+  "/v2.1/accounts/{accountId}/templates": {
+   "get": {
+    "tags": [
+     "Templates"
+    ],
+    "summary": "Gets the list of templates.",
+    "description": "Retrieves the list of templates for the specified account. The request can be limited to a specific folder.",
+    "operationId": "Templates_GetTemplates",
+    "parameters": [
+     {
+      "name": "accountId",
+      "in": "path",
+      "description": "The external account number (int) or account ID GUID.",
+      "required": true,
+      "type": "string"
+     },
+     {
+      "name": "count",
+      "in": "query",
+      "description": "The maximum number of results to return.",
+      "required": false,
+      "type": "string"
+     },
+     {
+      "name": "created_from_date",
+      "in": "query",
+      "required": false,
+      "type": "string",
+      "description": "Lists templates created on or after this date."
+     },
+     {
+      "name": "created_to_date",
+      "in": "query",
+      "required": false,
+      "type": "string",
+      "description": "Lists templates modified before this date."
+     },
+     {
+      "name": "folder_ids",
+      "in": "query",
+      "description": "A comma-separated list of folder ID GUIDs.",
+      "required": false,
+      "type": "string"
+     },
+     {
+      "name": "folder_types",
+      "in": "query",
+      "required": false,
+      "type": "string",
+      "description": "The type of folder to return templates for. Possible values are:"
+     },
+     {
+      "name": "from_date",
+      "in": "query",
+      "description": "Start of the search date range. Only returns templates created on or after this date/time. If no value is specified, there is no limit on the earliest date crea",
+      "required": false,
+      "type": "string"
+     },
+     {
+      "name": "include",
+      "in": "query",
+      "description": "A comma-separated list",
+      "required": false,
+      "type": "string"
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful response.",
+      "schema": {
+       "$ref": "#/definitions/envelopeTemplateResults"
+      }
+     }
+    }
+   }
+  }
+ },
+ "definitions": {
+  "envelope": {
+   "type": "object",
+   "properties": {
+    "accessControlListBase64": {
+     "type": "string"
+    },
+    "allowComments": {
+     "type": "string"
+    },
+    "allowMarkup": {
+     "type": "string"
+    },
+    "allowReassign": {
+     "type": "string"
+    },
+    "allowViewHistory": {
+     "type": "string"
+    },
+    "anySigner": {
+     "type": "string"
+    },
+    "asynchronous": {
+     "type": "string"
+    },
+    "attachmentsUri": {
+     "type": "string"
+    },
+    "authoritativeCopy": {
+     "type": "string"
+    },
+    "authoritativeCopyDefault": {
+     "type": "string"
+    },
+    "autoNavigation": {
+     "type": "string"
+    },
+    "brandId": {
+     "type": "string"
+    }
+   }
+  },
+  "envelopeDefinition": {
+   "type": "object",
+   "properties": {
+    "accessControlListBase64": {
+     "type": "string"
+    },
+    "accessibility": {
+     "type": "string"
+    },
+    "allowComments": {
+     "type": "string"
+    },
+    "allowMarkup": {
+     "type": "string"
+    },
+    "allowReassign": {
+     "type": "string"
+    },
+    "allowRecipientRecursion": {
+     "type": "string"
+    },
+    "allowViewHistory": {
+     "type": "string"
+    },
+    "anySigner": {
+     "type": "string"
+    },
+    "asynchronous": {
+     "type": "string"
+    },
+    "attachments": {
+     "type": "array",
+     "items": {
+      "type": "object"
+     }
+    },
+    "attachmentsUri": {
+     "type": "string"
+    },
+    "authoritativeCopy": {
+     "type": "string"
+    }
+   }
+  },
+  "envelopeSummary": {
+   "type": "object",
+   "properties": {
+    "bulkEnvelopeStatus": {
+     "type": "object"
+    },
+    "envelopeId": {
+     "type": "string"
+    },
+    "errorDetails": {
+     "type": "object"
+    },
+    "recipientSigningUri": {
+     "type": "string"
+    },
+    "recipientSigningUriError": {
+     "type": "string"
+    },
+    "status": {
+     "type": "string"
+    },
+    "statusDateTime": {
+     "type": "string"
+    },
+    "uri": {
+     "type": "string"
+    }
+   }
+  },
+  "envelopeTemplateResults": {
+   "type": "object",
+   "properties": {
+    "endPosition": {
+     "type": "string"
+    },
+    "envelopeTemplates": {
+     "type": "array",
+     "items": {
+      "type": "object"
+     }
+    },
+    "folders": {
+     "type": "array",
+     "items": {
+      "type": "object"
+     }
+    },
+    "nextUri": {
+     "type": "string"
+    },
+    "previousUri": {
+     "type": "string"
+    },
+    "resultSetSize": {
+     "type": "string"
+    },
+    "startPosition": {
+     "type": "string"
+    },
+    "totalSetSize": {
+     "type": "string"
+    }
+   }
+  },
+  "envelopeUpdateSummary": {
+   "type": "object",
+   "properties": {
+    "bulkEnvelopeStatus": {
+     "type": "object"
+    },
+    "envelopeId": {
+     "type": "string"
+    },
+    "errorDetails": {
+     "type": "object"
+    },
+    "listCustomFieldUpdateResults": {
+     "type": "array",
+     "items": {
+      "type": "object"
+     }
+    },
+    "lockInformation": {
+     "type": "object"
+    },
+    "purgeState": {
+     "type": "string"
+    },
+    "recipientUpdateResults": {
+     "type": "array",
+     "items": {
+      "type": "object"
+     }
+    },
+    "tabUpdateResults": {
+     "type": "object"
+    },
+    "textCustomFieldUpdateResults": {
+     "type": "array",
+     "items": {
+      "type": "object"
+     }
+    }
+   }
+  },
+  "envelopesInformation": {
+   "type": "object",
+   "properties": {
+    "continuationToken": {
+     "type": "string"
+    },
+    "endPosition": {
+     "type": "string"
+    },
+    "envelopes": {
+     "type": "array",
+     "items": {
+      "type": "object"
+     }
+    },
+    "envelopeSearchSource": {
+     "type": "string"
+    },
+    "envelopeTransactionStatuses": {
+     "type": "array",
+     "items": {
+      "type": "object"
+     }
+    },
+    "folders": {
+     "type": "array",
+     "items": {
+      "type": "object"
+     }
+    },
+    "lastQueriedDateTime": {
+     "type": "string"
+    },
+    "nextUri": {
+     "type": "string"
+    },
+    "previousUri": {
+     "type": "string"
+    },
+    "resultSetSize": {
+     "type": "string"
+    },
+    "startPosition": {
+     "type": "string"
+    },
+    "totalSetSize": {
+     "type": "string"
+    }
+   }
+  }
+ }
+}

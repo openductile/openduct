@@ -1,0 +1,177 @@
+# Made by `openduct app from-openapi`: Get Campaign Messages.
+description: "Get Campaign Messages, made from the API description's schemas"
+action: list_campaign_messages
+credential: { api_key: test-key }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://a.klaviyo.com/api/campaign-messages"
+      query: { "page[size]": "100" }
+      headers: { authorization: test-key, revision: "2026-10-15" }
+    answer:
+      status: 200
+      body:
+        data:
+          - type: campaign-message
+            id: id_1
+            attributes:
+              created: "2026-01-15T09:30:00Z"
+              updated: "2026-01-15T09:30:00Z"
+              definition:
+                name: example
+                status: cancelled
+                tracking_options:
+                  is_add_utm: true
+                  is_tracking_clicks: true
+                  is_tracking_opens: true
+                  tracking_params: [null]
+                send_options:
+                  send_time: "2026-01-15T09:30:00Z"
+                  send_times: {}
+                  send_strategy: ab_send_time_test
+                  recipient_percentage: 1
+                  throttling_type: none
+                  throttle_unit: hour
+                  is_ignoring_unsubscribes: true
+                ab_test: { winner_metric: clicks_unique, winner_percentage: 1, winner_wait_hours: 1 }
+            relationships:
+              campaign:
+                data: { type: campaign, id: id_1 }
+                links: { self: "https://example.com/1", related: "https://example.com/1" }
+              campaign-audience:
+                data: { type: campaign-audience, id: id_1 }
+                links: { self: "https://example.com/1", related: "https://example.com/1" }
+              campaign-variations:
+                data: [{}]
+                links: { self: "https://example.com/1", related: "https://example.com/1" }
+            links: { self: "https://example.com/1" }
+        links:
+          self: "https://example.com/1"
+          prev: "https://example.com/1"
+          next: "https://a.klaviyo.com/api/campaign-messages?page=2"
+        meta: { agent_hints: { next_steps: [example] } }
+        included:
+          - type: campaign
+            id: id_1
+            attributes:
+              created_at: "2026-01-15T09:30:00Z"
+              updated_at: "2026-01-15T09:30:00Z"
+              definition: {}
+            relationships: { campaign-audiences: {}, campaign-messages: {}, tags: {} }
+            links: { self: "https://example.com/1" }
+  - sent: { url: "https://a.klaviyo.com/api/campaign-messages?page=2" }
+    answer:
+      status: 200
+      body:
+        data:
+          - type: campaign-message
+            id: id_2
+            attributes:
+              created: "2026-01-15T09:30:00Z"
+              updated: "2026-01-15T09:30:00Z"
+              definition:
+                name: example
+                status: cancelled
+                tracking_options:
+                  is_add_utm: true
+                  is_tracking_clicks: true
+                  is_tracking_opens: true
+                  tracking_params: [null]
+                send_options:
+                  send_time: "2026-01-15T09:30:00Z"
+                  send_times: {}
+                  send_strategy: ab_send_time_test
+                  recipient_percentage: 1
+                  throttling_type: none
+                  throttle_unit: hour
+                  is_ignoring_unsubscribes: true
+                ab_test: { winner_metric: clicks_unique, winner_percentage: 1, winner_wait_hours: 1 }
+            relationships:
+              campaign:
+                data: { type: campaign, id: id_1 }
+                links: { self: "https://example.com/1", related: "https://example.com/1" }
+              campaign-audience:
+                data: { type: campaign-audience, id: id_1 }
+                links: { self: "https://example.com/1", related: "https://example.com/1" }
+              campaign-variations:
+                data: [{}]
+                links: { self: "https://example.com/1", related: "https://example.com/1" }
+            links: { self: "https://example.com/1" }
+        links: { self: "https://example.com/1", prev: "https://example.com/1", next: null }
+        meta: { agent_hints: { next_steps: [example] } }
+        included:
+          - type: campaign
+            id: id_1
+            attributes:
+              created_at: "2026-01-15T09:30:00Z"
+              updated_at: "2026-01-15T09:30:00Z"
+              definition: {}
+            relationships: { campaign-audiences: {}, campaign-messages: {}, tags: {} }
+            links: { self: "https://example.com/1" }
+result:
+  - type: campaign-message
+    id: id_1
+    attributes:
+      created: "2026-01-15T09:30:00Z"
+      updated: "2026-01-15T09:30:00Z"
+      definition:
+        name: example
+        status: cancelled
+        tracking_options:
+          is_add_utm: true
+          is_tracking_clicks: true
+          is_tracking_opens: true
+          tracking_params: [null]
+        send_options:
+          send_time: "2026-01-15T09:30:00Z"
+          send_times: {}
+          send_strategy: ab_send_time_test
+          recipient_percentage: 1
+          throttling_type: none
+          throttle_unit: hour
+          is_ignoring_unsubscribes: true
+        ab_test: { winner_metric: clicks_unique, winner_percentage: 1, winner_wait_hours: 1 }
+    relationships:
+      campaign:
+        data: { type: campaign, id: id_1 }
+        links: { self: "https://example.com/1", related: "https://example.com/1" }
+      campaign-audience:
+        data: { type: campaign-audience, id: id_1 }
+        links: { self: "https://example.com/1", related: "https://example.com/1" }
+      campaign-variations:
+        data: [{}]
+        links: { self: "https://example.com/1", related: "https://example.com/1" }
+    links: { self: "https://example.com/1" }
+  - type: campaign-message
+    id: id_2
+    attributes:
+      created: "2026-01-15T09:30:00Z"
+      updated: "2026-01-15T09:30:00Z"
+      definition:
+        name: example
+        status: cancelled
+        tracking_options:
+          is_add_utm: true
+          is_tracking_clicks: true
+          is_tracking_opens: true
+          tracking_params: [null]
+        send_options:
+          send_time: "2026-01-15T09:30:00Z"
+          send_times: {}
+          send_strategy: ab_send_time_test
+          recipient_percentage: 1
+          throttling_type: none
+          throttle_unit: hour
+          is_ignoring_unsubscribes: true
+        ab_test: { winner_metric: clicks_unique, winner_percentage: 1, winner_wait_hours: 1 }
+    relationships:
+      campaign:
+        data: { type: campaign, id: id_1 }
+        links: { self: "https://example.com/1", related: "https://example.com/1" }
+      campaign-audience:
+        data: { type: campaign-audience, id: id_1 }
+        links: { self: "https://example.com/1", related: "https://example.com/1" }
+      campaign-variations:
+        data: [{}]
+        links: { self: "https://example.com/1", related: "https://example.com/1" }
+    links: { self: "https://example.com/1" }

@@ -1,0 +1,7 @@
+action: search_users
+credential: { subdomain: acme, token: zm_test_1 }
+input: { query: ann@example.com }
+exchanges:
+  - sent: { method: GET, url: https://acme.zammad.com/api/v1/users/search, query: { query: ann@example.com, per_page: "100" } }
+    answer: { body: [{ id: 8, login: ann@example.com, firstname: Ann, lastname: Lee, email: ann@example.com, organization_id: 3 }] }
+result: [{ id: 8, login: ann@example.com, firstname: Ann, lastname: Lee, email: ann@example.com, organization_id: 3 }]

@@ -1,0 +1,15 @@
+description: 'MailerLite refuses: the step fails in its words, field by field'
+action: add_subscriber
+credential:
+  api_key: test-key
+input:
+  email: not-an-email
+exchanges:
+- answer:
+    status: 422
+    body:
+      message: The given data was invalid.
+      errors:
+        email:
+        - The email must be a valid email address.
+error: 'MailerLite answered 422: The given data was invalid. The email must be a valid email address.'

@@ -1,0 +1,11 @@
+action: add_incident_note
+credential: { api_key: pd_test_1 }
+input: { id: PINC001, from: ann@example.com, content: Rolled back the release }
+exchanges:
+  - sent:
+      method: POST
+      url: https://api.pagerduty.com/incidents/PINC001/notes
+      headers: { from: ann@example.com }
+      body: { note: { content: Rolled back the release } }
+    answer: { status: 201, body: { note: { id: PNOTE01, content: Rolled back the release, created_at: "2026-11-27T10:20:00Z" } } }
+result: { id: PNOTE01, content: Rolled back the release, created_at: "2026-11-27T10:20:00Z" }

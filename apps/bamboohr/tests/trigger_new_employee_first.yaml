@@ -1,0 +1,25 @@
+description: The first poll notes who is there and runs nothing
+trigger: new_employee
+credential:
+  company_domain: acme
+  api_key: test-key
+exchanges:
+- sent:
+    method: GET
+    url: https://acme.bamboohr.com/api/v1/employees/changed
+    query:
+      since: '2023-11-07T22:13:20Z'
+      type: inserted
+    headers:
+      authorization: Basic dGVzdC1rZXk6eA==
+      accept: application/json
+  answer:
+    status: 200
+    body:
+      latest: '2023-11-14T20:00:00+00:00'
+      employees:
+        '101':
+          id: '101'
+          action: Inserted
+          lastChanged: '2023-11-14T20:00:00+00:00'
+runs: []

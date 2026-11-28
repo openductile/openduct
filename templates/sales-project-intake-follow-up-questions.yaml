@@ -1,0 +1,80 @@
+name: A project request form that asks its own follow-up questions
+description: >-
+  A prospect describes their project on your form. A model reads it and finds what is missing to quote it - the
+  budget, the date, who decides - and the prospect is e-mailed a second, short form with just those questions; the
+  run waits up to a week for the answers. Then a model writes a one-page brief from both, and your sales team gets it
+  by e-mail, ready for the first call. Needs: your own mail server (mail) and an AI credential (model).
+category: Sales
+trigger:
+  form:
+    title: Tell us about your project
+    description: A few lines are enough - we answer within one working day.
+    fields:
+      - { name: name, label: Your name, type: text, required: true, max_length: 100 }
+      - { name: email, label: Your e-mail, type: email, required: true }
+      - { name: company, label: Company, type: text, max_length: 120 }
+      - { name: project, label: "What do you need?", type: long_text, required: true, max_length: 4000 }
+      - { name: when, label: "When should it be done?", type: date }
+    thanks: Thank you! We may e-mail you a couple of quick questions, then we will be in touch.
+# What a test runs on: an answer as the form gives it.
+sample:
+  name: Priya Shah
+  email: priya@shah-dental.example
+  company: Shah Dental
+  project: We want a new website with online booking for our two clinics, and a way to send reminders by text.
+  when: "2027-02-01"
+steps:
+  - name: gaps
+    ai:
+      credential: model
+      system: >-
+        You help a small web agency's sales team. From a prospect's request, find what is still missing to quote
+        it: budget, deadline, who decides, what exists today, how many pages, which systems it must work with.
+        Ask three short, friendly questions about the most important gaps, in the prospect's own terms.
+      prompt: "{{ value.name }} from {{ value.company }} wrote: {{ value.project }}\nWanted by: {{ value.when }}"
+      max_tokens: 400
+      schema:
+        type: object
+        properties:
+          questions: { type: array, items: { type: string }, maxItems: 3 }
+        required: [questions]
+  - name: asked
+    set:
+      # Three questions, the model's first; a sound question of our own where it gave fewer.
+      q1: "steps.gaps.json.questions != null && size(steps.gaps.json.questions) > 0 ? steps.gaps.json.questions[0] : 'Is there anything else we should know?'"
+      q2: "steps.gaps.json.questions != null && size(steps.gaps.json.questions) > 1 ? steps.gaps.json.questions[1] : 'Who else will decide on this project?'"
+      q3: "steps.gaps.json.questions != null && size(steps.gaps.json.questions) > 2 ? steps.gaps.json.questions[2] : 'What budget do you have in mind?'"
+  - name: ask_more
+    email:
+      credential: mail
+      to: "{{ value.email }}"
+      subject: "A few quick questions about your project"
+      text: "Hello {{ value.name }},\n\nThank you for telling us about your project. So we can quote it properly, could you answer a few short questions here? It takes two minutes:\n\n{{ links.more }}\n\nThe team at Example Web Studio"
+  - name: more
+    form:
+      title: "A few questions for {{ value.company }}"
+      description: Short answers are fine.
+      fields:
+        - { name: a1, label: "{{ steps.asked.q1 }}", type: long_text, max_length: 1500 }
+        - { name: a2, label: "{{ steps.asked.q2 }}", type: long_text, max_length: 1500 }
+        - { name: a3, label: "{{ steps.asked.q3 }}", type: long_text, max_length: 1500 }
+      timeout: 7d
+      on_timeout: continue
+  - name: brief
+    ai:
+      credential: model
+      system: >-
+        You write a one-page brief for a sales call: who the prospect is, what they need, the dates and budget, open
+        questions, and a first idea of how we would do it. Plain words, short headings.
+      prompt: >-
+        Request from {{ value.name }} ({{ value.company }}, {{ value.email }}): {{ value.project }}
+        Wanted by: {{ value.when }}
+        {{ steps.more.timed_out ? 'They have not answered our follow-up questions yet.' : 'Q: ' + steps.asked.q1 + ' A: ' + steps.more.a1 + '\nQ: ' + steps.asked.q2 + ' A: ' + steps.more.a2 + '\nQ: ' + steps.asked.q3 + ' A: ' + steps.more.a3 }}
+      max_tokens: 900
+  - name: to_sales
+    email:
+      credential: mail
+      to: sales@example.com
+      reply_to: "{{ value.email }}"
+      subject: "New project: {{ value.company }} ({{ value.name }}){{ steps.more.timed_out ? ' - no answers yet' : '' }}"
+      text: "{{ steps.brief.text }}"

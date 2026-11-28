@@ -66,7 +66,8 @@ fn credentials_named(definition: &Value, into: &mut BTreeSet<String>) {
     match definition {
         Value::Object(fields) => {
             for (k, v) in fields {
-                if k == "credential" {
+                // retrieval: its steps name AI credentials beside their database.
+                if k == "credential" || k == "embed_with" || k == "answer_with" {
                     if let Some(name) = v.as_str().filter(|n| !n.trim().is_empty()) {
                         into.insert(name.to_owned());
                     }
@@ -380,6 +381,21 @@ mod tests {
         assert_eq!(
             found.into_iter().collect::<Vec<_>>(),
             ["mail", "model", "team-chat"]
+        );
+    }
+
+    // retrieval
+    #[test]
+    fn the_credentials_a_retrieval_step_names_beside_its_database_are_found_too() {
+        let definition = json!({ "steps": [
+            { "ask_documents": { "credential": "docs-db", "embed_with": "vectors", "answer_with": "writer" } },
+            { "vector_store": { "credential": "docs-db", "embed_with": "vectors", "rerank": { "credential": "ranker" } } },
+        ] });
+        let mut found = BTreeSet::new();
+        credentials_named(&definition, &mut found);
+        assert_eq!(
+            found.into_iter().collect::<Vec<_>>(),
+            ["docs-db", "ranker", "vectors", "writer"]
         );
     }
 }

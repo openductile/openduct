@@ -1,0 +1,13 @@
+description: "Google refuses My Library to an API key alone: the step fails in its words"
+action: list_bookshelves
+sign_in: google_books_key
+credential: { api_key: test-key }
+exchanges:
+  - answer:
+      status: 401
+      body:
+        error:
+          code: 401
+          message: "Request is missing required authentication credential. Expected OAuth 2 access token, login cookie or other valid authentication credential."
+          status: UNAUTHENTICATED
+error: "Google Books answered 401: Request is missing required authentication credential."

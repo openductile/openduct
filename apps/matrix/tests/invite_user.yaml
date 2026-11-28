@@ -1,0 +1,11 @@
+description: Someone invited to a room
+action: invite_user
+credential: { homeserver: "https://matrix.example.org", token: syt_test_token }
+input: { room_id: "!abc123:example.org", user_id: "@bo:example.org" }
+exchanges:
+  - sent:
+      method: POST
+      url: "https://matrix.example.org/_matrix/client/v3/rooms/!abc123:example.org/invite"
+      body: { user_id: "@bo:example.org" }
+    answer: { status: 200, body: {} }
+result: { invited: true }

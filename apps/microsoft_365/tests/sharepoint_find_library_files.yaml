@@ -1,0 +1,8 @@
+description: Files found by a word with an apostrophe in it
+action: find_library_files
+credential: { access_token: eyJ0 }
+input: { site_id: "example.sharepoint.com,da60e844-ba1d-49bc-b4d4-d5e36bae9019,712a596e-90a1-49e3-9b48-bfa80bee8740", words: "Ann's quote" }
+exchanges:
+  - sent: { method: GET, url: "https://graph.microsoft.com/v1.0/sites/example.sharepoint.com,da60e844-ba1d-49bc-b4d4-d5e36bae9019,712a596e-90a1-49e3-9b48-bfa80bee8740/drive/root/search(q='Ann''s quote')" }
+    answer: { body: { value: [{ id: 01BYE5RZ5MYLM2SMX75ZBIPQZIHT6OAYPB, name: "Ann's quote.docx", file: { mimeType: application/vnd.openxmlformats-officedocument.wordprocessingml.document } }] } }
+result: [{ id: 01BYE5RZ5MYLM2SMX75ZBIPQZIHT6OAYPB, name: "Ann's quote.docx", file: { mimeType: application/vnd.openxmlformats-officedocument.wordprocessingml.document } }]

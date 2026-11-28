@@ -1,0 +1,6 @@
+action: list_org_units
+credential: { access_token: ya29.test }
+exchanges:
+  - sent: { method: GET, url: https://admin.googleapis.com/admin/directory/v1/customer/my_customer/orgunits, query: { type: all } }
+    answer: { body: { organizationUnits: [{ orgUnitId: "id:03ph8a2z0001", name: Sales, orgUnitPath: /Sales, parentOrgUnitPath: / }] } }
+result: [{ orgUnitId: "id:03ph8a2z0001", name: Sales, orgUnitPath: /Sales, parentOrgUnitPath: / }]

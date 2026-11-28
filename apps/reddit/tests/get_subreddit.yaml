@@ -1,0 +1,8 @@
+description: A community's details
+action: get_subreddit
+credential: { access_token: test-reddit-token }
+input: { subreddit: smallbusiness }
+exchanges:
+  - sent: { method: GET, url: https://oauth.reddit.com/r/smallbusiness/about }
+    answer: { body: { kind: t5, data: { id: 2qhlb, name: t5_2qhlb, display_name: smallbusiness, title: Small Business, subscribers: 1500000, over18: false, submission_type: any, url: /r/smallbusiness/ } } }
+result: { id: 2qhlb, name: t5_2qhlb, display_name: smallbusiness, title: Small Business, subscribers: 1500000, over18: false, submission_type: any, url: /r/smallbusiness/ }

@@ -1,0 +1,57 @@
+# Made by `openduct app from-openapi`: List flows.
+description: "List flows, made from the API description's schemas"
+action: list_flows
+credential: { access_key: ann, access_key_secret: test-password }
+input: { flow_owner_email: "ann@example.com" }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://api.gong.io/v2/flows"
+      query: { flowOwnerEmail: "ann@example.com" }
+      headers: { authorization: "Basic YW5uOnRlc3QtcGFzc3dvcmQ=" }
+    answer:
+      status: 200
+      body:
+        requestId: "4al018gzaztcr8nbukw"
+        records: { totalRecords: 263, currentPageSize: 100, currentPageNumber: 0, cursor: token_2 }
+        flows:
+          - id: "1695493301223590792"
+            name: example
+            folderId: "1695493301223573465"
+            folderName: "1695493301223573465"
+            visibility: Company
+            creationDate: example
+            exclusive: true
+  - sent:
+      method: GET
+      url: "https://api.gong.io/v2/flows"
+      query: { flowOwnerEmail: "ann@example.com", cursor: token_2 }
+      headers: { authorization: "Basic YW5uOnRlc3QtcGFzc3dvcmQ=" }
+    answer:
+      status: 200
+      body:
+        requestId: "4al018gzaztcr8nbukw"
+        records: { totalRecords: 263, currentPageSize: 100, currentPageNumber: 0, cursor: null }
+        flows:
+          - id: id_2
+            name: example
+            folderId: "1695493301223573465"
+            folderName: "1695493301223573465"
+            visibility: Company
+            creationDate: example
+            exclusive: true
+result:
+  - id: "1695493301223590792"
+    name: example
+    folderId: "1695493301223573465"
+    folderName: "1695493301223573465"
+    visibility: Company
+    creationDate: example
+    exclusive: true
+  - id: id_2
+    name: example
+    folderId: "1695493301223573465"
+    folderName: "1695493301223573465"
+    visibility: Company
+    creationDate: example
+    exclusive: true

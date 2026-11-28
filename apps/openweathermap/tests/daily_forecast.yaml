@@ -1,0 +1,14 @@
+action: daily_forecast
+credential: { api_key: test-owm-key-1 }
+input: { lat: 51.5, lon: -0.1 }
+exchanges:
+  - sent: { method: GET, url: https://api.openweathermap.org/data/4.0/onecall/timeline/1day, query: { appid: test-owm-key-1, lat: "51.5", lon: "-0.1", units: metric } }
+    answer:
+      body:
+        lat: 51.5
+        lon: -0.1
+        timezone: Europe/London
+        data:
+          - { dt: 1795780800, temp: { day: 9.1, min: 4.2, max: 10.3 }, weather: [{ id: 803, main: Clouds, description: broken clouds, icon: 04d }], pop: 0.2, uvi: 1.1 }
+        next: "https://api.openweathermap.org/data/4.0/onecall/timeline/1day?cnt=10&lat=51.5000&lon=-0.1000&start=1796644800&appid=test-owm-key-1"
+result: [{ dt: 1795780800, temp: { day: 9.1, min: 4.2, max: 10.3 }, weather: [{ id: 803, main: Clouds, description: broken clouds, icon: 04d }], pop: 0.2, uvi: 1.1 }]

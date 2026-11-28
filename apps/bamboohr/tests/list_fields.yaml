@@ -1,0 +1,26 @@
+description: The fields of an employee record
+action: list_fields
+credential:
+  company_domain: acme
+  api_key: test-key
+exchanges:
+- sent:
+    method: GET
+    url: https://acme.bamboohr.com/api/v1/meta/fields
+    headers:
+      authorization: Basic dGVzdC1rZXk6eA==
+      accept: application/json
+  answer:
+    status: 200
+    body:
+    - id: '4'
+      name: First name
+      type: text
+      alias: firstName
+      deprecated: false
+result:
+- id: '4'
+  name: First name
+  type: text
+  alias: firstName
+  deprecated: false

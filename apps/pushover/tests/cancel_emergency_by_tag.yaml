@@ -1,0 +1,11 @@
+description: "Emergency notifications stopped by tag"
+action: cancel_emergency_by_tag
+credential: {"token": "aTestTokenAbcdefghijklmnopqrst", "user_key": "uTestUserKeyAbcdefghijklmnopq"}
+input: {"tag": "freezer2"}
+exchanges:
+  - sent:
+      method: POST
+      url: "https://api.pushover.net/1/receipts/cancel_by_tag/freezer2.json"
+      body: {"token": "aTestTokenAbcdefghijklmnopqrst"}
+    answer: {"status": 200, "body": {"status": 1, "canceled": 3, "request": "r3"}}
+result: {"status": 1, "canceled": 3, "request": "r3"}

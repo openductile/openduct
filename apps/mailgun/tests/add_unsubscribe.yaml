@@ -1,0 +1,12 @@
+description: "An address unsubscribed from mail with one tag"
+action: add_unsubscribe
+credential: {"api_key": "key-test", "domain": "mg.example.com"}
+input: {"address": "yan@example.com", "tag": "newsletter"}
+exchanges:
+  - sent:
+      method: POST
+      url: "https://api.mailgun.net/v3/mg.example.com/unsubscribes"
+      headers: {"authorization": "Basic YXBpOmtleS10ZXN0"}
+      body: {"address": "yan@example.com", "tags": "newsletter"}
+    answer: {"status": 200, "body": {"message": "Address has been added to the unsubscribes table", "address": "yan@example.com"}}
+result: {"message": "Address has been added to the unsubscribes table", "address": "yan@example.com"}

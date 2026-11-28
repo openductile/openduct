@@ -1,0 +1,31 @@
+description: The contact custom fields
+action: list_custom_fields
+credential:
+  account: shopexample
+  api_key: test-key
+exchanges:
+- sent:
+    method: GET
+    url: https://shopexample.api-us1.com/api/3/fields
+    query:
+      limit: '100'
+    headers:
+      api-token: test-key
+  answer:
+    status: 200
+    body:
+      fields:
+      - &id001
+        id: '1'
+        title: Loyalty level
+        type: dropdown
+        perstag: LOYALTY_LEVEL
+        isrequired: '0'
+        options:
+        - '1'
+        - '2'
+      fieldOptions: []
+      meta:
+        total: '1'
+result:
+- *id001

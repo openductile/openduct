@@ -1,0 +1,11 @@
+action: run_task
+credential: { api_token: apify_api_test1 }
+input: { task: janedoe/my-task, wait_seconds: 60 }
+exchanges:
+  - sent:
+      method: POST
+      url: https://api.apify.com/v2/actor-tasks/janedoe~my-task/runs
+      query: { waitForFinish: "60" }
+      body: {}
+    answer: { status: 201, body: { data: { id: run2, status: SUCCEEDED, defaultDatasetId: ds2 } } }
+result: { id: run2, status: SUCCEEDED, defaultDatasetId: ds2 }

@@ -1,0 +1,7 @@
+action: get_coin_history
+credential: { api_key: CG-test1 }
+input: { id: bitcoin, date: 30-12-2025 }
+exchanges:
+  - sent: { method: GET, url: https://api.coingecko.com/api/v3/coins/bitcoin/history, query: { date: 30-12-2025 } }
+    answer: { body: { id: bitcoin, symbol: btc, name: Bitcoin, market_data: { current_price: { usd: 94100.5 }, market_cap: { usd: 1866000000000 } } } }
+result: { id: bitcoin, symbol: btc, name: Bitcoin, market_data: { current_price: { usd: 94100.5 }, market_cap: { usd: 1866000000000 } } }

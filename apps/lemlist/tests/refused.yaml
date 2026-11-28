@@ -1,0 +1,12 @@
+description: "lemlist refuses an unknown person, in plain words"
+action: get_lead
+credential: {"api_key": "test-key"}
+input: {"email": "zed@example.com"}
+exchanges:
+  - sent:
+      method: GET
+      url: "https://api.lemlist.com/api/leads/zed@example.com"
+      query: {"version": "v2"}
+      headers: {"authorization": "Basic OnRlc3Qta2V5"}
+    answer: {"status": 404, "body": "Lead not found"}
+error: "Lead not found"

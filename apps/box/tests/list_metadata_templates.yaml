@@ -1,0 +1,107 @@
+# Made by `openduct app from-openapi`: Find metadata template by instance ID.
+description: "Find metadata template by instance ID, made from the API description's schemas"
+action: list_metadata_templates
+credential: { access_token: test-access-token }
+input: { metadata_instance_id: "00000000-0000-4000-8000-000000000001" }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://api.box.com/2.0/metadata_templates"
+      query: { metadata_instance_id: "00000000-0000-4000-8000-000000000001", limit: "100" }
+      headers: { authorization: "Bearer test-access-token" }
+    answer:
+      status: 200
+      body:
+        limit: 1000
+        next_marker: token_2
+        prev_marker: JV9IRGZmieiBasejOG9yDCRNgd2ymoZIbjsxbJMjIs3kioVih
+        entries:
+          - id: "58063d82-4128-7b43-bba9-92f706befcdf"
+            type: metadata_template
+            scope: enterprise_123456
+            templateKey: productInfo
+            displayName: example
+            hidden: true
+            fields:
+              - type: string
+                key: category
+                displayName: Category
+                description: example
+                hidden: true
+                options: [{}]
+                taxonomyKey: locationTaxonomy
+                taxonomyId: "05ece6d7-fec4-4d3f-bfd2-36fd4dddea97"
+                namespace: enterprise_123456
+                optionsRules: { multiSelect: true, selectableLevels: [null] }
+                id: "822227e0-47a5-921b-88a8-494760b2e6d2"
+            copyInstanceOnItemCopy: true
+  - sent:
+      method: GET
+      url: "https://api.box.com/2.0/metadata_templates"
+      query: { metadata_instance_id: "00000000-0000-4000-8000-000000000001", limit: "100", marker: token_2 }
+      headers: { authorization: "Bearer test-access-token" }
+    answer:
+      status: 200
+      body:
+        limit: 1000
+        next_marker: null
+        prev_marker: JV9IRGZmieiBasejOG9yDCRNgd2ymoZIbjsxbJMjIs3kioVih
+        entries:
+          - id: id_2
+            type: metadata_template
+            scope: enterprise_123456
+            templateKey: productInfo
+            displayName: example
+            hidden: true
+            fields:
+              - type: string
+                key: category
+                displayName: Category
+                description: example
+                hidden: true
+                options: [{}]
+                taxonomyKey: locationTaxonomy
+                taxonomyId: "05ece6d7-fec4-4d3f-bfd2-36fd4dddea97"
+                namespace: enterprise_123456
+                optionsRules: { multiSelect: true, selectableLevels: [null] }
+                id: "822227e0-47a5-921b-88a8-494760b2e6d2"
+            copyInstanceOnItemCopy: true
+result:
+  - id: "58063d82-4128-7b43-bba9-92f706befcdf"
+    type: metadata_template
+    scope: enterprise_123456
+    templateKey: productInfo
+    displayName: example
+    hidden: true
+    fields:
+      - type: string
+        key: category
+        displayName: Category
+        description: example
+        hidden: true
+        options: [{}]
+        taxonomyKey: locationTaxonomy
+        taxonomyId: "05ece6d7-fec4-4d3f-bfd2-36fd4dddea97"
+        namespace: enterprise_123456
+        optionsRules: { multiSelect: true, selectableLevels: [null] }
+        id: "822227e0-47a5-921b-88a8-494760b2e6d2"
+    copyInstanceOnItemCopy: true
+  - id: id_2
+    type: metadata_template
+    scope: enterprise_123456
+    templateKey: productInfo
+    displayName: example
+    hidden: true
+    fields:
+      - type: string
+        key: category
+        displayName: Category
+        description: example
+        hidden: true
+        options: [{}]
+        taxonomyKey: locationTaxonomy
+        taxonomyId: "05ece6d7-fec4-4d3f-bfd2-36fd4dddea97"
+        namespace: enterprise_123456
+        optionsRules: { multiSelect: true, selectableLevels: [null] }
+        id: "822227e0-47a5-921b-88a8-494760b2e6d2"
+    copyInstanceOnItemCopy: true

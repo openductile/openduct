@@ -1,0 +1,82 @@
+name: Find people to contact at your target companies
+description: >-
+  For sales teams building a prospect list: put the companies' web domains in column A of a Targets sheet, press Run,
+  and Hunter's domain search looks up the people it knows there - in the department you choose - and adds each one it is
+  sure enough of to a Contacts sheet: name, role, email, how sure Hunter is, and the day found. Set the spreadsheet, the
+  department and how sure in the first step. Needs: a Google Sheets sign-in called sheets, and a Hunter API key as a
+  header credential called hunter (X-API-KEY).
+category: Sales
+trigger: manual
+# What a test runs on: what the run is given (nothing: the settings are in the first step).
+sample: {}
+steps:
+  - name: settings
+    set:
+      # Change these to your own.
+      spreadsheet: "'your-spreadsheet-id'"
+      department: "'sales'"
+      at_least: "80"
+  - name: today
+    datetime: {}
+  - name: targets
+    google_sheets:
+      credential: sheets
+      action: read_rows
+      spreadsheet_id: "{{ steps.settings.spreadsheet }}"
+      range: Targets!A2:A
+    retry: { attempts: 3, wait: 10s }
+  - name: each_company
+    for_each:
+      # Each row's first cell is a domain; blank rows are passed over.
+      items: steps.targets.filter(r, size(r) > 0 && string(r[0]).trim() != '')
+      steps:
+        - name: company
+          set:
+            domain: string(item[0]).trim().lowerAscii().replace('https://', '').replace('www.', '')
+        - name: people
+          http:
+            method: GET
+            url: https://api.hunter.io/v2/domain-search
+            credential: hunter
+            query:
+              domain: "{{ steps.company.domain }}"
+              department: "{{ steps.settings.department }}"
+              limit: "10"
+            sample:
+              data:
+                domain: brightcycles.example
+                organization: Bright Cycles
+                emails:
+                  - { value: mia.chen@brightcycles.example, type: personal, confidence: 94, first_name: Mia, last_name: Chen, position: Head of Sales }
+                  - { value: sales@brightcycles.example, type: generic, confidence: 90, first_name: null, last_name: null, position: null }
+                  - { value: tom.ray@brightcycles.example, type: personal, confidence: 61, first_name: Tom, last_name: Ray, position: Account Executive }
+          retry: { attempts: 3, wait: 10s }
+          # One domain Hunter cannot look up should not stop the others.
+          on_error: continue
+        - name: sure
+          list:
+            items: "has(steps.people.body.data) ? steps.people.body.data.emails : []"
+            filter: "item.type == 'personal' && item.confidence >= double(steps.settings.at_least)"
+            sort: confidence
+            order: desc
+            # At most this many people a company.
+            limit: 5
+        - name: each_person
+          for_each:
+            items: steps.sure
+            steps:
+              - name: add
+                google_sheets:
+                  credential: sheets
+                  action: add_row
+                  spreadsheet_id: "{{ steps.settings.spreadsheet }}"
+                  sheet: Contacts
+                  values:
+                    - "{{ steps.people.body.data.organization }}"
+                    - "{{ steps.company.domain }}"
+                    - "{{ item.first_name }} {{ item.last_name }}"
+                    - "{{ item.position }}"
+                    - "{{ item.value }}"
+                    - "{{ item.confidence }}"
+                    - "{{ steps.today.date }}"
+                retry: { attempts: 3, wait: 10s }

@@ -1,0 +1,13 @@
+description: The entries of a glossary's English to German pair
+action: get_glossary_entries
+credential: { api_key: 0f6a2c1e-5b7d-4e2a-9c3f-1a2b3c4d5e6f }
+input: { glossary_id: def3a26b-3e84-45b3-84ae-0c0aaf3525f7, source_lang: en, target_lang: de }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://api.deepl.com/v3/glossaries/def3a26b-3e84-45b3-84ae-0c0aaf3525f7/entries"
+      query: { source_lang: en, target_lang: de }
+    answer:
+      status: 200
+      body: { dictionaries: [{ source_lang: en, target_lang: de, entries: "basket\tWarenkorb\ncheckout\tKasse", entries_format: tsv }] }
+result: [{ source_lang: en, target_lang: de, entries: "basket\tWarenkorb\ncheckout\tKasse", entries_format: tsv }]

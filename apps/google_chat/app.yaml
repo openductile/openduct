@@ -3,21 +3,75 @@
 app: google_chat
 name: Google Chat
 category: messaging
-description: Post messages to a Google Chat space through its webhook.
-docs: https://developers.google.com/workspace/chat/quickstart/webhooks
+description: Messages, thread replies and cards in Google Chat spaces, through a space's webhook or a person's sign-in.
+docs: https://developers.google.com/workspace/chat/api/reference/rest/v1/spaces.messages/create
+hosts: [chat.googleapis.com]
+base_url: https://chat.googleapis.com/v1
 sign_in:
   - id: google_chat_webhook
     label: A Google Chat webhook
     fields:
       - { name: url, label: "The webhook's address", secret: true }
     url_field: url
+  - id: google_chat
+    label: Sign in with Google
+    oauth2:
+      authorize: https://accounts.google.com/o/oauth2/v2/auth
+      token: https://oauth2.googleapis.com/token
+      scopes: [https://www.googleapis.com/auth/chat.messages.create]
+      extra: { access_type: offline, prompt: consent }
+    headers:
+      Authorization: "Bearer {{ credential.access_token }}"
 default_action: send
+error: value.error.message
 actions:
   send:
     label: Post a message
+    description: A message in a space - with a webhook to its own, signed in to the space given.
     write: true
     method: POST
+    path: "/{{ input.space.startsWith('spaces/') ? input.space : 'spaces/' + input.space }}/messages"
     inputs:
       - { name: text, label: The message, required: true }
+      - { name: space, label: "The space, as spaces/AAAA (signed in only)" }
     send: { text: "{{ input.text }}" }
     result: "{'sent': true, 'answer': value}"
+    output: { sent: boolean, answer: record }
+  reply_in_thread:
+    label: Reply in a thread
+    description: >-
+      A message in a thread: by the thread's key (one of your own choosing starts a new thread with that key), or by
+      the thread's name; a thread not found starts a new one.
+    write: true
+    method: POST
+    path: "/{{ input.space.startsWith('spaces/') ? input.space : 'spaces/' + input.space }}/messages"
+    inputs:
+      - { name: text, label: The message, required: true }
+      - { name: thread_key, label: "The thread's key (yours: such as order-A-100)" }
+      - { name: thread, label: "Or the thread's name (spaces/.../threads/...)" }
+      - { name: space, label: "The space, as spaces/AAAA (signed in only)" }
+    query: { messageReplyOption: REPLY_MESSAGE_FALLBACK_TO_NEW_THREAD }
+    send:
+      text: "{{ input.text }}"
+      thread: "{{ has(input.thread) && input.thread != null ? {'name': input.thread} : {'threadKey': input.thread_key} }}"
+    output: { name: text, text: text, thread: record, createTime: text }
+  send_card:
+    label: Post a card
+    description: >-
+      A card (its JSON, as Google's card builder makes it: header, sections, widgets), with text above it, in a
+      thread when a key is given.
+    write: true
+    method: POST
+    path: "/{{ input.space.startsWith('spaces/') ? input.space : 'spaces/' + input.space }}/messages"
+    inputs:
+      - { name: card, label: "The card (its JSON)", required: true, kind: record }
+      - { name: text, label: Text shown above it }
+      - { name: thread_key, label: "A thread's key, to post it in that thread" }
+      - { name: space, label: "The space, as spaces/AAAA (signed in only)" }
+    query:
+      messageReplyOption: "{{ has(input.thread_key) && input.thread_key != null ? 'REPLY_MESSAGE_FALLBACK_TO_NEW_THREAD' : '' }}"
+    send:
+      text: "{{ input.text }}"
+      cardsV2: [{ cardId: card, card: "{{ input.card }}" }]
+      thread: "{{ has(input.thread_key) && input.thread_key != null ? {'threadKey': input.thread_key} : null }}"
+    output: { name: text, cardsV2: list, thread: record, createTime: text }

@@ -1,0 +1,85 @@
+description: 'Tickets over two pages: the next one from the Link header'
+action: list_tickets
+credential:
+  domain: acme
+  api_key: test-key
+input:
+  email: pat@example.com
+exchanges:
+- sent:
+    method: GET
+    url: https://acme.freshdesk.com/api/v2/tickets
+    query:
+      email: pat@example.com
+      order_type: desc
+      per_page: '100'
+    headers:
+      authorization: Basic dGVzdC1rZXk6WA==
+  answer:
+    status: 200
+    headers:
+      Link: <https://acme.freshdesk.com/api/v2/tickets?email=pat%40example.com&order_type=desc&per_page=100&page=2>;
+        rel="next"
+    body:
+    - &id001
+      id: 20
+      subject: Cracked lid
+      description_text: The lid of my mug is cracked.
+      status: 2
+      priority: 1
+      source: 2
+      type: null
+      requester_id: 5001
+      responder_id: null
+      group_id: null
+      company_id: null
+      tags: []
+      cc_emails: []
+      custom_fields: {}
+      due_by: '2026-11-20T11:30:00Z'
+      fr_due_by: '2026-11-18T11:30:00Z'
+      created_at: '2026-11-17T12:02:50Z'
+      updated_at: '2026-11-17T12:02:51Z'
+- sent:
+    url: https://acme.freshdesk.com/api/v2/tickets?email=pat%40example.com&order_type=desc&per_page=100&page=2
+  answer:
+    status: 200
+    body:
+    - id: 18
+      subject: Wrong colour
+      description_text: The lid of my mug is cracked.
+      status: 2
+      priority: 1
+      source: 2
+      type: null
+      requester_id: 5001
+      responder_id: null
+      group_id: null
+      company_id: null
+      tags: []
+      cc_emails: []
+      custom_fields: {}
+      due_by: '2026-11-20T11:30:00Z'
+      fr_due_by: '2026-11-18T11:30:00Z'
+      created_at: '2026-11-17T12:02:50Z'
+      updated_at: '2026-11-17T12:02:51Z'
+result:
+- *id001
+- id: 18
+  subject: Wrong colour
+  description_text: The lid of my mug is cracked.
+  status: 2
+  priority: 1
+  source: 2
+  type: null
+  requester_id: 5001
+  responder_id: null
+  group_id: null
+  company_id: null
+  tags: []
+  cc_emails: []
+  custom_fields: {}
+  due_by: '2026-11-20T11:30:00Z'
+  fr_due_by: '2026-11-18T11:30:00Z'
+  created_at: '2026-11-17T12:02:50Z'
+  updated_at: '2026-11-17T12:02:51Z'

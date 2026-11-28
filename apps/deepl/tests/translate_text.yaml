@@ -1,0 +1,14 @@
+description: One text translated into German, sent as a list of one
+action: translate_text
+credential: { api_key: 0f6a2c1e-5b7d-4e2a-9c3f-1a2b3c4d5e6f }
+input: { text: "Your order has shipped.", target_lang: DE, formality: more }
+exchanges:
+  - sent:
+      method: POST
+      url: "https://api.deepl.com/v2/translate"
+      headers: { authorization: DeepL-Auth-Key 0f6a2c1e-5b7d-4e2a-9c3f-1a2b3c4d5e6f }
+      body: { text: ["Your order has shipped."], target_lang: DE, formality: more }
+    answer:
+      status: 200
+      body: { translations: [{ detected_source_language: EN, text: "Ihre Bestellung wurde versandt." }] }
+result: { translations: [{ detected_source_language: EN, text: "Ihre Bestellung wurde versandt." }] }

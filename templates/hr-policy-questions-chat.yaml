@@ -1,0 +1,45 @@
+name: A chat that answers staff questions from your policies
+description: >-
+  A chat page for your staff: each question is answered by a model from your own policy documents only - the
+  handbook, leave, expenses, travel - kept in PostgreSQL with pgvector by "Keep your Confluence policies ready for
+  answers". Each answer names the documents it rests on; when nothing in them answers, it says so and points to the
+  people team (give the chat a password of your own before you share its address). Needs: policies_db (postgres with
+  pgvector), model (an AI credential that makes embeddings too).
+category: HR
+trigger:
+  chat:
+    texts:
+      title: Ask the handbook
+      welcome: "Hi! Ask me about leave, expenses, travel or any of our policies."
+      placeholder: Your question
+    # None yet: set one of your own before you share the address, and the page asks for it.
+    password: ""
+    history: 6
+    limits: { message: 1000, per_session: 20, per_address: 60 }
+# What a test runs on: a message as this trigger gives it.
+sample:
+  message: How many days of paid leave do I get in my first year?
+  session: 3c59dc048e8850243be8079a5c74d079
+  history: []
+  person: {}
+steps:
+  - name: answer
+    ask_documents:
+      credential: policies_db
+      table: policy_pieces
+      embed_with: model
+      question: "{{ value.message }}"
+      top_k: 5
+      min_score: 0.3
+      instructions: >-
+        You answer the staff of a small company about its own policies, in plain words and at most five sentences.
+        Say which policy you take the answer from. Never guess a number that is not in the passages.
+      max_tokens: 500
+  - name: reply
+    respond:
+      body:
+        text: >-
+          {{ steps.answer.answered
+              ? steps.answer.text + (size(steps.answer.sources.filter(s, s.cited)) == 0 ? ''
+                : '\n\nFrom: ' + steps.answer.sources.filter(s, s.cited).map(s, s.source).join(', '))
+              : "I could not find that in our policies. Please ask the people team at people@example.com." }}

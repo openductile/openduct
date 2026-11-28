@@ -1,0 +1,74 @@
+# Made by `openduct app from-openapi`: Retrieve Bitlinks by Group.
+description: "Retrieve Bitlinks by Group, made from the API description's schemas"
+action: list_links
+credential: { token: test-token }
+input: { group_guid: group_guid_1 }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://api-ssl.bitly.com/v4/groups/group_guid_1/bitlinks"
+      query: { size: "50" }
+      headers: { authorization: "Bearer test-token" }
+    answer:
+      status: 200
+      body:
+        links:
+          - references: {}
+            link: example
+            id: id_1
+            long_url: example
+            title: example
+            archived: true
+            created_at: example
+            created_by: example
+            client_id: client_1
+            custom_bitlinks: [example]
+            tags: [example]
+            launchpad_ids: [example]
+        pagination:
+          next: "https://api-ssl.bitly.com/v4/groups/group_guid_1/bitlinks?page=2"
+          search_after: example
+          size: 1
+  - sent: { url: "https://api-ssl.bitly.com/v4/groups/group_guid_1/bitlinks?page=2" }
+    answer:
+      status: 200
+      body:
+        links:
+          - references: {}
+            link: example
+            id: id_2
+            long_url: example
+            title: example
+            archived: true
+            created_at: example
+            created_by: example
+            client_id: client_1
+            custom_bitlinks: [example]
+            tags: [example]
+            launchpad_ids: [example]
+        pagination: { next: null, search_after: example, size: 1 }
+result:
+  - references: {}
+    link: example
+    id: id_1
+    long_url: example
+    title: example
+    archived: true
+    created_at: example
+    created_by: example
+    client_id: client_1
+    custom_bitlinks: [example]
+    tags: [example]
+    launchpad_ids: [example]
+  - references: {}
+    link: example
+    id: id_2
+    long_url: example
+    title: example
+    archived: true
+    created_at: example
+    created_by: example
+    client_id: client_1
+    custom_bitlinks: [example]
+    tags: [example]
+    launchpad_ids: [example]

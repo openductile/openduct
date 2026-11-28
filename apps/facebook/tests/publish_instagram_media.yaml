@@ -1,0 +1,10 @@
+action: publish_instagram_media
+credential: { access_token: EAAB_test }
+input: { instagram_account_id: "17841400008460056", container_id: "17889455560051444" }
+exchanges:
+  - sent:
+      method: POST
+      url: https://graph.facebook.com/v25.0/17841400008460056/media_publish
+      body: { creation_id: "17889455560051444" }
+    answer: { body: { id: "17920238422030506" } }
+result: { id: "17920238422030506" }

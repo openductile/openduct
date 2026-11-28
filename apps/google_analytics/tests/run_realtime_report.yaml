@@ -1,0 +1,26 @@
+description: Active users by country over the last 10 minutes
+action: run_realtime_report
+credential: { access_token: ya29.a0 }
+input: { property_id: "123456789", metrics: activeUsers, dimensions: country, minutes: 10 }
+exchanges:
+  - sent:
+      method: POST
+      url: "https://analyticsdata.googleapis.com/v1beta/properties/123456789:runRealtimeReport"
+      body:
+        metrics: [{ name: activeUsers }]
+        dimensions: [{ name: country }]
+        minuteRanges: [{ startMinutesAgo: 9, endMinutesAgo: 0 }]
+    answer:
+      body:
+        dimensionHeaders: [{ name: country }]
+        metricHeaders: [{ name: activeUsers, type: TYPE_INTEGER }]
+        rows:
+          - dimensionValues: [{ value: United States }]
+            metricValues: [{ value: "14" }]
+          - dimensionValues: [{ value: Mexico }]
+            metricValues: [{ value: "3" }]
+        rowCount: 2
+        kind: analyticsData#runRealtimeReport
+result:
+  - { country: United States, activeUsers: 14 }
+  - { country: Mexico, activeUsers: 3 }

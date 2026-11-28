@@ -1,0 +1,11 @@
+description: Someone banned from a room
+action: ban_user
+credential: { homeserver: "https://matrix.example.org", token: syt_test_token }
+input: { room_id: "!abc123:example.org", user_id: "@spam:example.org", reason: Spam }
+exchanges:
+  - sent:
+      method: POST
+      url: "https://matrix.example.org/_matrix/client/v3/rooms/!abc123:example.org/ban"
+      body: { user_id: "@spam:example.org", reason: Spam }
+    answer: { status: 200, body: {} }
+result: { banned: true }

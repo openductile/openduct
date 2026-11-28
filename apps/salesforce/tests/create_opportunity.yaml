@@ -1,0 +1,12 @@
+description: "An opportunity with its amount"
+action: create_opportunity
+credential: { access_token: "00D000000000001!AQ.test", instance: examplecorp.my.salesforce.com }
+input: { name: Example Co - 50 chairs, stage: Prospecting, close_date: "2026-12-31", amount: 4500, account_id: 0015e00000AbCdEAAV }
+exchanges:
+  - sent:
+      method: POST
+      url: https://examplecorp.my.salesforce.com/services/data/v67.0/sobjects/Opportunity/
+      headers: { authorization: Bearer 00D000000000001!AQ.test }
+      body: { Name: Example Co - 50 chairs, StageName: Prospecting, CloseDate: "2026-12-31", Amount: 4500, AccountId: 0015e00000AbCdEAAV }
+    answer: { status: 201, body: { id: 0065e00000OpPqRAAV, success: true, errors: [] } }
+result: { id: 0065e00000OpPqRAAV, success: true, errors: [] }

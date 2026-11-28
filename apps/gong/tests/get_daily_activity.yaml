@@ -1,0 +1,33 @@
+description: Each user's activity day by day
+action: get_daily_activity
+credential: {access_key: ann, access_key_secret: test-password, api_url: 'https://us-12345.api.gong.io/'}
+input:
+  from_date: '2026-11-27'
+  to_date: '2026-11-28'
+  user_ids: ['234599484848423']
+exchanges:
+- sent:
+    method: POST
+    url: https://us-12345.api.gong.io/v2/stats/activity/day-by-day
+    headers: {authorization: Basic YW5uOnRlc3QtcGFzc3dvcmQ=}
+    body:
+      filter:
+        fromDate: '2026-11-27'
+        toDate: '2026-11-28'
+        userIds: ['234599484848423']
+  answer:
+    status: 200
+    body:
+      requestId: 4al018gzaztcr8nbukw
+      records: {totalRecords: 1, currentPageSize: 1, currentPageNumber: 0}
+      usersDetailedActivities:
+      - &id001
+        userId: '234599484848423'
+        userEmailAddress: dana@shop.example
+        userDailyActivityStats:
+        - callsAsHost: ['7782342274025937895']
+          callsAttended: []
+          fromDate: '2026-11-27T00:00:00-05:00'
+          toDate: '2026-11-28T00:00:00-05:00'
+result:
+- *id001

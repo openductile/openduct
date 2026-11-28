@@ -1,0 +1,26 @@
+description: A text translated
+action: translate_text
+credential:
+  api_key: test-key
+input:
+  text: Hello, world!
+  from: en_GB
+  to: de_DE
+exchanges:
+- sent:
+    method: POST
+    url: https://api-b2b.backenster.com/b1/api/v3/translate
+    headers:
+      authorization: test-key
+    body:
+      platform: api
+      from: en_GB
+      to: de_DE
+      data: Hello, world!
+  answer:
+    status: 200
+    body:
+      err: null
+      result: Hallo, Welt!
+result:
+  text: Hallo, Welt!

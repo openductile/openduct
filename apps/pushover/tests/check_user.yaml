@@ -1,0 +1,10 @@
+description: "The credential's user key checked"
+action: check_user
+credential: {"token": "aTestTokenAbcdefghijklmnopqrst", "user_key": "uTestUserKeyAbcdefghijklmnopq"}
+exchanges:
+  - sent:
+      method: POST
+      url: "https://api.pushover.net/1/users/validate.json"
+      body: {"token": "aTestTokenAbcdefghijklmnopqrst", "user": "uTestUserKeyAbcdefghijklmnopq"}
+    answer: {"status": 200, "body": {"status": 1, "group": 0, "devices": ["phone", "desktop"], "licenses": ["Android", "Desktop"], "request": "e460545a-8e5e-4d4a-b9d2-1a7b4a8b2c43"}}
+result: {"status": 1, "group": 0, "devices": ["phone", "desktop"], "licenses": ["Android", "Desktop"], "request": "e460545a-8e5e-4d4a-b9d2-1a7b4a8b2c43"}

@@ -1,0 +1,35 @@
+description: Users by their ids
+action: find_users
+credential: {access_key: ann, access_key_secret: test-password, api_url: 'https://us-12345.api.gong.io/'}
+input:
+  user_ids: ['234599484848423']
+exchanges:
+- sent:
+    method: POST
+    url: https://us-12345.api.gong.io/v2/users/extensive
+    headers: {authorization: Basic YW5uOnRlc3QtcGFzc3dvcmQ=}
+    body:
+      filter:
+        userIds: ['234599484848423']
+  answer:
+    status: 200
+    body:
+      requestId: 4al018gzaztcr8nbukw
+      records: {totalRecords: 1, currentPageSize: 1, currentPageNumber: 0}
+      users:
+      - &id001
+        id: '234599484848423'
+        emailAddress: dana@shop.example
+        created: '2026-01-05T09:00:00Z'
+        active: true
+        emailAliases: []
+        firstName: Dana
+        lastName: Example
+        title: Account Executive
+        phoneNumber: +1 555 0100
+        managerId: '563515258458745'
+        settings: {webConferencesRecorded: true}
+        spokenLanguages:
+        - {language: en-US, primary: true}
+result:
+- *id001

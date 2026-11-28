@@ -1,0 +1,34 @@
+# Made by `openduct app from-openapi`: Create a content import source.
+description: "Create a content import source, made from the API description's schemas"
+action: create_content_import_source
+credential: { token: test-token }
+input: { url: example }
+exchanges:
+  - sent:
+      method: POST
+      url: "https://api.intercom.io/ai/content_import_sources"
+      query: {}
+      headers: { authorization: "Bearer test-token" }
+      body: { sync_behavior: api, url: example }
+    answer:
+      status: 200
+      body:
+        type: content_import_source
+        id: 1234
+        last_synced_at: 1672928610
+        sync_behavior: api
+        status: active
+        url: example
+        created_at: 1672928359
+        updated_at: 1672928610
+        audience_ids: [1]
+result:
+  type: content_import_source
+  id: 1234
+  last_synced_at: 1672928610
+  sync_behavior: api
+  status: active
+  url: example
+  created_at: 1672928359
+  updated_at: 1672928610
+  audience_ids: [1]

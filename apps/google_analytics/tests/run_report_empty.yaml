@@ -1,0 +1,11 @@
+description: A report with no rows (Google leaves rows out) gives none
+action: run_report
+credential: { access_token: ya29.a0 }
+input: { property_id: "123456789", metrics: purchaseRevenue, start_date: yesterday, end_date: yesterday }
+exchanges:
+  - answer:
+      body:
+        metricHeaders: [{ name: purchaseRevenue, type: TYPE_CURRENCY }]
+        metadata: { currencyCode: USD, timeZone: America/New_York }
+        kind: analyticsData#runReport
+result: []

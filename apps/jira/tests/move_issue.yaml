@@ -1,0 +1,10 @@
+action: move_issue
+credential: { site: examplecorp, email: ann@example.com, api_token: ATATT_test }
+input: { issue: SUP-13, transition_id: "31" }
+exchanges:
+  - sent:
+      method: POST
+      url: https://examplecorp.atlassian.net/rest/api/3/issue/SUP-13/transitions
+      body: { transition: { id: "31" } }
+    answer: { status: 204, body: "" }
+result: { moved: true }

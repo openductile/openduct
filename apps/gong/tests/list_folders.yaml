@@ -1,0 +1,27 @@
+# Made by `openduct app from-openapi`: List library folders.
+description: "List library folders, made from the API description's schemas"
+action: list_folders
+credential: { access_key: ann, access_key_secret: test-password }
+input: { workspace_id: workspace_1 }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://api.gong.io/v2/library/folders"
+      query: { workspaceId: workspace_1 }
+      headers: { authorization: "Basic YW5uOnRlc3QtcGFzc3dvcmQ=" }
+    answer:
+      status: 200
+      body:
+        requestId: "4al018gzaztcr8nbukw"
+        folders:
+          - id: "3843152912968920037"
+            name: example
+            parentFolderId: "295738305212375930"
+            createdBy: "234599484848423"
+            updated: "2020-03-14T13:30:00Z"
+result:
+  - id: "3843152912968920037"
+    name: example
+    parentFolderId: "295738305212375930"
+    createdBy: "234599484848423"
+    updated: "2020-03-14T13:30:00Z"

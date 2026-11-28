@@ -1,0 +1,19 @@
+description: The account balance
+action: get_balance
+credential:
+  api_key: abcd1234
+  api_secret: test-secret
+exchanges:
+- sent:
+    method: GET
+    url: https://rest.nexmo.com/account/get-balance
+    headers:
+      authorization: Basic YWJjZDEyMzQ6dGVzdC1zZWNyZXQ=
+  answer:
+    status: 200
+    body:
+      value: 10.28
+      autoReload: false
+result:
+  value: 10.28
+  autoReload: false

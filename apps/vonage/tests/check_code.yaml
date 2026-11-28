@@ -1,0 +1,24 @@
+description: The right code
+action: check_code
+credential:
+  api_key: abcd1234
+  api_secret: test-secret
+input:
+  request_id: c11236f4-00bf-4b89-84ba-88b25df97315
+  code: '123456'
+exchanges:
+- sent:
+    method: POST
+    url: https://api.nexmo.com/v2/verify/c11236f4-00bf-4b89-84ba-88b25df97315
+    headers:
+      authorization: Basic YWJjZDEyMzQ6dGVzdC1zZWNyZXQ=
+    body:
+      code: '123456'
+  answer:
+    status: 200
+    body:
+      request_id: c11236f4-00bf-4b89-84ba-88b25df97315
+      status: completed
+result:
+  request_id: c11236f4-00bf-4b89-84ba-88b25df97315
+  status: completed

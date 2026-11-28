@@ -1,0 +1,7 @@
+action: remove_from_list
+credential: { api_key: xkeysib-test-1 }
+input: { list_id: "3", emails: kim@example.com }
+exchanges:
+  - sent: { method: POST, url: https://api.brevo.com/v3/contacts/lists/3/contacts/remove, body: { emails: [kim@example.com] } }
+    answer: { status: 201, body: { contacts: { success: [kim@example.com], failure: [] } } }
+result: { success: [kim@example.com], failure: [] }

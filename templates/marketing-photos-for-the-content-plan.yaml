@@ -1,0 +1,76 @@
+name: Find a photo and the draft for every post in your content plan
+description: >-
+  Press Run before a planning meeting: an AI agent reads your Content plan sheet, and for each post that has no
+  picture yet, searches Pexels for a fitting free photo (landscape, matching the post's topic and mood), finds the
+  post's draft in Google Drive by its title, and writes the photo's link, its photographer's credit and the draft's
+  link back into the post's row. For small marketing teams who plan in a sheet and draft in Drive. Needs: model,
+  google_sheets, pexels (an API key, sent as the Authorization header), google_drive.
+category: Marketing
+trigger: manual
+# What a test runs on: what you give when you press Run.
+sample:
+  month: December
+steps:
+  - name: fill
+    agent:
+      credential: model
+      instructions: >-
+        You help a marketing team finish its content plan. Read the plan: its first row names the columns (title,
+        topic, publish_on, photo_url, photo_credit, draft_url), and sheet rows are numbered from 1, the header being
+        row 1. For each post planned for the month asked whose photo_url is empty: search for two or three photos
+        with words from its topic, pick the one that fits best (no text in the image, no visible brands), find its
+        draft by the post's title, and write photo_url, photo_credit ("Photo by <name> on Pexels") and draft_url into
+        columns D to F of that post's row. Leave rows that already have a photo alone. End with one line per post
+        you changed.
+      input: "Posts planned for {{ value.month }}."
+      tools:
+        - name: read_plan
+          description: Every row of the content plan, the header first.
+          google_sheets:
+            action: read_rows
+            credential: google_sheets
+            spreadsheet_id: your-spreadsheet-id
+            range: Content plan
+        - name: search_photos
+          description: Free stock photos for a few words, landscape, with each photo's page, picture link and photographer.
+          parameters:
+            type: object
+            properties:
+              words: { type: string, description: "A few words, as winter coffee table" }
+            required: [words]
+          http:
+            url: https://api.pexels.com/v1/search
+            credential: pexels
+            query: { query: "{{ args.words }}", orientation: landscape, per_page: "5" }
+        - name: find_draft
+          description: Documents in Google Drive whose name contains the words given, with their links.
+          parameters:
+            type: object
+            properties:
+              title: { type: string, description: "The post's title, or the main words of it" }
+            required: [title]
+          google_drive:
+            action: find_files
+            credential: google_drive
+            q: "name contains '{{ args.title.replace(\"'\", \"\") }}' and mimeType = 'application/vnd.google-apps.document' and trashed = false"
+        # Writes only columns D to F of one post's row: the model chooses the row, never the range.
+        - name: write_row
+          description: Writes a post's photo link, photo credit and draft link into its row of the plan.
+          parameters:
+            type: object
+            properties:
+              row: { type: integer, minimum: 2, description: "The post's row number in the sheet (the header is 1)" }
+              photo_url: { type: string }
+              photo_credit: { type: string }
+              draft_url: { type: string }
+            required: [row, photo_url, photo_credit, draft_url]
+          google_sheets:
+            action: set_rows
+            credential: google_sheets
+            spreadsheet_id: your-spreadsheet-id
+            range: "Content plan!D{{ args.row }}:F{{ args.row }}"
+            rows: "{{ [[args.photo_url, args.photo_credit, args.draft_url]] }}"
+      allow: [read_plan, search_photos, find_draft, write_row]
+      max_turns: 20
+      max_tool_calls: 40
+      max_tokens: 1200

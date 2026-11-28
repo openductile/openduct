@@ -1,0 +1,206 @@
+# Made by `openduct app from-openapi`: Change a release.
+description: "Change a release, made from the API description's schemas"
+action: update_release
+credential: { token: test-token }
+input: { organization_id_or_slug: example, version: example }
+exchanges:
+  - sent:
+      method: PUT
+      url: "https://us.sentry.io/api/0/organizations/example/releases/example/"
+      query: {}
+      headers: { authorization: "Bearer test-token" }
+      body: {}
+    answer:
+      status: 200
+      body:
+        ref: example
+        url: example
+        dateReleased: "2026-01-15T09:30:00Z"
+        dateCreated: "2026-01-15T09:30:00Z"
+        dateStarted: "2026-01-15T09:30:00Z"
+        owner:
+          identities:
+            - id: id_1
+              name: example
+              organization: {}
+              provider: {}
+              dateVerified: "2026-01-15T09:30:00Z"
+              dateSynced: "2026-01-15T09:30:00Z"
+          avatar: { avatarType: letter_avatar, avatarUuid: avatar_uuid_1, avatarUrl: example }
+          authenticators:
+            - id: id_1
+              type: example
+              name: example
+              dateCreated: "2026-01-15T09:30:00Z"
+              dateUsed: "2026-01-15T09:30:00Z"
+          canReset2fa: true
+          id: id_1
+          name: example
+          username: example
+          email: "ann@example.com"
+          avatarUrl: example
+          isActive: true
+          isSuspended: true
+          hasPasswordAuth: true
+        lastCommit:
+          id: id_1
+          message: example
+          dateCreated: "2026-01-15T09:30:00Z"
+          pullRequest:
+            id: id_1
+            title: example
+            message: example
+            dateCreated: "2026-01-15T09:30:00Z"
+            mergedAt: "2026-01-15T09:30:00Z"
+            status: merged
+            repository:
+              url: example
+              provider: {}
+              status: active
+              integrationId: integration_1
+              externalSlug: example
+              externalId: external_1
+              settings: {}
+              id: id_1
+              name: example
+              dateCreated: "2026-01-15T09:30:00Z"
+            author: {}
+            externalUrl: example
+          suspectCommitType: example
+          repository:
+            url: example
+            provider: {}
+            status: active
+            integrationId: integration_1
+            externalSlug: example
+            externalId: external_1
+            settings: { enabledCodeReview: true, codeReviewTriggers: [null] }
+            id: id_1
+            name: example
+            dateCreated: "2026-01-15T09:30:00Z"
+          author:
+            identities: [null]
+            avatar: {}
+            authenticators: [null]
+            canReset2fa: true
+            id: id_1
+            name: example
+            username: example
+            email: "ann@example.com"
+            avatarUrl: example
+            isActive: true
+            isSuspended: true
+            hasPasswordAuth: true
+        lastDeploy:
+          dateStarted: "2026-01-15T09:30:00Z"
+          url: example
+          id: id_1
+          environment: example
+          dateFinished: "2026-01-15T09:30:00Z"
+          name: example
+        firstEvent: "2026-01-15T09:30:00Z"
+        lastEvent: "2026-01-15T09:30:00Z"
+        currentProjectMeta:
+          sessionsLowerBound: example
+          sessionsUpperBound: example
+          nextReleaseVersion: example
+          prevReleaseVersion: example
+          firstReleaseVersion: example
+          lastReleaseVersion: example
+        userAgent: example
+result:
+  ref: example
+  url: example
+  dateReleased: "2026-01-15T09:30:00Z"
+  dateCreated: "2026-01-15T09:30:00Z"
+  dateStarted: "2026-01-15T09:30:00Z"
+  owner:
+    identities:
+      - id: id_1
+        name: example
+        organization: {}
+        provider: {}
+        dateVerified: "2026-01-15T09:30:00Z"
+        dateSynced: "2026-01-15T09:30:00Z"
+    avatar: { avatarType: letter_avatar, avatarUuid: avatar_uuid_1, avatarUrl: example }
+    authenticators:
+      - id: id_1
+        type: example
+        name: example
+        dateCreated: "2026-01-15T09:30:00Z"
+        dateUsed: "2026-01-15T09:30:00Z"
+    canReset2fa: true
+    id: id_1
+    name: example
+    username: example
+    email: "ann@example.com"
+    avatarUrl: example
+    isActive: true
+    isSuspended: true
+    hasPasswordAuth: true
+  lastCommit:
+    id: id_1
+    message: example
+    dateCreated: "2026-01-15T09:30:00Z"
+    pullRequest:
+      id: id_1
+      title: example
+      message: example
+      dateCreated: "2026-01-15T09:30:00Z"
+      mergedAt: "2026-01-15T09:30:00Z"
+      status: merged
+      repository:
+        url: example
+        provider: {}
+        status: active
+        integrationId: integration_1
+        externalSlug: example
+        externalId: external_1
+        settings: {}
+        id: id_1
+        name: example
+        dateCreated: "2026-01-15T09:30:00Z"
+      author: {}
+      externalUrl: example
+    suspectCommitType: example
+    repository:
+      url: example
+      provider: {}
+      status: active
+      integrationId: integration_1
+      externalSlug: example
+      externalId: external_1
+      settings: { enabledCodeReview: true, codeReviewTriggers: [null] }
+      id: id_1
+      name: example
+      dateCreated: "2026-01-15T09:30:00Z"
+    author:
+      identities: [null]
+      avatar: {}
+      authenticators: [null]
+      canReset2fa: true
+      id: id_1
+      name: example
+      username: example
+      email: "ann@example.com"
+      avatarUrl: example
+      isActive: true
+      isSuspended: true
+      hasPasswordAuth: true
+  lastDeploy:
+    dateStarted: "2026-01-15T09:30:00Z"
+    url: example
+    id: id_1
+    environment: example
+    dateFinished: "2026-01-15T09:30:00Z"
+    name: example
+  firstEvent: "2026-01-15T09:30:00Z"
+  lastEvent: "2026-01-15T09:30:00Z"
+  currentProjectMeta:
+    sessionsLowerBound: example
+    sessionsUpperBound: example
+    nextReleaseVersion: example
+    prevReleaseVersion: example
+    firstReleaseVersion: example
+    lastReleaseVersion: example
+  userAgent: example

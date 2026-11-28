@@ -1,0 +1,10 @@
+action: create_maintenance_window
+credential: { api_key: ur_test_1 }
+input: { name: Sunday backups, interval: weekly, date: "2026-11-29", time: "02:00:00", duration: 60, days: "7", monitor_ids: "801, 802" }
+exchanges:
+  - sent:
+      method: POST
+      url: https://api.uptimerobot.com/v3/maintenance-windows
+      body: { name: Sunday backups, interval: weekly, date: "2026-11-29", time: "02:00:00", duration: 60, days: [7], monitorIds: [801, 802] }
+    answer: { status: 201, body: { id: 51, name: Sunday backups, interval: weekly, date: "2026-11-29", time: "02:00:00", duration: 60, days: [7], monitorIds: [801, 802], status: active } }
+result: { id: 51, name: Sunday backups, interval: weekly, date: "2026-11-29", time: "02:00:00", duration: 60, days: [7], monitorIds: [801, 802], status: active }

@@ -1,0 +1,80 @@
+name: A weekly timesheet summary for team leads
+description: >-
+  Every Friday at 16:00 (Sydney time), read the week's entries from your Timesheet sheet (date, person, project, hours,
+  billable). A short Python script works out each person's hours and billable share, each project's hours, who is over
+  45 hours and who has a weekday with nothing logged, and a model turns the figures into five plain lines posted to
+  your team leads' channel in Slack - a nudge to fill gaps before the weekend, not a ranking. Needs: sheets
+  (google_sheets), model (ai), team (slack).
+category: HR
+trigger:
+  schedule: { every: week, on: [friday], at: "16:00", timezone: Australia/Sydney }
+# What a test runs on: an event as this trigger gives it.
+sample:
+  scheduled_at: '2026-11-27T05:00:00Z'
+steps:
+  - name: entries
+    google_sheets:
+      action: read_rows
+      credential: sheets
+      spreadsheet_id: your-spreadsheet-id
+      range: Timesheet!A1:E5000
+    retry: { attempts: 3, wait: 30s }
+  - name: figures
+    python: |
+      # This week (Monday to the run's day): totals by person and project, long weeks and missing days.
+      # 16:00 in Sydney is the same day in UTC (05:00 or 06:00), so the run's UTC day is its day in Sydney.
+      from datetime import date, timedelta
+
+      run_day = date.fromisoformat(value["scheduled_at"][:10])
+      monday = run_day - timedelta(days=run_day.weekday())
+      weekdays = [monday + timedelta(days=i) for i in range((run_day - monday).days + 1) if (monday + timedelta(days=i)).weekday() < 5]
+
+      rows = steps.get("entries") or []
+      head = [str(h).strip().lower() for h in (rows[0] if rows else [])]
+      def col(row, name):
+          i = head.index(name) if name in head else -1
+          return row[i] if 0 <= i < len(row) else ""
+
+      people, projects, days_logged = {}, {}, {}
+      for row in rows[1:]:
+          try:
+              day = date.fromisoformat(str(col(row, "date"))[:10])
+              hours = float(str(col(row, "hours")).replace(",", "."))
+          except ValueError:
+              continue
+          if not (monday <= day <= run_day):
+              continue
+          who = str(col(row, "person")).strip() or "(no name)"
+          billable = str(col(row, "billable")).strip().lower() in ("yes", "y", "true", "1")
+          p = people.setdefault(who, {"hours": 0.0, "billable": 0.0})
+          p["hours"] += hours
+          p["billable"] += hours if billable else 0.0
+          project = str(col(row, "project")).strip() or "(none)"
+          projects[project] = projects.get(project, 0.0) + hours
+          days_logged.setdefault(who, set()).add(day)
+
+      result = {
+          "week": f"{monday.isoformat()} to {run_day.isoformat()}",
+          "people": {w: {"hours": round(p["hours"], 1), "billable_pct": round(100 * p["billable"] / p["hours"]) if p["hours"] else 0}
+                     for w, p in sorted(people.items())},
+          "projects": {k: round(v, 1) for k, v in sorted(projects.items(), key=lambda kv: -kv[1])},
+          "over_45": [w for w, p in people.items() if p["hours"] > 45],
+          "missing_days": {w: [d.strftime("%a") for d in weekdays if d not in days_logged.get(w, set())]
+                           for w in sorted(people) if any(d not in days_logged.get(w, set()) for d in weekdays)},
+          "total_hours": round(sum(p["hours"] for p in people.values()), 1),
+      }
+  - name: note
+    ai:
+      credential: model
+      system: >-
+        You write a team lead's weekly timesheet note in five short lines: total hours, the projects that took the
+        most time, anyone over 45 hours (a wellbeing check, kindly said), and anyone with days still to fill in.
+        Use the figures exactly; do not rank people.
+      prompt: "Week {{ steps.figures.week }}: {{ steps.figures }}"
+      max_tokens: 300
+  - name: post
+    slack:
+      credential: team
+      channel: "#team-leads"
+      text: "Timesheets, {{ steps.figures.week }} ({{ steps.figures.total_hours }} hours logged):\n{{ steps.note.text }}"
+    retry: { attempts: 3, wait: 10s }

@@ -1,0 +1,17 @@
+description: "A repository's branches, with their last builds"
+action: list_branches
+credential: { token: test-token }
+input: { repo: shop-example/storefront }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://api.travis-ci.com/repo/shop-example%2Fstorefront/branches"
+      query: { exists_on_github: "true", limit: "100" }
+    answer:
+      body:
+        "@type": branches
+        "@pagination": { limit: 100, offset: 0, count: 1, is_first: true, is_last: true, next: null }
+        branches:
+          - { name: main, default_branch: true, exists_on_github: true, last_build: { id: 86601346, number: "212", state: passed } }
+result:
+  - { name: main, default_branch: true, exists_on_github: true, last_build: { id: 86601346, number: "212", state: passed } }

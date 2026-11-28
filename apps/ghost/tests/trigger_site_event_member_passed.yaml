@@ -1,0 +1,9 @@
+description: A member added, when the workflow asked only for posts published, is answered and runs nothing
+trigger: site_event
+credential: { site: acme, content_key: 22444f78447824223cefc48aaa, webhook_secret: gh_whsec_test_1 }
+input: { events: post.published }
+delivery:
+  headers: { x-ghost-signature: "sha256=30547b5e96eb1a1369a1d5318f0c50273a1bdd5127da54d0232942016fa58445, t=1795773600000" }
+  body: '{"event":"member.added","member":{"current":{"id":"6744a1b2c3d4e5f600000099","email":"ann@example.com","name":"Ann Lee","status":"free"},"previous":{}}}'
+  at: 1795773601
+passed: true

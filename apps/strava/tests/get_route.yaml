@@ -1,0 +1,7 @@
+action: get_route
+credential: { access_token: st_test_1 }
+input: { id: "8001" }
+exchanges:
+  - sent: { method: GET, url: https://www.strava.com/api/v3/routes/8001 }
+    answer: { body: { id: 8001, name: Harbour loop, distance: 10200.0, estimated_moving_time: 3300 } }
+result: { id: 8001, name: Harbour loop, distance: 10200.0, estimated_moving_time: 3300 }

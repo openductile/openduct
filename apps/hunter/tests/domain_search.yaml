@@ -1,0 +1,32 @@
+description: The sales people at a website, with the company's address pattern
+action: domain_search
+credential: { api_key: hunter-test-key }
+input: { domain: example.com, department: sales, limit: 10 }
+exchanges:
+  - sent:
+      method: GET
+      url: https://api.hunter.io/v2/domain-search
+      query: { domain: example.com, department: sales, limit: "10" }
+    answer:
+      body:
+        data:
+          domain: example.com
+          disposable: false
+          webmail: false
+          accept_all: false
+          pattern: "{first}.{last}"
+          organization: Example Inc
+          linked_domains: []
+          emails:
+            - { value: ann.example@example.com, type: personal, confidence: 97, first_name: Ann, last_name: Example, position: Head of Sales, department: sales, seniority: executive, verification: { date: "2026-11-21", status: valid } }
+        meta: { results: 1, limit: 10, offset: 0, params: { domain: example.com, department: sales } }
+result:
+  domain: example.com
+  disposable: false
+  webmail: false
+  accept_all: false
+  pattern: "{first}.{last}"
+  organization: Example Inc
+  linked_domains: []
+  emails:
+    - { value: ann.example@example.com, type: personal, confidence: 97, first_name: Ann, last_name: Example, position: Head of Sales, department: sales, seniority: executive, verification: { date: "2026-11-21", status: valid } }

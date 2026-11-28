@@ -1,0 +1,12 @@
+description: A light dimmed to half - no answer asked for, so no return_response in the address
+action: call_service
+credential: { url: "http://home.example:8123", token: ha-test-token }
+input: { domain: light, service: turn_on, data: { entity_id: light.porch, brightness_pct: 50 } }
+exchanges:
+  - sent:
+      method: POST
+      url: "http://home.example:8123/api/services/light/turn_on"
+      query: {}
+      body: { entity_id: light.porch, brightness_pct: 50 }
+    answer: { status: 200, body: [{ entity_id: light.porch, state: "on", attributes: { brightness: 128 } }] }
+result: [{ entity_id: light.porch, state: "on", attributes: { brightness: 128 } }]

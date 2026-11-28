@@ -13,6 +13,7 @@ sign_in:
     fields:
       - { name: shop, label: "The store's name, as in mystore.myshopify.com" }
       - { name: access_token, label: "The Admin API access token (shpat_...)", secret: true }
+      - { name: webhook_secret, label: "The app's API secret key (it signs webhooks)", secret: true, optional: true }
     headers:
       X-Shopify-Access-Token: "{{ credential.access_token }}"
   - id: shopify_app
@@ -61,3 +62,55 @@ actions:
     send:
       customer: { email: "{{ input.email }}", first_name: "{{ input.first_name }}", last_name: "{{ input.last_name }}", tags: "{{ input.tags }}" }
     result: value.customer
+triggers:
+  new_order:
+    label: A new order
+    description: >-
+      Each order placed in the store, as Shopify sends it, signed with the app's secret. Turning the workflow on adds the webhook to the
+      store, and turning it off deletes it.
+    webhook:
+      signature: { header: x-shopify-hmac-sha256, encoding: base64 }
+      secret: [webhook_secret, client_secret]
+      id: "headers['x-shopify-webhook-id']"
+      only: "headers['x-shopify-topic'] == 'orders/create'"
+      register:
+        - method: POST
+          path: /webhooks.json
+          send: { webhook: { topic: orders/create, address: "{{ input.address }}", format: json } }
+      keep: { webhook_id: string(value.webhook.id) }
+      unregister:
+        - { method: DELETE, path: "/webhooks/{{ input.registered.webhook_id }}.json" }
+  order_paid:
+    label: An order paid
+    description: >-
+      Each order once it is paid, as Shopify sends it, signed with the app's secret. Turning the workflow on adds the webhook to the
+      store, and turning it off deletes it.
+    webhook:
+      signature: { header: x-shopify-hmac-sha256, encoding: base64 }
+      secret: [webhook_secret, client_secret]
+      id: "headers['x-shopify-webhook-id']"
+      only: "headers['x-shopify-topic'] == 'orders/paid'"
+      register:
+        - method: POST
+          path: /webhooks.json
+          send: { webhook: { topic: orders/paid, address: "{{ input.address }}", format: json } }
+      keep: { webhook_id: string(value.webhook.id) }
+      unregister:
+        - { method: DELETE, path: "/webhooks/{{ input.registered.webhook_id }}.json" }
+  new_customer:
+    label: A new customer
+    description: >-
+      Each customer added to the store, as Shopify sends it, signed with the app's secret. Turning the workflow on adds the webhook to the
+      store, and turning it off deletes it.
+    webhook:
+      signature: { header: x-shopify-hmac-sha256, encoding: base64 }
+      secret: [webhook_secret, client_secret]
+      id: "headers['x-shopify-webhook-id']"
+      only: "headers['x-shopify-topic'] == 'customers/create'"
+      register:
+        - method: POST
+          path: /webhooks.json
+          send: { webhook: { topic: customers/create, address: "{{ input.address }}", format: json } }
+      keep: { webhook_id: string(value.webhook.id) }
+      unregister:
+        - { method: DELETE, path: "/webhooks/{{ input.registered.webhook_id }}.json" }

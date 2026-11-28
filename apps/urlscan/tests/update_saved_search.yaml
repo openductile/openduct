@@ -1,0 +1,10 @@
+action: update_saved_search
+credential: { api_key: us_test_1 }
+input: { id: s-1, name: Brand X look-alikes, query: "page.title:\"Brand X\" AND date:>now-7d", datasource: scans }
+exchanges:
+  - sent:
+      method: PUT
+      url: https://urlscan.io/api/v1/user/searches/s-1/
+      body: { search: { name: Brand X look-alikes, query: "page.title:\"Brand X\" AND date:>now-7d", datasource: scans } }
+    answer: { body: { search: { _id: s-1, name: Brand X look-alikes, query: "page.title:\"Brand X\" AND date:>now-7d", datasource: scans } } }
+result: { _id: s-1, name: Brand X look-alikes, query: "page.title:\"Brand X\" AND date:>now-7d", datasource: scans }

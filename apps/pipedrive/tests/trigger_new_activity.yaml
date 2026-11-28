@@ -1,0 +1,8 @@
+description: Activities added since the last poll
+trigger: new_activity
+credential: { api_key: test-pipedrive-token }
+seen: { items: [["90", ""]] }
+exchanges:
+  - sent: { method: GET, url: https://api.pipedrive.com/api/v2/activities, query: { sort_by: add_time, sort_direction: desc, limit: "100" } }
+    answer: { body: { success: true, data: [{ id: 91, subject: Call Ann back, type: call, done: false }, { id: 90, subject: Send the quote, type: task, done: true }], additional_data: { next_cursor: c2 } } }
+runs: [{ id: 91, subject: Call Ann back, type: call, done: false }]

@@ -1,0 +1,152 @@
+# Copyright 2026 Ductile AI, Inc
+# SPDX-License-Identifier: Apache-2.0
+# QuickChart: written by hand from QuickChart's own OpenAPI 3.1 description, https://quickchart.io/openapi.json
+# (fetched 2026-11-27; no licence stated, so every label here is in our own words).
+app: quickchart
+name: QuickChart
+category: developer
+description: Charts and QR codes as links to images - for emails, messages and reports - and QR codes read back.
+docs: "https://quickchart.io/documentation/"
+hosts: [quickchart.io]
+base_url: "https://quickchart.io"
+sign_in:
+  - id: quickchart
+    label: "QuickChart, free or with an API key"
+    fields:
+      - { name: api_key, label: "An API key from a paid plan (left empty: QuickChart's free use)", secret: true, optional: true }
+    query: { key: "{{ credential.api_key }}" }
+error: "type(value) == map && has(value.error) ? value.error : null"
+actions:
+  create_chart_link:
+    label: "Make a chart link"
+    description: >-
+      Keeps a Chart.js chart and gives a short link to its image, to put in an email or message. The image is drawn
+      when the link is opened; links last 3 days on the free plan and 6 months with a key.
+    write: true
+    method: POST
+    path: "/chart/create"
+    inputs:
+      - name: chart
+        label: "The chart, as Chart.js configuration: {type: bar, data: {labels: [...], datasets: [...]}}"
+        required: true
+      - { name: width, label: "Width in pixels (500 if left out)", kind: number }
+      - { name: height, label: "Height in pixels (300 if left out)", kind: number }
+      - { name: background_color, label: "Background color, such as white or #ffffff (see-through if left out)" }
+      - { name: format, label: "Image kind: png (the default), jpg, webp, svg or pdf" }
+      - { name: version, label: "Chart.js version: 2 (the default), 3 or 4" }
+    send:
+      chart: "{{ input.chart }}"
+      width: "{{ input.width }}"
+      height: "{{ input.height }}"
+      backgroundColor: "{{ input.background_color }}"
+      format: "{{ input.format }}"
+      version: "{{ input.version }}"
+      # A paid plan's links last longer when the key is in the body too.
+      key: "{{ credential.api_key == null || credential.api_key == '' ? null : credential.api_key }}"
+    output: { success: boolean, url: text }
+  chart_image:
+    label: "Draw a chart as Base64"
+    description: "Draws a Chart.js chart now and gives the PNG image as Base64 text, to attach or embed."
+    method: POST
+    path: "/chart"
+    inputs:
+      - name: chart
+        label: "The chart, as Chart.js configuration: {type: bar, data: {labels: [...], datasets: [...]}}"
+        required: true
+      - { name: width, label: "Width in pixels (500 if left out)", kind: number }
+      - { name: height, label: "Height in pixels (300 if left out)", kind: number }
+      - { name: background_color, label: "Background color, such as white or #ffffff (see-through if left out)" }
+      - { name: version, label: "Chart.js version: 2 (the default), 3 or 4" }
+    send:
+      chart: "{{ input.chart }}"
+      width: "{{ input.width }}"
+      height: "{{ input.height }}"
+      backgroundColor: "{{ input.background_color }}"
+      version: "{{ input.version }}"
+      format: base64
+    # A chart QuickChart cannot draw comes back as a picture of the error, not as words.
+    error: "status >= 400 ? 'the chart could not be drawn (Check a chart says why)' : null"
+    result: "{'image_base64': value}"
+    output: { image_base64: text }
+  check_chart:
+    label: "Check a chart"
+    description: "Says whether QuickChart can draw a chart, with its errors and warnings, without drawing it."
+    method: POST
+    path: "/api/validate-chart"
+    inputs:
+      - name: chart
+        label: "The chart, as Chart.js configuration"
+        required: true
+      - { name: width, label: "Width in pixels", kind: number }
+      - { name: height, label: "Height in pixels", kind: number }
+      - { name: version, label: "Chart.js version: 2, 3 or 4" }
+    send:
+      chart: "{{ input.chart }}"
+      width: "{{ input.width }}"
+      height: "{{ input.height }}"
+      version: "{{ input.version }}"
+    error: "status >= 400 && type(value) == map && has(value.errors) ? value.errors.join('; ') : null"
+    output: { success: boolean, errors: list, warnings: list, normalized: record, renderCheck: record }
+  chart_from_words:
+    label: "Make a chart from a description"
+    description: >-
+      QuickChart turns a sentence - the chart and its numbers - into a chart, and gives its configuration, a link to
+      its image and a link to change it in QuickChart's editor.
+    write: true
+    method: POST
+    path: "/natural/config"
+    inputs:
+      - { name: description, label: "The chart in words, numbers included (at most 512 characters)", required: true }
+      - { name: width, label: "Width in pixels (500 if left out)", kind: number }
+      - { name: height, label: "Height in pixels (300 if left out)", kind: number }
+      - { name: background_color, label: "Background color (see-through if left out)" }
+    send:
+      description: "{{ input.description }}"
+      width: "{{ input.width }}"
+      height: "{{ input.height }}"
+      backgroundColor: "{{ input.background_color }}"
+    output: { success: boolean, description: text, chart: text, chartUrl: text, chartMakerUrl: text, warnings: list }
+  qr_code_link:
+    label: "Make a QR code link"
+    description: "A link to the image of a QR code holding the text or address given, drawn when the link is opened."
+    method: POST
+    path: "/qr-url"
+    inputs:
+      - { name: text, label: "What the code holds: an address, a ticket number, text", required: true }
+      - { name: size, label: "Size in pixels (150 if left out)", kind: number }
+      - { name: margin, label: "Blank border, in modules (4 if left out)", kind: number }
+      - { name: format, label: "Image kind: png (the default), svg or jpg" }
+      - { name: dark, label: "Color of the dark squares, as hex without # (000000 if left out)" }
+      - { name: light, label: "Background color, as hex without # (ffffff if left out)" }
+      - { name: ec_level, label: "How much damage it survives: L, M, Q or H" }
+      - { name: caption, label: "Words under the code" }
+      - { name: center_image_url, label: "A logo's address to put in the middle (not for svg)" }
+    send:
+      text: "{{ input.text }}"
+      size: "{{ input.size }}"
+      margin: "{{ input.margin }}"
+      format: "{{ input.format }}"
+      dark: "{{ input.dark }}"
+      light: "{{ input.light }}"
+      ecLevel: "{{ input.ec_level }}"
+      caption: "{{ input.caption }}"
+      centerImageUrl: "{{ input.center_image_url }}"
+    output: { url: text }
+  qr_code_links:
+    label: "Make many QR code links"
+    description: "Links to QR code images, one for each item given - each item as Make a QR code link takes it."
+    method: POST
+    path: "/qr-urls"
+    inputs:
+      - { name: qr_codes, label: "The codes, as [{text: ..., size: ...}, ...]", required: true, kind: list }
+    send: { qrCodes: "{{ input.qr_codes }}" }
+    output: { urls: list }
+  read_qr_code:
+    label: "Read a QR code"
+    description: "What a QR code in an image says, from the image's public address."
+    method: GET
+    path: "/qr-read"
+    inputs:
+      - { name: image_url, label: "The image's public address", required: true }
+    query: { url: "{{ input.image_url }}" }
+    output: { result: text }

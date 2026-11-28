@@ -1,0 +1,48 @@
+description: A case changed since the poll before runs again
+trigger: updated_case
+credential:
+  url: https://thehive.example.com
+  api_key: test-key
+seen:
+  items:
+  - - ~8192
+    - '1795161600000'
+exchanges:
+- sent:
+    body:
+      query:
+      - _name: listCase
+      - _name: sort
+        _fields:
+        - _updatedAt: desc
+      - _name: page
+        from: 0
+        to: 100
+  answer:
+    status: 200
+    body:
+    - _id: ~8192
+      _type: Case
+      _createdBy: analyst@example.com
+      _createdAt: 1795161600000
+      _updatedAt: 1795165200000
+      number: 42
+      title: Password reset email reported
+      description: Reported phishing email.
+      severity: 2
+      severityLabel: MEDIUM
+      startDate: 1795161600000
+      endDate: null
+      tags:
+      - phishing
+      flag: false
+      tlp: 2
+      pap: 2
+      status: New
+      stage: New
+      summary: null
+      impactStatus: null
+      assignee: analyst@example.com
+      customFields: []
+ids:
+- ~8192

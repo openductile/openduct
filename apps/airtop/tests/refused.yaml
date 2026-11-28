@@ -1,0 +1,9 @@
+description: "A session that has ended: the step fails in Airtop's words, its detail and errors"
+action: open_window
+credential: { token: test-airtop-key }
+input: { session_id: 6f1c2a9e-0000-4c1d-9a3e-000000000001, url: "https://shop.example.com" }
+exchanges:
+  - answer:
+      status: 404
+      body: { title: Not Found, status: 404, detail: session not found, errors: [{ message: no running session has this id, location: path.sessionId }] }
+error: "Airtop answered 404: session not found: no running session has this id"

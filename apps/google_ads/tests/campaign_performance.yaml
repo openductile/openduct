@@ -1,0 +1,21 @@
+description: Yesterday's results, a row for each campaign and day
+action: campaign_performance
+credential: { access_token: ya29.test }
+input: { customer_id: 123-456-7890, period: YESTERDAY, developer_token: devtok-test }
+exchanges:
+  - sent:
+      method: POST
+      url: "https://googleads.googleapis.com/v26/customers/1234567890/googleAds:search"
+      body:
+        query: "SELECT campaign.id, campaign.name, segments.date, metrics.impressions, metrics.clicks, metrics.cost_micros, metrics.conversions, metrics.conversions_value FROM campaign WHERE segments.date DURING YESTERDAY ORDER BY segments.date"
+    answer:
+      status: 200
+      body:
+        results:
+          - campaign: { resourceName: customers/1234567890/campaigns/111, id: "111", name: Winter sale }
+            segments: { date: "2026-11-26" }
+            metrics: { impressions: "1520", clicks: "84", costMicros: "41250000", conversions: 6, conversionsValue: 540 }
+result:
+  - campaign: { resourceName: customers/1234567890/campaigns/111, id: "111", name: Winter sale }
+    segments: { date: "2026-11-26" }
+    metrics: { impressions: "1520", clicks: "84", costMicros: "41250000", conversions: 6, conversionsValue: 540 }

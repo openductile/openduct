@@ -1,0 +1,18 @@
+description: A web address watched every 5 minutes, with a tag and an alert contact; the type and timeout as by default
+action: create_monitor
+credential: { api_key: ur_test_1 }
+input: { friendly_name: Shop, url: "https://shop.example.com", tags: "shop, prod", alert_contact_id: 4401 }
+exchanges:
+  - sent:
+      method: POST
+      url: https://api.uptimerobot.com/v3/monitors
+      body:
+        friendlyName: Shop
+        url: "https://shop.example.com"
+        type: HTTP
+        interval: 300
+        timeout: 30
+        tagNames: [shop, prod]
+        assignedAlertContacts: [{ alertContactId: 4401, threshold: 0, recurrence: 0 }]
+    answer: { status: 201, body: { id: 801, friendlyName: Shop, url: "https://shop.example.com", type: HTTP, status: STARTED, interval: 300 } }
+result: { id: 801, friendlyName: Shop, url: "https://shop.example.com", type: HTTP, status: STARTED, interval: 300 }

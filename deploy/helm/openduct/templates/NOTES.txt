@@ -1,0 +1,9 @@
+OpenDuct {{ .Chart.AppVersion }}: {{ .Values.replicas }} node(s){{ if include "openduct.cluster" . }}, one cluster{{ end }}.
+
+  kubectl rollout status statefulset/{{ include "openduct.name" . }} -n {{ .Release.Namespace }}
+
+The studio and webhooks: service {{ include "openduct.name" . }}-studio, port {{ .Values.service.port }}
+{{- if .Values.ingress.enabled }}, at https://{{ first .Values.studio.hosts }}{{ else }}: put an ingress with TLS in front of it (ingress.enabled){{ end }}.
+Open it and make the installation's admin on the first visit.
+
+Kafka clients inside the cluster: {{ include "openduct.name" . }}-0.{{ include "openduct.name" . }}:9092

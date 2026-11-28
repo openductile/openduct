@@ -1,0 +1,39 @@
+# Made by `openduct app from-openapi`: Lookup HLR.
+description: "Lookup HLR, made from the API description's schemas"
+action: lookup_hlr
+credential: { api_key: test-key }
+input: { number: example }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://gateway.seven.io/api/lookup/hlr"
+      query: { number: example }
+      headers: { x-api-key: test-key }
+    answer:
+      status: 200
+      body:
+        international_formatted: example
+        country_name: example
+        country_code: example
+        international_format_number: example
+        national_format_number: example
+        country_prefix: example
+        current_carrier: { network_code: example, name: example, country: example, network_type: fixed_line }
+        original_carrier: { network_code: example, name: example, country: example, network_type: fixed_line }
+        lookup_outcome: example
+        lookup_outcome_message: example
+        valid_number: example
+        reachable: example
+result:
+  international_formatted: example
+  country_name: example
+  country_code: example
+  international_format_number: example
+  national_format_number: example
+  country_prefix: example
+  current_carrier: { network_code: example, name: example, country: example, network_type: fixed_line }
+  original_carrier: { network_code: example, name: example, country: example, network_type: fixed_line }
+  lookup_outcome: example
+  lookup_outcome_message: example
+  valid_number: example
+  reachable: example

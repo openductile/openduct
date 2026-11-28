@@ -1,0 +1,8 @@
+description: A task marked done
+action: complete_task
+credential: { access_token: ya29.test }
+input: { list_id: "@default", task_id: dGFzazM }
+exchanges:
+  - sent: { method: PATCH, url: https://tasks.googleapis.com/tasks/v1/lists/@default/tasks/dGFzazM, body: { status: completed } }
+    answer: { body: { kind: tasks#task, id: dGFzazM, title: Send the March invoices, status: completed, completed: "2026-11-27T15:00:00.000Z" } }
+result: { kind: tasks#task, id: dGFzazM, title: Send the March invoices, status: completed, completed: "2026-11-27T15:00:00.000Z" }

@@ -1,0 +1,77 @@
+#!/bin/bash
+# Copyright 2026 Ductile AI, Inc
+# SPDX-License-Identifier: Apache-2.0
+#
+# OpenDuct on one virtual machine, as the aws-vm, gcp-vm and azure-vm modules start it: the released program (its
+# checksum checked) as a systemd service of its own user, its data on the machine's disk. It changes nothing when
+# run again with the release in place. It leaves `openduct-upgrade <version>` on the machine for later releases.
+set -euo pipefail
+
+cat > /usr/local/sbin/openduct-upgrade <<'SCRIPT'
+#!/bin/bash
+# openduct-upgrade <version>: the release (as v0.1.3) downloaded, its checksum checked, installed, and the
+# service restarted with it. The release before stays as /usr/local/bin/openduct.previous, for a rollback:
+#   sudo install -m 0755 /usr/local/bin/openduct.previous /usr/local/bin/openduct && sudo systemctl restart openduct
+set -euo pipefail
+version="$1"
+target="${target}"
+work=$(mktemp -d)
+trap 'rm -rf "$work"' EXIT
+cd "$work"
+base="https://github.com/openductile/openduct/releases/download/$version"
+pack="openduct-$version-$target.tar.gz"
+curl -fsSLO --retry 5 "$base/$pack"
+curl -fsSLO --retry 5 "$base/$pack.sha256"
+sha256sum -c "$pack.sha256"
+tar xzf "$pack"
+if [ -x /usr/local/bin/openduct ]; then cp -p /usr/local/bin/openduct /usr/local/bin/openduct.previous; fi
+install -m 0755 "openduct-$version-$target/openduct" /usr/local/bin/openduct
+if [ -f "openduct-$version-$target/openduct-python" ]; then
+  install -m 0755 "openduct-$version-$target/openduct-python" /usr/local/bin/openduct-python
+fi
+if systemctl is-enabled --quiet openduct 2>/dev/null; then systemctl restart openduct; fi
+SCRIPT
+chmod 0755 /usr/local/sbin/openduct-upgrade
+
+data=/var/lib/openduct
+id openduct >/dev/null 2>&1 || useradd --system --home-dir "$data" --shell /usr/sbin/nologin openduct
+install -d -o openduct -g openduct -m 0700 "$data"
+
+cat > /etc/systemd/system/openduct.service <<'UNIT'
+[Unit]
+Description=OpenDuct: workflows and streams of events
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=openduct
+Environment=OPENDUCT_DATA_DIR=/var/lib/openduct
+# Kafka clients on this machine only; the studio on its own port, reached by the names below.
+Environment=OPENDUCT_LISTEN=127.0.0.1:9092
+Environment=OPENDUCT_STUDIO_LISTEN=0.0.0.0:5480
+Environment=OPENDUCT_STUDIO_HOSTS=${studio_hosts}
+Environment=OPENDUCT_STUDIO_SECURE_COOKIES=${secure_cookies}
+Environment=OPENDUCT_METRICS_LISTEN=127.0.0.1:9645
+ExecStart=/usr/local/bin/openduct start
+Restart=on-failure
+# OpenDuct stops cleanly on SIGTERM: it hands its partitions over, lets requests in flight finish, releases its data.
+TimeoutStopSec=30
+LimitNOFILE=65536
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/var/lib/openduct
+
+[Install]
+WantedBy=multi-user.target
+UNIT
+systemctl daemon-reload
+
+# The release asked for, unless it is the one in place.
+version="${version}"
+if ! /usr/local/bin/openduct --version 2>/dev/null | grep -q " $${version#v}$"; then
+  /usr/local/sbin/openduct-upgrade "$version"
+fi
+systemctl enable openduct
+systemctl start openduct

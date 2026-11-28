@@ -1,0 +1,141 @@
+# Copyright 2026 Ductile AI, Inc
+# SPDX-License-Identifier: Apache-2.0
+# Dropcontact: made by `openduct app from-openapi` from https://developer.dropcontact.com/openapi.json (Enrich API
+# Service 0.1.0, OpenAPI 3.1; last changed 2026-11-09, fetched 2026-11-27; no licence stated), then finished by hand.
+app: dropcontact
+name: Dropcontact
+category: sales
+description: Find and check work email addresses, and fill in contacts' and companies' details, with Dropcontact.
+docs: "https://developer.dropcontact.com"
+hosts: [api.dropcontact.com]
+base_url: "https://api.dropcontact.com"
+sign_in:
+  - id: dropcontact
+    label: "An API key"
+    fields:
+      - { name: api_key, label: "The API key (Dropcontact, Settings, API)", secret: true }
+    headers: { X-Access-Token: "{{ credential.api_key }}" }
+default_action: enrich_contact
+# Dropcontact says why in `reason`, both when it refuses and when it answers 200 that a batch is not ready yet.
+error: "has(value.success) && value.success == false && has(value.reason) ? value.reason : null"
+actions:
+  enrich_contact:
+    label: "Find a contact's email and details"
+    description: >-
+      Sends one contact - a name and company, a LinkedIn profile, or an email to check - to be enriched; gives the
+      request_id to get the result by, a few seconds to minutes later.
+    # It spends the account's credits: a preview shows it and does not send it.
+    write: true
+    method: POST
+    path: "/v1/enrich/all"
+    inputs:
+      - { name: first_name, label: "First name" }
+      - { name: last_name, label: "Last name" }
+      - { name: full_name, label: "Full name (if not first and last)" }
+      - { name: email, label: "An email address, to check or to start from" }
+      - { name: company, label: "Their company" }
+      - { name: website, label: "Their company's website" }
+      - { name: linkedin, label: "Their LinkedIn profile's address" }
+      - { name: phone, label: "Their company's phone number" }
+      - { name: job, label: "Their job title" }
+      - { name: siren, label: "Add a French company's SIREN and SIRET numbers", kind: boolean }
+      - { name: language, label: "The language of the email's qualification: en or fr" }
+    send:
+      data:
+        - first_name: "{{ input.first_name }}"
+          last_name: "{{ input.last_name }}"
+          full_name: "{{ input.full_name }}"
+          email: "{{ input.email }}"
+          company: "{{ input.company }}"
+          website: "{{ input.website }}"
+          linkedin: "{{ input.linkedin }}"
+          phone: "{{ input.phone }}"
+          job: "{{ input.job }}"
+      siren: "{{ input.siren }}"
+      language: "{{ input.language }}"
+    output: { error: boolean, success: boolean, credits_left: number, request_id: text, data: list }
+  enrich_contacts:
+    label: "Find many contacts' emails and details"
+    description: "Sends up to 250 contacts at once to be enriched; gives the request_id to get the results by."
+    write: true
+    method: POST
+    path: "/v1/enrich/all"
+    inputs:
+      - name: contacts
+        label: "The contacts, 250 at most: each a record of first_name, last_name, company, website, linkedin, email ..."
+        required: true
+        kind: list
+      - { name: siren, label: "Add French companies' SIREN and SIRET numbers", kind: boolean }
+      - { name: language, label: "The language of the emails' qualification: en or fr" }
+      - { name: callback_url, label: "An address to send the results to when they are ready, for this request only" }
+    send:
+      data: "{{ input.contacts }}"
+      siren: "{{ input.siren }}"
+      language: "{{ input.language }}"
+      custom_callback_url: "{{ input.callback_url }}"
+    output: { error: boolean, success: boolean, credits_left: number, request_id: text, data: list }
+  get_results:
+    label: "Get the enriched contacts"
+    description: >-
+      The contacts of a request, enriched: emails found with how sure Dropcontact is of each, job, company, website,
+      LinkedIn, phone, size and industry. Until all are done it fails, in Dropcontact's words (a step that tries again
+      after 30 seconds waits for them), unless asked for those done so far.
+    method: GET
+    path: "/v1/enrich/all/{{ input.request_id }}"
+    inputs:
+      - { name: request_id, label: "The request_id a request to enrich gave", required: true }
+      - { name: done_so_far, label: "Give the contacts done so far, not waiting for all", kind: boolean }
+    query: { forceResults: "{{ input.done_so_far }}" }
+    items: value.data
+    output:
+      first_name: text
+      last_name: text
+      full_name: text
+      civility: text
+      email: list
+      linkedin: text
+      job: text
+      job_function: text
+      job_level: text
+      mobile_phone: text
+      location: text
+      company: text
+      website: text
+      country: text
+      company_linkedin: text
+      phone: text
+      nb_employees: text
+      industry: text
+      siren: text
+      siret: text
+      vat: text
+      custom_fields: record
+      status: text
+  get_credits:
+    label: "Check credits"
+    description: "How many credits the account has left, free ones too."
+    method: GET
+    path: "/v1/account/credits"
+    output: { credits: number }
+  get_webhook:
+    label: "Look up where results are sent"
+    description: "The account's own address that Dropcontact sends results to when a request names none."
+    method: GET
+    path: "/v1/enrich/webhook"
+    output: { error: boolean, success: boolean, callback_url: text }
+  set_webhook:
+    label: "Set where results are sent"
+    description: "Sets the account's own address that Dropcontact sends results to when a request names none."
+    write: true
+    method: PUT
+    path: "/v1/enrich/webhook"
+    inputs: [{ name: callback_url, label: "The address", required: true }]
+    send: { callback_url: "{{ input.callback_url }}" }
+    output: { error: boolean, success: boolean, callback_url: text }
+  delete_webhook:
+    label: "Stop sending results to an address"
+    description: "Removes the account's own address for results."
+    write: true
+    method: DELETE
+    path: "/v1/enrich/webhook"
+    output: { detail: text }

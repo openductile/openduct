@@ -1,0 +1,25 @@
+description: Two columns of an item changed at once
+action: update_item
+credential:
+  token: monday-test-token
+input:
+  board_id: '1234567890'
+  item_id: '9876543210'
+  column_values:
+    status: Done
+exchanges:
+- sent:
+    body:
+      query: 'mutation ($board: ID!, $item: ID, $values: JSON!, $labels: Boolean) { change_multiple_column_values(board_id:
+        $board, item_id: $item, column_values: $values, create_labels_if_missing: $labels) { id } }'
+      variables:
+        board: '1234567890'
+        item: '9876543210'
+        values: '{"status":"Done"}'
+  answer:
+    body:
+      data:
+        change_multiple_column_values:
+          id: '9876543210'
+result:
+  id: '9876543210'

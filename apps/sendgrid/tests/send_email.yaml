@@ -1,0 +1,31 @@
+description: An email in plain words and HTML to two people, a copy to a third; SendGrid queues it
+action: send_email
+credential: { token: SG.test-key }
+input:
+  to: "ann@example.com, bo@example.com"
+  cc: ops@example.com
+  from: orders@shop.example
+  from_name: Example Shop
+  subject: Your order has shipped
+  text: Your order 1042 is on its way.
+  html: "<p>Your order <b>1042</b> is on its way.</p>"
+  reply_to: help@shop.example
+  categories: "orders, shipping"
+exchanges:
+  - sent:
+      method: POST
+      url: https://api.sendgrid.com/v3/mail/send
+      headers: { authorization: Bearer SG.test-key }
+      body:
+        personalizations:
+          - to: [{ email: ann@example.com }, { email: bo@example.com }]
+            cc: [{ email: ops@example.com }]
+        from: { email: orders@shop.example, name: Example Shop }
+        reply_to: { email: help@shop.example }
+        subject: Your order has shipped
+        content:
+          - { type: text/plain, value: Your order 1042 is on its way. }
+          - { type: text/html, value: "<p>Your order <b>1042</b> is on its way.</p>" }
+        categories: [orders, shipping]
+    answer: { status: 202, headers: { x-message-id: AbC1dEf2GhI3jKl4MnO5pQ } }
+result: { sent: true }

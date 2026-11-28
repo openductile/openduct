@@ -1,0 +1,19 @@
+description: The records a SOQL query finds
+action: query
+credential: { access_token: "00D000000000001!AQ.test", instance: examplecorp.my.salesforce.com }
+input: { soql: "SELECT Id, Name FROM Lead WHERE Status = 'Open - Not Contacted' ORDER BY CreatedDate DESC" }
+exchanges:
+  - sent:
+      method: GET
+      url: https://examplecorp.my.salesforce.com/services/data/v67.0/query
+      query: { q: "SELECT Id, Name FROM Lead WHERE Status = 'Open - Not Contacted' ORDER BY CreatedDate DESC" }
+    answer:
+      body:
+        totalSize: 2
+        done: true
+        records:
+          - { attributes: { type: Lead, url: /services/data/v67.0/sobjects/Lead/00Q5e000001AbcDEAZ }, Id: 00Q5e000001AbcDEAZ, Name: Ann Lee }
+          - { attributes: { type: Lead, url: /services/data/v67.0/sobjects/Lead/00Q5e000001AbcDFAZ }, Id: 00Q5e000001AbcDFAZ, Name: Cy Park }
+result:
+  - { attributes: { type: Lead, url: /services/data/v67.0/sobjects/Lead/00Q5e000001AbcDEAZ }, Id: 00Q5e000001AbcDEAZ, Name: Ann Lee }
+  - { attributes: { type: Lead, url: /services/data/v67.0/sobjects/Lead/00Q5e000001AbcDFAZ }, Id: 00Q5e000001AbcDFAZ, Name: Cy Park }

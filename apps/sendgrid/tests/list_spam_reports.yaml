@@ -1,0 +1,10 @@
+description: Spam reports
+action: list_spam_reports
+credential: { token: SG.test-key }
+exchanges:
+  - sent:
+      method: GET
+      url: https://api.sendgrid.com/v3/suppression/spam_reports
+      query: { limit: "100" }
+    answer: { body: [{ created: 1764100000, email: bo@example.com, ip: 192.0.2.20 }] }
+result: [{ created: 1764100000, email: bo@example.com, ip: 192.0.2.20 }]

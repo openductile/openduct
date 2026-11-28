@@ -1,0 +1,22 @@
+description: "List a session's windows"
+action: list_windows
+credential: { token: test-token }
+input: { session_id: session_1 }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://api.airtop.ai/api/v1/sessions/session_1/windows"
+      query: {}
+      headers: { authorization: "Bearer test-token" }
+    answer:
+      status: 200
+      body:
+        data: { windows: [{ targetId: target_1, title: example, url: example, windowId: window_1 }] }
+        errors: [{ code: example, details: {}, message: example, reason: example }]
+        meta: { requestId: request_1 }
+        warnings: [{ code: example, details: {}, message: example, reason: example }]
+result:
+  data: { windows: [{ targetId: target_1, title: example, url: example, windowId: window_1 }] }
+  errors: [{ code: example, details: {}, message: example, reason: example }]
+  meta: { requestId: request_1 }
+  warnings: [{ code: example, details: {}, message: example, reason: example }]

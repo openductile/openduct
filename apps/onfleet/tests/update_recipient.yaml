@@ -1,0 +1,37 @@
+description: A recipient who wants no texts
+action: update_recipient
+credential:
+  api_key: test-key
+input:
+  recipient_id: xX87G1gSkeLvGXlHn2tn0~iB
+  skip_sms: true
+exchanges:
+- sent:
+    method: PUT
+    url: https://onfleet.com/api/v2/recipients/xX87G1gSkeLvGXlHn2tn0~iB
+    headers:
+      authorization: Basic dGVzdC1rZXk6
+    body:
+      skipSMSNotifications: true
+  answer:
+    status: 200
+    body:
+      id: xX87G1gSkeLvGXlHn2tn0~iB
+      organization: yAM*fDkztrT3gUcz9mNDgNOL
+      timeCreated: 1795161600000
+      timeLastModified: 1795161600000
+      name: Pat Sample
+      phone: '+14155550100'
+      notes: Ring twice
+      skipSMSNotifications: true
+      metadata: &id001 []
+result:
+  id: xX87G1gSkeLvGXlHn2tn0~iB
+  organization: yAM*fDkztrT3gUcz9mNDgNOL
+  timeCreated: 1795161600000
+  timeLastModified: 1795161600000
+  name: Pat Sample
+  phone: '+14155550100'
+  notes: Ring twice
+  skipSMSNotifications: true
+  metadata: *id001

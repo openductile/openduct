@@ -1,0 +1,38 @@
+description: A call to make, its due time sent as seconds since 1970
+action: create_task
+credential: {domain: shopexample, email: dana@shop.example, api_key: agile-test-key}
+input:
+  subject: Call Ann about the proposal
+  type: CALL
+  priority: HIGH
+  due: '2026-12-01T09:00:00Z'
+  contact_ids: ['5629585249009664']
+exchanges:
+- sent:
+    method: POST
+    url: https://shopexample.agilecrm.com/dev/api/tasks
+    headers: {authorization: Basic ZGFuYUBzaG9wLmV4YW1wbGU6YWdpbGUtdGVzdC1rZXk=, accept: application/json}
+    query: {}
+    body:
+      subject: Call Ann about the proposal
+      type: CALL
+      priority_type: HIGH
+      due: 1796115600
+      contacts: ['5629585249009664']
+      status: YET_TO_START
+  answer:
+    status: 200
+    body: &id001
+      id: 5690477483393024
+      type: CALL
+      priority_type: HIGH
+      due: 1796115600
+      created_time: 1764237600
+      is_complete: false
+      subject: Call Ann about the proposal
+      taskDescription: ''
+      status: YET_TO_START
+      progress: 0
+      contacts: []
+      taskOwner: {id: 6263975862861824}
+result: *id001

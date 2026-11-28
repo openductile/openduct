@@ -1,0 +1,56 @@
+description: Comments posted since the poll before, the newest asked for; listing stops at one seen before
+trigger: new_comment
+credential: {api_key: pubkey-test-1, api_secret: secret-test-1, access_token: token-test-1}
+input: {forum: shop-example}
+seen:
+  items:
+  - ['6001', '']
+exchanges:
+- sent:
+    method: GET
+    url: https://disqus.com/api/3.0/forums/listPosts.json
+    query: {api_key: pubkey-test-1, api_secret: secret-test-1, access_token: token-test-1, forum: shop-example, limit: '100'}
+  answer:
+    status: 200
+    body:
+      cursor: {prev: null, hasNext: true, next: '1764230000000000:0:0', hasPrev: false, total: null, id: '1764230000000000:0:0',
+        more: true}
+      code: 0
+      response:
+      - &id002
+        id: '6002'
+        forum: shop-example
+        thread: '7001'
+        parent: null
+        author: &id001 {username: ann_example, name: Ann Example, id: '101', isAnonymous: false, profileUrl: 'https://disqus.com/by/ann_example/'}
+        message: <p>Does this ship to Canada?</p>
+        raw_message: Does this ship to Canada?
+        createdAt: '2026-11-27T11:00:00'
+        isApproved: true
+        isSpam: false
+        isDeleted: false
+        isFlagged: false
+        isHighlighted: false
+        isEdited: false
+        likes: 0
+        dislikes: 0
+        points: 0
+      - id: '6001'
+        forum: shop-example
+        thread: '7001'
+        parent: null
+        author: *id001
+        message: <p>Great guide, thanks!</p>
+        raw_message: Great guide, thanks!
+        createdAt: '2026-11-27T10:00:00'
+        isApproved: true
+        isSpam: false
+        isDeleted: false
+        isFlagged: false
+        isHighlighted: false
+        isEdited: false
+        likes: 2
+        dislikes: 0
+        points: 2
+runs:
+- *id002

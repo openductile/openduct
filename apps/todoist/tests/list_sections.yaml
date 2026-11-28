@@ -1,0 +1,7 @@
+action: list_sections
+credential: { token: todoist-test-token }
+input: { project_id: 6Xproj0000000001 }
+exchanges:
+  - sent: { method: GET, url: https://api.todoist.com/api/v1/sections, query: { project_id: 6Xproj0000000001, limit: "200" } }
+    answer: { body: { results: [{ id: 6Xsect0000000001, project_id: 6Xproj0000000001, name: Waiting, section_order: 1, is_archived: false }] } }
+result: [{ id: 6Xsect0000000001, project_id: 6Xproj0000000001, name: Waiting, section_order: 1, is_archived: false }]

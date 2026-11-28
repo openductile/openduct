@@ -1,0 +1,11 @@
+description: A new lead
+action: create_lead
+credential: { api_key: hunter-test-key }
+input: { email: cy@example.com, first_name: Cy, last_name: Example, position: Owner }
+exchanges:
+  - sent:
+      method: POST
+      url: https://api.hunter.io/v2/leads
+      body: { email: cy@example.com, first_name: Cy, last_name: Example, position: Owner }
+    answer: { status: 201, body: { data: { id: 103, email: cy@example.com, first_name: Cy, last_name: Example, position: Owner } } }
+result: { id: 103, email: cy@example.com, first_name: Cy, last_name: Example, position: Owner }

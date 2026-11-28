@@ -1,0 +1,38 @@
+description: A new company with its domain
+action: create_company
+credential:
+  domain: acme
+  api_key: test-key
+input:
+  name: Sample Supplies
+  domains:
+  - example.com
+  account_tier: Premium
+exchanges:
+- sent:
+    method: POST
+    url: https://acme.freshdesk.com/api/v2/companies
+    headers:
+      authorization: Basic dGVzdC1rZXk6WA==
+    body:
+      name: Sample Supplies
+      domains:
+      - example.com
+      account_tier: Premium
+  answer:
+    status: 201
+    body: &id001
+      id: 8
+      name: Sample Supplies
+      description: Office supply reseller
+      domains:
+      - example.com
+      note: null
+      health_score: Happy
+      account_tier: Premium
+      renewal_date: '2027-06-30T00:00:00Z'
+      industry: Retail
+      custom_fields: {}
+      created_at: '2026-01-08T09:08:53Z'
+      updated_at: '2026-01-08T09:08:53Z'
+result: *id001

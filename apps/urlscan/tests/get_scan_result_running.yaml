@@ -1,0 +1,7 @@
+description: While the scan runs, urlscan.io answers 404 and the step says so
+action: get_scan_result
+credential: { api_key: us_test_1 }
+input: { uuid: 0e37e828-a9d9-45c0-ac50-1ca579b86c72 }
+exchanges:
+  - answer: { status: 404, body: { message: Scan is not finished yet or does not exist, status: 404 } }
+error: "urlscan.io answered 404: Scan is not finished yet or does not exist"

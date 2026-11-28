@@ -1,0 +1,39 @@
+description: "Create a list in a folder"
+action: create_list
+credential: { api_key: test-key }
+input: { folder_id: 456, name: example }
+exchanges:
+  - sent:
+      method: POST
+      url: "https://api.clickup.com/api/v2/folder/456/list"
+      query: {}
+      headers: { authorization: test-key }
+      body: { name: example }
+    answer:
+      status: 200
+      body:
+        id: id_1
+        name: example
+        orderindex: 1
+        content: example
+        status: { status: example, color: example, hide_label: true }
+        priority: { priority: example, color: example }
+        assignee: { id: 1, color: example, username: example, initials: example, profilePicture: example }
+        task_count: example
+        due_date: example
+        due_date_time: true
+        start_date: example
+        start_date_time: example
+result:
+  id: id_1
+  name: example
+  orderindex: 1
+  content: example
+  status: { status: example, color: example, hide_label: true }
+  priority: { priority: example, color: example }
+  assignee: { id: 1, color: example, username: example, initials: example, profilePicture: example }
+  task_count: example
+  due_date: example
+  due_date_time: true
+  start_date: example
+  start_date_time: example

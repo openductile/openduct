@@ -1,0 +1,45 @@
+description: Contacts with a word in them
+action: search
+credential: {domain: shopexample, email: dana@shop.example, api_key: agile-test-key}
+input: {q: Example}
+exchanges:
+- sent:
+    method: GET
+    url: https://shopexample.agilecrm.com/dev/api/search
+    headers: {authorization: Basic ZGFuYUBzaG9wLmV4YW1wbGU6YWdpbGUtdGVzdC1rZXk=, accept: application/json}
+    query: {q: Example, type: PERSON, page_size: '25'}
+  answer:
+    status: 200
+    body:
+    - &id004
+      id: '5629585249009664'
+      type: PERSON
+      created_time: '1764237600'
+      updated_time: 1764237600
+      star_value: 4
+      lead_score: 10
+      tags: &id001 [Lead]
+      properties:
+      - {type: SYSTEM, name: first_name, value: Ann}
+      - {type: SYSTEM, name: last_name, value: Example}
+      - {type: SYSTEM, name: email, value: ann@example.com, subtype: work}
+      contact_company_id: null
+      owner: &id002 {id: 6263975862861824, email: dana@shop.example, name: Dana Example}
+      campaignStatus: &id003 []
+    - &id005
+      id: '5629585249009665'
+      type: PERSON
+      created_time: '1764241200'
+      updated_time: 1764241200
+      star_value: 4
+      lead_score: 10
+      tags: *id001
+      properties:
+      - {type: SYSTEM, name: first_name, value: Bob}
+      - {type: SYSTEM, name: email, value: bob@example.com, subtype: work}
+      contact_company_id: null
+      owner: *id002
+      campaignStatus: *id003
+result:
+- *id004
+- *id005

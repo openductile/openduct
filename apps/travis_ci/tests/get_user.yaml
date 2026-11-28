@@ -1,0 +1,10 @@
+description: "The account the token belongs to"
+action: get_user
+credential: { token: test-token }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://api.travis-ci.com/user"
+    answer:
+      body: { "@type": user, id: 267, login: ann-example, name: Ann Example, github_id: 1000267, avatar_url: "https://avatars.example/u/1000267", is_syncing: false, synced_at: "2026-11-26T08:00:00Z" }
+result: { "@type": user, id: 267, login: ann-example, name: Ann Example, github_id: 1000267, avatar_url: "https://avatars.example/u/1000267", is_syncing: false, synced_at: "2026-11-26T08:00:00Z" }

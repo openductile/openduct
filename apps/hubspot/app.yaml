@@ -64,3 +64,19 @@ actions:
       - { name: pipeline, label: "Its pipeline (default)" }
     send:
       properties: { dealname: "{{ input.dealname }}", amount: "{{ input.amount }}", dealstage: "{{ input.dealstage }}", pipeline: "{{ input.pipeline }}" }
+triggers:
+  new_contact:
+    label: A new contact
+    description: Each contact added, the newest asked for every few minutes.
+    poll:
+      method: POST
+      path: /crm/v3/objects/contacts/search
+      send:
+        sorts: [{ propertyName: createdate, direction: DESCENDING }]
+        properties: [email, firstname, lastname, phone, company, createdate]
+        limit: 100
+      items: value.results
+      next: "has(value.paging) ? {'after': value.paging.next.after} : null"
+      page_in: body
+      newest_first: true
+      id: item.id

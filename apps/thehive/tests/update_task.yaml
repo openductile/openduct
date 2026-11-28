@@ -1,0 +1,20 @@
+description: A task done
+action: update_task
+credential:
+  url: https://thehive.example.com
+  api_key: test-key
+input:
+  task_id: ~12288
+  status: Completed
+exchanges:
+- sent:
+    method: PATCH
+    url: https://thehive.example.com/api/v1/task/~12288
+    headers:
+      authorization: Bearer test-key
+    body:
+      status: Completed
+  answer:
+    status: 204
+result:
+  updated: true

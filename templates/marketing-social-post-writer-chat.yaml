@@ -1,0 +1,83 @@
+name: A chat that writes social posts, with photos to go with them
+description: >-
+  A chat page for your marketing team: say what the post is about and where it goes - "Instagram, our new autumn
+  menu, cosy" - and a model writes it in your brand's voice, in the length the platform likes, then three free photos
+  that fit are found on Unsplash, each with the credit Unsplash asks for. Ask for changes in the same chat; it
+  remembers the conversation. Describe your brand's voice in the first step. Needs: an AI credential (model) and an
+  Unsplash access key as a header credential named Authorization holding "Client-ID ..." (unsplash).
+category: Marketing
+trigger:
+  chat:
+    texts:
+      title: Post writer
+      welcome: "Tell me what the post is about and where it goes (Instagram, LinkedIn, Facebook, X)."
+      placeholder: "LinkedIn: we just hired our tenth baker"
+    # Set a password before you share the page.
+    password: ""
+    history: 10
+    limits: { message: 1500, per_session: 30, per_address: 60 }
+# What a test runs on: a message as this trigger gives it.
+sample:
+  message: "Instagram: our new autumn menu - pumpkin soup, apple tart, spiced latte. Cosy, not cheesy."
+  session: 7f3a9c2e5b8d4f1a6c0e9b2d4f6a8c1e
+  history: []
+  person: {}
+steps:
+  - name: voice
+    set:
+      brand: "'A neighbourhood cafe and bakery. Warm, plain words, a little playful; no exclamation marks in a row; at most two hashtags; never promise what we do not sell.'"
+  - name: post
+    ai:
+      credential: model
+      system: >-
+        You write social media posts. The brand: {{ steps.voice.brand }} Fit the platform: Instagram up to 60 words
+        and a question at the end; LinkedIn up to 120 words, no hashtags in the middle; X up to 260 characters;
+        Facebook up to 80 words. If the platform is not said, write for Instagram. photo_search is two to four plain
+        words for a stock photo that fits (no brand names, no people's names).
+      messages: "{{ value.history }}"
+      prompt: "{{ value.message }}"
+      max_tokens: 600
+      schema:
+        type: object
+        properties:
+          platform: { type: string }
+          post: { type: string }
+          photo_search: { type: string }
+        required: [platform, post, photo_search]
+  - name: photos
+    http:
+      credential: unsplash
+      url: https://api.unsplash.com/search/photos
+      query:
+        query: "{{ steps.post.json.photo_search != null ? steps.post.json.photo_search : 'cafe autumn' }}"
+        per_page: "3"
+        orientation: squarish
+        content_filter: high
+      headers: { Accept-Version: v1 }
+      fail_on_status: false
+      sample:
+        total: 812
+        results:
+          - id: aB3dE5fG7hI
+            alt_description: bowl of pumpkin soup on a wooden table
+            urls: { regular: "https://images.unsplash.example/photo-0000000000001?w=1080" }
+            links: { html: "https://unsplash.example/photos/aB3dE5fG7hI" }
+            user: { name: Jo Example, links: { html: "https://unsplash.example/@sample-photographer-1" } }
+          - id: jK9lM1nO3pQ
+            alt_description: apple tart with a latte
+            urls: { regular: "https://images.unsplash.example/photo-0000000000002?w=1080" }
+            links: { html: "https://unsplash.example/photos/jK9lM1nO3pQ" }
+            user: { name: Sam Sample, links: { html: "https://unsplash.example/@sample-photographer-2" } }
+    retry: { attempts: 2, wait: 5s }
+  - name: credits
+    set:
+      # Unsplash asks for each photo to be credited to its photographer, with links.
+      lines: >-
+        steps.photos.status >= 400 || !has(steps.photos.body.results) || size(steps.photos.body.results) == 0
+          ? 'No photos found this time - try other words.'
+          : steps.photos.body.results.map(p, '- ' + (p.alt_description != null ? p.alt_description : 'photo') + ': '
+            + p.links.html + ' (Photo by ' + p.user.name + ' on Unsplash, ' + p.user.links.html + ')').join('\n')
+  - name: reply
+    respond:
+      body:
+        text: "{{ steps.post.json.post != null ? steps.post.json.post : 'I could not write that one - say a little more about it?' }}\n\nPhotos that fit:\n{{ steps.credits.lines }}"

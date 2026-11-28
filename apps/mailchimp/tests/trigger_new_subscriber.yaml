@@ -1,0 +1,12 @@
+description: People who joined the audience since the last poll, the newest asked for
+trigger: new_subscriber
+credential: { api_key: key-us21, data_center: us21 }
+input: { list_id: L1 }
+seen: { items: [["h1", ""]] }
+exchanges:
+  - sent:
+      method: GET
+      url: https://us21.api.mailchimp.com/3.0/lists/L1/members
+      query: { status: subscribed, sort_field: timestamp_opt, sort_dir: DESC, count: "100" }
+    answer: { body: { members: [{ id: h2, email_address: ann@example.com }, { id: h1, email_address: bob@example.com }] } }
+runs: [{ id: h2, email_address: ann@example.com }]

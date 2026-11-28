@@ -1,0 +1,44 @@
+# Made by `openduct app from-openapi`: Bulk update contacts.
+description: "Bulk update contacts, made from the API description's schemas"
+action: update_bulk
+credential: { token: test-token }
+input: { contacts: [{ id: abc123 }] }
+exchanges:
+  - sent:
+      method: PUT
+      url: "https://api.intercom.io/contacts/bulk"
+      query: {}
+      headers: { authorization: "Bearer test-token" }
+      body: { contacts: [{ id: abc123 }] }
+    answer:
+      status: 202
+      body:
+        id: job_v2_1
+        type: contacts.bulk.job
+        state: running
+        created_at: 1713360000
+        updated_at: 1713360060
+        completed_at: 1713360120
+        tasks:
+          - id: task_v2_1
+            item_count: 3
+            state: pending
+            created_at: 1713360000
+            started_at: 1713360060
+            completed_at: 1713360120
+        url: example
+result:
+  id: job_v2_1
+  type: contacts.bulk.job
+  state: running
+  created_at: 1713360000
+  updated_at: 1713360060
+  completed_at: 1713360120
+  tasks:
+    - id: task_v2_1
+      item_count: 3
+      state: pending
+      created_at: 1713360000
+      started_at: 1713360060
+      completed_at: 1713360120
+  url: example

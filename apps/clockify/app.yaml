@@ -1,0 +1,753 @@
+# Copyright 2026 Ductile AI, Inc
+# SPDX-License-Identifier: Apache-2.0
+# Clockify: started with `openduct app from-openapi` from the OpenAPI 3.0.1 description inside https://docs.clockify.me/
+# (Clockify API v1, fetched 2026-11-27; no licence stated, so every label here is in our own words), then finished by hand.
+app: clockify
+name: Clockify
+category: productivity
+description: Time tracking in Clockify - time entries and timers, projects, tasks, clients, tags and the detailed report.
+docs: "https://docs.clockify.me/"
+hosts: [api.clockify.me, reports.api.clockify.me]
+base_url: "https://api.clockify.me/api"
+base_url_field: region_url
+sign_in:
+  - id: clockify
+    label: "An API key"
+    fields:
+      - { name: api_key, label: "The API key (Profile settings, API)", secret: true }
+      - name: region_url
+        label: "Only for a workspace kept in a region: its address, such as https://euc1.clockify.me/api"
+        optional: true
+      - { name: webhook_secret, label: "A webhook's token, for one added in Clockify by hand", secret: true, optional: true }
+    headers: { x-api-key: "{{ credential.api_key }}" }
+error: value.message
+actions:
+  list_workspaces:
+    label: "List my workspaces"
+    description: "The workspaces the key's owner belongs to, with their ids."
+    method: GET
+    path: "/v1/workspaces"
+    items: value
+    output:
+      id: text
+      name: text
+      hourlyRate: record
+      costRate: record
+      memberships: list
+      workspaceSettings: record
+      imageUrl: text
+      currencies: list
+  get_me:
+    label: "Who I am"
+    description: "The user the API key belongs to: id, name, email, active and default workspace."
+    method: GET
+    path: "/v1/user"
+    output:
+      id: text
+      name: text
+      email: text
+      activeWorkspace: text
+      defaultWorkspace: text
+      status: text
+      profilePicture: text
+      settings: record
+      memberships: list
+  list_users:
+    label: "List a workspace's members"
+    description: "Every member of the workspace, page after page; narrowed by email, name or status when given."
+    method: GET
+    path: "/v1/workspaces/{{ input.workspace_id }}/users"
+    inputs:
+      - { name: workspace_id, label: "The workspace's id", required: true }
+      - { name: email, label: "Only those whose email has this in it" }
+      - { name: name, label: "Only those whose name has this in it" }
+      - { name: status, label: "Only those of this status: PENDING, ACTIVE, DECLINED, INACTIVE or ALL" }
+    query:
+      email: "{{ input.email }}"
+      name: "{{ input.name }}"
+      status: "{{ input.status }}"
+      include-roles: "false"
+      page-size: "50"
+    items: value
+    next: "size(value) < 50 ? null : {'page': (page == null ? 1 : int(page['page'])) + 1}"
+    output:
+      id: text
+      name: text
+      email: text
+      status: record
+      activeWorkspace: text
+      defaultWorkspace: text
+      memberships: list
+      customFields: list
+      profilePicture: text
+      settings: record
+  list_clients:
+    label: "List clients"
+    description: "The workspace's clients, page after page; narrowed by name when given."
+    method: GET
+    path: "/v1/workspaces/{{ input.workspace_id }}/clients"
+    inputs:
+      - { name: workspace_id, label: "The workspace's id", required: true }
+      - { name: name, label: "Only those whose name has this in it" }
+      - { name: archived, label: "true for archived clients only, false for the others" }
+    query: { name: "{{ input.name }}", archived: "{{ input.archived }}", page-size: "50" }
+    items: value
+    next: "size(value) < 50 ? null : {'page': (page == null ? 1 : int(page['page'])) + 1}"
+    output:
+      id: text
+      name: text
+      email: text
+      address: text
+      note: text
+      archived: boolean
+      ccEmails: list
+      currencyCode: text
+      currencyId: text
+      workspaceId: text
+  create_client:
+    label: "Add a client"
+    description: "A new client in the workspace, with its email, address and a note."
+    write: true
+    method: POST
+    path: "/v1/workspaces/{{ input.workspace_id }}/clients"
+    inputs:
+      - { name: workspace_id, label: "The workspace's id", required: true }
+      - { name: name, label: "Name" }
+      - { name: email, label: "Email" }
+      - { name: address, label: "Address" }
+      - { name: note, label: "A note" }
+    send:
+      name: "{{ input.name }}"
+      email: "{{ input.email }}"
+      address: "{{ input.address }}"
+      note: "{{ input.note }}"
+    output:
+      id: text
+      name: text
+      email: text
+      address: text
+      note: text
+      archived: boolean
+      ccEmails: list
+      currencyCode: text
+      currencyId: text
+      workspaceId: text
+  update_client:
+    label: "Change a client"
+    description: "A client's name, email, address or note, or archive it; fields not given are left out of the request."
+    write: true
+    method: PUT
+    path: "/v1/workspaces/{{ input.workspace_id }}/clients/{{ input.client_id }}"
+    inputs:
+      - { name: workspace_id, label: "The workspace's id", required: true }
+      - { name: client_id, label: "The client's id", required: true }
+      - { name: name, label: "Name" }
+      - { name: email, label: "Email" }
+      - { name: address, label: "Address" }
+      - { name: note, label: "A note" }
+      - { name: archived, label: "Archived", kind: boolean }
+      - { name: archive_projects, label: "Archive its projects too", kind: boolean }
+    query: { archive-projects: "{{ input.archive_projects }}" }
+    send:
+      name: "{{ input.name }}"
+      email: "{{ input.email }}"
+      address: "{{ input.address }}"
+      note: "{{ input.note }}"
+      archived: "{{ input.archived }}"
+    output:
+      id: text
+      name: text
+      email: text
+      address: text
+      note: text
+      archived: boolean
+      ccEmails: list
+      currencyCode: text
+      currencyId: text
+      workspaceId: text
+  list_projects:
+    label: "List projects"
+    description: "The workspace's projects, page after page; narrowed by name, archived or billable when given."
+    method: GET
+    path: "/v1/workspaces/{{ input.workspace_id }}/projects"
+    inputs:
+      - { name: workspace_id, label: "The workspace's id", required: true }
+      - { name: name, label: "Only those whose name has this in it" }
+      - { name: archived, label: "Archived projects only", kind: boolean }
+      - { name: billable, label: "Billable projects only", kind: boolean }
+    query:
+      name: "{{ input.name }}"
+      archived: "{{ input.archived }}"
+      billable: "{{ input.billable }}"
+      page-size: "50"
+    items: value
+    next: "size(value) < 50 ? null : {'page': (page == null ? 1 : int(page['page'])) + 1}"
+    output:
+      id: text
+      name: text
+      clientId: text
+      clientName: text
+      billable: boolean
+      archived: boolean
+      color: text
+      duration: text
+      estimate: record
+      budgetEstimate: record
+      timeEstimate: record
+      hourlyRate: record
+      costRate: record
+      memberships: list
+      note: text
+      public: boolean
+      template: boolean
+      workspaceId: text
+  get_project:
+    label: "Look up a project"
+    description: "One project by its id."
+    method: GET
+    path: "/v1/workspaces/{{ input.workspace_id }}/projects/{{ input.project_id }}"
+    inputs:
+      - { name: workspace_id, label: "The workspace's id", required: true }
+      - { name: project_id, label: "The project's id", required: true }
+    output:
+      id: text
+      name: text
+      clientId: text
+      billable: boolean
+      archived: boolean
+      color: text
+      duration: text
+      estimate: record
+      budgetEstimate: record
+      timeEstimate: record
+      hourlyRate: record
+      costRate: record
+      memberships: list
+      note: text
+      public: boolean
+      template: boolean
+      workspaceId: text
+  create_project:
+    label: "Add a project"
+    description: "A new project, for a client when one is given; billable, public and its color as asked."
+    write: true
+    method: POST
+    path: "/v1/workspaces/{{ input.workspace_id }}/projects"
+    inputs:
+      - { name: workspace_id, label: "The workspace's id", required: true }
+      - { name: name, label: "Name", required: true }
+      - { name: client_id, label: "The client's id" }
+      - { name: billable, label: "Billable", kind: boolean }
+      - { name: is_public, label: "Seen by the whole workspace", kind: boolean }
+      - { name: color, label: "Color, such as #03A9F4" }
+      - { name: note, label: "A note" }
+      - { name: hourly_rate, label: "Billable rate, such as {amount: 5000, currency: USD} (in cents)", kind: record }
+    send:
+      name: "{{ input.name }}"
+      clientId: "{{ input.client_id }}"
+      billable: "{{ input.billable }}"
+      isPublic: "{{ input.is_public }}"
+      color: "{{ input.color }}"
+      note: "{{ input.note }}"
+      hourlyRate: "{{ input.hourly_rate }}"
+    output:
+      id: text
+      name: text
+      clientId: text
+      clientName: text
+      billable: boolean
+      archived: boolean
+      color: text
+      duration: text
+      estimate: record
+      hourlyRate: record
+      costRate: record
+      memberships: list
+      note: text
+      public: boolean
+      template: boolean
+      workspaceId: text
+  update_project:
+    label: "Change a project"
+    description: "A project's name, client, note, color, billable or public setting, or archive it."
+    write: true
+    method: PUT
+    path: "/v1/workspaces/{{ input.workspace_id }}/projects/{{ input.project_id }}"
+    inputs:
+      - { name: workspace_id, label: "The workspace's id", required: true }
+      - { name: project_id, label: "The project's id", required: true }
+      - { name: name, label: "Name" }
+      - { name: client_id, label: "The client's id" }
+      - { name: billable, label: "Billable", kind: boolean }
+      - { name: is_public, label: "Seen by the whole workspace", kind: boolean }
+      - { name: archived, label: "Archived", kind: boolean }
+      - { name: color, label: "Color, such as #03A9F4" }
+      - { name: note, label: "A note" }
+    send:
+      name: "{{ input.name }}"
+      clientId: "{{ input.client_id }}"
+      billable: "{{ input.billable }}"
+      isPublic: "{{ input.is_public }}"
+      archived: "{{ input.archived }}"
+      color: "{{ input.color }}"
+      note: "{{ input.note }}"
+    output:
+      id: text
+      name: text
+      clientId: text
+      billable: boolean
+      archived: boolean
+      color: text
+      duration: text
+      estimate: record
+      hourlyRate: record
+      costRate: record
+      memberships: list
+      note: text
+      public: boolean
+      template: boolean
+      workspaceId: text
+  list_tasks:
+    label: "List a project's tasks"
+    description: "The tasks of one project, page after page; narrowed by name, or to active or done ones."
+    method: GET
+    path: "/v1/workspaces/{{ input.workspace_id }}/projects/{{ input.project_id }}/tasks"
+    inputs:
+      - { name: workspace_id, label: "The workspace's id", required: true }
+      - { name: project_id, label: "The project's id", required: true }
+      - { name: name, label: "Only those whose name has this in it" }
+      - { name: is_active, label: "true for active tasks only, false for done ones", kind: boolean }
+    query: { name: "{{ input.name }}", is-active: "{{ input.is_active }}", page-size: "50" }
+    items: value
+    next: "size(value) < 50 ? null : {'page': (page == null ? 1 : int(page['page'])) + 1}"
+    output:
+      id: text
+      name: text
+      projectId: text
+      status: record
+      assigneeId: text
+      assigneeIds: list
+      billable: boolean
+      duration: text
+      estimate: text
+      budgetEstimate: number
+      hourlyRate: record
+      costRate: record
+      userGroupIds: list
+  create_task:
+    label: "Add a task to a project"
+    description: "A new task under a project, given to the people named when given."
+    write: true
+    method: POST
+    path: "/v1/workspaces/{{ input.workspace_id }}/projects/{{ input.project_id }}/tasks"
+    inputs:
+      - { name: workspace_id, label: "The workspace's id", required: true }
+      - { name: project_id, label: "The project's id", required: true }
+      - { name: name, label: "Name", required: true }
+      - { name: assignee_ids, label: "The ids of the people it is for", kind: list }
+      - { name: estimate, label: "Time it should take, such as PT2H30M" }
+      - { name: status, label: "ACTIVE or DONE" }
+    send:
+      name: "{{ input.name }}"
+      assigneeIds: "{{ input.assignee_ids }}"
+      estimate: "{{ input.estimate }}"
+      status: "{{ input.status }}"
+    output:
+      id: text
+      name: text
+      projectId: text
+      status: record
+      assigneeId: text
+      assigneeIds: list
+      billable: boolean
+      duration: text
+      estimate: text
+      budgetEstimate: number
+      hourlyRate: record
+      costRate: record
+      userGroupIds: list
+  update_task:
+    label: "Change a task"
+    description: "A task's name, people, estimate or status (mark it DONE). Its name is always sent."
+    write: true
+    method: PUT
+    path: "/v1/workspaces/{{ input.workspace_id }}/projects/{{ input.project_id }}/tasks/{{ input.task_id }}"
+    inputs:
+      - { name: workspace_id, label: "The workspace's id", required: true }
+      - { name: project_id, label: "The project's id", required: true }
+      - { name: task_id, label: "The task's id", required: true }
+      - { name: name, label: "Name", required: true }
+      - { name: assignee_ids, label: "The ids of the people it is for", kind: list }
+      - { name: estimate, label: "Time it should take, such as PT2H30M" }
+      - { name: status, label: "ACTIVE or DONE" }
+      - { name: billable, label: "Billable", kind: boolean }
+    send:
+      name: "{{ input.name }}"
+      assigneeIds: "{{ input.assignee_ids }}"
+      estimate: "{{ input.estimate }}"
+      status: "{{ input.status }}"
+      billable: "{{ input.billable }}"
+    output:
+      id: text
+      name: text
+      projectId: text
+      status: record
+      assigneeIds: list
+      billable: boolean
+      duration: text
+      estimate: text
+      hourlyRate: record
+      costRate: record
+  list_tags:
+    label: "List tags"
+    description: "The workspace's tags, page after page; narrowed by name when given."
+    method: GET
+    path: "/v1/workspaces/{{ input.workspace_id }}/tags"
+    inputs:
+      - { name: workspace_id, label: "The workspace's id", required: true }
+      - { name: name, label: "Only those whose name has this in it" }
+      - { name: archived, label: "Archived tags only", kind: boolean }
+    query: { name: "{{ input.name }}", archived: "{{ input.archived }}", page-size: "50" }
+    items: value
+    next: "size(value) < 50 ? null : {'page': (page == null ? 1 : int(page['page'])) + 1}"
+    output: { id: text, name: text, archived: boolean, workspaceId: text }
+  create_tag:
+    label: "Add a tag"
+    description: "A new tag in the workspace."
+    write: true
+    method: POST
+    path: "/v1/workspaces/{{ input.workspace_id }}/tags"
+    inputs:
+      - { name: workspace_id, label: "The workspace's id", required: true }
+      - { name: name, label: "Name" }
+    send: { name: "{{ input.name }}" }
+    output: { id: text, name: text, archived: boolean, workspaceId: text }
+  list_time_entries:
+    label: "List a person's time entries"
+    description: "One member's time entries, page after page; between two times, or for a project or task, when given."
+    method: GET
+    path: "/v1/workspaces/{{ input.workspace_id }}/user/{{ input.user_id }}/time-entries"
+    inputs:
+      - { name: workspace_id, label: "The workspace's id", required: true }
+      - { name: user_id, label: "The member's id", required: true }
+      - { name: start, label: "Started from (such as 2026-11-01T00:00:00Z)" }
+      - { name: end, label: "Until (such as 2026-11-30T23:59:59Z)" }
+      - { name: project, label: "Only this project's (its id)" }
+      - { name: task, label: "Only this task's (its id)" }
+      - { name: description, label: "Only those whose description has this in it" }
+    query:
+      start: "{{ input.start }}"
+      end: "{{ input.end }}"
+      project: "{{ input.project }}"
+      task: "{{ input.task }}"
+      description: "{{ input.description }}"
+      page-size: "50"
+    items: value
+    next: "size(value) < 50 ? null : {'page': (page == null ? 1 : int(page['page'])) + 1}"
+    output:
+      id: text
+      description: text
+      userId: text
+      projectId: text
+      taskId: text
+      tagIds: list
+      billable: boolean
+      timeInterval: record
+      hourlyRate: record
+      costRate: record
+      customFieldValues: list
+      isLocked: boolean
+      type: text
+      workspaceId: text
+  get_time_entry:
+    label: "Look up a time entry"
+    description: "One time entry by its id."
+    method: GET
+    path: "/v1/workspaces/{{ input.workspace_id }}/time-entries/{{ input.time_entry_id }}"
+    inputs:
+      - { name: workspace_id, label: "The workspace's id", required: true }
+      - { name: time_entry_id, label: "The time entry's id", required: true }
+    output:
+      id: text
+      description: text
+      userId: text
+      projectId: text
+      taskId: text
+      tagIds: list
+      billable: boolean
+      timeInterval: record
+      hourlyRate: record
+      costRate: record
+      customFieldValues: list
+      isLocked: boolean
+      type: text
+      workspaceId: text
+  create_time_entry:
+    label: "Add a time entry (or start a timer)"
+    description: "Time for the key's owner: with a start and an end it is logged; with a start alone a timer starts."
+    write: true
+    method: POST
+    path: "/v1/workspaces/{{ input.workspace_id }}/time-entries"
+    inputs:
+      - { name: workspace_id, label: "The workspace's id", required: true }
+      - { name: start, label: "Start (such as 2026-11-27T09:00:00Z)" }
+      - { name: end, label: "End (left out: a timer starts)" }
+      - { name: description, label: "What was done" }
+      - { name: project_id, label: "The project's id" }
+      - { name: task_id, label: "The task's id" }
+      - { name: tag_ids, label: "Tag ids", kind: list }
+      - { name: billable, label: "Billable", kind: boolean }
+      - { name: custom_fields, label: "Custom fields, as [{customFieldId, value}]", kind: list }
+    send:
+      start: "{{ input.start }}"
+      end: "{{ input.end }}"
+      description: "{{ input.description }}"
+      projectId: "{{ input.project_id }}"
+      taskId: "{{ input.task_id }}"
+      tagIds: "{{ input.tag_ids }}"
+      billable: "{{ input.billable }}"
+      customFields: "{{ input.custom_fields }}"
+    output:
+      id: text
+      description: text
+      userId: text
+      projectId: text
+      taskId: text
+      tagIds: list
+      billable: boolean
+      timeInterval: record
+      customFieldValues: list
+      isLocked: boolean
+      type: text
+      workspaceId: text
+  add_time_entry_for:
+    label: "Add a time entry for someone else"
+    description: "Time logged for another member of the workspace (it needs an admin's key)."
+    write: true
+    method: POST
+    path: "/v1/workspaces/{{ input.workspace_id }}/user/{{ input.user_id }}/time-entries"
+    inputs:
+      - { name: workspace_id, label: "The workspace's id", required: true }
+      - { name: user_id, label: "The member's id", required: true }
+      - { name: start, label: "Start (such as 2026-11-27T09:00:00Z)" }
+      - { name: end, label: "End" }
+      - { name: description, label: "What was done" }
+      - { name: project_id, label: "The project's id" }
+      - { name: task_id, label: "The task's id" }
+      - { name: tag_ids, label: "Tag ids", kind: list }
+      - { name: billable, label: "Billable", kind: boolean }
+    send:
+      start: "{{ input.start }}"
+      end: "{{ input.end }}"
+      description: "{{ input.description }}"
+      projectId: "{{ input.project_id }}"
+      taskId: "{{ input.task_id }}"
+      tagIds: "{{ input.tag_ids }}"
+      billable: "{{ input.billable }}"
+    output:
+      id: text
+      description: text
+      userId: text
+      projectId: text
+      taskId: text
+      tagIds: list
+      billable: boolean
+      timeInterval: record
+      customFieldValues: list
+      isLocked: boolean
+      type: text
+  update_time_entry:
+    label: "Change a time entry"
+    description: "A time entry's times, description, project, task, tags or billable flag. Its start is always sent."
+    write: true
+    method: PUT
+    path: "/v1/workspaces/{{ input.workspace_id }}/time-entries/{{ input.time_entry_id }}"
+    inputs:
+      - { name: workspace_id, label: "The workspace's id", required: true }
+      - { name: time_entry_id, label: "The time entry's id", required: true }
+      - { name: start, label: "Start (such as 2026-11-27T09:00:00Z)", required: true }
+      - { name: end, label: "End" }
+      - { name: description, label: "What was done" }
+      - { name: project_id, label: "The project's id" }
+      - { name: task_id, label: "The task's id" }
+      - { name: tag_ids, label: "Tag ids", kind: list }
+      - { name: billable, label: "Billable", kind: boolean }
+    send:
+      start: "{{ input.start }}"
+      end: "{{ input.end }}"
+      description: "{{ input.description }}"
+      projectId: "{{ input.project_id }}"
+      taskId: "{{ input.task_id }}"
+      tagIds: "{{ input.tag_ids }}"
+      billable: "{{ input.billable }}"
+    output:
+      id: text
+      description: text
+      userId: text
+      projectId: text
+      taskId: text
+      tagIds: list
+      billable: boolean
+      timeInterval: record
+      customFieldValues: list
+      isLocked: boolean
+      type: text
+      workspaceId: text
+  delete_time_entry:
+    label: "Remove a time entry"
+    description: "Deletes one time entry for good."
+    write: true
+    method: DELETE
+    path: "/v1/workspaces/{{ input.workspace_id }}/time-entries/{{ input.time_entry_id }}"
+    inputs:
+      - { name: workspace_id, label: "The workspace's id", required: true }
+      - { name: time_entry_id, label: "The time entry's id", required: true }
+    result: "{'deleted': status < 300}"
+    output: { deleted: boolean }
+  stop_timer:
+    label: "Stop a running timer"
+    description: "Stops the timer a member has running, at the end time given."
+    write: true
+    method: PATCH
+    path: "/v1/workspaces/{{ input.workspace_id }}/user/{{ input.user_id }}/time-entries"
+    inputs:
+      - { name: workspace_id, label: "The workspace's id", required: true }
+      - { name: user_id, label: "The member's id", required: true }
+      - { name: end, label: "When it stops (such as 2026-11-27T17:30:00Z)", required: true }
+    send: { end: "{{ input.end }}" }
+    output:
+      id: text
+      description: text
+      userId: text
+      projectId: text
+      taskId: text
+      tagIds: list
+      billable: boolean
+      timeInterval: record
+      isLocked: boolean
+      type: text
+  list_running_timers:
+    label: "List running timers"
+    description: "Every time entry with a timer still running in the workspace, page after page."
+    method: GET
+    path: "/v1/workspaces/{{ input.workspace_id }}/time-entries/status/in-progress"
+    inputs: [{ name: workspace_id, label: "The workspace's id", required: true }]
+    query: { page-size: "100" }
+    items: value
+    next: "size(value) < 100 ? null : {'page': (page == null ? 1 : int(page['page'])) + 1}"
+    output:
+      id: text
+      description: text
+      userId: text
+      projectId: text
+      taskId: text
+      tagIds: list
+      billable: boolean
+      timeInterval: record
+      isLocked: boolean
+      type: text
+      workspaceId: text
+  detailed_report:
+    label: "Detailed time report"
+    description: >-
+      Every time entry between two times, with its project, member, amount and tags, page after page (on Clockify's
+      Free plan, at most 31 days at a time). The report is asked of Clockify's global reports address.
+    method: POST
+    path: "/v1/workspaces/{{ input.workspace_id }}/reports/detailed"
+    inputs:
+      - { name: workspace_id, label: "The workspace's id", required: true }
+      - { name: date_range_start, label: "From (such as 2026-11-01T00:00:00)", required: true }
+      - { name: date_range_end, label: "To (such as 2026-11-30T23:59:59.999)", required: true }
+      - { name: projects, label: "Projects, as {ids: [...], contains: CONTAINS}", kind: record }
+      - { name: clients, label: "Clients, as {ids: [...], contains: CONTAINS}", kind: record }
+      - { name: users, label: "Members, as {ids: [...], contains: CONTAINS}", kind: record }
+      - { name: tags, label: "Tags, as {ids: [...], containedInTimeentry: CONTAINS}", kind: record }
+      - { name: billable, label: "Billable time only (true) or non-billable only (false)", kind: boolean }
+      - { name: description, label: "Only entries whose description has this in it" }
+    by:
+      clockify:
+        url: "https://reports.api.clockify.me/v1/workspaces/{{ input.workspace_id }}/reports/detailed"
+    send:
+      dateRangeStart: "{{ input.date_range_start }}"
+      dateRangeEnd: "{{ input.date_range_end }}"
+      projects: "{{ input.projects }}"
+      clients: "{{ input.clients }}"
+      users: "{{ input.users }}"
+      tags: "{{ input.tags }}"
+      billable: "{{ input.billable }}"
+      description: "{{ input.description }}"
+      exportType: JSON
+      detailedFilter: { page: 1, pageSize: 50 }
+    page_in: body
+    items: value.timeEntries
+    next: >-
+      size(value.timeEntries) < 50 ? null
+      : {'detailedFilter': {'page': (page == null ? 1 : int(page.detailedFilter.page)) + 1, 'pageSize': 50}}
+    output:
+      _id: text
+      description: text
+      userId: text
+      userName: text
+      userEmail: text
+      projectId: text
+      projectName: text
+      clientId: text
+      clientName: text
+      taskId: text
+      taskName: text
+      tags: list
+      billable: boolean
+      timeInterval: record
+      amount: number
+      rate: number
+      type: text
+  list_invoices:
+    label: "List invoices"
+    description: "The workspace's invoices, page after page; only those of the statuses given (such as UNSENT,SENT,PAID)."
+    method: GET
+    path: "/v1/workspaces/{{ input.workspace_id }}/invoices"
+    inputs:
+      - { name: workspace_id, label: "The workspace's id", required: true }
+      - { name: statuses, label: "Statuses, with commas: UNSENT, SENT, PAID, PARTIALLY_PAID, VOID, OVERDUE" }
+    query: { statuses: "{{ input.statuses }}", page-size: "50" }
+    items: value.invoices
+    next: "size(value.invoices) < 50 ? null : {'page': (page == null ? 1 : int(page['page'])) + 1}"
+    output:
+      id: text
+      number: text
+      clientId: text
+      clientName: text
+      status: text
+      amount: number
+      balance: number
+      paid: number
+      currency: text
+      issuedDate: text
+      dueDate: text
+triggers:
+  event:
+    label: Something happened in Clockify
+    description: >-
+      What Clockify sends as it happens, for the event chosen: a timer started or stopped, a time entry added,
+      changed or removed, a project, task, client or tag added, an invoice made, and the rest. Turning the workflow on
+      adds a webhook to the workspace; turning it off removes it. Each delivery carries the webhook's token.
+    inputs:
+      - { name: workspace_id, label: "The workspace's id", required: true }
+      - name: event
+        label: "Which: NEW_TIME_ENTRY, NEW_TIMER_STARTED, TIMER_STOPPED, TIME_ENTRY_UPDATED, NEW_PROJECT, NEW_CLIENT, NEW_TASK, NEW_INVOICE..."
+        required: true
+    webhook:
+      signature: { header: clockify-signature, algorithm: token }
+      secret: webhook_secret
+      register:
+        - method: POST
+          path: "/v1/workspaces/{{ input.workspace_id }}/webhooks"
+          send:
+            name: "OpenDuct {{ input.workflow }}"
+            url: "{{ input.address }}"
+            triggerSource: ["{{ input.workspace_id }}"]
+            triggerSourceType: WORKSPACE_ID
+            webhookEvent: "{{ input.event }}"
+      keep: { webhook_secret: value.authToken, webhook_id: value.id }
+      unregister:
+        - { method: DELETE, path: "/v1/workspaces/{{ input.workspace_id }}/webhooks/{{ input.registered.webhook_id }}" }

@@ -1,0 +1,12 @@
+description: "A campaign's interested leads"
+action: list_campaign_leads
+credential: {"api_key": "test-key"}
+input: {"campaign_id": "cam_A1", "state": "interested"}
+exchanges:
+  - sent:
+      method: GET
+      url: "https://api.lemlist.com/api/campaigns/cam_A1/leads/"
+      query: {"state": "interested", "limit": "100"}
+      headers: {"authorization": "Basic OnRlc3Qta2V5"}
+    answer: {"status": 200, "body": [{"_id": "lea_L1", "contactId": "ctc_C1", "state": "contacted", "createdAt": "2026-11-02T08:00:00.000Z"}]}
+result: [{"_id": "lea_L1", "contactId": "ctc_C1", "state": "contacted", "createdAt": "2026-11-02T08:00:00.000Z"}]

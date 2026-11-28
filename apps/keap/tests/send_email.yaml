@@ -1,0 +1,13 @@
+# Made by `openduct app from-openapi`: Send an email.
+description: "Send an email, made from the API description's schemas"
+action: send_email
+credential: { access_token: test-access-token }
+input: { contacts: [example], subject: example }
+exchanges:
+  - sent:
+      method: POST
+      url: "https://api.keap.com/crm/rest/v2/emails:send"
+      query: {}
+      headers: { authorization: "Bearer test-access-token" }
+      body: { contacts: [example], subject: example }
+    answer: { status: 202 }

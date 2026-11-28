@@ -1,0 +1,7 @@
+action: list_activity_comments
+credential: { access_token: st_test_1 }
+input: { id: "99001" }
+exchanges:
+  - sent: { method: GET, url: https://www.strava.com/api/v3/activities/99001/comments, query: { page_size: "200" } }
+    answer: { body: [{ id: 7001, activity_id: 99001, text: Great pace!, athlete: { firstname: Bob, lastname: R. }, created_at: "2026-11-27T09:00:00Z" }] }
+result: [{ id: 7001, activity_id: 99001, text: Great pace!, athlete: { firstname: Bob, lastname: R. }, created_at: "2026-11-27T09:00:00Z" }]

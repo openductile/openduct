@@ -1,0 +1,11 @@
+description: A reaction to a message, as its content says
+action: send_event
+credential: { homeserver: "https://matrix.example.org", token: syt_test_token }
+input: { room_id: "!abc123:example.org", event_type: m.reaction, content: { "m.relates_to": { rel_type: m.annotation, event_id: "$ev1", key: "+1" } }, transaction_id: run-8a01 }
+exchanges:
+  - sent:
+      method: PUT
+      url: "https://matrix.example.org/_matrix/client/v3/rooms/!abc123:example.org/send/m.reaction/run-8a01"
+      body: { "m.relates_to": { rel_type: m.annotation, event_id: "$ev1", key: "+1" } }
+    answer: { status: 200, body: { event_id: "$ev6" } }
+result: { event_id: "$ev6" }

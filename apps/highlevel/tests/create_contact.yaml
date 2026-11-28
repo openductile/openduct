@@ -1,0 +1,41 @@
+description: "Create a contact"
+action: create_contact
+credential: { token: test-token }
+input: { location_id: ve9EPM428h8vShlRW1KT }
+exchanges:
+  - sent:
+      method: POST
+      url: "https://services.leadconnectorhq.com/contacts/"
+      query: {}
+      headers: { authorization: "Bearer test-token", version: "2021-07-28" }
+      body: { locationId: ve9EPM428h8vShlRW1KT }
+    answer:
+      status: 201
+      body:
+        contact:
+          id: seD4PfOuKoVMLkEZqohJ
+          dateAdded: "2021-08-31T09:59:41.937Z"
+          dateUpdated: "2021-08-31T09:59:41.937Z"
+          deleted: false
+          tags: [example]
+          type: read
+          customFields: [{ id: MgobCB14YMVKuE4Ka8p1, value: name }]
+          locationId: ve9EPM428h8vShlRW1KT
+          firstName: ann
+          firstNameLowerCase: ann
+          fullNameLowerCase: example
+          lastName: Example
+result:
+  id: seD4PfOuKoVMLkEZqohJ
+  dateAdded: '2021-08-31T09:59:41.937Z'
+  dateUpdated: '2021-08-31T09:59:41.937Z'
+  deleted: false
+  tags: [example]
+  type: read
+  customFields:
+  - {id: MgobCB14YMVKuE4Ka8p1, value: name}
+  locationId: ve9EPM428h8vShlRW1KT
+  firstName: ann
+  firstNameLowerCase: ann
+  fullNameLowerCase: example
+  lastName: Example

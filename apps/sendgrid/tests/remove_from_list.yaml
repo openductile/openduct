@@ -1,0 +1,11 @@
+description: A contact taken off a list
+action: remove_from_list
+credential: { token: SG.test-key }
+input: { list_id: ca7a3796-e8a8-4029-9ccb-df8937940562, contact_ids: 3d5f1c2a-7b9e-4c1d-8e2f-a1b2c3d4e5f6 }
+exchanges:
+  - sent:
+      method: DELETE
+      url: https://api.sendgrid.com/v3/marketing/lists/ca7a3796-e8a8-4029-9ccb-df8937940562/contacts
+      query: { contact_ids: 3d5f1c2a-7b9e-4c1d-8e2f-a1b2c3d4e5f6 }
+    answer: { status: 202, body: { job_id: 7e6f5a4b-3c2d-4e1f-8a9b-0c1d2e3f4a5b } }
+result: { job_id: 7e6f5a4b-3c2d-4e1f-8a9b-0c1d2e3f4a5b }

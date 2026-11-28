@@ -1,0 +1,6 @@
+action: list_lists
+credential: { api_key: xkeysib-test-1 }
+exchanges:
+  - sent: { method: GET, url: https://api.brevo.com/v3/contacts/lists, query: { limit: "50" } }
+    answer: { body: { lists: [{ id: 3, name: Customers, folderId: 1, uniqueSubscribers: 1200 }], count: 1 } }
+result: [{ id: 3, name: Customers, folderId: 1, uniqueSubscribers: 1200 }]

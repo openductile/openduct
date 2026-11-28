@@ -27,8 +27,16 @@ token and renews it as it runs out.
 
 A spreadsheet's id is the long part of its address: `docs.google.com/spreadsheets/d/<id>/edit`.
 
+## Triggers
+
+- **A new row** (`new_row`) and **A new or changed row** (`new_or_updated_row`), asked every 5 minutes: each row
+  under the header row of a sheet, as a record of the header's names with its `row_number`. A row is known by its
+  number: putting rows in above it, or taking rows out, makes those below it look changed. The first 5,000 rows.
+
 ## Tested
 
 Recorded exchanges from Google's documented requests and answers (`tests/`).
 
 Tried against a Google account on 2026-11-16: its sign-in worked, and a spreadsheet that does not exist was refused in Google's words; the account had no spreadsheet, so reading and writing rows were not tried live.
+
+Triggers are tested with recorded exchanges and signed deliveries (`tests/trigger_*.yaml`), signatures made as the app documents them; none was run against a live account.

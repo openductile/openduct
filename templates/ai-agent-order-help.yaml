@@ -1,0 +1,56 @@
+name: An assistant that looks up orders
+description: >-
+  Your shop's chat sends each customer message to this workflow's webhook ({"chat_id": ..., "message": ...}). An AI
+  agent answers it: it looks the order up through your shop's API before it says anything about it, works out the
+  day it arrives, and remembers each chat's conversation; the answer goes back to the chat.
+category: AI
+trigger:
+  # Left empty here: each workflow made from the template is given a token of its own.
+  webhook: { token: "" }
+# What a test runs on: an event as this trigger gives it.
+sample:
+  chat_id: chat-4711
+  message: Where is my order A-1042?
+steps:
+  - where: value.chat_id != null && value.message != null
+  - name: assistant
+    agent:
+      credential: model
+      instructions: >-
+        You answer the customers of a small online shop, kindly and in at most three sentences. When a customer asks
+        about an order, look it up by its id before you answer, and never guess its status. If you cannot find the
+        order, ask for its id.
+      input: "{{ value.message }}"
+      tools:
+        - name: order_status
+          description: An order's status, items and the day it was sent, by its id (as A-1042).
+          parameters:
+            type: object
+            properties:
+              id: { type: string, description: "The order's id, as A-1042" }
+            required: [id]
+          http:
+            credential: shop
+            url: "https://shop.example.com/api/orders/{{ args.id }}"
+        - name: arrival_day
+          description: The day an order arrives, from the day it was sent and how many days delivery takes.
+          parameters:
+            type: object
+            properties:
+              sent: { type: string, description: "The day it was sent, as 2026-11-20" }
+              days: { type: integer, description: "How many days delivery takes", minimum: 0, maximum: 60 }
+            required: [sent, days]
+          javascript: |
+            const day = new Date(args.sent + "T00:00:00Z");
+            day.setUTCDate(day.getUTCDate() + args.days);
+            return { arrives: day.toISOString().slice(0, 10) };
+      memory:
+        key: "{{ value.chat_id }}"
+        window: 10
+        clear: "value.message == '/start'"
+      max_turns: 6
+      max_tool_calls: 6
+  - name: reply
+    respond:
+      status: 200
+      body: { answer: "{{ steps.assistant.text }}" }

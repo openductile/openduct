@@ -1,0 +1,22 @@
+/* Copyright 2026 Ductile AI, Inc - SPDX-License-Identifier: Apache-2.0 */
+/* A chat trigger's settings and its "Try the chat" panel, in the trigger's window. */
+.tg-section textarea { min-height: 2.4rem; padding: 0.45rem 0.6rem; background: var(--panel); border: 1px solid var(--line); border-radius: 9px; font: inherit; color: var(--ink); resize: vertical; }
+.tg-section textarea.code { font-family: var(--mono, ui-monospace, monospace); font-size: var(--fs-sm); }
+.chat-colours { display: flex; gap: 0.8rem; }
+.chat-colours input[type="color"] { width: 3rem; height: 32px; padding: 2px; }
+.chat-numbers { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.chat-try-head { display: flex; align-items: center; justify-content: space-between; }
+.chat-again { height: 26px; padding: 0 0.6rem; font-size: var(--fs-sm); font-weight: 400; color: var(--ink); background: var(--panel); border: 1px solid var(--line); border-radius: 999px; }
+.chat-try-messages { display: flex; flex-direction: column; gap: 0.4rem; max-height: 18rem; overflow-y: auto; margin: 0; padding: 0.6rem; list-style: none; background: var(--panel); border: 1px solid var(--line); border-radius: 9px; }
+.chat-try-messages li { max-width: 85%; padding: 0.35rem 0.6rem; border-radius: 10px; font-size: var(--fs-md); white-space: pre-wrap; overflow-wrap: anywhere; }
+.chat-try-messages li.bot { align-self: flex-start; background: var(--bg); border: 1px solid var(--line); }
+.chat-try-messages li.me { align-self: flex-end; color: var(--accent-ink); background: var(--accent); }
+.chat-try-messages li.pending { opacity: 0.6; }
+.chat-try-ask { display: flex; gap: 0.4rem; }
+.chat-try-ask input { flex: 1; height: 34px; background: var(--panel); }
+.chat-try-ask button { height: 34px; padding: 0 0.9rem; color: var(--accent-ink); background: var(--accent); border: none; border-radius: 8px; }
+.chat-try-ask button:disabled { opacity: 0.5; }
+.chat-problem { margin: 0; font-size: var(--fs-sm); color: var(--bad, #c62828); }
+.chat-run summary { cursor: pointer; font-size: var(--fs-sm); color: var(--muted); }
+.chat-run ul { margin: 0.4rem 0 0; padding-left: 1.1rem; font-size: var(--fs-sm); }
+@media (max-width: 40rem) { .chat-numbers { grid-template-columns: 1fr; } }

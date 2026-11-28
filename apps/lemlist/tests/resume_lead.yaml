@@ -1,0 +1,11 @@
+description: "A paused lead resumed"
+action: resume_lead
+credential: {"api_key": "test-key"}
+input: {"lead_id": "lea_L1"}
+exchanges:
+  - sent:
+      method: POST
+      url: "https://api.lemlist.com/api/leads/start/lea_L1"
+      headers: {"authorization": "Basic OnRlc3Qta2V5"}
+    answer: {"status": 200, "body": [{"_id": "lea_L1", "campaignId": "cam_A1", "contactId": "ctc_C1", "email": "ann@example.com", "firstName": "Ann", "lastName": "Lee", "companyName": "Northwind Example", "isPaused": false, "emailStatus": "deliverable"}]}
+result: [{"_id": "lea_L1", "campaignId": "cam_A1", "contactId": "ctc_C1", "email": "ann@example.com", "firstName": "Ann", "lastName": "Lee", "companyName": "Northwind Example", "isPaused": false, "emailStatus": "deliverable"}]

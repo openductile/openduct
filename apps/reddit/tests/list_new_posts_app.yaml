@@ -1,0 +1,9 @@
+description: The same, read with an app's own token (no person signed in)
+action: list_new_posts
+sign_in: reddit_app
+credential: { client_id: test-client, client_secret: test-secret, access_token: test-app-token, expires_at: "4102444800" }
+input: { subreddit: smallbusiness }
+exchanges:
+  - sent: { method: GET, url: https://oauth.reddit.com/r/smallbusiness/new, headers: { authorization: Bearer test-app-token } }
+    answer: { body: { kind: Listing, data: { after: null, before: null, children: [{ kind: t3, data: { id: 1h2ab3c, name: t3_1h2ab3c, title: How do you price custom orders?, author: example_shop, subreddit: smallbusiness, selftext: "", url: "https://www.reddit.com/r/smallbusiness/comments/1h2ab3c/", permalink: /r/smallbusiness/comments/1h2ab3c/, created_utc: 1764237600, score: 12, num_comments: 3, over_18: false } }] } } }
+result: [{ id: 1h2ab3c, name: t3_1h2ab3c, title: How do you price custom orders?, author: example_shop, subreddit: smallbusiness, selftext: "", url: "https://www.reddit.com/r/smallbusiness/comments/1h2ab3c/", permalink: /r/smallbusiness/comments/1h2ab3c/, created_utc: 1764237600, score: 12, num_comments: 3, over_18: false }]

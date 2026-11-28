@@ -1,0 +1,6 @@
+action: list_my_playlists
+credential: { access_token: BQ-test-token }
+exchanges:
+  - sent: { method: GET, url: https://api.spotify.com/v1/me/playlists, query: { limit: "50" } }
+    answer: { body: { items: [{ id: 0TestList000000000001, name: Shop music, public: false, owner: { id: example-shop } }], next: null, total: 1 } }
+result: [{ id: 0TestList000000000001, name: Shop music, public: false, owner: { id: example-shop } }]

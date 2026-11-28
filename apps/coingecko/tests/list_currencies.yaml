@@ -1,0 +1,6 @@
+action: list_currencies
+credential: { api_key: CG-test1 }
+exchanges:
+  - sent: { method: GET, url: https://api.coingecko.com/api/v3/simple/supported_vs_currencies }
+    answer: { body: [btc, usd, eur] }
+result: [{ currency: btc }, { currency: usd }, { currency: eur }]

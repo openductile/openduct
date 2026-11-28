@@ -1,0 +1,10 @@
+action: add_registrant
+credential: { access_token: zoom-test-token }
+input: { meeting_id: "85700000001", email: ann@example.com, first_name: Ann, last_name: Lee }
+exchanges:
+  - sent:
+      method: POST
+      url: https://api.zoom.us/v2/meetings/85700000001/registrants
+      body: { email: ann@example.com, first_name: Ann, last_name: Lee }
+    answer: { status: 201, body: { id: 85700000001, registrant_id: reg-test-1, join_url: "https://us02web.zoom.us/w/85700000001?tk=test1", topic: Monthly supplier call, start_time: "2026-12-01T20:00:00Z" } }
+result: { id: 85700000001, registrant_id: reg-test-1, join_url: "https://us02web.zoom.us/w/85700000001?tk=test1", topic: Monthly supplier call, start_time: "2026-12-01T20:00:00Z" }

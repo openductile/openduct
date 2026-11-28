@@ -1,0 +1,83 @@
+name: Send social media messages to the right team, by meaning
+description: >-
+  When your social inbox tool passes on a direct message or a comment over a webhook ({"platform", "from", "handle",
+  "text", "link"}), compare what it means with what each of your teams handles - using embeddings, so "my parcel never
+  came" finds support without the word support - log it in a Google Sheet with the team chosen, and e-mail that team
+  from Gmail with a link to answer it. Describe your teams in the first step. Needs: an AI credential with an
+  embedding model (model), Google Sheets (sheets) and Gmail (gmail).
+category: Marketing
+trigger:
+  # Left empty here: each workflow made from the template is given a token of its own.
+  webhook: { token: "" }
+# What a test runs on: an event as this trigger gives it.
+sample:
+  platform: instagram
+  from: Jo Rivera
+  handle: "@jo.makes.things"
+  text: Hi! I run a small craft account (40k followers) and would love to feature your totes in a video. Who can I talk to?
+  link: https://social.example.com/messages/88412
+steps:
+  - where: value.text != null && value.text.trim() != ''
+  - name: teams
+    set:
+      # Each team, where its mail goes, and what it handles - in the words customers would use.
+      list: >-
+        [{'team': 'support', 'email': 'support@example.com', 'about': 'problems with an order: late, lost or broken parcels, refunds, returns, a wrong item, help using the product'},
+         {'team': 'sales', 'email': 'sales@example.com', 'about': 'buying: prices, wholesale and bulk orders, discounts, stock, custom orders for a business'},
+         {'team': 'partnerships', 'email': 'partners@example.com', 'about': 'creators and influencers who want to feature or review our products in a video or post, collaborations, sponsored posts, affiliate programs, press and interviews'},
+         {'team': 'jobs', 'email': 'people@example.com', 'about': 'working for us: jobs, internships, applying, sending a CV'}]
+  # One call: the message first, then every team's description.
+  - name: meaning
+    embed:
+      credential: model
+      input: "{{ [value.text] + steps.teams.list.map(t, t.about) }}"
+    retry: { attempts: 3, wait: 10s }
+  - name: pick
+    javascript: |
+      // The team whose description is nearest the message (cosine similarity of their embeddings). Without
+      // embeddings - or when nothing is near enough - the team whose words the message shares most, else support.
+      const teams = steps.teams.list;
+      const v = steps.meaning.embeddings || [];
+      const cos = (a, b) => {
+        let d = 0, na = 0, nb = 0;
+        for (let i = 0; i < a.length; i++) { d += a[i] * b[i]; na += a[i] * a[i]; nb += b[i] * b[i]; }
+        return na && nb ? d / Math.sqrt(na * nb) : 0;
+      };
+      let best = null, score = 0, how = "meaning";
+      if (v.length === teams.length + 1) {
+        teams.forEach((t, i) => { const s = cos(v[0], v[i + 1]); if (s > score) { score = s; best = t; } });
+        if (score < 0.2) best = null;
+      }
+      if (!best) {
+        how = "words";
+        const words = new Set(value.text.toLowerCase().match(/[a-z]{4,}/g) || []);
+        let most = 0;
+        for (const t of teams) {
+          const shared = (t.about.toLowerCase().match(/[a-z]{4,}/g) || []).filter(w => words.has(w)).length;
+          if (shared > most) { most = shared; best = t; }
+        }
+        best = best || teams[0];
+      }
+      return { team: best.team, email: best.email, score: Math.round(score * 100) / 100, how };
+  - name: log
+    google_sheets:
+      action: add_row
+      credential: sheets
+      spreadsheet_id: your-sheet-id
+      sheet: Social inbox
+      values:
+        - "{{ value.platform }}"
+        - "{{ value.from }} {{ value.handle }}"
+        - "{{ value.text }}"
+        - "{{ steps.pick.team }}"
+        - "{{ steps.pick.how }} {{ steps.pick.score }}"
+        - "{{ value.link }}"
+    retry: { attempts: 3, wait: 30s }
+  - name: tell
+    gmail:
+      action: send_email
+      credential: gmail
+      to: "{{ steps.pick.email }}"
+      subject: "New {{ value.platform }} message for {{ steps.pick.team }} from {{ value.from }}"
+      text: "{{ value.from }} ({{ value.handle }}) wrote on {{ value.platform }}:\n\n{{ value.text }}\n\nAnswer it here: {{ value.link }}"
+    retry: { attempts: 3, wait: 30s }

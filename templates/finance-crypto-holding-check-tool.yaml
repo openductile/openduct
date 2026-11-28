@@ -1,0 +1,102 @@
+name: A crypto holding check other workflows can call
+description: >-
+  A building block: other workflows run it with a Run a workflow step (and AI assistants can call it as a tool) with
+  a coin, how much of it you hold and the price below which you want to hear. It reads the coin's market figures from
+  CoinGecko, works out the holding's value and how far the price is from your level in a short script, and an AI agent
+  reads the last 30 days of prices to describe the trend in plain words. It informs; it never buys or sells. Needs:
+  coingecko (header: x-cg-demo-api-key and your CoinGecko key), model (ai).
+category: Finance
+trigger: manual
+tool:
+  name: check_crypto_holding
+  description: A coin's price now, its 24-hour and 7-day change, the value of a holding, whether the price is below a level, and a plain note on the 30-day trend. Information only, never advice to trade.
+  input:
+    coin: { type: string, description: "CoinGecko's id for the coin, as bitcoin or ethereum", required: true }
+    holding: { type: number, description: "How much of the coin is held", required: true }
+    alert_below: { type: number, description: "A price in US dollars to compare with" }
+# What a test runs on: the input another workflow (or an assistant) gives.
+sample:
+  coin: bitcoin
+  holding: 0.25
+  alert_below: 80000
+steps:
+  - name: market
+    http:
+      url: https://api.coingecko.com/api/v3/coins/markets
+      credential: coingecko
+      query: { vs_currency: usd, ids: "{{ value.coin }}", price_change_percentage: "24h,7d" }
+      sample:
+        - id: bitcoin
+          symbol: btc
+          current_price: 91234.5
+          high_24h: 92810.0
+          low_24h: 89120.4
+          price_change_percentage_24h: -1.42
+          price_change_percentage_7d_in_currency: 3.87
+          market_cap_rank: 1
+          last_updated: '2026-11-27T14:58:11.204Z'
+    retry: { attempts: 3, wait: 15s }
+  - name: unknown
+    if:
+      when: size(steps.market.body) == 0
+      then:
+        - stop: { error: "CoinGecko knows no coin {{ value.coin }}: give its id, as bitcoin" }
+  - name: figures
+    javascript: |
+      // The holding's value, where the price sits in today's range, and how far it is from the level given.
+      const m = steps.market.body[0];
+      const price = Number(m.current_price);
+      const usd = (n) => Math.round(n * 100) / 100;
+      const range = m.high_24h - m.low_24h;
+      const level = value.alert_below === undefined || value.alert_below === null ? null : Number(value.alert_below);
+      return {
+        coin: m.id,
+        symbol: String(m.symbol || "").toUpperCase(),
+        price,
+        holding_value: usd(price * Number(value.holding)),
+        change_24h_pct: usd(m.price_change_percentage_24h || 0),
+        change_7d_pct: usd(m.price_change_percentage_7d_in_currency || 0),
+        place_in_24h_range_pct: range > 0 ? Math.round(((price - m.low_24h) / range) * 100) : null,
+        below_level: level === null ? null : price < level,
+        distance_to_level_pct: level ? usd(((price - level) / level) * 100) : null,
+        as_of: m.last_updated,
+      };
+  - name: trend
+    agent:
+      credential: model
+      instructions: >-
+        You describe a coin's price trend in two plain sentences for someone who holds it: the direction over 30
+        days, how steady it was, and where today's price sits. Read the prices with price_history first. Never advise
+        buying or selling, and never predict prices.
+      input: "{{ steps.figures.symbol }} now {{ steps.figures.price }} USD; 24h {{ steps.figures.change_24h_pct }}%, 7d {{ steps.figures.change_7d_pct }}%."
+      tools:
+        - name: price_history
+          description: Daily prices in US dollars over the last 30 days, as [time in ms, price] pairs.
+          http:
+            # The id CoinGecko gave back, not the one asked for.
+            url: "https://api.coingecko.com/api/v3/coins/{{ steps.figures.coin }}/market_chart"
+            credential: coingecko
+            query: { vs_currency: usd, days: "30", interval: daily }
+      allow: [price_history]
+      output:
+        schema:
+          type: object
+          properties:
+            trend: { type: string, enum: [rising, falling, flat, mixed] }
+            note: { type: string }
+          required: [trend, note]
+      max_turns: 3
+      max_tool_calls: 2
+  # What the calling workflow (or assistant) is given back.
+  - name: answer
+    set:
+      coin: steps.figures.coin
+      price_usd: steps.figures.price
+      holding_value_usd: steps.figures.holding_value
+      change_24h_pct: steps.figures.change_24h_pct
+      change_7d_pct: steps.figures.change_7d_pct
+      below_level: steps.figures.below_level
+      distance_to_level_pct: steps.figures.distance_to_level_pct
+      trend: steps.trend.json.trend
+      note: steps.trend.json.note
+      as_of: steps.figures.as_of

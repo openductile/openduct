@@ -1,0 +1,66 @@
+name: Product photos with a clean background, by email
+description: >-
+  For shop owners and the people who list products: upload a product photo on a form page and, a minute later, get it
+  back by email as a PNG with the background taken away - ready for a white or coloured backdrop on your store or a
+  marketplace. The background is removed by remove.bg; the photo goes nowhere else and stays in the run's history for 14
+  days. Needs: a remove.bg API key as a header credential called removebg (X-Api-Key), and a mail server credential
+  called mail.
+category: E-commerce
+trigger:
+  form:
+    title: Clean up a product photo
+    description: A JPG or PNG of up to 2 MB. The cut-out comes back to your email.
+    fields:
+      - { name: email, label: Your email, type: email, required: true }
+      - { name: photo, label: The photo, type: file, required: true, accept: ".jpg,.jpeg,.png,image/jpeg,image/png", max_size: 2MB }
+      - { name: product, label: "The product (to name the file)", type: text, max_length: 80 }
+    thanks: Thank you - the cut-out is on its way to your inbox.
+# What a test runs on: an event as this trigger gives it (the photo's bytes, in Base64, as a form gives a file).
+sample:
+  email: lee@example.com
+  product: Blue mug
+  photo:
+    name: blue-mug.png
+    type: image/png
+    size: 68
+    base64: iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==
+steps:
+  - name: photo
+    convert:
+      format: base64
+      base64: value.photo.base64
+      name: "{{ value.photo.name }}"
+  - name: cutout
+    http:
+      method: POST
+      url: https://api.remove.bg/v1.0/removebg
+      credential: removebg
+      # Asked as JSON, remove.bg answers with the cut-out in Base64 (data.result_b64).
+      headers: { Accept: application/json }
+      multipart:
+        image_file: { file: steps.photo }
+        size: auto
+        format: png
+      fail_on_status: true
+      timeout: 60s
+      sample:
+        data:
+          result_b64: iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==
+          foreground_top: 0
+          foreground_left: 0
+          foreground_width: 1
+          foreground_height: 1
+    retry: { attempts: 2, wait: 10s }
+  - name: png
+    convert:
+      format: base64
+      base64: steps.cutout.body.data.result_b64
+      name: "{{ (has(value.product) && value.product != null && value.product != '' ? value.product : 'product').lowerAscii().replace(' ', '-') }}-cutout.png"
+  - name: send
+    email:
+      credential: mail
+      to: "{{ value.email }}"
+      subject: Your photo, background removed
+      text: "Here is {{ value.photo.name }} with its background taken away, as a PNG. Reply to this email if it needs another try."
+      attachments: steps.png
+    retry: { attempts: 3, wait: 30s }

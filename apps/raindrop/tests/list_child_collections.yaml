@@ -1,0 +1,14 @@
+description: "The collections inside others"
+action: list_child_collections
+credential: { token: test-token }
+exchanges:
+  - sent:
+      method: GET
+      url: https://api.raindrop.io/rest/v1/collections/childrens
+    answer:
+      body:
+        result: true
+        items:
+          - { _id: 78, title: Packaging, count: 3, parent: { $id: 77 } }
+result:
+  - { _id: 78, title: Packaging, count: 3, parent: { $id: 77 } }

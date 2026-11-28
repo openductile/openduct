@@ -1,0 +1,30 @@
+description: Cancelled orders removed, going on past any changed meanwhile
+action: delete_matching
+credential: {url: 'https://search.example.com:9200', api_key: VnVhQ2ZHY0JDZGJrUW0tZTVhT3g6dWkybHAyYXhUTm1zeWFrdzl0dk5udw==}
+input: {index: orders, q: 'status:cancelled', conflicts: proceed}
+exchanges:
+- sent:
+    method: POST
+    url: https://search.example.com:9200/orders/_delete_by_query
+    query: {q: 'status:cancelled', conflicts: proceed}
+    headers: {authorization: ApiKey VnVhQ2ZHY0JDZGJrUW0tZTVhT3g6dWkybHAyYXhUTm1zeWFrdzl0dk5udw==}
+  answer:
+    status: 200
+    body:
+      took: 41
+      timed_out: false
+      total: 2
+      batches: 1
+      version_conflicts: 0
+      noops: 0
+      failures: &id001 []
+      deleted: 2
+result:
+  took: 41
+  timed_out: false
+  total: 2
+  batches: 1
+  version_conflicts: 0
+  noops: 0
+  failures: *id001
+  deleted: 2

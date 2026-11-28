@@ -1,0 +1,32 @@
+description: An order added, searchable at once
+action: add_document
+credential: {url: 'https://search.example.com:9200', api_key: VnVhQ2ZHY0JDZGJrUW0tZTVhT3g6dWkybHAyYXhUTm1zeWFrdzl0dk5udw==}
+input:
+  index: orders
+  document: {order: '1001', total: 25, email: ann@example.com}
+  refresh: wait_for
+exchanges:
+- sent:
+    method: POST
+    url: https://search.example.com:9200/orders/_doc
+    query: {refresh: wait_for}
+    headers: {authorization: ApiKey VnVhQ2ZHY0JDZGJrUW0tZTVhT3g6dWkybHAyYXhUTm1zeWFrdzl0dk5udw==}
+    body: {order: '1001', total: 25, email: ann@example.com}
+  answer:
+    status: 201
+    body:
+      _index: orders
+      _id: Xb3kP5MBc2tQ9xLwz1Ab
+      _version: 1
+      result: created
+      _seq_no: 0
+      _primary_term: 1
+      _shards: &id001 {total: 2, successful: 1, failed: 0}
+result:
+  _index: orders
+  _id: Xb3kP5MBc2tQ9xLwz1Ab
+  _version: 1
+  result: created
+  _seq_no: 0
+  _primary_term: 1
+  _shards: *id001

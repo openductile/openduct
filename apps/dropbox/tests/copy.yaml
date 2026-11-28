@@ -1,0 +1,8 @@
+description: A template copied for a client
+action: copy
+credential: { access_token: sl.test-token }
+input: { from_path: /Templates/Proposal.docx, to_path: /Clients/Example Co/Proposal.docx, autorename: true }
+exchanges:
+  - sent: { url: https://api.dropboxapi.com/2/files/copy_v2, body: { from_path: /Templates/Proposal.docx, to_path: /Clients/Example Co/Proposal.docx, autorename: true } }
+    answer: { body: { metadata: { ".tag": file, id: "id:a4ayc_80_OEAAAAAAAAAZe", name: Proposal.docx, path_display: /Clients/Example Co/Proposal.docx } } }
+result: { ".tag": file, id: "id:a4ayc_80_OEAAAAAAAAAZe", name: Proposal.docx, path_display: /Clients/Example Co/Proposal.docx }

@@ -1,0 +1,12 @@
+description: "No contact found: Mautic gives an empty list"
+action: list_contacts
+credential: {"site_url": "https://mautic.example.com", "username": "admin", "password": "pw-test"}
+input: {"search": "zed@example.com"}
+exchanges:
+  - sent:
+      method: GET
+      url: "https://mautic.example.com/api/contacts"
+      query: {"search": "zed@example.com", "orderBy": "id", "orderByDir": "desc", "limit": "100"}
+      headers: {"authorization": "Basic YWRtaW46cHctdGVzdA=="}
+    answer: {"status": 200, "body": {"total": 0, "contacts": []}}
+result: []

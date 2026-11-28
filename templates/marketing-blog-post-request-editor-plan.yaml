@@ -1,0 +1,70 @@
+name: Blog post requests, planned by your editor
+description: >-
+  Anyone in the company asks for a blog post on a form: the topic, who it is for, what it should achieve. A model
+  drafts a working title and an outline, your editor gets an e-mail with a link to a second form - pick the writer,
+  set the publishing day, change the outline - and the run waits for it, up to three days. The person who asked hears
+  the plan, or that the editor has not got to it yet. Needs: model (ai), mail (smtp).
+category: Marketing
+trigger:
+  form:
+    title: Ask for a blog post
+    description: Tell us what you need; the editor plans it within three working days.
+    fields:
+      - { name: email, label: Your e-mail, type: email, required: true }
+      - { name: topic, label: The topic, type: text, required: true, max_length: 200 }
+      - { name: audience, label: "Who is it for?", type: dropdown, options: [Customers, Prospects, Partners, Our own staff], required: true }
+      - { name: goal, label: "What should it achieve?", type: long_text, required: true, max_length: 2000 }
+      - { name: wanted_by, label: Wanted by, type: date }
+    thanks: Thank you - the editor plans it and you hear back by e-mail.
+# What a test runs on: an answer as the form gives it.
+sample:
+  email: omar.haddad@example.com
+  topic: How we cut delivery times in the north-west
+  audience: Customers
+  goal: Show customers what changed in our routes and when they will see faster deliveries.
+  wanted_by: '2026-12-15'
+steps:
+  - name: outline
+    ai:
+      credential: model
+      system: >-
+        You help a company's editor plan blog posts. Write a working title and an outline of five or six short
+        points, for the readers given. Plain words; no claims the request does not support.
+      prompt: "Topic: {{ value.topic }}\nReaders: {{ value.audience }}\nGoal: {{ value.goal }}"
+      max_tokens: 400
+  - name: tell_editor
+    email:
+      credential: mail
+      to: editor@example.com
+      reply_to: "{{ value.email }}"
+      subject: "Blog request: {{ value.topic }}"
+      text: "{{ value.email }} asks for a post for {{ value.audience }}, wanted by {{ value.wanted_by }}.\n\nGoal: {{ value.goal }}\n\nA first outline:\n{{ steps.outline.text }}\n\nPlan it here (the link works once): {{ links.plan }}"
+  - name: plan
+    form:
+      title: "Plan: {{ value.topic }}"
+      description: "For {{ value.audience }}. Goal: {{ value.goal }}"
+      fields:
+        - { name: writer, label: "Who writes it?", type: dropdown, options: [Alex Kim, Sam Patel, Rosa Lind, Freelance], required: true }
+        - { name: publish_on, label: Publishing day, type: date, required: true }
+        - { name: outline, label: The outline, type: long_text, default: "{{ steps.outline.text }}", max_length: 5000 }
+        - { name: note, label: A note for the person who asked, type: long_text, max_length: 1000 }
+      timeout: 3d
+      on_timeout: continue
+  - name: answer
+    if:
+      when: steps.plan.timed_out == true
+      then:
+        - name: not_yet
+          email:
+            credential: mail
+            to: "{{ value.email }}"
+            cc: editor@example.com
+            subject: "Your blog request: {{ value.topic }}"
+            text: "The editor has not planned your post yet - it stays on the list, and you hear as soon as it is."
+      else:
+        - name: planned
+          email:
+            credential: mail
+            to: "{{ value.email }}"
+            subject: "Planned: {{ value.topic }}"
+            text: "{{ steps.plan.writer }} writes it, to be published on {{ steps.plan.publish_on }}.\n\nThe outline:\n{{ steps.plan.outline }}\n\n{{ steps.plan.note }}"

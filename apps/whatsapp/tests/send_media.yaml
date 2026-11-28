@@ -1,0 +1,11 @@
+description: A document by its address, with a caption and its file name
+action: send_media
+credential: { access_token: EAAG1, phone_number_id: "1234", api_version: v21.0 }
+input: { to: "16505551234", kind: document, link: "https://shop.example/invoices/A-100.pdf", caption: Your invoice, filename: A-100.pdf }
+exchanges:
+  - sent:
+      method: POST
+      url: https://graph.facebook.com/v21.0/1234/messages
+      body: { messaging_product: whatsapp, recipient_type: individual, to: "16505551234", type: document, document: { link: "https://shop.example/invoices/A-100.pdf", caption: Your invoice, filename: A-100.pdf } }
+    answer: { body: { messaging_product: whatsapp, contacts: [{ input: "16505551234", wa_id: "16505551234" }], messages: [{ id: wamid.D1 }] } }
+result: { messaging_product: whatsapp, contacts: [{ input: "16505551234", wa_id: "16505551234" }], messages: [{ id: wamid.D1 }] }

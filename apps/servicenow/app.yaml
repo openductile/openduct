@@ -1,0 +1,343 @@
+# Copyright 2026 Ductile AI, Inc
+# SPDX-License-Identifier: Apache-2.0
+# ServiceNow, written by hand from its Table API reference
+# (https://www.servicenow.com/docs/r/api-reference/rest-apis/c_TableAPI.html, read 2026-11-27) and its OAuth client
+# credentials grant workflow (platform security docs). Moving whole tables in a pipeline is the `servicenow` connector's
+# (docs/connectors); this app is for a workflow's steps: open, find and change incidents and any table's records.
+app: servicenow
+name: ServiceNow
+category: support
+description: Open, find and change incidents and any other table's records in a ServiceNow instance.
+docs: "https://www.servicenow.com/docs/r/api-reference/rest-apis/c_TableAPI.html"
+hosts: ["*.service-now.com"]
+base_url: "https://{{ credential.instance }}.service-now.com/api/now"
+sign_in:
+  - id: servicenow
+    label: "A user name and password"
+    fields:
+      - { name: instance, label: "The instance's name: acme for acme.service-now.com" }
+      - { name: username, label: "The user name (an integration user with the roles the steps need)" }
+      - { name: password, label: "The password", secret: true }
+    basic: { username: "{{ credential.username }}", password: "{{ credential.password }}" }
+  - id: servicenow_client
+    label: "A client ID and secret (OAuth)"
+    fields:
+      - { name: instance, label: "The instance's name: acme for acme.service-now.com" }
+      - { name: client_id, label: "The client ID (System OAuth, Application Registry)" }
+      - { name: client_secret, label: "The client secret", secret: true }
+    oauth2: { grant: client_credentials, token: "https://{{ credential.instance }}.service-now.com/oauth_token.do" }
+    headers: { Authorization: "Bearer {{ credential.access_token }}" }
+default_action: create_incident
+# ServiceNow says what went wrong in error.message, and why in error.detail.
+error: >-
+  has(value.error) && has(value.error.message)
+  ? value.error.message + (has(value.error.detail) && value.error.detail != null && value.error.detail != ''
+    ? ': ' + value.error.detail : '')
+  : null
+actions:
+  create_incident:
+    label: "Open an incident"
+    description: "Opens an incident with what happened, who it is for, how urgent it is and who should work on it; gives it with its number."
+    write: true
+    method: POST
+    path: /table/incident
+    inputs:
+      - { name: short_description, label: "What happened, in a line", required: true }
+      - { name: description, label: "More about it" }
+      - { name: caller_id, label: "Who it is for: the person's sys_id (or name, with display values)" }
+      - { name: category, label: "The category, such as inquiry, software, hardware or network" }
+      - { name: urgency, label: "How urgent: 1 (high), 2 (medium) or 3 (low)" }
+      - { name: impact, label: "How wide: 1 (high), 2 (medium) or 3 (low)" }
+      - { name: assignment_group, label: "The group to work on it: its sys_id (or name, with display values)" }
+      - { name: assigned_to, label: "The person to work on it: their sys_id (or name, with display values)" }
+      - { name: display_values, label: "The values given are names as people see them, not sys_ids", kind: boolean }
+    query:
+      sysparm_input_display_value: "{{ input.display_values }}"
+      sysparm_exclude_reference_link: "true"
+    send:
+      short_description: "{{ input.short_description }}"
+      description: "{{ input.description }}"
+      caller_id: "{{ input.caller_id }}"
+      category: "{{ input.category }}"
+      urgency: "{{ input.urgency }}"
+      impact: "{{ input.impact }}"
+      assignment_group: "{{ input.assignment_group }}"
+      assigned_to: "{{ input.assigned_to }}"
+    result: value.result
+    output:
+      sys_id: text
+      number: text
+      short_description: text
+      description: text
+      state: text
+      incident_state: text
+      urgency: text
+      impact: text
+      priority: text
+      category: text
+      caller_id: text
+      assignment_group: text
+      assigned_to: text
+      opened_at: text
+      sys_created_on: text
+      sys_updated_on: text
+      resolved_at: text
+      close_code: text
+      close_notes: text
+  update_incident:
+    label: "Change an incident"
+    description: "Changes an incident's state, urgency or who works on it, or adds a comment the caller sees or a work note they do not."
+    write: true
+    method: PATCH
+    path: "/table/incident/{{ input.sys_id }}"
+    inputs:
+      - { name: sys_id, label: "The incident's sys_id", required: true }
+      - { name: state, label: "Its state, as the instance numbers them (by default 1 New, 2 In Progress, 3 On Hold, 6 Resolved, 7 Closed, 8 Canceled)" }
+      - { name: comments, label: "A comment the caller sees" }
+      - { name: work_notes, label: "A work note only those who work on it see" }
+      - { name: urgency, label: "How urgent: 1 (high), 2 (medium) or 3 (low)" }
+      - { name: impact, label: "How wide: 1 (high), 2 (medium) or 3 (low)" }
+      - { name: assignment_group, label: "The group to work on it" }
+      - { name: assigned_to, label: "The person to work on it" }
+      - { name: close_code, label: "When resolving: how it was solved, as the instance's resolution codes name it" }
+      - { name: close_notes, label: "When resolving: what was done" }
+      - { name: display_values, label: "The values given are names as people see them, not sys_ids", kind: boolean }
+    query:
+      sysparm_input_display_value: "{{ input.display_values }}"
+      sysparm_exclude_reference_link: "true"
+    send:
+      state: "{{ input.state }}"
+      comments: "{{ input.comments }}"
+      work_notes: "{{ input.work_notes }}"
+      urgency: "{{ input.urgency }}"
+      impact: "{{ input.impact }}"
+      assignment_group: "{{ input.assignment_group }}"
+      assigned_to: "{{ input.assigned_to }}"
+      close_code: "{{ input.close_code }}"
+      close_notes: "{{ input.close_notes }}"
+    result: value.result
+    output:
+      sys_id: text
+      number: text
+      short_description: text
+      description: text
+      state: text
+      incident_state: text
+      urgency: text
+      impact: text
+      priority: text
+      category: text
+      caller_id: text
+      assignment_group: text
+      assigned_to: text
+      opened_at: text
+      sys_created_on: text
+      sys_updated_on: text
+      resolved_at: text
+      close_code: text
+      close_notes: text
+  get_incident:
+    label: "Look up an incident"
+    description: "An incident by its number, such as INC0010002 (Look up a record finds one by its sys_id)."
+    method: GET
+    path: /table/incident
+    inputs:
+      - { name: number, label: "The incident's number, such as INC0010002", required: true }
+      - { name: display_values, label: "Give names as people see them, not codes and sys_ids", kind: boolean }
+    query:
+      sysparm_query: "number={{ input.number }}"
+      sysparm_limit: "1"
+      sysparm_display_value: "{{ input.display_values }}"
+      sysparm_exclude_reference_link: "true"
+    # The first of those the query found; null when none.
+    result: "size(value.result) > 0 ? value.result[0] : null"
+    output:
+      sys_id: text
+      number: text
+      short_description: text
+      description: text
+      state: text
+      incident_state: text
+      urgency: text
+      impact: text
+      priority: text
+      category: text
+      caller_id: text
+      assignment_group: text
+      assigned_to: text
+      opened_at: text
+      sys_created_on: text
+      sys_updated_on: text
+      resolved_at: text
+      close_code: text
+      close_notes: text
+  list_incidents:
+    label: "Find incidents"
+    description: "The incidents that match, the newest first unless the query orders them, every page up to 1,000."
+    method: GET
+    path: /table/incident
+    inputs:
+      - name: query
+        label: "Which, as an encoded query: active=true^priority=1 (as a list's filter, Copy query, gives it)"
+      - { name: fields, label: "Only these fields, with commas: number,short_description,state" }
+      - { name: display_values, label: "Give names as people see them, not codes and sys_ids", kind: boolean }
+    query:
+      sysparm_query: >-
+        {{ has(input.query) && input.query != null && input.query != '' ? (input.query.contains('ORDERBY') ? input.query : input.query + '^ORDERBYDESCsys_created_on') : 'ORDERBYDESCsys_created_on' }}
+      sysparm_fields: "{{ input.fields }}"
+      sysparm_display_value: "{{ input.display_values }}"
+      sysparm_exclude_reference_link: "true"
+      sysparm_limit: "100"
+    items: value.result
+    next: "size(value.result) < 100 ? null : {'sysparm_offset': (page == null ? 0 : int(page.sysparm_offset)) + 100}"
+    output:
+      sys_id: text
+      number: text
+      short_description: text
+      description: text
+      state: text
+      incident_state: text
+      urgency: text
+      impact: text
+      priority: text
+      category: text
+      caller_id: text
+      assignment_group: text
+      assigned_to: text
+      opened_at: text
+      sys_created_on: text
+      sys_updated_on: text
+      resolved_at: text
+      close_code: text
+      close_notes: text
+  list_records:
+    label: "Find records of a table"
+    description: "The records of any table - change_request, problem, sc_req_item, sys_user, cmdb_ci ... - that match, every page up to 1,000."
+    method: GET
+    path: "/table/{{ input.table }}"
+    inputs:
+      - { name: table, label: "The table's name, such as change_request or sys_user", required: true }
+      - { name: query, label: "Which, as an encoded query: active=true^ORDERBYDESCsys_created_on" }
+      - { name: fields, label: "Only these fields, with commas" }
+      - { name: display_values, label: "Give names as people see them, not codes and sys_ids", kind: boolean }
+    query:
+      sysparm_query: "{{ input.query }}"
+      sysparm_fields: "{{ input.fields }}"
+      sysparm_display_value: "{{ input.display_values }}"
+      sysparm_exclude_reference_link: "true"
+      sysparm_limit: "100"
+    items: value.result
+    next: "size(value.result) < 100 ? null : {'sysparm_offset': (page == null ? 0 : int(page.sysparm_offset)) + 100}"
+    output: { sys_id: text, number: text, short_description: text, state: text, sys_created_on: text, sys_updated_on: text }
+  get_record:
+    label: "Look up a record"
+    description: "One record of any table by its sys_id."
+    method: GET
+    path: "/table/{{ input.table }}/{{ input.sys_id }}"
+    inputs:
+      - { name: table, label: "The table's name", required: true }
+      - { name: sys_id, label: "The record's sys_id", required: true }
+      - { name: fields, label: "Only these fields, with commas" }
+      - { name: display_values, label: "Give names as people see them, not codes and sys_ids", kind: boolean }
+    query:
+      sysparm_fields: "{{ input.fields }}"
+      sysparm_display_value: "{{ input.display_values }}"
+      sysparm_exclude_reference_link: "true"
+    result: value.result
+    output: { sys_id: text, number: text, short_description: text, state: text, sys_created_on: text, sys_updated_on: text }
+  create_record:
+    label: "Add a record"
+    description: "Adds a record to any table, with the fields given; gives it with its sys_id."
+    write: true
+    method: POST
+    path: "/table/{{ input.table }}"
+    inputs:
+      - { name: table, label: "The table's name, such as change_request or sc_task", required: true }
+      - { name: fields, label: "Its fields, as a record: {short_description: ..., assignment_group: ...}", required: true, kind: record }
+      - { name: display_values, label: "The values given are names as people see them, not sys_ids", kind: boolean }
+    query:
+      sysparm_input_display_value: "{{ input.display_values }}"
+      sysparm_exclude_reference_link: "true"
+    send: "{{ input.fields }}"
+    result: value.result
+    output: { sys_id: text, number: text, short_description: text, state: text, sys_created_on: text }
+  update_record:
+    label: "Change a record"
+    description: "Changes the fields given of a record of any table; the others stay as they are."
+    write: true
+    method: PATCH
+    path: "/table/{{ input.table }}/{{ input.sys_id }}"
+    inputs:
+      - { name: table, label: "The table's name", required: true }
+      - { name: sys_id, label: "The record's sys_id", required: true }
+      - { name: fields, label: "The fields to change, as a record", required: true, kind: record }
+      - { name: display_values, label: "The values given are names as people see them, not sys_ids", kind: boolean }
+    query:
+      sysparm_input_display_value: "{{ input.display_values }}"
+      sysparm_exclude_reference_link: "true"
+    send: "{{ input.fields }}"
+    result: value.result
+    output: { sys_id: text, number: text, short_description: text, state: text, sys_updated_on: text }
+  delete_record:
+    label: "Remove a record"
+    description: "Removes a record of any table."
+    write: true
+    method: DELETE
+    path: "/table/{{ input.table }}/{{ input.sys_id }}"
+    inputs:
+      - { name: table, label: "The table's name", required: true }
+      - { name: sys_id, label: "The record's sys_id", required: true }
+triggers:
+  new_incident:
+    label: A new incident
+    description: Each incident opened (or only those the query picks), the newest asked for every few minutes.
+    inputs:
+      - { name: query, label: "Only these, as an encoded query: priority=1^assignment_group=..." }
+    poll:
+      method: GET
+      path: /table/incident
+      query:
+        sysparm_query: >-
+          {{ has(input.query) && input.query != null && input.query != '' ? input.query + '^' : '' }}ORDERBYDESCsys_created_on
+        sysparm_exclude_reference_link: "true"
+        sysparm_limit: "100"
+      items: value.result
+      newest_first: true
+      id: item.sys_id
+      every: 5m
+  updated_incident:
+    label: An incident changed
+    description: Each incident opened or changed (a new state, a comment, someone new on it), the last changed asked for every few minutes.
+    inputs:
+      - { name: query, label: "Only these, as an encoded query: active=true" }
+    poll:
+      method: GET
+      path: /table/incident
+      query:
+        sysparm_query: >-
+          {{ has(input.query) && input.query != null && input.query != '' ? input.query + '^' : '' }}ORDERBYDESCsys_updated_on
+        sysparm_exclude_reference_link: "true"
+        sysparm_limit: "100"
+      items: value.result
+      newest_first: true
+      id: item.sys_id
+      version: item.sys_updated_on
+      every: 5m
+  new_record:
+    label: A new record in a table
+    description: Each record added to a table (a change request, a catalog request, a user ...), asked for every few minutes.
+    inputs:
+      - { name: table, label: "The table's name, such as change_request or sc_req_item", required: true }
+      - { name: query, label: "Only these, as an encoded query" }
+    poll:
+      method: GET
+      path: "/table/{{ input.table }}"
+      query:
+        sysparm_query: >-
+          {{ has(input.query) && input.query != null && input.query != '' ? input.query + '^' : '' }}ORDERBYDESCsys_created_on
+        sysparm_exclude_reference_link: "true"
+        sysparm_limit: "100"
+      items: value.result
+      newest_first: true
+      id: item.sys_id
+      every: 5m

@@ -1,0 +1,12 @@
+description: "Someone put on a list, changed if there already"
+action: add_member
+credential: {"api_key": "key-test", "domain": "mg.example.com"}
+input: {"list_address": "news@mg.example.com", "address": "ann@example.com", "name": "Ann Lee", "vars": "{\"plan\": \"pro\"}", "upsert": true}
+exchanges:
+  - sent:
+      method: POST
+      url: "https://api.mailgun.net/v3/lists/news@mg.example.com/members"
+      headers: {"authorization": "Basic YXBpOmtleS10ZXN0"}
+      body: {"address": "ann@example.com", "name": "Ann Lee", "vars": "{\"plan\": \"pro\"}", "upsert": "true"}
+    answer: {"status": 200, "body": {"member": {"address": "ann@example.com", "name": "Ann Lee", "subscribed": true, "vars": {"plan": "pro"}}, "message": "Mailing list member has been created"}}
+result: {"address": "ann@example.com", "name": "Ann Lee", "subscribed": true, "vars": {"plan": "pro"}}

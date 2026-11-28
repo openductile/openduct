@@ -1,0 +1,50 @@
+# Made by `openduct app from-openapi`: Update Contact.
+description: "Update Contact, made from the API description's schemas"
+action: update_contact
+credential: { api_key: test-key }
+input: { id: id_1 }
+exchanges:
+  - sent:
+      method: PATCH
+      url: "https://gateway.seven.io/api/contacts/id_1"
+      query: {}
+      headers: { x-api-key: test-key }
+      body: {}
+    answer:
+      status: 200
+      body:
+        id: 1
+        avatar: example
+        validation: { state: example, timestamp: example }
+        initials: { initials: example, color: example }
+        properties:
+          firstname: example
+          lastname: example
+          mobile_number: 1
+          home_number: example
+          email: "ann@example.com"
+          address: example
+          postal_code: example
+          city: example
+          birthday: "2026-01-15"
+          notes: example
+        groups: [1]
+        created: example
+result:
+  id: 1
+  avatar: example
+  validation: { state: example, timestamp: example }
+  initials: { initials: example, color: example }
+  properties:
+    firstname: example
+    lastname: example
+    mobile_number: 1
+    home_number: example
+    email: "ann@example.com"
+    address: example
+    postal_code: example
+    city: example
+    birthday: "2026-01-15"
+    notes: example
+  groups: [1]
+  created: example

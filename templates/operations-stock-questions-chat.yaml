@@ -1,0 +1,74 @@
+name: A stock chat for your team
+description: >-
+  A chat page for the shop floor and the warehouse: ask what is in stock, how many are left, where an item is kept, or
+  ask for something to be reordered. A quick first model answers small talk at once; a question about stock goes to
+  an AI agent that reads your Stock sheet in Google Sheets and, only when asked, adds a line to the Reorders sheet with
+  who asked. Give the chat a password, as it can add reorders. Needs: Google Sheets (sheets) and an AI credential
+  (model).
+category: Operations
+trigger:
+  chat:
+    texts:
+      title: Stock desk
+      welcome: Hi! Ask me what is in stock, or ask me to reorder something.
+      placeholder: "How many green totes are left?"
+    # Set a password before you share the page: the chat can add reorders.
+    password: ""
+    history: 10
+    limits: { message: 1000, per_session: 20, per_address: 60 }
+# What a test runs on: a message as this trigger gives it.
+sample:
+  message: How many green totes do we have, and can you reorder 50 if it is under 20?
+  session: 3c59dc048e8850243be8079a5c74d079
+  history: []
+  person:
+    name: Sam
+steps:
+  # A small, quick answer first: most "thanks" and "hello" need no sheet at all.
+  - name: route
+    ai:
+      credential: model
+      system: >-
+        You sort messages sent to a shop's stock desk. needs_stock is true when the message asks about items, stock
+        levels, places in the warehouse or reorders; otherwise false, and reply answers it in one friendly sentence.
+      messages: "{{ value.history }}"
+      prompt: "{{ value.message }}"
+      max_tokens: 150
+      schema:
+        type: object
+        properties:
+          needs_stock: { type: boolean }
+          reply: { type: string }
+        required: [needs_stock, reply]
+  - name: answer
+    if:
+      when: steps.route.json.needs_stock == false && steps.route.json.reply != null
+      then:
+        - name: quick
+          respond:
+            body: { text: "{{ steps.route.json.reply }}" }
+      else:
+        - name: desk
+          agent:
+            credential: model
+            instructions: >-
+              You answer a shop's staff about stock. Read the stock list with stock before you give any number; never
+              guess one. Answer in at most three sentences. Add a reorder with reorder only when the person asks for
+              one, with the item's sku, its name, the quantity, who asked ({{ has(value.person.name) ? value.person.name : 'the chat' }})
+              and today's note, as ["SKU", "name", quantity, "who", "note"]; then say it was added.
+            input: "{{ value.message }}"
+            tools:
+              - name: stock
+                description: "The stock list: one row an item - sku, name, on hand, reorder level, place."
+                google_sheets: { action: read_rows, credential: sheets, spreadsheet_id: your-sheet-id, range: "Stock!A1:F1000" }
+              - name: reorder
+                description: Adds one line to the Reorders sheet.
+                google_sheets: { action: add_row, credential: sheets, spreadsheet_id: your-sheet-id, sheet: Reorders }
+            allow: [stock, reorder]
+            # The conversation is remembered by the chat's session.
+            memory: { key: "{{ value.session }}", window: 10 }
+            max_turns: 6
+            max_tool_calls: 6
+        - name: full
+          respond:
+            body: { text: "{{ steps.desk.text }}" }

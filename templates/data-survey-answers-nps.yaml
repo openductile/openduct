@@ -1,0 +1,66 @@
+name: Keep survey answers and your Net Promoter Score up to date
+description: >-
+  Your survey tool sends each answer to this workflow's address ({"respondent", "score" from 0 to 10, "comment",
+  "segment"}). Each answer is kept in the survey_answers data table - one per respondent, an answer sent again
+  replacing the first - and the counts of promoters, passives and detractors are kept between runs, so the workflow
+  answers every call with the Net Promoter Score so far. Make the table once, under Tables: survey_answers, with the
+  columns respondent, segment, group and comment (text) and score (number). No credential is needed.
+category: Data
+trigger:
+  # Left empty here: each workflow made from the template is given a token of its own.
+  webhook: { token: "" }
+# What a test runs on: an event as this trigger gives it.
+sample:
+  respondent: r-10293
+  score: 9
+  comment: Ordering is quick and the team is lovely.
+  segment: Restaurants
+steps:
+  - name: answer
+    set:
+      score: "has(value.score) ? int(double(string(value.score))) : -1"
+      respondent: "has(value.respondent) ? string(value.respondent) : ''"
+  - name: valid
+    if:
+      when: steps.answer.score < 0 || steps.answer.score > 10 || steps.answer.respondent == ''
+      then:
+        - respond: { status: 422, body: { error: "an answer needs a respondent and a score from 0 to 10" } }
+        - stop: {}
+  - name: group
+    set:
+      name: "steps.answer.score >= 9 ? 'promoter' : steps.answer.score >= 7 ? 'passive' : 'detractor'"
+  # The respondent's earlier answer, if any: its group leaves the counts before the new one joins them.
+  - name: earlier
+    table: { name: survey_answers, action: get, where: { respondent: "{{ steps.answer.respondent }}" }, limit: 1 }
+  - name: keep
+    table:
+      name: survey_answers
+      action: upsert
+      key: respondent
+      row:
+        respondent: "{{ steps.answer.respondent }}"
+        score: "{{ steps.answer.score }}"
+        group: "{{ steps.group.name }}"
+        segment: "{{ has(value.segment) ? value.segment : '' }}"
+        comment: "{{ has(value.comment) ? value.comment : '' }}"
+  - name: counts
+    javascript:
+      state: true
+      code: |
+        // The counts kept between runs; an answer sent again moves the respondent from their old group.
+        const c = { promoter: 0, passive: 0, detractor: 0, ...(state.counts || {}) };
+        const before = steps.earlier && steps.earlier[0] && steps.earlier[0].group;
+        if (before && c[before] > 0) c[before] -= 1;
+        c[steps.group.name] += 1;
+        state.counts = c;
+        const all = c.promoter + c.passive + c.detractor;
+        const nps = all ? Math.round(((c.promoter - c.detractor) / all) * 100) : 0;
+        return { ...c, answers: all, nps };
+  - name: reply
+    respond:
+      status: 200
+      body:
+        kept: "{{ steps.answer.respondent }}"
+        group: "{{ steps.group.name }}"
+        nps: "{{ steps.counts.nps }}"
+        answers: "{{ steps.counts.answers }}"

@@ -1,0 +1,15 @@
+# Copyright 2026 Ductile AI, Inc
+# SPDX-License-Identifier: Apache-2.0
+apiVersion: v2
+name: openduct
+description: >-
+  OpenDuct on Kubernetes: one node, or a cluster of three or more, each a broker with the studio beside it,
+  together one OpenDuct.
+type: application
+# The chart's own version, and the OpenDuct release it runs unless image.tag says another.
+version: 0.1.0
+appVersion: "0.1.2"
+home: https://github.com/openductile/openduct
+sources:
+  - https://github.com/openductile/openduct/tree/main/deploy/helm/openduct
+keywords: [kafka, streaming, workflows, automation]

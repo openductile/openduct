@@ -1,0 +1,7 @@
+action: make_admin
+credential: { access_token: ya29.test }
+input: { user: ann@example.com, status: true }
+exchanges:
+  - sent: { method: POST, url: https://admin.googleapis.com/admin/directory/v1/users/ann@example.com/makeAdmin, body: { status: true } }
+    answer: { status: 204 }
+result: { changed: true }

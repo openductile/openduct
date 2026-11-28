@@ -1,0 +1,11 @@
+description: "Two tags merged into one"
+action: rename_tag
+credential: { token: test-token }
+input: { tags: [vendor, vendors], new_name: supplier }
+exchanges:
+  - sent:
+      method: PUT
+      url: https://api.raindrop.io/rest/v1/tags
+      body: { tags: [vendor, vendors], replace: supplier }
+    answer: { body: { result: true } }
+result: { renamed: true }

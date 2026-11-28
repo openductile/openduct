@@ -1,0 +1,373 @@
+# Copyright 2026 Ductile AI, Inc
+# SPDX-License-Identifier: Apache-2.0
+#
+# Written by hand from Zammad's REST API documentation (https://docs.zammad.org/en/latest/api/intro.html; its source,
+# github.com/zammad/zammad-documentation at 1eb414863cd2, api/) and the webhook pages of its admin documentation
+# (github.com/zammad/zammad-admin-documentation at 0f309e628ab2, manage/webhook/).
+app: zammad
+name: Zammad
+category: support
+description: Tickets of a Zammad help desk, their messages and tags, its customers and organisations.
+docs: https://docs.zammad.org/en/latest/api/intro.html
+hosts: ["*.zammad.com"]
+base_url: "https://{{ credential.subdomain }}.zammad.com"
+base_url_field: url
+sign_in:
+  - id: zammad
+    label: An access token (Zammad hosted)
+    fields:
+      - { name: subdomain, label: "Your Zammad's name: the acme of acme.zammad.com" }
+      - { name: token, label: "An access token (your profile, Token Access, Create)", secret: true }
+    headers: { Authorization: "Token token={{ credential.token }}" }
+  - id: zammad_self_hosted
+    label: An access token (your own Zammad)
+    fields:
+      - { name: url, label: "Your Zammad's address, such as https://support.example.com" }
+      - { name: token, label: "An access token (your profile, Token Access, Create)", secret: true }
+    headers: { Authorization: "Token token={{ credential.token }}" }
+error: value.error_human
+actions:
+  list_tickets:
+    label: List tickets
+    description: The tickets you may see, every page up to the most.
+    method: GET
+    path: /api/v1/tickets
+    inputs:
+      - { name: expand, label: "With names (group, state, owner) beside the ids", kind: boolean }
+    query: { expand: "{{ input.expand }}", per_page: "100" }
+    items: value
+    next: "size(value) < 100 ? null : {'page': (page == null ? 1 : int(page.page)) + 1}"
+    output: &ticket { id: number, number: text, title: text, group_id: number, state_id: number, priority_id: number, owner_id: number, customer_id: number, organization_id: number, article_count: number, created_at: text, updated_at: text, close_at: text, escalation_at: text, pending_time: text, group: text, state: text, priority: text, owner: text, customer: text }
+  search_tickets:
+    label: Find tickets
+    description: >-
+      Tickets matching a search, as in Zammad's search bar (such as state.name:open, customer.email:ann@example.com
+      or a word), sorted as asked; every page up to the most.
+    method: GET
+    path: /api/v1/tickets/search
+    inputs:
+      - { name: query, label: "The search (such as state.name:open AND group.name:Sales)", required: true }
+      - { name: sort_by, label: "Sorted by this field (such as created_at)" }
+      - { name: order_by, label: "asc or desc" }
+      - { name: expand, label: "With names beside the ids", kind: boolean }
+    query: { query: "{{ input.query }}", sort_by: "{{ input.sort_by }}", order_by: "{{ input.order_by }}", expand: "{{ input.expand }}", per_page: "100" }
+    items: value
+    next: "size(value) < 100 ? null : {'page': (page == null ? 1 : int(page.page)) + 1}"
+    output: *ticket
+  get_ticket:
+    label: Get a ticket
+    description: "One ticket, by its id."
+    method: GET
+    path: "/api/v1/tickets/{{ input.id }}"
+    inputs:
+      - { name: id, label: "The ticket's id (not its number)", required: true }
+      - { name: expand, label: "With names beside the ids", kind: boolean }
+    query: { expand: "{{ input.expand }}" }
+    output: *ticket
+  create_ticket:
+    label: Open a ticket
+    description: >-
+      Opens a ticket in a group, for a customer (by email; one not known yet is made), with its first message: a
+      note, a phone call or an email.
+    write: true
+    method: POST
+    path: /api/v1/tickets
+    inputs:
+      - { name: title, label: Title, required: true }
+      - { name: group, label: "The group (such as Users or Sales)", required: true }
+      - { name: customer, label: "The customer's email address", required: true }
+      - { name: body, label: "The first message", required: true }
+      - { name: subject, label: "The message's subject" }
+      - { name: type, label: "note (the default), phone or email" }
+      - { name: sender, label: "Who wrote it: Customer (the default) or Agent" }
+      - { name: internal, label: "Seen by agents only", kind: boolean }
+      - { name: state, label: "The state (such as new, open)" }
+      - { name: priority, label: "The priority (such as 2 normal, 3 high)" }
+      - { name: content_type, label: "text/plain (the default) or text/html" }
+    send:
+      title: "{{ input.title }}"
+      group: "{{ input.group }}"
+      customer_id: "{{ 'guess:' + input.customer }}"
+      state: "{{ input.state }}"
+      priority: "{{ input.priority }}"
+      article:
+        subject: "{{ input.subject }}"
+        body: "{{ input.body }}"
+        type: "{{ has(input.type) && input.type != null ? input.type : 'note' }}"
+        sender: "{{ has(input.sender) && input.sender != null ? input.sender : 'Customer' }}"
+        internal: "{{ has(input.internal) && input.internal != null ? input.internal : false }}"
+        content_type: "{{ input.content_type }}"
+    output: *ticket
+  update_ticket:
+    label: Change a ticket
+    description: Its title, group, state, priority, owner or customer; with a note added if given.
+    write: true
+    method: PUT
+    path: "/api/v1/tickets/{{ input.id }}"
+    inputs:
+      - { name: id, label: "The ticket's id", required: true }
+      - { name: title, label: New title }
+      - { name: group, label: "Move to this group" }
+      - { name: state, label: "The state (such as open, pending reminder, closed)" }
+      - { name: priority, label: "The priority (such as 3 high)" }
+      - { name: owner, label: "Give it to this agent (their login or email)" }
+      - { name: pending_time, label: "Until (for a pending state, such as 2026-12-01T09:00:00Z)" }
+      - { name: note, label: "A note to add (agents only)" }
+    send:
+      title: "{{ input.title }}"
+      group: "{{ input.group }}"
+      state: "{{ input.state }}"
+      priority: "{{ input.priority }}"
+      owner: "{{ input.owner }}"
+      pending_time: "{{ input.pending_time }}"
+      article: "{{ {'body': input.note, 'type': 'note', 'internal': true} }}"
+    output: *ticket
+  delete_ticket:
+    label: Remove a ticket
+    description: Deletes a ticket and its messages for good (an admin's token).
+    write: true
+    method: DELETE
+    path: "/api/v1/tickets/{{ input.id }}"
+    inputs:
+      - { name: id, label: "The ticket's id", required: true }
+    result: "{'deleted': status < 300}"
+    output: { deleted: boolean }
+  list_articles:
+    label: A ticket's messages
+    description: Every message (article) of a ticket, the first first.
+    method: GET
+    path: "/api/v1/ticket_articles/by_ticket/{{ input.ticket_id }}"
+    inputs:
+      - { name: ticket_id, label: "The ticket's id", required: true }
+    items: value
+    output: &article { id: number, ticket_id: number, from: text, to: text, cc: text, subject: text, body: text, content_type: text, type: text, sender: text, internal: boolean, created_at: text, attachments: list }
+  add_article:
+    label: Reply to a ticket, or add a note
+    description: >-
+      Adds a message to a ticket: an internal note, a phone note, or an email sent to the address given (type
+      email, with to).
+    write: true
+    method: POST
+    path: /api/v1/ticket_articles
+    inputs:
+      - { name: ticket_id, label: "The ticket's id", required: true }
+      - { name: body, label: The message, required: true }
+      - { name: type, label: "note (the default), email or phone" }
+      - { name: to, label: "Send it to this address (for an email)" }
+      - { name: subject, label: Subject }
+      - { name: internal, label: "Seen by agents only (true by default for a note)", kind: boolean }
+      - { name: sender, label: "Agent (the default) or Customer" }
+      - { name: content_type, label: "text/plain (the default) or text/html" }
+      - { name: time_unit, label: "Time spent, in your Zammad's unit (such as 15)" }
+    send:
+      ticket_id: "{{ input.ticket_id }}"
+      body: "{{ input.body }}"
+      type: "{{ has(input.type) && input.type != null ? input.type : 'note' }}"
+      to: "{{ input.to }}"
+      subject: "{{ input.subject }}"
+      internal: "{{ has(input.internal) && input.internal != null ? input.internal : !(has(input.type) && input.type != null && input.type != 'note') }}"
+      sender: "{{ has(input.sender) && input.sender != null ? input.sender : 'Agent' }}"
+      content_type: "{{ input.content_type }}"
+      time_unit: "{{ input.time_unit }}"
+    output: *article
+  list_ticket_tags:
+    label: A ticket's tags
+    description: "The tags on a ticket."
+    method: GET
+    path: /api/v1/tags
+    inputs:
+      - { name: ticket_id, label: "The ticket's id", required: true }
+    query: { object: Ticket, o_id: "{{ input.ticket_id }}" }
+    result: "{'tags': value.tags}"
+    output: { tags: list }
+  add_ticket_tag:
+    label: Tag a ticket
+    description: Adds a tag to a ticket (made if it does not exist yet and you may make tags).
+    write: true
+    method: POST
+    path: /api/v1/tags/add
+    inputs:
+      - { name: ticket_id, label: "The ticket's id", required: true }
+      - { name: tag, label: The tag, required: true }
+    send: { item: "{{ input.tag }}", object: Ticket, o_id: "{{ input.ticket_id }}" }
+    result: "{'tagged': value == true}"
+    output: { tagged: boolean }
+  remove_ticket_tag:
+    label: Take a tag off a ticket
+    description: "Takes a tag off a ticket."
+    write: true
+    method: DELETE
+    path: /api/v1/tags/remove
+    inputs:
+      - { name: ticket_id, label: "The ticket's id", required: true }
+      - { name: tag, label: The tag, required: true }
+    send: { item: "{{ input.tag }}", object: Ticket, o_id: "{{ input.ticket_id }}" }
+    result: "{'removed': value == true}"
+    output: { removed: boolean }
+  me:
+    label: Who I am
+    description: The user the token belongs to.
+    method: GET
+    path: /api/v1/users/me
+    output: &user { id: number, login: text, firstname: text, lastname: text, email: text, phone: text, organization_id: number, role_ids: list, active: boolean, vip: boolean, note: text, created_at: text, updated_at: text }
+  search_users:
+    label: Find people
+    description: Customers and agents matching a search (a name, an email address, or such as email:ann@example.com); every page.
+    method: GET
+    path: /api/v1/users/search
+    inputs:
+      - { name: query, label: "The search (such as ann@example.com)", required: true }
+    query: { query: "{{ input.query }}", per_page: "100" }
+    items: value
+    next: "size(value) < 100 ? null : {'page': (page == null ? 1 : int(page.page)) + 1}"
+    output: *user
+  get_user:
+    label: Get a person
+    description: "One person (customer or agent), by their id."
+    method: GET
+    path: "/api/v1/users/{{ input.id }}"
+    inputs:
+      - { name: id, label: "Their id", required: true }
+    output: *user
+  create_user:
+    label: Add a customer
+    description: Adds a person (a customer, unless an admin gives other roles), with their organisation if given.
+    write: true
+    method: POST
+    path: /api/v1/users
+    inputs:
+      - { name: email, label: Email address, required: true }
+      - { name: firstname, label: First name }
+      - { name: lastname, label: Last name }
+      - { name: phone, label: Phone }
+      - { name: organization, label: "Their organisation's name" }
+      - { name: note, label: A note about them }
+    send:
+      email: "{{ input.email }}"
+      firstname: "{{ input.firstname }}"
+      lastname: "{{ input.lastname }}"
+      phone: "{{ input.phone }}"
+      organization: "{{ input.organization }}"
+      note: "{{ input.note }}"
+    output: *user
+  update_user:
+    label: Change a person
+    description: "A person's email, name, phone, organisation or note; or makes them inactive."
+    write: true
+    method: PUT
+    path: "/api/v1/users/{{ input.id }}"
+    inputs:
+      - { name: id, label: "Their id", required: true }
+      - { name: email, label: Email address }
+      - { name: firstname, label: First name }
+      - { name: lastname, label: Last name }
+      - { name: phone, label: Phone }
+      - { name: organization, label: "Their organisation's name" }
+      - { name: note, label: A note about them }
+      - { name: active, label: "Active (false: they may no longer sign in)", kind: boolean }
+    send:
+      email: "{{ input.email }}"
+      firstname: "{{ input.firstname }}"
+      lastname: "{{ input.lastname }}"
+      phone: "{{ input.phone }}"
+      organization: "{{ input.organization }}"
+      note: "{{ input.note }}"
+      active: "{{ input.active }}"
+    output: *user
+  search_organizations:
+    label: Find organisations
+    description: "Organisations matching a search (a name or a domain); every page."
+    method: GET
+    path: /api/v1/organizations/search
+    inputs:
+      - { name: query, label: "The search (a name or a domain)", required: true }
+    query: { query: "{{ input.query }}", per_page: "100" }
+    items: value
+    next: "size(value) < 100 ? null : {'page': (page == null ? 1 : int(page.page)) + 1}"
+    output: &organization { id: number, name: text, domain: text, domain_assignment: boolean, shared: boolean, vip: boolean, active: boolean, note: text, member_ids: list, created_at: text }
+  create_organization:
+    label: Add an organisation
+    description: A company your customers belong to; with a domain, people of that domain join it by themselves.
+    write: true
+    method: POST
+    path: /api/v1/organizations
+    inputs:
+      - { name: name, label: Name, required: true }
+      - { name: domain, label: "Its email domain (such as example.com)" }
+      - { name: domain_assignment, label: "Put people of that domain in it", kind: boolean }
+      - { name: shared, label: "Its people see each other's tickets", kind: boolean }
+      - { name: vip, label: "A VIP", kind: boolean }
+      - { name: note, label: A note }
+    send:
+      name: "{{ input.name }}"
+      domain: "{{ input.domain }}"
+      domain_assignment: "{{ input.domain_assignment }}"
+      shared: "{{ input.shared }}"
+      vip: "{{ input.vip }}"
+      note: "{{ input.note }}"
+    output: *organization
+  list_groups:
+    label: List groups
+    description: The groups tickets are sorted into (Users, Sales...).
+    method: GET
+    path: /api/v1/groups
+    query: { per_page: "100" }
+    items: value
+    next: "size(value) < 100 ? null : {'page': (page == null ? 1 : int(page.page)) + 1}"
+    output: { id: number, name: text, active: boolean, email_address_id: number, note: text }
+  list_states:
+    label: List ticket states
+    description: The states a ticket can be in (new, open, pending reminder, closed...).
+    method: GET
+    path: /api/v1/ticket_states
+    items: value
+    output: { id: number, name: text, state_type_id: number, active: boolean }
+  list_priorities:
+    label: List ticket priorities
+    description: "The priorities a ticket can have (1 low, 2 normal, 3 high)."
+    method: GET
+    path: /api/v1/ticket_priorities
+    items: value
+    output: { id: number, name: text, active: boolean }
+triggers:
+  ticket_event:
+    label: A ticket opened (or changed)
+    description: >-
+      Each ticket Zammad sends, signed, when it is opened (or changed). Turning the workflow on makes a webhook and a
+      Zammad trigger that calls it, and turning it off removes both; this needs an admin's token.
+    inputs:
+      - { name: ticket_action, label: "create (a ticket opened, the default) or update (a ticket changed)" }
+    webhook:
+      signature: { header: x-hub-signature-256, prefix: "sha256=", signed: "{body}", encoding: hex }
+      secret: webhook_secret
+      id: "headers['x-zammad-delivery']"
+      event: "{'ticket': value.ticket, 'article': has(value.article) ? value.article : null}"
+      register:
+        - method: POST
+          path: /api/v1/webhooks
+          send:
+            name: "{{ 'OpenDuct workflow ' + input.workflow }}"
+            endpoint: "{{ input.address }}"
+            http_method: post
+            signature_token: "{{ input.secret }}"
+            ssl_verify: true
+            active: true
+            note: Made by OpenDuct; removed when the workflow is turned off.
+        - method: POST
+          path: /api/v1/triggers
+          send:
+            name: "{{ 'OpenDuct workflow ' + input.workflow }}"
+            condition:
+              ticket.action: { operator: is, value: "{{ input.ticket_action == null ? 'create' : input.ticket_action }}" }
+            perform:
+              notification.webhook: { webhook_id: "{{ input.previous.id }}" }
+            activator: action
+            execution_condition_mode: selective
+            active: true
+      keep:
+        webhook_secret: input.secret
+        webhook_id: "string(value.perform['notification.webhook'].webhook_id)"
+        trigger_id: string(value.id)
+      unregister:
+        - { method: DELETE, path: "/api/v1/triggers/{{ input.registered.trigger_id }}" }
+        - { method: DELETE, path: "/api/v1/webhooks/{{ input.registered.webhook_id }}" }

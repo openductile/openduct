@@ -1,0 +1,7 @@
+description: A company page this member may not post for
+action: post
+credential: { access_token: AQX_test, person_id: 782bbtaQ }
+input: { text: Hello, organization_id: "99" }
+exchanges:
+  - answer: { status: 403, body: { status: 403, serviceErrorCode: 100, code: ACCESS_DENIED, message: "Not enough permissions to access: partnerApiPostsExternal.CREATE.20261101" } }
+error: "LinkedIn answered 403: Not enough permissions"

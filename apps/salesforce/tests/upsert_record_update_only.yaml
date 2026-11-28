@@ -1,0 +1,12 @@
+description: Only a change asked for, of one there already
+action: upsert_record
+credential: { access_token: "00D000000000001!AQ.test", instance: examplecorp.my.salesforce.com }
+input: { object: Account, id_field: Customer_Number__c, id_value: C-1042, fields: { Phone: "+1 555 0101" }, update_only: true }
+exchanges:
+  - sent:
+      method: PATCH
+      url: https://examplecorp.my.salesforce.com/services/data/v67.0/sobjects/Account/Customer_Number__c/C-1042
+      query: { updateOnly: "true" }
+      body: { Phone: "+1 555 0101" }
+    answer: { status: 200, body: { id: 0015e00000AbCdEAAV, success: true, errors: [], created: false } }
+result: { id: 0015e00000AbCdEAAV, success: true, errors: [], created: false }

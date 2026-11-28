@@ -1,0 +1,15 @@
+description: An Actor run to its end and its records given; apify/web-scraper written as the API names it
+action: run_and_get_items
+credential: { api_token: apify_api_test1 }
+input: { actor: apify/website-content-crawler, input: { startUrls: [{ url: "https://example.com" }], maxCrawlPages: 2 }, limit: 2 }
+exchanges:
+  - sent:
+      method: POST
+      url: https://api.apify.com/v2/actors/apify~website-content-crawler/run-sync-get-dataset-items
+      headers: { authorization: Bearer apify_api_test1 }
+      query: { format: json, clean: "true", limit: "2" }
+      body: { startUrls: [{ url: "https://example.com" }], maxCrawlPages: 2 }
+    answer:
+      status: 201
+      body: [{ url: "https://example.com", text: Example Domain }, { url: "https://example.com/about", text: About us }]
+result: [{ url: "https://example.com", text: Example Domain }, { url: "https://example.com/about", text: About us }]

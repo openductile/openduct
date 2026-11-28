@@ -1,0 +1,11 @@
+description: A product made; Odoo answers with the new ids
+action: create_record
+credential: { address: "https://mycompany.example.com", api_key: 6578616d706c65206b6579 }
+input: { model: product.template, values: { name: Oak chair, list_price: 120 } }
+exchanges:
+  - sent:
+      method: POST
+      url: https://mycompany.example.com/json/2/product.template/create
+      body: { vals_list: [{ name: Oak chair, list_price: 120 }] }
+    answer: { body: [57] }
+result: { id: 57 }

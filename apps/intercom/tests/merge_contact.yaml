@@ -1,0 +1,40 @@
+# Made by `openduct app from-openapi`: Merge two contacts.
+description: "Merge two contacts, made from the API description's schemas"
+action: merge_contact
+credential: { token: test-token }
+input: { from: "5d70dd30de4efd54f42fd526", into: "5ba682d23d7cf92bef87bfd4" }
+exchanges:
+  - sent:
+      method: POST
+      url: "https://api.intercom.io/contacts/merge"
+      query: {}
+      headers: { authorization: "Bearer test-token" }
+      body: { from: "5d70dd30de4efd54f42fd526", into: "5ba682d23d7cf92bef87bfd4" }
+    answer:
+      status: 200
+      body:
+        enabled_push_messaging: true
+        type: contact
+        id: "5ba682d23d7cf92bef87bfd4"
+        external_id: f3b87a2e09d514c6c2e79b9a
+        workspace_id: ecahpwf5
+        role: user
+        email: "ann@example.com"
+        email_domain: example.com
+        email_verified: true
+        phone: example
+        whatsapp_number: example
+        name: example
+result:
+  enabled_push_messaging: true
+  type: contact
+  id: "5ba682d23d7cf92bef87bfd4"
+  external_id: f3b87a2e09d514c6c2e79b9a
+  workspace_id: ecahpwf5
+  role: user
+  email: "ann@example.com"
+  email_domain: example.com
+  email_verified: true
+  phone: example
+  whatsapp_number: example
+  name: example

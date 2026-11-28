@@ -1,0 +1,5 @@
+description: "Bitly refuses a token it does not know: the step fails in its words"
+action: list_groups
+credential: { token: test-token }
+exchanges: [{ answer: { status: 403, body: { message: FORBIDDEN, resource: groups, description: "You are currently forbidden to access this resource." } } }]
+error: "Bitly answered 403: FORBIDDEN"

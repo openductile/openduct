@@ -1,0 +1,13 @@
+description: "Google refuses a change to a contact changed meanwhile"
+action: update_contact
+credential: {"access_token": "ya29.test"}
+input: {"contact": "people/c333", "etag": "%old", "job_title": "Head buyer"}
+exchanges:
+  - sent:
+      method: PATCH
+      url: "https://people.googleapis.com/v1/people/c333:updateContact"
+      query: {"updatePersonFields": "organizations", "personFields": "names,emailAddresses,phoneNumbers,organizations,addresses,birthdays,biographies,urls,memberships,metadata"}
+      headers: {"authorization": "Bearer ya29.test"}
+      body: {"etag": "%old", "organizations": [{"title": "Head buyer"}]}
+    answer: {"status": 400, "body": {"error": {"code": 400, "message": "Request person.etag is different than the current person.etag. Clear local cache and get the latest person.", "status": "FAILED_PRECONDITION"}}}
+error: "Request person.etag is different than the current person.etag"

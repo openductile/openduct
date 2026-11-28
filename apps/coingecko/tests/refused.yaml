@@ -1,0 +1,6 @@
+description: A Pro key sent to the free address, refused in CoinGecko's words
+action: ping
+credential: { api_key: CG-pro-key }
+exchanges:
+  - answer: { status: 400, body: { status: { error_code: 10010, error_message: "If you are using Pro API key, please change your root URL from api.coingecko.com to pro-api.coingecko.com" } } }
+error: "CoinGecko answered 400: If you are using Pro API key, please change your root URL from api.coingecko.com to pro-api.coingecko.com"

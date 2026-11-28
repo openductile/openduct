@@ -1,0 +1,16 @@
+description: "The signed-in user's builds"
+action: list_my_builds
+credential: { token: test-token }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://api.travis-ci.com/builds"
+      query: { limit: "100" }
+    answer:
+      body:
+        "@type": builds
+        "@pagination": { limit: 100, offset: 0, count: 1, is_first: true, is_last: true, next: null }
+        builds:
+          - { id: 86601346, number: "212", state: passed, repository: { id: 891, slug: shop-example/storefront } }
+result:
+  - { id: 86601346, number: "212", state: passed, repository: { id: 891, slug: shop-example/storefront } }

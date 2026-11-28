@@ -1,0 +1,40 @@
+description: The newest companies, asked with form fields
+action: list_companies
+credential: {domain: shopexample, email: dana@shop.example, api_key: agile-test-key}
+exchanges:
+- sent:
+    method: POST
+    url: https://shopexample.agilecrm.com/dev/api/contacts/companies/list
+    headers: {authorization: Basic ZGFuYUBzaG9wLmV4YW1wbGU6YWdpbGUtdGVzdC1rZXk=, accept: application/json}
+    query: {}
+    body: {page_size: '100', global_sort_key: -created_time}
+  answer:
+    status: 200
+    body:
+    - id: '5649189358796800'
+      type: COMPANY
+      created_time: '1764237600'
+      updated_time: 1764237600
+      star_value: 0
+      lead_score: 0
+      tags: &id001 []
+      properties: &id002
+      - {type: SYSTEM, name: name, value: Shop Example}
+      - {type: SYSTEM, name: url, value: 'https://shop.example'}
+      contact_company_id: null
+      owner: &id003 {id: 6263975862861824}
+      campaignStatus: &id004 []
+      cursor: ClMKFgoMY3JlYXRlZF90aW1l
+result:
+- id: '5649189358796800'
+  type: COMPANY
+  created_time: '1764237600'
+  updated_time: 1764237600
+  star_value: 0
+  lead_score: 0
+  tags: *id001
+  properties: *id002
+  contact_company_id: null
+  owner: *id003
+  campaignStatus: *id004
+  cursor: ClMKFgoMY3JlYXRlZF90aW1l

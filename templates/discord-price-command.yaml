@@ -1,0 +1,31 @@
+name: A Discord slash command answered from a table
+description: >-
+  Answers the /price slash command in a Discord server with an item's price from the prices data table. Discord is
+  told at once that the bot is thinking; the workflow finds the item and sets the answer. Make the table once, under
+  Tables: prices, with the text columns item and price. In the Discord Developer Portal, register /price with one
+  text option, item, and give the workflow's address as the Interactions Endpoint URL once it is on.
+category: Sales
+trigger:
+  discord: { when: interaction, credential: shop-bot, command: price }
+# What a test runs on: a slash command as this trigger gives it.
+sample:
+  kind: command
+  command: price
+  option: tea
+  options: [{ name: item, type: 3, value: tea }]
+  user: { id: "920000000000000001", username: ann }
+  guild_id: "900000000000000001"
+  channel_id: "910000000000000001"
+  id: "1100000000000000002"
+  application_id: "1000000000000000001"
+  token: dGVzdC1jb21tYW5kLXRva2Vu
+steps:
+  - name: found
+    table: { name: prices, action: get, where: { item: "{{ value.option.lowerAscii() }}" }, limit: 1 }
+  - name: answer
+    discord:
+      action: answer_interaction
+      credential: shop-bot
+      application_id: "{{ value.application_id }}"
+      token: "{{ value.token }}"
+      text: "{{ size(steps.found) > 0 ? value.option + ' is ' + string(steps.found[0].price) : 'There is no price for ' + value.option + ' yet.' }}"

@@ -1,0 +1,20 @@
+description: A list's open items, with their columns, over two pages - the next page the whole address Graph gives
+action: list_list_items
+credential: { access_token: eyJ0 }
+input: { site_id: "example.sharepoint.com,da60e844-ba1d-49bc-b4d4-d5e36bae9019,712a596e-90a1-49e3-9b48-bfa80bee8740", list_id: Orders, filter: "fields/Status eq 'Open'" }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://graph.microsoft.com/v1.0/sites/example.sharepoint.com,da60e844-ba1d-49bc-b4d4-d5e36bae9019,712a596e-90a1-49e3-9b48-bfa80bee8740/lists/Orders/items"
+      query: { expand: fields, "$filter": "fields/Status eq 'Open'" }
+    answer:
+      body:
+        value: [{ id: "1", fields: { Title: Order 1042, Status: Open }, lastModifiedDateTime: "2026-11-26T10:00:00Z" }]
+        "@odata.nextLink": "https://graph.microsoft.com/v1.0/sites/example.sharepoint.com,da60e844-ba1d-49bc-b4d4-d5e36bae9019,712a596e-90a1-49e3-9b48-bfa80bee8740/lists/Orders/items?expand=fields&$skiptoken=UGFnZWQ9VFJVRSZwX0lEPTE"
+  - sent:
+      url: "https://graph.microsoft.com/v1.0/sites/example.sharepoint.com,da60e844-ba1d-49bc-b4d4-d5e36bae9019,712a596e-90a1-49e3-9b48-bfa80bee8740/lists/Orders/items?expand=fields&$skiptoken=UGFnZWQ9VFJVRSZwX0lEPTE"
+      query: {}
+    answer: { body: { value: [{ id: "2", fields: { Title: Order 1043, Status: Open }, lastModifiedDateTime: "2026-11-26T11:00:00Z" }] } }
+result:
+  - { id: "1", fields: { Title: Order 1042, Status: Open }, lastModifiedDateTime: "2026-11-26T10:00:00Z" }
+  - { id: "2", fields: { Title: Order 1043, Status: Open }, lastModifiedDateTime: "2026-11-26T11:00:00Z" }

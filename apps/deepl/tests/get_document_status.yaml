@@ -1,0 +1,11 @@
+description: A document's translation, still being done
+action: get_document_status
+credential: { api_key: 0f6a2c1e-5b7d-4e2a-9c3f-1a2b3c4d5e6f }
+input: { document_id: 04DE5AD98A02647D83285A36021911C6, document_key: 0CB0054F1C132C1625B392EADDA41CB754A742822F6877173029A6C487E7F60A }
+exchanges:
+  - sent:
+      method: POST
+      url: "https://api.deepl.com/v2/document/04DE5AD98A02647D83285A36021911C6"
+      body: { document_key: 0CB0054F1C132C1625B392EADDA41CB754A742822F6877173029A6C487E7F60A }
+    answer: { status: 200, body: { document_id: 04DE5AD98A02647D83285A36021911C6, status: translating, seconds_remaining: 20 } }
+result: { document_id: 04DE5AD98A02647D83285A36021911C6, status: translating, seconds_remaining: 20 }

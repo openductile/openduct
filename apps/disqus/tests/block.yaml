@@ -1,0 +1,20 @@
+description: An email added to a site's blocklist
+action: block
+credential: {api_key: pubkey-test-1, api_secret: secret-test-1, access_token: token-test-1}
+input: {forum: shop-example, email: spammer@example.test, notes: Repeated spam}
+exchanges:
+- sent:
+    method: POST
+    url: https://disqus.com/api/3.0/blacklists/add.json
+    query: {api_key: pubkey-test-1, api_secret: secret-test-1, access_token: token-test-1}
+    body: {forum: shop-example, email: spammer@example.test, notes: Repeated spam}
+  answer:
+    status: 200
+    body:
+      code: 0
+      response:
+      - {type: email, value: spammer@example.test, notes: Repeated spam}
+result:
+  blocked: true
+  entries:
+  - {type: email, value: spammer@example.test, notes: Repeated spam}

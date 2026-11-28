@@ -1,0 +1,105 @@
+name: Research a list of leads and note how well each fits
+description: >-
+  Press Run and the leads in your Google Sheet that have no notes yet - up to ten at a time - are researched: an AI
+  agent reads each company's website through the Firecrawl scrape API, writes two lines on what it does and why it may
+  need you, and scores the fit from 1 to 5. The notes and the score go back into the sheet, and the salesperson gets
+  the list by e-mail, best fits first. The sheet's first row names its columns: Company, Website, Contact, Notes and
+  Fit (A to E). Needs: google_sheets, model (an AI credential), firecrawl (a bearer credential with your API key),
+  gmail.
+category: Sales
+trigger: manual
+# What a test runs on: what you give it when you press Run.
+sample:
+  send_to: sam@example.com
+  we_sell: Scheduling software for clinics and salons
+steps:
+  - name: sheet
+    google_sheets:
+      action: read_rows
+      credential: google_sheets
+      spreadsheet_id: your-spreadsheet-id
+      range: Leads!A1:E500
+  # The rows as records, with their row numbers; only those with a website and no notes yet, ten at most.
+  - name: todo
+    javascript: |
+      const rows = steps.sheet || [];
+      const head = (rows[0] || []).map((h) => String(h).trim().toLowerCase());
+      const col = (name) => head.indexOf(name);
+      const [c, w, n] = [col("company"), col("website"), col("notes")];
+      if (c < 0 || w < 0 || n < 0) return { leads: [], note: "the first row needs Company, Website and Notes" };
+      const leads = [];
+      rows.slice(1).forEach((r, i) => {
+        const site = String(r[w] || "").trim();
+        if (site && !String(r[n] || "").trim() && leads.length < 10) {
+          leads.push({ row: i + 2, company: r[c], website: site.startsWith("http") ? site : "https://" + site });
+        }
+      });
+      return { leads };
+  - name: each
+    for_each:
+      items: steps.todo.leads
+      steps:
+        - name: look
+          agent:
+            credential: model
+            instructions: >-
+              You research one company for a salesperson. Read its website, then say in two short lines what the
+              company does and why it may need what we sell, and score the fit from 1 (none) to 5 (strong). Use only
+              what the site says; if it cannot be read, say so and score 1.
+            input: "We sell: {{ value.we_sell }}. The company: {{ item.company }}, {{ item.website }}"
+            tools:
+              - name: read_site
+                description: The main text of a web page, as Markdown, by its address.
+                parameters:
+                  type: object
+                  properties:
+                    url: { type: string, description: "The page's address, starting with https://" }
+                  required: [url]
+                http:
+                  method: POST
+                  url: https://api.firecrawl.dev/v1/scrape
+                  credential: firecrawl
+                  json: { url: "{{ args.url }}", formats: [markdown], onlyMainContent: true }
+                  timeout: 60s
+            allow: [read_site]
+            output:
+              schema:
+                type: object
+                properties:
+                  notes: { type: string }
+                  fit: { type: integer, minimum: 1, maximum: 5 }
+                required: [notes, fit]
+            max_turns: 4
+            max_tool_calls: 3
+        - name: found
+          javascript: |
+            const said = (steps.look && steps.look.json) || {};
+            return { notes: said.notes || "(the site could not be read)", fit: said.fit || 1 };
+        - name: noted
+          google_sheets:
+            action: set_rows
+            credential: google_sheets
+            spreadsheet_id: your-spreadsheet-id
+            range: "Leads!D{{ item.row }}:E{{ item.row }}"
+            rows: "{{ [[steps.found.notes, steps.found.fit]] }}"
+          retry: { attempts: 3, wait: 10s }
+  - where: size(steps.todo.leads) > 0
+  # Each lead beside what the agent wrote about it, the best fits first.
+  - name: report
+    javascript: |
+      const done = (steps.todo.leads || []).map((lead, i) => {
+        const found = (steps.each[i] && steps.each[i].found) || {};
+        return { ...lead, fit: found.fit || 1, notes: found.notes || "(no notes)" };
+      });
+      done.sort((a, b) => b.fit - a.fit);
+      return {
+        text: done.map((l) => `${l.fit}/5 ${l.company} - ${l.website}\n${l.notes}`).join("\n\n"),
+        best: done.filter((l) => l.fit >= 4).length,
+      };
+  - name: send
+    gmail:
+      action: send_email
+      credential: gmail
+      to: "{{ value.send_to }}"
+      subject: "{{ size(steps.todo.leads) }} leads researched, {{ steps.report.best }} good fits"
+      text: "Best fits first (the notes are in the sheet too):\n\n{{ steps.report.text }}"

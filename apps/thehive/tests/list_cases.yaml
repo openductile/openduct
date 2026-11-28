@@ -1,0 +1,74 @@
+description: The newest cases, a hundred by default
+action: list_cases
+credential:
+  url: https://thehive.example.com
+  api_key: test-key
+exchanges:
+- sent:
+    method: POST
+    url: https://thehive.example.com/api/v1/query
+    headers:
+      authorization: Bearer test-key
+    body:
+      query:
+      - _name: listCase
+      - _name: sort
+        _fields:
+        - _createdAt: desc
+      - _name: page
+        from: 0
+        to: 100
+  answer:
+    status: 200
+    body:
+    - &id001
+      _id: ~8256
+      _type: Case
+      _createdBy: analyst@example.com
+      _createdAt: 1795161600000
+      _updatedAt: 1795165200000
+      number: 43
+      title: Invoice with a macro
+      description: Reported phishing email.
+      severity: 2
+      severityLabel: MEDIUM
+      startDate: 1795161600000
+      endDate: null
+      tags:
+      - phishing
+      flag: false
+      tlp: 2
+      pap: 2
+      status: New
+      stage: New
+      summary: null
+      impactStatus: null
+      assignee: analyst@example.com
+      customFields: []
+    - &id002
+      _id: ~8192
+      _type: Case
+      _createdBy: analyst@example.com
+      _createdAt: 1795161600000
+      _updatedAt: 1795165200000
+      number: 42
+      title: Password reset email reported
+      description: Reported phishing email.
+      severity: 2
+      severityLabel: MEDIUM
+      startDate: 1795161600000
+      endDate: null
+      tags:
+      - phishing
+      flag: false
+      tlp: 2
+      pap: 2
+      status: New
+      stage: New
+      summary: null
+      impactStatus: null
+      assignee: analyst@example.com
+      customFields: []
+result:
+- *id001
+- *id002

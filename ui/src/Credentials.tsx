@@ -195,7 +195,7 @@ function CredentialWindow(props: { kinds: CredentialKind[]; editing: Editing; on
           items={PROVIDERS.map((p) => ({
             id: p.id,
             name: p.name,
-            blurb: p.id === "other" ? "Its address, and how it takes its key" : p.keyless ? "No key needed" : "Just its key",
+            blurb: p.id === "other" ? "Its address, and how it takes its key" : p.keyless ? "No key needed" : p.edit ? "Its key, and your own address" : "Just its key",
             family: "ai" as const,
             icon: p.brand ? <BrandIcon slug={p.brand} /> : <Icon kind="ai" />,
           }))}
@@ -235,8 +235,8 @@ function CredentialWindow(props: { kinds: CredentialKind[]; editing: Editing; on
           {ai ? (
             <>
               <div className="form-grid">{visible.filter((f) => !advanced.includes(f.name) && !(f.name === "api_key" && provider?.keyless)).map(field)}</div>
-              <details className="advanced" open={provider?.id === "other"}>
-                <summary>Address and API {provider?.id !== "other" && <span className="hint">filled in for {provider?.name}</span>}</summary>
+              <details className="advanced" open={provider?.id === "other" || !!provider?.edit}>
+                <summary>Address and API {provider?.edit ? <span className="hint">{provider.edit}</span> : provider?.id !== "other" && <span className="hint">filled in for {provider?.name}</span>}</summary>
                 <div className="form-grid">{visible.filter((f) => advanced.includes(f.name)).map(field)}</div>
               </details>
             </>

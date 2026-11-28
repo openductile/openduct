@@ -1,0 +1,17 @@
+description: Each poll looks over the last half hour; events seen before are not run again
+trigger: email_event
+credential: {"api_key": "key-test", "domain": "mg.example.com"}
+input: { event: delivered }
+seen: { items: [["ev_5", ""]] }
+exchanges:
+  - sent:
+      method: GET
+      url: https://api.mailgun.net/v3/mg.example.com/events
+      query: { event: delivered, begin: "1699998200", ascending: "yes", limit: "300" }
+      headers: { authorization: "Basic YXBpOmtleS10ZXN0" }
+    answer: { body: { items: [{"id": "ev_5", "event": "delivered", "timestamp": 1699999000.0, "recipient": "ann@example.com"}, {"id": "ev_6", "event": "delivered", "timestamp": 1699999500.0, "recipient": "bo@example.com"}], paging: { next: "https://api.mailgun.net/v3/mg.example.com/events/p2" } } }
+  - sent: { url: "https://api.mailgun.net/v3/mg.example.com/events/p2" }
+    answer: { body: { items: [], paging: { next: "https://api.mailgun.net/v3/mg.example.com/events/p3" } } }
+runs:
+  - {"id": "ev_6", "event": "delivered", "timestamp": 1699999500.0, "recipient": "bo@example.com"}
+ids: [ev_6]

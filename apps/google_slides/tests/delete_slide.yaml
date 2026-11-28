@@ -1,0 +1,9 @@
+description: A slide removed
+action: delete_slide
+credential: { access_token: ya29.test }
+input: { presentation: 1CoPyOfTheTemplate0123456789abcdefg, slide_id: g3 }
+exchanges:
+  - sent:
+      body: { requests: [{ deleteObject: { objectId: g3 } }] }
+    answer: { body: { presentationId: 1CoPyOfTheTemplate0123456789abcdefg, replies: [{}] } }
+result: { id: 1CoPyOfTheTemplate0123456789abcdefg, deleted: true }

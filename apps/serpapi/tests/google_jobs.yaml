@@ -1,0 +1,16 @@
+description: Job openings near a city
+action: google_jobs
+credential: { api_key: serp_test_key_1 }
+input: { q: barista, location: "Austin, Texas, United States" }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://serpapi.com/search"
+      query: { api_key: serp_test_key_1, engine: google_jobs, q: barista, location: "Austin, Texas, United States" }
+    answer:
+      status: 200
+      body:
+        jobs_results:
+          - { title: Barista, company_name: Example Coffee, location: "Austin, TX", via: Example Jobs, description: Make coffee for our guests., detected_extensions: { posted_at: 2 days ago, schedule_type: Part-time }, job_id: job1 }
+result:
+  - { title: Barista, company_name: Example Coffee, location: "Austin, TX", via: Example Jobs, description: Make coffee for our guests., detected_extensions: { posted_at: 2 days ago, schedule_type: Part-time }, job_id: job1 }

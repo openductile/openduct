@@ -1,0 +1,7 @@
+description: The space used and allowed
+action: get_space_usage
+credential: { access_token: sl.test-token }
+exchanges:
+  - sent: { method: POST, url: https://api.dropboxapi.com/2/users/get_space_usage }
+    answer: { body: { used: 314159265, allocation: { ".tag": individual, allocated: 10000000000 } } }
+result: { used: 314159265, allocation: { ".tag": individual, allocated: 10000000000 } }

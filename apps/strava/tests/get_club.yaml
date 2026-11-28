@@ -1,0 +1,7 @@
+action: get_club
+credential: { access_token: st_test_1 }
+input: { id: "3001" }
+exchanges:
+  - sent: { method: GET, url: https://www.strava.com/api/v3/clubs/3001 }
+    answer: { body: { id: 3001, name: Harbourside Runners, sport_type: running, private: false, member_count: 214 } }
+result: { id: 3001, name: Harbourside Runners, sport_type: running, private: false, member_count: 214 }

@@ -1,0 +1,11 @@
+description: "Every unsubscribe"
+action: list_unsubscribes
+credential: {"api_key": "test-key"}
+exchanges:
+  - sent:
+      method: GET
+      url: "https://api.lemlist.com/api/v2/unsubscribes/variables"
+      query: {"limit": "100"}
+      headers: {"authorization": "Basic OnRlc3Qta2V5"}
+    answer: {"status": 200, "body": [{"_id": "uns_1", "value": "bo@example.com", "source": "user", "createdAt": "2026-11-20T10:00:00.000Z"}]}
+result: [{"_id": "uns_1", "value": "bo@example.com", "source": "user", "createdAt": "2026-11-20T10:00:00.000Z"}]

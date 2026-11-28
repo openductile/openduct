@@ -1,0 +1,100 @@
+name: Voice notes dropped in S3, turned into action items
+description: >-
+  For people who think out loud - on site visits, after calls, between meetings: record a voice note and let your phone
+  app or recorder upload it to a folder of an S3 bucket (or any store with S3's API). Each new recording is transcribed
+  by Deepgram, read by a model for a short summary and the tasks in it (who, what, by when), posted to your team's
+  Google Chat space, and moved to a done folder. Deepgram fetches the recording through a link that works for an hour;
+  nothing else leaves your bucket. Needs: an s3 credential called notes_s3, a Deepgram key as a header credential called
+  deepgram (Authorization: Token <key>), an AI credential called model, and a Google Chat webhook credential called
+  team_chat.
+category: AI
+trigger:
+  storage:
+    credential: notes_s3
+    folder: voice-notes
+    pattern: "*.m4a, *.mp3, *.wav, *.ogg"
+    every: 2m
+# What a test runs on: an event as this trigger gives it.
+sample:
+  name: site-visit-2026-11-27.m4a
+  path: voice-notes/site-visit-2026-11-27.m4a
+  kind: file
+  size: 1843200
+  modified: "2026-11-27T10:42:00Z"
+  change: new
+steps:
+  - name: link
+    storage:
+      action: presign
+      credential: notes_s3
+      path: "{{ value.path }}"
+      expires: 1h
+  - name: transcript
+    http:
+      method: POST
+      url: https://api.deepgram.com/v1/listen
+      credential: deepgram
+      query: { model: nova-3, smart_format: "true", detect_language: "true" }
+      json: { url: "{{ steps.link.url }}" }
+      timeout: 120s
+      fail_on_status: true
+      sample:
+        metadata: { duration: 74.2 }
+        results:
+          channels:
+            - detected_language: en
+              alternatives:
+                - transcript: >-
+                    Okay, visit at the Elm Street shop is done. The back door lock is broken, Priya should get a
+                    locksmith there this week. The fridge display is fine. We need new price labels for the window
+                    before Saturday, and I will send the landlord the photos of the damp wall tomorrow.
+                  confidence: 0.97
+    retry: { attempts: 3, wait: 30s }
+  - name: heard
+    set:
+      text: steps.transcript.body.results.channels[0].alternatives[0].transcript
+      minutes: round(double(steps.transcript.body.metadata.duration) / 60.0, 1)
+  - where: size(steps.heard.text.trim()) > 0
+  - name: tasks
+    ai:
+      credential: model
+      system: >-
+        You turn a voice note into a summary of two sentences at most and the tasks in it. For each task: what is to
+        be done, who is to do it (only if the note says), and by when (only if the note says, in words). Nothing that
+        the note does not say. Answer as JSON.
+      prompt: "{{ steps.heard.text }}"
+      schema:
+        type: object
+        properties:
+          summary: { type: string }
+          tasks:
+            type: array
+            items:
+              type: object
+              properties:
+                task: { type: string }
+                who: { type: string }
+                when: { type: string }
+              required: [task]
+        required: [summary, tasks]
+      max_tokens: 600
+  - name: message
+    set:
+      # Without the model's answer (it failed, or a test), the transcript itself is posted.
+      summary: "steps.tasks.json.summary != null ? steps.tasks.json.summary : steps.heard.text"
+      tasks: >-
+        steps.tasks.json.tasks != null ? steps.tasks.json.tasks.map(t, '- ' + t.task
+          + (has(t.who) && t.who != null && t.who != '' ? ' (' + t.who + ')' : '')
+          + (has(t.when) && t.when != null && t.when != '' ? ', ' + t.when : '')).join('\n') : ''
+  - name: post
+    google_chat:
+      credential: team_chat
+      text: "Voice note {{ value.name }} ({{ steps.heard.minutes }} min): {{ steps.message.summary }}\n{{ steps.message.tasks }}"
+    retry: { attempts: 3, wait: 10s }
+  - name: done
+    storage:
+      action: move
+      credential: notes_s3
+      path: "{{ value.path }}"
+      to: "voice-notes-done/{{ value.name }}"
+      overwrite: true

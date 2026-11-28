@@ -1,0 +1,20 @@
+description: A new field for an index
+action: add_fields
+credential: {url: 'https://search.example.com:9200', api_key: VnVhQ2ZHY0JDZGJrUW0tZTVhT3g6dWkybHAyYXhUTm1zeWFrdzl0dk5udw==}
+input:
+  index: orders
+  properties:
+    paid_at: {type: date}
+exchanges:
+- sent:
+    method: PUT
+    url: https://search.example.com:9200/orders/_mapping
+    query: {}
+    headers: {authorization: ApiKey VnVhQ2ZHY0JDZGJrUW0tZTVhT3g6dWkybHAyYXhUTm1zeWFrdzl0dk5udw==}
+    body:
+      properties:
+        paid_at: {type: date}
+  answer:
+    status: 200
+    body: {acknowledged: true}
+result: {acknowledged: true}

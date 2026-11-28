@@ -19,6 +19,8 @@ mod auth;
 mod binlog;
 mod json;
 mod source;
+pub mod sql; // sql databases
+mod statement; // sql databases
 mod stream;
 mod values;
 mod wire;
@@ -150,6 +152,7 @@ impl MysqlCdcSource {
             username,
             password,
             tls,
+            address: None, // sql databases
         };
         Ok(Self::new(shown, options, tables, server_id, snapshot))
     }

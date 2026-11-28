@@ -1,0 +1,6 @@
+description: A key Dropcontact does not know is refused (401), in its words
+action: get_credits
+credential: { api_key: dc_wrong_key }
+exchanges:
+  - answer: { status: 401, body: { error: true, reason: "Invalid API key", success: false } }
+error: "Dropcontact answered 401: Invalid API key"

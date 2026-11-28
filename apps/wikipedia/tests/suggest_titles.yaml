@@ -1,0 +1,8 @@
+description: Titles that begin with what is typed
+action: suggest_titles
+credential: { contact: ops@example.com, language: en }
+input: { q: Jupi, limit: 1 }
+exchanges:
+  - sent: { method: GET, url: https://en.wikipedia.org/w/rest.php/v1/search/title, query: { q: Jupi, limit: "1" } }
+    answer: { body: { pages: [{ id: 38930, key: Jupiter, title: Jupiter, description: Fifth planet from the Sun, thumbnail: null }] } }
+result: [{ id: 38930, key: Jupiter, title: Jupiter, description: Fifth planet from the Sun, thumbnail: null }]

@@ -1,0 +1,38 @@
+description: The languages, named in English by default
+action: list_languages
+credential:
+  api_key: test-key
+exchanges:
+- sent:
+    method: GET
+    url: https://api-b2b.backenster.com/b1/api/v3/getLanguages
+    query:
+      platform: api
+    headers:
+      authorization: test-key
+  answer:
+    status: 200
+    body:
+      err: null
+      result: &id001
+      - full_code: de_DE
+        code_alpha_1: de
+        englishName: German
+        codeName: German
+        flagPath: static/flags/german
+        testWordForSyntezis: Hallo
+        rtl: 'false'
+        modes:
+        - name: Translation
+          value: true
+      - full_code: es_ES
+        code_alpha_1: es
+        englishName: Spanish
+        codeName: Spanish
+        flagPath: static/flags/spanish
+        testWordForSyntezis: Hola
+        rtl: 'false'
+        modes:
+        - name: Translation
+          value: true
+result: *id001

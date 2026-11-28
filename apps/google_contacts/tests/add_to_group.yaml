@@ -1,0 +1,12 @@
+description: "Two contacts given a label, the group named by its id"
+action: add_to_group
+credential: {"access_token": "ya29.test"}
+input: {"group": "8c3d", "contacts": ["people/c111", "people/c222"]}
+exchanges:
+  - sent:
+      method: POST
+      url: "https://people.googleapis.com/v1/contactGroups/8c3d/members:modify"
+      headers: {"authorization": "Bearer ya29.test"}
+      body: {"resourceNamesToAdd": ["people/c111", "people/c222"]}
+    answer: {"status": 200, "body": {}}
+result: {}

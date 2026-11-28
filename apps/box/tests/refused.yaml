@@ -1,0 +1,6 @@
+# Made by `openduct app from-openapi`: a refusal.
+description: "Box refuses list_items: the step fails in its words"
+action: list_items
+credential: { access_token: test-access-token }
+exchanges: [{ answer: { status: 404, body: { message: "Not found" } } }]
+error: "Box answered 404: Not found"

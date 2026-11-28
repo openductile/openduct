@@ -1,0 +1,7 @@
+action: update_monitor
+credential: { api_key: ur_test_1 }
+input: { id: 801, interval: 60, tags: prod }
+exchanges:
+  - sent: { method: PATCH, url: https://api.uptimerobot.com/v3/monitors/801, body: { interval: 60, tagNames: [prod] } }
+    answer: { body: { id: 801, friendlyName: Shop, interval: 60, status: UP } }
+result: { id: 801, friendlyName: Shop, interval: 60, status: UP }

@@ -1,0 +1,11 @@
+description: A view link for people of the organization
+action: share_library_file
+credential: { access_token: eyJ0 }
+input: { site_id: "example.sharepoint.com,da60e844-ba1d-49bc-b4d4-d5e36bae9019,712a596e-90a1-49e3-9b48-bfa80bee8740", file_id: 01BYE5RZ6QN3ZWBTUFOFD3GSPGOHDJD36K, type: view, scope: organization }
+exchanges:
+  - sent:
+      method: POST
+      url: "https://graph.microsoft.com/v1.0/sites/example.sharepoint.com,da60e844-ba1d-49bc-b4d4-d5e36bae9019,712a596e-90a1-49e3-9b48-bfa80bee8740/drive/items/01BYE5RZ6QN3ZWBTUFOFD3GSPGOHDJD36K/createLink"
+      body: { type: view, scope: organization }
+    answer: { status: 201, body: { id: 123ABC, roles: [read], link: { type: view, scope: organization, webUrl: "https://example.sharepoint.com/:b:/s/sales/EaBcD1234" } } }
+result: { id: 123ABC, url: "https://example.sharepoint.com/:b:/s/sales/EaBcD1234", type: view, scope: organization }

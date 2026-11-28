@@ -1,0 +1,11 @@
+description: A new presentation, with its one slide
+action: make_presentation
+credential: { access_token: ya29.test }
+input: { title: Quarterly review }
+exchanges:
+  - sent:
+      method: POST
+      url: https://slides.googleapis.com/v1/presentations
+      body: { title: Quarterly review }
+    answer: { body: { presentationId: 1NeWpReSeNtAtIoN0123456789abcdefgh, title: Quarterly review, slides: [{ objectId: p, pageElements: [] }], revisionId: r1 } }
+result: { id: 1NeWpReSeNtAtIoN0123456789abcdefgh, title: Quarterly review, url: "https://docs.google.com/presentation/d/1NeWpReSeNtAtIoN0123456789abcdefgh/edit", slides: [p] }

@@ -1,0 +1,65 @@
+name: A morning weather briefing for crews on Telegram
+description: >-
+  Every day at 6:00 Denver time, an AI agent looks up today's weather at each of your job sites with Open-Meteo (free,
+  no key) and sends the crews' Telegram group a short briefing: which sites are fine, which need rain gear or a later
+  start, and where wind or heat means stopping work at height. List your sites and your own rules in the first step.
+  Needs: a Telegram bot in the crews' group (bot) and an AI credential (model).
+category: Operations
+trigger:
+  schedule: { every: day, at: "06:00", timezone: America/Denver }
+# What a test runs on: an event as this trigger gives it.
+sample:
+  scheduled_at: '2026-11-27T13:00:00Z'
+steps:
+  - name: sites
+    set:
+      # Your job sites today: a name the crews know, and the town to look up.
+      list: "[{'site': 'Maple St. roof', 'town': 'Boulder, Colorado'}, {'site': 'Riverside warehouse', 'town': 'Denver, Colorado'}, {'site': 'Hillcrest deck', 'town': 'Golden, Colorado'}]"
+      rules: "'No work at height when gusts pass 40 km/h. Concrete needs 5 C or more. Over 32 C, breaks every hour.'"
+  - name: briefing
+    agent:
+      credential: model
+      instructions: >-
+        You write a construction company's morning weather briefing for its crews. For each site, find the town's
+        place with geocode, then today's forecast with forecast, and never guess the weather. Then write one line a
+        site: the site, the high and low, rain and wind, and what the crew should do, going by these rules:
+        {{ steps.sites.rules }} Put the sites that need a change first. At most 12 lines, plain words, no greeting.
+      input: "Today's sites: {{ steps.sites.list.map(s, s.site + ' (' + s.town + ')').join('; ') }}"
+      tools:
+        - name: geocode
+          description: "A town's latitude and longitude, by its name (as Boulder, Colorado)."
+          parameters:
+            type: object
+            properties:
+              town: { type: string, description: "The town, as Boulder, Colorado" }
+            required: [town]
+          http:
+            url: https://geocoding-api.open-meteo.com/v1/search
+            query: { name: "{{ args.town.split(',')[0] }}", count: "3", language: en, format: json }
+        - name: forecast
+          description: "Today's forecast at a place: high, low, chance of rain, rain in mm, wind and gusts in km/h."
+          parameters:
+            type: object
+            properties:
+              latitude: { type: number }
+              longitude: { type: number }
+            required: [latitude, longitude]
+          http:
+            url: https://api.open-meteo.com/v1/forecast
+            query:
+              latitude: "{{ args.latitude }}"
+              longitude: "{{ args.longitude }}"
+              daily: temperature_2m_max,temperature_2m_min,precipitation_probability_max,precipitation_sum,wind_speed_10m_max,wind_gusts_10m_max
+              timezone: auto
+              forecast_days: "1"
+      allow: [geocode, forecast]
+      max_turns: 10
+      max_tool_calls: 20
+      max_tokens: 800
+  - name: send
+    telegram:
+      credential: bot
+      # The crews' group: its id, as Telegram gives it (a group's starts with -).
+      chat_id: "-1001234567890"
+      text: "Weather, {{ string(timestamp(value.scheduled_at)).substring(0, 10) }}\n\n{{ steps.briefing.text }}"
+    retry: { attempts: 3, wait: 30s }

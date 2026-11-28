@@ -1,0 +1,39 @@
+description: A task done
+action: update_task
+credential: {domain: shopexample, email: dana@shop.example, api_key: agile-test-key}
+input: {task_id: '5690477483393024', status: COMPLETED, is_complete: true}
+exchanges:
+- sent:
+    method: PUT
+    url: https://shopexample.agilecrm.com/dev/api/tasks/partial-update
+    headers: {authorization: Basic ZGFuYUBzaG9wLmV4YW1wbGU6YWdpbGUtdGVzdC1rZXk=, accept: application/json}
+    query: {}
+    body: {id: '5690477483393024', status: COMPLETED, is_complete: true}
+  answer:
+    status: 200
+    body:
+      id: 5690477483393024
+      type: CALL
+      priority_type: HIGH
+      due: 1796115600
+      created_time: 1764237600
+      is_complete: true
+      subject: Call Ann about the proposal
+      taskDescription: ''
+      status: COMPLETED
+      progress: 0
+      contacts: &id001 []
+      taskOwner: &id002 {id: 6263975862861824}
+result:
+  id: 5690477483393024
+  type: CALL
+  priority_type: HIGH
+  due: 1796115600
+  created_time: 1764237600
+  is_complete: true
+  subject: Call Ann about the proposal
+  taskDescription: ''
+  status: COMPLETED
+  progress: 0
+  contacts: *id001
+  taskOwner: *id002

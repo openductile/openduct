@@ -1,0 +1,96 @@
+name: New App Store reviews in Airtable, with the themes in Slack
+description: >-
+  Every six hours, read the newest reviews of an app - yours, or a competitor's - from the App
+  Store's public reviews feed, keep each new one as a record of your Reviews table in Airtable, and post to Slack the
+  low ratings and the complaints several people make in other words: reviews are compared by meaning (embeddings),
+  so "logs me out" and "keeps signing me off" count as one theme. Set the app's id (the number in its App Store
+  address) and your base below. Needs: airtable (a personal access token), model (an AI credential that makes
+  embeddings), slack.
+category: Marketing
+trigger:
+  schedule: { every: 6h }
+# What a test runs on: an event as this trigger gives it.
+sample:
+  scheduled_at: '2026-11-27T12:00:00Z'
+steps:
+  - name: feed
+    http:
+      # The app's id: the number after "id" in its App Store address.
+      url: https://itunes.apple.com/us/rss/customerreviews/id=1234567890/sortBy=mostRecent/json
+      timeout: 30s
+      sample:
+        feed:
+          entry:
+            - { id: { label: "11001" }, author: { name: { label: maple_k } }, "im:rating": { label: "2" }, "im:version": { label: "4.2.0" }, title: { label: Logs me out }, content: { label: "Since the update it logs me out every time I switch apps." } }
+            - { id: { label: "11002" }, author: { name: { label: dtorres } }, "im:rating": { label: "1" }, "im:version": { label: "4.2.0" }, title: { label: Signed off again }, content: { label: "Keeps signing me off, I have to enter my password all the time." } }
+            - { id: { label: "11003" }, author: { name: { label: jun.p } }, "im:rating": { label: "5" }, "im:version": { label: "4.2.0" }, title: { label: Love the new widgets }, content: { label: "The home screen widget is exactly what I wanted." } }
+    retry: { attempts: 3, wait: 1m }
+  # The reviews not seen before; the ids seen are kept between runs (the last 500).
+  - name: fresh
+    javascript:
+      state: true
+      code: |
+        const entries = (steps.feed.body && steps.feed.body.feed && steps.feed.body.feed.entry) || [];
+        const seen = new Set(state.seen || []);
+        const reviews = entries
+          .filter((e) => e["im:rating"] && e.id && !seen.has(e.id.label))
+          .map((e) => ({
+            id: e.id.label, author: e.author.name.label, rating: Number(e["im:rating"].label),
+            version: e["im:version"] ? e["im:version"].label : "", title: e.title.label, text: e.content.label,
+          }));
+        state.seen = [...reviews.map((r) => r.id), ...(state.seen || [])].slice(0, 500);
+        return { reviews, texts: reviews.map((r) => `${r.title}. ${r.text}`) };
+  - where: size(steps.fresh.reviews) > 0
+  - name: vectors
+    embed:
+      credential: model
+      input: "{{ steps.fresh.texts }}"
+  # Reviews whose meaning is close (cosine similarity of 0.85 or more) make one theme.
+  - name: themes
+    javascript: |
+      const reviews = steps.fresh.reviews;
+      const v = steps.vectors.embeddings || [];
+      const cos = (a, b) => {
+        let d = 0, x = 0, y = 0;
+        for (let i = 0; i < a.length; i++) { d += a[i] * b[i]; x += a[i] * a[i]; y += b[i] * b[i]; }
+        return d / (Math.sqrt(x) * Math.sqrt(y) || 1);
+      };
+      const groups = [];
+      reviews.forEach((r, i) => {
+        const g = v[i] && groups.find((g) => v[g[0]] && cos(v[g[0]], v[i]) >= 0.85);
+        if (g) g.push(i); else groups.push([i]);
+      });
+      const repeated = groups.filter((g) => g.length > 1)
+        .map((g) => `${g.length} reviews say much the same: "${reviews[g[0]].title}" (${g.map((i) => reviews[i].rating + "★").join(", ")})`);
+      const low = reviews.filter((r) => r.rating <= 2).map((r) => `${r.rating}★ ${r.title}: ${r.text}`);
+      return { repeated, low, any: repeated.length + low.length > 0 };
+  - name: each
+    for_each:
+      items: steps.fresh.reviews
+      steps:
+        - name: record
+          airtable:
+            action: add_record
+            credential: airtable
+            # Your base's id (app..., in its address).
+            base_id: your-base-id
+            table: Reviews
+            fields:
+              Review: "{{ item.id }}"
+              Rating: "{{ item.rating }}"
+              Title: "{{ item.title }}"
+              Text: "{{ item.text }}"
+              Version: "{{ item.version }}"
+              Author: "{{ item.author }}"
+          retry: { attempts: 3, wait: 10s }
+  - name: tell
+    if:
+      when: steps.themes.any
+      then:
+        - slack:
+            credential: slack
+            channel: "#product"
+            text: >-
+              {{ size(steps.fresh.reviews) }} new App Store reviews.{{ size(steps.themes.repeated) > 0 ? '\nThemes: '
+              + steps.themes.repeated.join('; ') : '' }}{{ size(steps.themes.low) > 0 ? '\nLow ratings:\n'
+              + steps.themes.low.join('\n') : '' }}

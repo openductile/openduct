@@ -1,0 +1,20 @@
+description: "All bookmarks matching a tag, the newest first: a short page is the last"
+action: list_bookmarks
+credential: { token: test-token }
+input: { search: "#supplier" }
+exchanges:
+  - sent:
+      method: GET
+      url: https://api.raindrop.io/rest/v1/raindrops/0
+      query: { search: "#supplier", perpage: "50" }
+      headers: { authorization: Bearer test-token }
+    answer:
+      body:
+        result: true
+        count: 2
+        items:
+          - { _id: 1001, link: "https://supplier.example/catalog", title: Supplier catalog, tags: [supplier], type: link, domain: supplier.example, important: false, created: "2026-11-26T09:00:00.000Z", collection: { $id: 77 } }
+          - { _id: 1000, link: "https://parts.example/prices", title: Parts prices, tags: [supplier], type: link, domain: parts.example, important: true, created: "2026-11-20T09:00:00.000Z", collection: { $id: 77 } }
+result:
+  - { _id: 1001, link: "https://supplier.example/catalog", title: Supplier catalog, tags: [supplier], type: link, domain: supplier.example, important: false, created: "2026-11-26T09:00:00.000Z", collection: { $id: 77 } }
+  - { _id: 1000, link: "https://parts.example/prices", title: Parts prices, tags: [supplier], type: link, domain: parts.example, important: true, created: "2026-11-20T09:00:00.000Z", collection: { $id: 77 } }

@@ -1,0 +1,73 @@
+description: Applications sent since the poll before, the newest asked for first
+trigger: new_application
+credential:
+  company_domain: acme
+  api_key: test-key
+seen:
+  items:
+  - - '4999'
+    - ''
+exchanges:
+- sent:
+    method: GET
+    url: https://acme.bamboohr.com/api/v1/applicant_tracking/applications
+    query:
+      sortBy: created_date
+      sortOrder: DESC
+  answer:
+    status: 200
+    body:
+      paginationComplete: true
+      nextPageUrl: null
+      applications:
+      - id: 5001
+        appliedDate: '2026-11-14T21:40:00Z'
+        status:
+          id: 1
+          label: New
+        rating: null
+        applicant:
+          id: 900
+          firstName: Cleo
+          lastName: Candidate
+          avatar: null
+          email: cleo@example.com
+          source: Careers page
+        job:
+          id: 21
+          title:
+            id: 3
+            label: Barista
+      - id: 5000
+        appliedDate: '2026-11-13T10:05:00Z'
+        status: &id001
+          id: 2
+          label: Reviewed
+        rating: 4
+        applicant:
+          id: 899
+          firstName: Dev
+          lastName: Applicant
+          avatar: null
+          email: dev@example.com
+          source: Referral
+        job: &id002
+          id: 21
+          title:
+            id: 3
+            label: Barista
+      - id: 4999
+        appliedDate: '2026-11-13T10:05:00Z'
+        status: *id001
+        rating: 4
+        applicant:
+          id: 898
+          firstName: Eli
+          lastName: Applicant
+          avatar: null
+          email: eli@example.com
+          source: Referral
+        job: *id002
+ids:
+- '5000'
+- '5001'

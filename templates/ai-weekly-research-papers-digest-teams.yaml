@@ -1,0 +1,65 @@
+name: The week's research papers on your subject, in Teams
+description: >-
+  Every Friday at 15:00 Eastern time, an AI agent searches arXiv (its public API, no key) for the week's new papers on
+  the subjects your team follows, reads the most promising ones in full through the fetch tool of an MCP server you
+  run, and posts a short digest to your Microsoft Teams channel: five papers at most, what each found and why it
+  matters to you, with links. Say what your team works on in the first step. Needs: an MCP server with a fetch tool
+  and its token (fetch_mcp), a Teams incoming webhook (team_teams) and an AI credential (model).
+category: AI
+trigger:
+  schedule: { every: week, on: [friday], at: "15:00", timezone: America/New_York }
+# What a test runs on: an event as this trigger gives it.
+sample:
+  scheduled_at: '2026-11-27T20:00:00Z'
+steps:
+  - name: interests
+    set:
+      # What your team works on, in a sentence or two, and the arXiv search for it.
+      about: "'We build retrieval-augmented assistants for customer support: retrieval quality, evaluation, and keeping answers grounded.'"
+      search: "'(abs:\"retrieval augmented\" OR abs:\"retrieval-augmented\") AND (cat:cs.CL OR cat:cs.IR)'"
+  - name: digest
+    agent:
+      credential: model
+      instructions: >-
+        You pick research papers for a small engineering team: {{ steps.interests.about }} Search arXiv with
+        search; it answers in Atom XML, newest first - keep to papers submitted in the seven days before
+        {{ value.scheduled_at.substring(0, 10) }}. Read the three to five most useful in full with read_paper (their
+        address at arxiv.org/html/ID, or the abstract page when there is none). Then write the digest: for each paper
+        its title, one sentence on what it found, one on why it matters to us, and its arxiv.org/abs link. Never
+        describe a paper you have not read. Plain words, no greeting.
+      input: "This week's papers for: {{ steps.interests.search }}"
+      tools:
+        - name: search
+          description: "Searches arXiv: an arXiv query (as abs:retrieval AND cat:cs.IR), newest first, in Atom XML."
+          parameters:
+            type: object
+            properties:
+              query: { type: string, description: "An arXiv search query" }
+            required: [query]
+          http:
+            url: https://export.arxiv.org/api/query
+            query: { search_query: "{{ args.query }}", sortBy: submittedDate, sortOrder: descending, max_results: "25" }
+            response: text
+        - name: read_paper
+          description: A paper's page as text, by its address on arxiv.org.
+          parameters:
+            type: object
+            properties:
+              url: { type: string, description: "The paper's address, as https://arxiv.org/html/2611.01234" }
+            required: [url]
+          mcp:
+            # Your MCP server's address: one that offers a fetch tool, as the reference fetch server does.
+            url: https://mcp.example.com/mcp
+            credential: fetch_mcp
+            tool: fetch
+            arguments: { url: "{{ args.url }}", max_length: 20000 }
+            read_only: true
+      allow: [search, read_paper]
+      max_turns: 12
+      max_tool_calls: 12
+      max_tokens: 1500
+  - name: post
+    teams:
+      credential: team_teams
+      text: "**Papers this week, {{ value.scheduled_at.substring(0, 10) }}**\n\n{{ steps.digest.text }}"
+    retry: { attempts: 3, wait: 30s }

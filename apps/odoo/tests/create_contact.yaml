@@ -1,0 +1,10 @@
+description: A person at a company
+action: create_contact
+credential: { address: "https://mycompany.example.com", api_key: 6578616d706c65206b6579 }
+input: { name: Bo Example, email: bo@example.com, company_name: Example Deco, city: Springfield }
+exchanges:
+  - sent:
+      url: https://mycompany.example.com/json/2/res.partner/create
+      body: { vals_list: [{ name: Bo Example, email: bo@example.com, company_name: Example Deco, city: Springfield }] }
+    answer: { body: [27] }
+result: { id: 27 }

@@ -1,0 +1,13 @@
+description: A contact's fields, only those named
+action: get_record
+credential: { access_token: "00D000000000001!AQ.test", instance: examplecorp.my.salesforce.com }
+input: { object: Contact, id: 0035e00000XyZaBAAV, fields: "Name,Email" }
+exchanges:
+  - sent:
+      method: GET
+      url: https://examplecorp.my.salesforce.com/services/data/v67.0/sobjects/Contact/0035e00000XyZaBAAV
+      query: { fields: "Name,Email" }
+      headers: { authorization: Bearer 00D000000000001!AQ.test }
+    answer:
+      body: { attributes: { type: Contact, url: /services/data/v67.0/sobjects/Contact/0035e00000XyZaBAAV }, Id: 0035e00000XyZaBAAV, Name: Bo Okafor, Email: bo@example.com }
+result: { attributes: { type: Contact, url: /services/data/v67.0/sobjects/Contact/0035e00000XyZaBAAV }, Id: 0035e00000XyZaBAAV, Name: Bo Okafor, Email: bo@example.com }

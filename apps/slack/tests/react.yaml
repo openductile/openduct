@@ -1,0 +1,11 @@
+description: A reaction, its name given with colons and sent without
+action: react
+credential: { bot_token: xoxb-1 }
+input: { channel: C0123456, ts: "1700000050.000200", emoji: ":thumbsup:" }
+exchanges:
+  - sent:
+      method: POST
+      url: https://slack.com/api/reactions.add
+      body: { channel: C0123456, timestamp: "1700000050.000200", name: thumbsup }
+    answer: { body: { ok: true } }
+result: { reacted: true }

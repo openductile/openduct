@@ -1,0 +1,623 @@
+# Copyright 2026 Ductile AI, Inc
+# SPDX-License-Identifier: Apache-2.0
+# Agile CRM: written by hand from Agile CRM's REST API documentation,
+# https://github.com/agilecrm/rest-api/blob/8748e70b91e13afecff881d0b58546c3677e1794/README.md (read 2026-11-27;
+# Agile CRM publishes no API description file).
+app: agile_crm
+name: Agile CRM
+category: crm
+description: >-
+  Contacts, companies, deals, notes, tasks and campaigns in Agile CRM: contacts found, added, changed, tagged and put in
+  campaigns; deals made and moved along; tasks and notes added.
+docs: https://github.com/agilecrm/rest-api
+hosts: ["*.agilecrm.com"]
+base_url: "https://{{ credential.domain }}.agilecrm.com/dev/api"
+sign_in:
+  - id: agile_crm
+    label: "Your email and the REST API key"
+    fields:
+      - { name: domain, label: "The account's name, as in mycompany.agilecrm.com" }
+      - { name: email, label: "Your email (the one you sign in with)" }
+      - { name: api_key, label: "The REST API key (Admin Settings, API & Analytics)", secret: true }
+    basic: { username: "{{ credential.email }}", password: "{{ credential.api_key }}" }
+    # Agile CRM answers in XML unless asked for JSON.
+    headers: { Accept: application/json }
+actions:
+  list_contacts:
+    label: List contacts
+    description: "Every contact of the account, in the order they were added; every page."
+    method: GET
+    path: /contacts
+    query: { page_size: "100" }
+    # No contacts at all is an empty answer; the next page's cursor is in the last contact of a page.
+    items: "type(value) == list ? value : []"
+    next: "type(value) == list && size(value) > 0 && has(value[size(value) - 1].cursor) ? {'cursor': value[size(value) - 1].cursor} : null"
+    output:
+      id: text
+      type: text
+      created_time: text
+      updated_time: number
+      star_value: number
+      lead_score: number
+      tags: list
+      properties: list
+      contact_company_id: text
+      owner: record
+      campaignStatus: list
+  get_contact:
+    label: Look up a contact
+    description: "One contact (or company), by id: its fields (properties), tags, score and owner."
+    method: GET
+    path: "/contacts/{{ input.contact_id }}"
+    inputs:
+      - { name: contact_id, label: "The contact's id", required: true }
+    output:
+      id: text
+      type: text
+      created_time: text
+      updated_time: number
+      star_value: number
+      lead_score: number
+      tags: list
+      properties: list
+      contact_company_id: text
+      owner: record
+      campaignStatus: list
+  find_contact_by_email:
+    label: Find a contact by email
+    description: The contact with this email, if there is one.
+    method: GET
+    path: "/contacts/search/email/{{ input.email }}"
+    inputs:
+      - { name: email, label: Email, required: true }
+    output:
+      id: text
+      type: text
+      created_time: text
+      updated_time: number
+      star_value: number
+      lead_score: number
+      tags: list
+      properties: list
+      contact_company_id: text
+      owner: record
+      campaignStatus: list
+  find_contact_by_phone:
+    label: Find a contact by phone
+    description: The contact with this phone number, if there is one.
+    method: GET
+    path: "/contacts/search/phonenumber/{{ input.phone }}"
+    inputs:
+      - { name: phone, label: Phone number, required: true }
+    output:
+      id: text
+      type: text
+      created_time: text
+      updated_time: number
+      star_value: number
+      lead_score: number
+      tags: list
+      properties: list
+      contact_company_id: text
+      owner: record
+      campaignStatus: list
+  search:
+    label: Search contacts or companies
+    description: Contacts (or companies) whose fields hold a word.
+    method: GET
+    path: /search
+    inputs:
+      - { name: q, label: "The word to look for", required: true }
+      - { name: type, label: "PERSON (contacts, the default) or COMPANY" }
+      - { name: page_size, label: "How many (25 by default)", kind: number }
+    query:
+      q: "{{ input.q }}"
+      type: "{{ has(input.type) && input.type != null ? input.type : 'PERSON' }}"
+      page_size: "{{ has(input.page_size) && input.page_size != null ? string(int(input.page_size)) : '25' }}"
+    result: "type(value) == list ? value : []"
+    output:
+      id: text
+      type: text
+      created_time: text
+      updated_time: number
+      star_value: number
+      lead_score: number
+      tags: list
+      properties: list
+      contact_company_id: text
+      owner: record
+      campaignStatus: list
+  create_contact:
+    label: Add a contact
+    description: "A new contact, with its name, email, phone, company, title, tags and score as given."
+    write: true
+    method: POST
+    path: /contacts
+    inputs:
+      - { name: first_name, label: First name, required: true }
+      - { name: last_name, label: Last name }
+      - { name: email, label: Email }
+      - { name: phone, label: Phone }
+      - { name: company, label: Company }
+      - { name: title, label: Job title }
+      - { name: tags, label: Tags, kind: list }
+      - { name: lead_score, label: Lead score, kind: number }
+      - { name: star_value, label: "Stars, 0 to 5", kind: number }
+      - name: custom_fields
+        label: "Custom fields (as JSON): each a name and a value, such as [{\"name\": \"Plan\", \"value\": \"Gold\"}]"
+        kind: list
+    send:
+      tags: "{{ input.tags }}"
+      lead_score: "{{ input.lead_score }}"
+      star_value: "{{ input.star_value }}"
+      # Each field is a property: a system one (first_name, email...) or a custom one.
+      properties: >-
+        {{ [
+          {'type': 'SYSTEM', 'name': 'first_name', 'value': input.first_name},
+          has(input.last_name) ? {'type': 'SYSTEM', 'name': 'last_name', 'value': input.last_name} : null,
+          has(input.email) ? {'type': 'SYSTEM', 'name': 'email', 'subtype': 'work', 'value': input.email} : null,
+          has(input.phone) ? {'type': 'SYSTEM', 'name': 'phone', 'subtype': 'work', 'value': input.phone} : null,
+          has(input.company) ? {'type': 'SYSTEM', 'name': 'company', 'value': input.company} : null,
+          has(input.title) ? {'type': 'SYSTEM', 'name': 'title', 'value': input.title} : null
+        ].filter(p, p != null) + (has(input.custom_fields) ? input.custom_fields.map(f, {'type': 'CUSTOM', 'name': f.name, 'value': f.value}) : []) }}
+    output:
+      id: text
+      type: text
+      created_time: text
+      updated_time: number
+      star_value: number
+      lead_score: number
+      tags: list
+      properties: list
+      contact_company_id: text
+      owner: record
+      campaignStatus: list
+  update_contact:
+    label: Change a contact
+    description: "Changes the fields given of a contact (an email or phone of the same kind is replaced); the others stay."
+    write: true
+    method: PUT
+    path: /contacts/edit-properties
+    inputs:
+      - { name: contact_id, label: "The contact's id", required: true }
+      - { name: first_name, label: First name }
+      - { name: last_name, label: Last name }
+      - { name: email, label: Email }
+      - { name: phone, label: Phone }
+      - { name: company, label: Company }
+      - { name: title, label: Job title }
+      - { name: custom_fields, label: "Custom fields (as JSON): each a name and a value", kind: list }
+    send:
+      id: "{{ input.contact_id }}"
+      properties: >-
+        {{ [
+          has(input.first_name) ? {'type': 'SYSTEM', 'name': 'first_name', 'value': input.first_name} : null,
+          has(input.last_name) ? {'type': 'SYSTEM', 'name': 'last_name', 'value': input.last_name} : null,
+          has(input.email) ? {'type': 'SYSTEM', 'name': 'email', 'subtype': 'work', 'value': input.email} : null,
+          has(input.phone) ? {'type': 'SYSTEM', 'name': 'phone', 'subtype': 'work', 'value': input.phone} : null,
+          has(input.company) ? {'type': 'SYSTEM', 'name': 'company', 'value': input.company} : null,
+          has(input.title) ? {'type': 'SYSTEM', 'name': 'title', 'value': input.title} : null
+        ].filter(p, p != null) + (has(input.custom_fields) ? input.custom_fields.map(f, {'type': 'CUSTOM', 'name': f.name, 'value': f.value}) : []) }}
+    output:
+      id: text
+      type: text
+      created_time: text
+      updated_time: number
+      star_value: number
+      lead_score: number
+      tags: list
+      properties: list
+      contact_company_id: text
+      owner: record
+      campaignStatus: list
+  add_tags:
+    label: Tag a contact
+    description: Adds tags to a contact; the tags it has stay.
+    write: true
+    method: PUT
+    path: /contacts/edit/tags
+    inputs:
+      - { name: contact_id, label: "The contact's id", required: true }
+      - { name: tags, label: Tags, required: true, kind: list }
+    send: { id: "{{ input.contact_id }}", tags: "{{ input.tags }}" }
+    output:
+      id: text
+      type: text
+      created_time: text
+      updated_time: number
+      star_value: number
+      lead_score: number
+      tags: list
+      properties: list
+      contact_company_id: text
+      owner: record
+      campaignStatus: list
+  remove_tags:
+    label: Take tags off a contact
+    description: Takes these tags off a contact (or company).
+    write: true
+    method: PUT
+    path: /contacts/delete/tags
+    inputs:
+      - { name: contact_id, label: "The contact's id", required: true }
+      - { name: tags, label: Tags, required: true, kind: list }
+    send: { id: "{{ input.contact_id }}", tags: "{{ input.tags }}" }
+    result: "{'tags': value}"
+    output: { tags: list }
+  delete_contact:
+    label: Delete a contact
+    description: Removes a contact (or company).
+    write: true
+    method: DELETE
+    path: "/contacts/{{ input.contact_id }}"
+    inputs:
+      - { name: contact_id, label: "The contact's id", required: true }
+    result: "{'deleted': true}"
+    output: { deleted: boolean }
+  list_campaigns:
+    label: List campaigns
+    description: "The account's campaigns (workflows), with their ids."
+    method: GET
+    path: /workflows
+    query: { page_size: "100" }
+    items: "type(value) == list ? value : []"
+    next: "type(value) == list && size(value) > 0 && has(value[size(value) - 1].cursor) ? {'cursor': value[size(value) - 1].cursor} : null"
+    output: { id: text, name: text, is_disabled: boolean, created_time: number, updated_time: number, unsubscribe: record }
+  add_to_campaign:
+    label: Put a contact in a campaign
+    description: Starts a campaign for the contact with this email.
+    write: true
+    method: POST
+    path: /campaigns/enroll/email
+    body: form
+    inputs:
+      - { name: email, label: "The contact's email", required: true }
+      - { name: campaign_id, label: "The campaign (its id, from List campaigns)", required: true }
+    send: { email: "{{ input.email }}", workflow-id: "{{ input.campaign_id }}" }
+    result: "{'added': true}"
+    output: { added: boolean }
+  remove_from_campaign:
+    label: Take a contact off a campaign
+    description: Stops a campaign for a contact.
+    write: true
+    method: DELETE
+    path: "/workflows/remove-active-subscriber/{{ input.campaign_id }}/{{ input.contact_id }}"
+    inputs:
+      - { name: campaign_id, label: "The campaign (its id)", required: true }
+      - { name: contact_id, label: "The contact's id", required: true }
+    result: "{'removed': true}"
+    output: { removed: boolean }
+  list_companies:
+    label: List companies
+    description: "The account's newest companies, up to 100."
+    method: POST
+    path: /contacts/companies/list
+    body: form
+    send: { page_size: "100", global_sort_key: "-created_time" }
+    items: "type(value) == list ? value : []"
+    output:
+      id: text
+      type: text
+      created_time: text
+      updated_time: number
+      star_value: number
+      lead_score: number
+      tags: list
+      properties: list
+      contact_company_id: text
+      owner: record
+      campaignStatus: list
+  create_company:
+    label: Add a company
+    description: "A new company, with its address on the web, email and phone as given."
+    write: true
+    method: POST
+    path: /contacts
+    inputs:
+      - { name: name, label: Name, required: true }
+      - { name: url, label: Website }
+      - { name: email, label: Email }
+      - { name: phone, label: Phone }
+      - { name: custom_fields, label: "Custom fields (as JSON): each a name and a value", kind: list }
+    send:
+      type: COMPANY
+      properties: >-
+        {{ [
+          {'type': 'SYSTEM', 'name': 'name', 'value': input.name},
+          has(input.url) ? {'type': 'SYSTEM', 'name': 'url', 'value': input.url} : null,
+          has(input.email) ? {'type': 'SYSTEM', 'name': 'email', 'value': input.email} : null,
+          has(input.phone) ? {'type': 'SYSTEM', 'name': 'phone', 'value': input.phone} : null
+        ].filter(p, p != null) + (has(input.custom_fields) ? input.custom_fields.map(f, {'type': 'CUSTOM', 'name': f.name, 'value': f.value}) : []) }}
+    output:
+      id: text
+      type: text
+      created_time: text
+      updated_time: number
+      star_value: number
+      lead_score: number
+      tags: list
+      properties: list
+      contact_company_id: text
+      owner: record
+      campaignStatus: list
+  list_deals:
+    label: List deals
+    description: "Every deal, in the order they were made; every page."
+    method: GET
+    path: /opportunity
+    query: { page_size: "100" }
+    items: "type(value) == list ? value : []"
+    next: "type(value) == list && size(value) > 0 && has(value[size(value) - 1].cursor) ? {'cursor': value[size(value) - 1].cursor} : null"
+    output:
+      id: text
+      name: text
+      description: text
+      expected_value: number
+      probability: number
+      milestone: text
+      pipeline_id: text
+      close_date: number
+      created_time: number
+      owner_id: text
+      contact_ids: list
+      contacts: list
+      custom_data: list
+      archived: boolean
+  get_deal:
+    label: Look up a deal
+    description: One deal, with its contacts.
+    method: GET
+    path: "/opportunity/{{ input.deal_id }}"
+    inputs:
+      - { name: deal_id, label: "The deal's id", required: true }
+    output:
+      id: text
+      name: text
+      description: text
+      expected_value: number
+      probability: number
+      milestone: text
+      pipeline_id: text
+      close_date: number
+      created_time: number
+      owner_id: text
+      contact_ids: list
+      contacts: list
+      custom_data: list
+      archived: boolean
+  create_deal:
+    label: Add a deal
+    description: "A new deal, at a milestone of a track (milestone names are as the track shows them, capitals included)."
+    write: true
+    method: POST
+    path: /opportunity
+    inputs:
+      - { name: name, label: Name, required: true }
+      - { name: expected_value, label: "Expected value", required: true, kind: number }
+      - { name: milestone, label: "Milestone, such as Prospect or Proposal", required: true }
+      - { name: pipeline_id, label: "The track (its id); the default track if not given" }
+      - { name: probability, label: "Probability, 0 to 100", kind: number }
+      - { name: close_date, label: "Expected close (such as 2026-12-31T00:00:00Z)" }
+      - { name: contact_ids, label: "Its contacts (their ids)", kind: list }
+      - { name: description, label: Description }
+      - { name: owner_id, label: "Its owner (a user's id)" }
+    send:
+      name: "{{ input.name }}"
+      expected_value: "{{ input.expected_value }}"
+      milestone: "{{ input.milestone }}"
+      pipeline_id: "{{ input.pipeline_id }}"
+      probability: "{{ input.probability }}"
+      close_date: "{{ int(timestamp(input.close_date)) }}"
+      contact_ids: "{{ input.contact_ids }}"
+      description: "{{ input.description }}"
+      owner_id: "{{ input.owner_id }}"
+    output:
+      id: text
+      name: text
+      description: text
+      expected_value: number
+      probability: number
+      milestone: text
+      pipeline_id: text
+      close_date: number
+      created_time: number
+      owner_id: text
+      contact_ids: list
+      contacts: list
+      custom_data: list
+      archived: boolean
+  update_deal:
+    label: Change a deal
+    description: "Changes the fields given of a deal, such as its milestone or value; the others stay."
+    write: true
+    method: PUT
+    path: /opportunity/partial-update
+    inputs:
+      - { name: deal_id, label: "The deal's id", required: true }
+      - { name: name, label: Name }
+      - { name: expected_value, label: "Expected value", kind: number }
+      - { name: milestone, label: "Milestone, such as Won or Lost" }
+      - { name: probability, label: "Probability, 0 to 100", kind: number }
+      - { name: close_date, label: "Expected close (such as 2026-12-31T00:00:00Z)" }
+      - { name: contact_ids, label: "Its contacts (their ids)", kind: list }
+      - { name: description, label: Description }
+    send:
+      id: "{{ input.deal_id }}"
+      name: "{{ input.name }}"
+      expected_value: "{{ input.expected_value }}"
+      milestone: "{{ input.milestone }}"
+      probability: "{{ input.probability }}"
+      close_date: "{{ int(timestamp(input.close_date)) }}"
+      contact_ids: "{{ input.contact_ids }}"
+      description: "{{ input.description }}"
+    output:
+      id: text
+      name: text
+      description: text
+      expected_value: number
+      probability: number
+      milestone: text
+      pipeline_id: text
+      close_date: number
+      created_time: number
+      owner_id: text
+      contact_ids: list
+      contacts: list
+      custom_data: list
+      archived: boolean
+  delete_deal:
+    label: Delete a deal
+    description: Removes a deal.
+    write: true
+    method: DELETE
+    path: "/opportunity/{{ input.deal_id }}"
+    inputs:
+      - { name: deal_id, label: "The deal's id", required: true }
+    result: "{'deleted': true}"
+    output: { deleted: boolean }
+  add_note:
+    label: Add a note
+    description: A note on one or more contacts.
+    write: true
+    method: POST
+    path: /notes
+    inputs:
+      - { name: subject, label: Subject, required: true }
+      - { name: description, label: The note }
+      - { name: contact_ids, label: "The contacts (their ids)", required: true, kind: list }
+    send: { subject: "{{ input.subject }}", description: "{{ input.description }}", contact_ids: "{{ input.contact_ids }}" }
+    output: { id: number, created_time: number, subject: text, description: text, entity_type: text }
+  list_tasks:
+    label: List tasks
+    description: "Tasks, of one kind, status or priority if asked, pending ones only if asked; every page."
+    method: GET
+    path: /tasks/based
+    inputs:
+      - { name: criteria, label: "Group by: CATEGORY, STATUS or PRIORITY" }
+      - { name: type, label: "Which of it: a category (CALL, EMAIL, FOLLOW_UP, MEETING...), a status (YET_TO_START, IN_PROGRESS, COMPLETED) or a priority (HIGH, NORMAL, LOW)" }
+      - { name: pending, label: "Only those not done", kind: boolean }
+      - { name: owner, label: "Only this user's (their id)" }
+    query:
+      criteria: "{{ input.criteria }}"
+      type: "{{ input.type }}"
+      pending: "{{ input.pending }}"
+      owner: "{{ input.owner }}"
+      page_size: "100"
+    items: "type(value) == list ? value : []"
+    next: "type(value) == list && size(value) > 0 && has(value[size(value) - 1].cursor) ? {'cursor': value[size(value) - 1].cursor} : null"
+    output:
+      id: number
+      type: text
+      priority_type: text
+      due: number
+      created_time: number
+      is_complete: boolean
+      subject: text
+      taskDescription: text
+      status: text
+      progress: number
+      contacts: list
+      taskOwner: record
+  create_task:
+    label: Add a task
+    description: "A new task, due at a time, on contacts or deals if given."
+    write: true
+    method: POST
+    path: /tasks
+    inputs:
+      - { name: subject, label: Subject, required: true }
+      - { name: type, label: "CALL, EMAIL, FOLLOW_UP, MEETING, MILESTONE, SEND, TWEET or OTHER", required: true }
+      - { name: priority, label: "HIGH, NORMAL or LOW", required: true }
+      - { name: due, label: "Due (such as 2026-12-01T09:00:00Z)", required: true }
+      - { name: description, label: Description }
+      - { name: contact_ids, label: "Its contacts (their ids)", kind: list }
+      - { name: deal_ids, label: "Its deals (their ids)", kind: list }
+      - { name: owner_id, label: "Its owner (a user's id)" }
+    send:
+      subject: "{{ input.subject }}"
+      type: "{{ input.type }}"
+      priority_type: "{{ input.priority }}"
+      due: "{{ int(timestamp(input.due)) }}"
+      taskDescription: "{{ input.description }}"
+      contacts: "{{ input.contact_ids }}"
+      deal_ids: "{{ input.deal_ids }}"
+      owner_id: "{{ input.owner_id }}"
+      status: YET_TO_START
+    output:
+      id: number
+      type: text
+      priority_type: text
+      due: number
+      created_time: number
+      is_complete: boolean
+      subject: text
+      taskDescription: text
+      status: text
+      progress: number
+      contacts: list
+      taskOwner: record
+  update_task:
+    label: Change a task
+    description: "Changes the fields given of a task, or marks it done; the others stay."
+    write: true
+    method: PUT
+    path: /tasks/partial-update
+    inputs:
+      - { name: task_id, label: "The task's id", required: true }
+      - { name: subject, label: Subject }
+      - { name: status, label: "YET_TO_START, IN_PROGRESS or COMPLETED" }
+      - { name: is_complete, label: Done, kind: boolean }
+      - { name: priority, label: "HIGH, NORMAL or LOW" }
+      - { name: due, label: "Due (such as 2026-12-01T09:00:00Z)" }
+    send:
+      id: "{{ input.task_id }}"
+      subject: "{{ input.subject }}"
+      status: "{{ input.status }}"
+      is_complete: "{{ input.is_complete }}"
+      priority_type: "{{ input.priority }}"
+      due: "{{ int(timestamp(input.due)) }}"
+    output:
+      id: number
+      type: text
+      priority_type: text
+      due: number
+      created_time: number
+      is_complete: boolean
+      subject: text
+      taskDescription: text
+      status: text
+      progress: number
+      contacts: list
+      taskOwner: record
+triggers:
+  new_contact:
+    label: A new contact
+    description: Each contact added, the newest of the last day asked for every few minutes.
+    poll:
+      method: POST
+      path: /filters/filter/dynamic-filter
+      body: form
+      send:
+        page_size: "50"
+        global_sort_key: "-created_time"
+        filterJson: '{"rules":[{"LHS":"created_time","CONDITION":"LAST","RHS":"1"}],"or_rules":[],"contact_type":"PERSON"}'
+      items: "type(value) == list ? value : []"
+      newest_first: true
+      id: item.id
+      every: 5m
+  updated_contact:
+    label: A contact added or changed
+    description: Each contact added or changed, the last changed of the last day asked for every few minutes.
+    poll:
+      method: POST
+      path: /filters/filter/dynamic-filter
+      body: form
+      send:
+        page_size: "50"
+        global_sort_key: "-updated_time"
+        filterJson: '{"rules":[{"LHS":"updated_time","CONDITION":"LAST","RHS":"1"}],"or_rules":[],"contact_type":"PERSON"}'
+      items: "type(value) == list ? value : []"
+      newest_first: true
+      id: item.id
+      version: item.updated_time
+      every: 5m

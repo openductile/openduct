@@ -1,0 +1,7 @@
+description: A value a field cannot take - Baserow names the error
+action: create_row
+credential: { token: br-test-token }
+input: { table_id: 1203, fields: { Email: not-an-email } }
+exchanges:
+  - answer: { status: 400, body: { error: ERROR_REQUEST_BODY_VALIDATION, detail: { Email: [{ error: Enter a valid email address., code: invalid }] } } }
+error: "Baserow answered 400: ERROR_REQUEST_BODY_VALIDATION"

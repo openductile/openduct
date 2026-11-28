@@ -1,0 +1,22 @@
+description: A social post image made, its title and picture changed
+action: create_image
+credential: { api_key: at_test_key_1 }
+input:
+  template_id: 12577b29420496
+  overrides:
+    - { name: text_1, text: "Spring sale: 20% off" }
+    - { name: image_1, src: "https://images.example.com/pots.png" }
+  output_image_type: pngOnly
+exchanges:
+  - sent:
+      method: POST
+      url: "https://rest.apitemplate.io/v2/create-image"
+      query: { template_id: 12577b29420496, output_image_type: pngOnly }
+      body:
+        overrides:
+          - { name: text_1, text: "Spring sale: 20% off" }
+          - { name: image_1, src: "https://images.example.com/pots.png" }
+    answer:
+      status: 200
+      body: { status: success, download_url_png: "https://files.example.com/post.png", template_id: 12577b29420496, transaction_ref: e9c46f03-1840-44dc-bae7-f280e0be98a9 }
+result: { status: success, download_url_png: "https://files.example.com/post.png", template_id: 12577b29420496, transaction_ref: e9c46f03-1840-44dc-bae7-f280e0be98a9 }

@@ -1,0 +1,13 @@
+description: "One bookmark"
+action: get_bookmark
+credential: { token: test-token }
+input: { bookmark_id: 1001 }
+exchanges:
+  - sent:
+      method: GET
+      url: https://api.raindrop.io/rest/v1/raindrop/1001
+    answer:
+      body:
+        result: true
+        item: { _id: 1001, link: "https://supplier.example/catalog", title: Supplier catalog, excerpt: "Spring prices", tags: [supplier], type: link, collection: { $id: 77 } }
+result: { _id: 1001, link: "https://supplier.example/catalog", title: Supplier catalog, excerpt: "Spring prices", tags: [supplier], type: link, collection: { $id: 77 } }

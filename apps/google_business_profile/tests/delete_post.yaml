@@ -1,0 +1,11 @@
+description: "A post taken off"
+action: delete_post
+credential: {"access_token": "ya29.test"}
+input: {"account_id": "1001", "location_id": "2002", "post_id": "lp1"}
+exchanges:
+  - sent:
+      method: DELETE
+      url: "https://mybusiness.googleapis.com/v4/accounts/1001/locations/2002/localPosts/lp1"
+      headers: {"authorization": "Bearer ya29.test"}
+    answer: {"status": 200, "body": {}}
+result: {"deleted": true}

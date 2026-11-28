@@ -1,0 +1,36 @@
+description: A subscriber put in a group
+action: add_to_group
+credential:
+  api_key: test-key
+input:
+  subscriber_id: '31986843064993537'
+  group_id: '42'
+exchanges:
+- sent:
+    method: POST
+    url: https://connect.mailerlite.com/api/subscribers/31986843064993537/groups/42
+    headers:
+      authorization: Bearer test-key
+      accept: application/json
+  answer:
+    status: 200
+    body:
+      data: &id001
+        id: '42'
+        name: Newsletter
+        active_count: 120
+        sent_count: 8
+        opens_count: 300
+        open_rate:
+          float: 0.41
+          string: 41%
+        clicks_count: 50
+        click_rate:
+          float: 0.07
+          string: 7%
+        unsubscribed_count: 4
+        unconfirmed_count: 0
+        bounced_count: 1
+        junk_count: 0
+        created_at: '2026-05-24 11:52:55'
+result: *id001

@@ -1,0 +1,11 @@
+description: A message scheduled for a time, sent as Unix seconds
+action: schedule
+credential: { bot_token: xoxb-1 }
+input: { channel: C0123456, at: "2026-12-01T09:00:00Z", text: "Stock count today" }
+exchanges:
+  - sent:
+      method: POST
+      url: https://slack.com/api/chat.scheduleMessage
+      body: { channel: C0123456, post_at: 1796115600, text: "Stock count today" }
+    answer: { body: { ok: true, channel: C0123456, scheduled_message_id: Q1298393284, post_at: 1796115600 } }
+result: { ok: true, channel: C0123456, scheduled_message_id: Q1298393284, post_at: 1796115600 }

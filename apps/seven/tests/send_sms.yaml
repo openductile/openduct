@@ -1,0 +1,47 @@
+description: "An SMS sent to a customer, with a sender name"
+action: send_sms
+credential: { api_key: test-key }
+input: { to: "+4915112345678", text: "Your order 1042 has shipped.", from: ShopExampl }
+exchanges:
+  - sent:
+      method: POST
+      url: "https://gateway.seven.io/api/sms"
+      query: {}
+      headers: { x-api-key: test-key }
+      body: { to: "+4915112345678", text: "Your order 1042 has shipped.", from: ShopExampl }
+    answer:
+      status: 200
+      body:
+        success: "100"
+        total_price: 0.075
+        balance: 42.5
+        debug: "false"
+        sms_type: direct
+        messages:
+          - id: "77229318"
+            sender: ShopExampl
+            recipient: "4915112345678"
+            text: "Your order 1042 has shipped."
+            encoding: gsm
+            parts: 1
+            price: 0.075
+            success: true
+            error: null
+            error_text: null
+result:
+  success: "100"
+  total_price: 0.075
+  balance: 42.5
+  debug: "false"
+  sms_type: direct
+  messages:
+    - id: "77229318"
+      sender: ShopExampl
+      recipient: "4915112345678"
+      text: "Your order 1042 has shipped."
+      encoding: gsm
+      parts: 1
+      price: 0.075
+      success: true
+      error: null
+      error_text: null

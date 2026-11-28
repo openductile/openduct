@@ -1,0 +1,25 @@
+description: A kind's fields and what may be done with it
+action: describe_object
+credential: { access_token: "00D000000000001!AQ.test", instance: examplecorp.my.salesforce.com }
+input: { object: Lead }
+exchanges:
+  - sent: { method: GET, url: https://examplecorp.my.salesforce.com/services/data/v67.0/sobjects/Lead/describe }
+    answer:
+      body:
+        name: Lead
+        label: Lead
+        custom: false
+        createable: true
+        updateable: true
+        fields:
+          - { name: LastName, label: Last Name, type: string, nillable: false }
+          - { name: Status, label: Status, type: picklist, picklistValues: [{ value: Open - Not Contacted, active: true }] }
+result:
+  name: Lead
+  label: Lead
+  custom: false
+  createable: true
+  updateable: true
+  fields:
+    - { name: LastName, label: Last Name, type: string, nillable: false }
+    - { name: Status, label: Status, type: picklist, picklistValues: [{ value: Open - Not Contacted, active: true }] }

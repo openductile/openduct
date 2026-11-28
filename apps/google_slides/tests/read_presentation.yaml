@@ -1,0 +1,21 @@
+description: Each slide's text, a picture and an empty slide left as they are
+action: read_presentation
+credential: { access_token: ya29.test }
+input: { presentation: 1CoPyOfTheTemplate0123456789abcdefg }
+exchanges:
+  - sent: { method: GET, url: https://slides.googleapis.com/v1/presentations/1CoPyOfTheTemplate0123456789abcdefg }
+    answer:
+      body:
+        presentationId: 1CoPyOfTheTemplate0123456789abcdefg
+        title: Proposal for Example Co
+        slides:
+          - objectId: p
+            pageElements:
+              - objectId: title_1
+                shape: { shapeType: TEXT_BOX, text: { textElements: [{ endIndex: 1, paragraphMarker: {} }, { textRun: { content: "Proposal for " } }, { textRun: { content: "{{company}}\n" } }] } }
+              - { objectId: logo_1, image: { contentUrl: "https://lh3.googleusercontent.example/abc" } }
+          - objectId: g2
+result:
+  id: 1CoPyOfTheTemplate0123456789abcdefg
+  title: Proposal for Example Co
+  slides: [{ id: p, text: "Proposal for {{company}}\n" }, { id: g2, text: "" }]

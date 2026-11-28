@@ -1,0 +1,7 @@
+action: search
+credential: { api_key: CG-test1 }
+input: { query: ether }
+exchanges:
+  - sent: { method: GET, url: https://api.coingecko.com/api/v3/search, query: { query: ether } }
+    answer: { body: { coins: [{ id: ethereum, name: Ethereum, symbol: ETH, market_cap_rank: 2 }], exchanges: [], categories: [{ id: ethereum-ecosystem, name: Ethereum Ecosystem }], nfts: [] } }
+result: { coins: [{ id: ethereum, name: Ethereum, symbol: ETH, market_cap_rank: 2 }], exchanges: [], categories: [{ id: ethereum-ecosystem, name: Ethereum Ecosystem }], nfts: [] }

@@ -1,0 +1,14 @@
+description: Turning the workflow on finds who you are, then subscribes the address to your bookings with a key of its own
+trigger: new_booking
+register: true
+workflow: wf1
+address: https://studio.example/hooks/h1
+credential: { token: cal_1 }
+exchanges:
+  - sent: { method: GET, url: https://api.calendly.com/users/me }
+    answer: { body: { resource: { uri: "https://api.calendly.com/users/U1", current_organization: "https://api.calendly.com/organizations/O1" } } }
+  - sent:
+      method: POST
+      url: https://api.calendly.com/webhook_subscriptions
+      headers: { authorization: Bearer cal_1 }
+    answer: { status: 201, body: { resource: { uri: "https://api.calendly.com/webhook_subscriptions/S1", state: active } } }

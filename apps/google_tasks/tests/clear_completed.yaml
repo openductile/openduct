@@ -1,0 +1,8 @@
+description: The done tasks of a list hidden
+action: clear_completed
+credential: { access_token: ya29.test }
+input: { list_id: "@default" }
+exchanges:
+  - sent: { method: POST, url: https://tasks.googleapis.com/tasks/v1/lists/@default/clear }
+    answer: { status: 204 }
+result: { cleared: true }

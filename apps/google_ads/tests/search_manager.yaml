@@ -1,0 +1,10 @@
+description: Through a manager account - its id goes in the login-customer-id header; no rows
+action: search
+credential: { access_token: ya29.test }
+input: { customer_id: "1234567890", query: "SELECT campaign.id FROM campaign", developer_token: devtok-test, login_customer_id: 555-000-1111 }
+exchanges:
+  - sent:
+      url: "https://googleads.googleapis.com/v26/customers/1234567890/googleAds:search"
+      headers: { developer-token: devtok-test, login-customer-id: "5550001111" }
+    answer: { status: 200, body: { fieldMask: campaign.id } }
+result: []

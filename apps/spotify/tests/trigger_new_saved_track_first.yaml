@@ -1,0 +1,7 @@
+description: The first poll notes what is liked already and runs nothing
+trigger: new_saved_track
+credential: { access_token: BQ-test-token }
+exchanges:
+  - sent: { url: https://api.spotify.com/v1/me/tracks }
+    answer: { body: { items: [{ added_at: "2026-11-26T18:00:00Z", track: { id: 0TestTrack000000000001, name: Example Song, uri: "spotify:track:0TestTrack000000000001", duration_ms: 201000, explicit: false, popularity: 41, artists: [{ id: 0TestArtist00000000001, name: Example Band }], album: { id: 0TestAlbum000000000001, name: Example Album } } }], next: null } }
+runs: []

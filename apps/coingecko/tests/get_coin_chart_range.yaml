@@ -1,0 +1,7 @@
+action: get_coin_chart_range
+credential: { api_key: CG-test1 }
+input: { id: ethereum, vs_currency: usd, from: 1795651200, to: 1795737600 }
+exchanges:
+  - sent: { method: GET, url: https://api.coingecko.com/api/v3/coins/ethereum/market_chart/range, query: { vs_currency: usd, from: "1795651200", to: "1795737600" } }
+    answer: { body: { prices: [[1795651200000, 2930.1]], market_caps: [[1795651200000, 353000000000]], total_volumes: [[1795651200000, 15000000000]] } }
+result: { prices: [[1795651200000, 2930.1]], market_caps: [[1795651200000, 353000000000]], total_volumes: [[1795651200000, 15000000000]] }

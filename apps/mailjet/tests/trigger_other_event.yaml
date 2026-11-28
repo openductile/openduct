@@ -1,0 +1,16 @@
+description: An event of another kind runs nothing
+trigger: email_event
+credential:
+  api_key: test-key
+  secret_key: test-secret
+  webhook_secret: Basic b3BlbmR1Y3Q6d2hzLXRlc3QtMQ==
+input:
+  event: open
+delivery:
+  headers:
+    authorization: Basic b3BlbmR1Y3Q6d2hzLXRlc3QtMQ==
+  body: '{"event": "click", "time": 1700000000, "MessageID": 19421777396190490, "Message_GUID": "1ab23cd4-e567-8901-2345-6789f0aa1b2c",
+    "email": "pat@example.com", "mj_campaign_id": 7173, "mj_contact_id": 320, "customcampaign": "", "CustomID":
+    "order-100", "Payload": "", "ip": "192.0.2.10", "geo": "US", "agent": "Mozilla/5.0", "url": "https://www.example.com/track"}'
+  at: 1700000010
+passed: true

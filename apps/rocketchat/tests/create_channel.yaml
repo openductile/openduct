@@ -1,0 +1,7 @@
+action: create_channel
+credential: { workspace: acme, user_id: uAbC123, token: rc_test_1 }
+input: { name: support, members: "ann, bob", topic: Customer questions }
+exchanges:
+  - sent: { method: POST, url: https://acme.rocket.chat/api/v1/channels.create, body: { name: support, members: [ann, bob], extraData: { topic: Customer questions } } }
+    answer: { body: { channel: { _id: rSupp1, name: support, t: c, usernames: [shop-bot, ann, bob] }, success: true } }
+result: { _id: rSupp1, name: support, t: c, usernames: [shop-bot, ann, bob] }

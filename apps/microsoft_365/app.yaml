@@ -1,11 +1,15 @@
 # Copyright 2026 Ductile AI, Inc
 # SPDX-License-Identifier: Apache-2.0
+# The SharePoint actions and triggers: written by hand from Microsoft Graph's v1.0 reference
+# (https://github.com/microsoftgraph/microsoft-graph-docs-contrib at 951930b591f9, CC BY 4.0), read 2026-11-27.
 app: microsoft_365
 name: Microsoft 365
 category: productivity
-description: Mail and calendar in Outlook, and rows of Excel tables, through Microsoft Graph.
+description: >-
+  Mail and calendar in Outlook, rows of Excel tables, SharePoint sites' lists and files, tasks in Microsoft To Do,
+  and the organisation's users, groups and licences (Microsoft Entra ID, for its admins), through Microsoft Graph.
 docs: https://learn.microsoft.com/graph/api/overview
-hosts: [graph.microsoft.com]
+hosts: [graph.microsoft.com, login.microsoftonline.com]
 base_url: https://graph.microsoft.com/v1.0
 sign_in:
   - id: microsoft_365
@@ -13,13 +17,45 @@ sign_in:
     oauth2:
       authorize: https://login.microsoftonline.com/common/oauth2/v2.0/authorize
       token: https://login.microsoftonline.com/common/oauth2/v2.0/token
-      scopes: [offline_access, Mail.Send, Calendars.ReadWrite, Files.ReadWrite]
+      scopes: [offline_access, Mail.Send, Mail.Read, Calendars.ReadWrite, Files.ReadWrite, Files.ReadWrite.All, Sites.ReadWrite.All, Tasks.ReadWrite]
+    headers:
+      Authorization: "Bearer {{ credential.access_token }}"
+  # Users, groups and licences of the organisation's directory (Microsoft Entra ID), for its admins: a work account
+  # with the admin roles to match, and the organisation's consent to these permissions.
+  - id: microsoft_entra_admin
+    label: "Sign in as an admin of the organisation (users and groups)"
+    oauth2:
+      authorize: https://login.microsoftonline.com/organizations/oauth2/v2.0/authorize
+      token: https://login.microsoftonline.com/organizations/oauth2/v2.0/token
+      scopes:
+        - offline_access
+        - User.ReadWrite.All
+        - Group.ReadWrite.All
+        - GroupMember.ReadWrite.All
+        - User.Invite.All
+        - User.RevokeSessions.All
+        - LicenseAssignment.ReadWrite.All
+    headers:
+      Authorization: "Bearer {{ credential.access_token }}"
+  # The same, as the organisation's own app rather than a person: the directory's tenant, an app registered in it with
+  # those application permissions (granted by an admin), and its secret.
+  - id: microsoft_entra_app
+    label: "An app of the organisation's own (users and groups, no person signed in)"
+    fields:
+      - { name: tenant_id, label: "The directory's tenant id (Microsoft Entra admin center, Overview)" }
+      - { name: client_id, label: "The app's application (client) id" }
+      - { name: client_secret, label: "The app's client secret (its value)", secret: true }
+    oauth2:
+      grant: client_credentials
+      token: "https://login.microsoftonline.com/{{ credential.tenant_id }}/oauth2/v2.0/token"
+      scopes: [https://graph.microsoft.com/.default]
     headers:
       Authorization: "Bearer {{ credential.access_token }}"
 error: value.error.message
 actions:
   send_email:
     label: Send an email
+    description: An email in plain words from the signed-in mailbox, kept in its Sent Items.
     write: true
     method: POST
     path: /me/sendMail
@@ -34,8 +70,10 @@ actions:
         toRecipients: [{ emailAddress: { address: "{{ input.to }}" } }]
       saveToSentItems: true
     result: "{'sent': true}"
+    output: { sent: boolean }
   list_events:
     label: List calendar events
+    description: The events of the signed-in calendar between two times, a repeating one once for each time.
     method: GET
     path: /me/calendarView
     inputs:
@@ -44,8 +82,10 @@ actions:
     query: { startDateTime: "{{ input.from }}", endDateTime: "{{ input.to }}", "$top": "100" }
     items: value.value
     next: "value['@odata.nextLink']"
+    output: &event { id: text, subject: text, start: record, end: record, location: record, organizer: record, attendees: list, webLink: text }
   add_event:
     label: Add a calendar event
+    description: A new event in the signed-in calendar, with its title, start, end and time zone.
     write: true
     method: POST
     path: /me/events
@@ -58,8 +98,10 @@ actions:
       subject: "{{ input.title }}"
       start: { dateTime: "{{ input.start }}", timeZone: "{{ input.time_zone }}" }
       end: { dateTime: "{{ input.end }}", timeZone: "{{ input.time_zone }}" }
+    output: *event
   add_excel_row:
     label: Add a row to an Excel table
+    description: A row added at the end of a table of an Excel workbook kept in OneDrive.
     write: true
     method: POST
     path: "/me/drive/items/{{ input.file_id }}/workbook/tables/{{ input.table }}/rows"
@@ -68,3 +110,742 @@ actions:
       - { name: table, label: "The table's name, such as Table1", required: true }
       - { name: values, label: "The row's values, in order (as JSON)", required: true, kind: list }
     send: { values: "{{ [input.values] }}" }
+    output: { index: number, values: list }
+  # SharePoint
+  find_sites:
+    label: Find SharePoint sites
+    description: The SharePoint sites whose name or description holds some words, with their ids.
+    method: GET
+    path: /sites
+    inputs:
+      - { name: search, label: "Words in the site's name or description", required: true }
+    query: { search: "{{ input.search }}" }
+    items: value.value
+    next: "value['@odata.nextLink']"
+    output: &site { id: text, name: text, displayName: text, description: text, webUrl: text, createdDateTime: text, lastModifiedDateTime: text }
+  get_site:
+    label: Look up a SharePoint site
+    description: A site from its address (such as https://example.sharepoint.com/sites/sales), with its id, which the other SharePoint actions ask for.
+    method: GET
+    path: >-
+      {{ '/sites/' + regex.extract(input.site, r'^https://([^/]+)') + (regex.extract(input.site, r'^https://[^/]+(/[^?#]*[^/?#])') == null ? '' : ':' + regex.extract(input.site, r'^https://[^/]+(/[^?#]*[^/?#])')) }}
+    inputs:
+      - { name: site, label: "The site's address, such as https://example.sharepoint.com/sites/sales", required: true }
+    output: *site
+  list_lists:
+    label: List a site's lists
+    description: The lists and document libraries of a SharePoint site, with their ids.
+    method: GET
+    path: "/sites/{{ input.site_id }}/lists"
+    inputs:
+      - &site_id { name: site_id, label: "The site's id (from Look up a SharePoint site)", required: true }
+    items: value.value
+    next: "value['@odata.nextLink']"
+    output: { id: text, name: text, displayName: text, description: text, webUrl: text, list: record, createdDateTime: text, lastModifiedDateTime: text }
+  list_list_items:
+    label: List a SharePoint list's items
+    description: The items of a list with their columns' values, every page; only those a filter holds for, if given.
+    method: GET
+    path: "/sites/{{ input.site_id }}/lists/{{ input.list_id }}/items"
+    inputs:
+      - *site_id
+      - &list_id { name: list_id, label: "The list's id or name", required: true }
+      - { name: filter, label: "Only those a filter holds for, such as fields/Status eq 'Open' (best on indexed columns)" }
+    query: { expand: fields, "$filter": "{{ input.filter }}" }
+    items: value.value
+    next: "value['@odata.nextLink']"
+    output: &list_item { id: text, fields: record, webUrl: text, createdDateTime: text, lastModifiedDateTime: text, createdBy: record, lastModifiedBy: record }
+  get_list_item:
+    label: Look up a SharePoint list item
+    description: One item of a list with its columns' values.
+    method: GET
+    path: "/sites/{{ input.site_id }}/lists/{{ input.list_id }}/items/{{ input.item_id }}"
+    inputs:
+      - *site_id
+      - *list_id
+      - &item_id { name: item_id, label: "The item's id", required: true }
+    query: { expand: fields }
+    output: *list_item
+  add_list_item:
+    label: Add a SharePoint list item
+    description: A new item of a list, with its columns' values by their internal names (Title, and the list's own).
+    write: true
+    method: POST
+    path: "/sites/{{ input.site_id }}/lists/{{ input.list_id }}/items"
+    inputs:
+      - *site_id
+      - *list_id
+      - { name: fields, label: "Its columns' values, by internal name, as a record (such as Title: Order 1042)", required: true, kind: record }
+    send: { fields: "{{ input.fields }}" }
+    output: *list_item
+  update_list_item:
+    label: Change a SharePoint list item
+    description: Columns of an item of a list given new values; the others stay as they are.
+    write: true
+    method: PATCH
+    path: "/sites/{{ input.site_id }}/lists/{{ input.list_id }}/items/{{ input.item_id }}/fields"
+    inputs:
+      - *site_id
+      - *list_id
+      - *item_id
+      - { name: fields, label: "The columns' new values, by internal name, as a record", required: true, kind: record }
+    send: "{{ input.fields }}"
+    output: { id: text, Title: text }
+  delete_list_item:
+    label: Delete a SharePoint list item
+    description: An item removed from a list (to the site's recycle bin).
+    write: true
+    method: DELETE
+    path: "/sites/{{ input.site_id }}/lists/{{ input.list_id }}/items/{{ input.item_id }}"
+    inputs:
+      - *site_id
+      - *list_id
+      - *item_id
+    result: "{'deleted': true}"
+    output: { deleted: boolean }
+  list_library_files:
+    label: List files in a SharePoint library
+    description: The files and folders in the site's document library - at its top, or in a folder named by its path.
+    method: GET
+    path: "/sites/{{ input.site_id }}/drive/root{{ has(input.folder) && input.folder != null && input.folder.trim() != '' ? ':/' + input.folder.trim() + ':' : '' }}/children"
+    inputs:
+      - *site_id
+      - { name: folder, label: "The folder's path, such as Contracts/2026 (the top when empty)" }
+    items: value.value
+    next: "value['@odata.nextLink']"
+    output: &drive_item { id: text, name: text, webUrl: text, size: number, file: record, folder: record, parentReference: record, createdDateTime: text, lastModifiedDateTime: text, createdBy: record, lastModifiedBy: record }
+  find_library_files:
+    label: Find files in a SharePoint library
+    description: The files and folders of the site's document library whose name or content holds some words.
+    method: GET
+    path: "/sites/{{ input.site_id }}/drive/root/search(q='{{ input.words.replace(\"'\", \"''\") }}')"
+    inputs:
+      - *site_id
+      - { name: words, label: "The words to look for", required: true }
+    items: value.value
+    next: "value['@odata.nextLink']"
+    output: *drive_item
+  share_library_file:
+    label: Get a sharing link to a SharePoint file
+    description: A link to a file or folder of the site's library, to view or to edit, for people in your organization or for anyone.
+    write: true
+    method: POST
+    path: "/sites/{{ input.site_id }}/drive/items/{{ input.file_id }}/createLink"
+    inputs:
+      - *site_id
+      - { name: file_id, label: "The file's or folder's id", required: true }
+      - { name: type, label: "view or edit", required: true }
+      - { name: scope, label: "Who: organization (people signed in to it) or anonymous (anyone with the link)", description: "the organization's own default when empty" }
+    send: { type: "{{ input.type }}", scope: "{{ input.scope }}" }
+    result: "{'id': value.id, 'url': value.link.webUrl, 'type': value.link.type, 'scope': value.link.scope}"
+    output: { id: text, url: text, type: text, scope: text }
+  # Microsoft To Do
+  list_task_lists:
+    label: List To Do lists
+    description: The signed-in user's lists in Microsoft To Do, with the id each task action needs.
+    method: GET
+    path: /me/todo/lists
+    items: value.value
+    next: "value['@odata.nextLink']"
+    output: { id: text, displayName: text, isOwner: boolean, isShared: boolean, wellknownListName: text }
+  add_task_list:
+    label: Add a To Do list
+    description: Makes a new list in Microsoft To Do.
+    write: true
+    method: POST
+    path: /me/todo/lists
+    inputs:
+      - { name: name, label: "The list's name", required: true }
+    send: { displayName: "{{ input.name }}" }
+    output: { id: text, displayName: text, isOwner: boolean, isShared: boolean, wellknownListName: text }
+  list_tasks:
+    label: List the tasks of a To Do list
+    description: Every task in one Microsoft To Do list, done or not.
+    method: GET
+    path: "/me/todo/lists/{{ input.list_id }}/tasks"
+    inputs:
+      - { name: list_id, label: "The list's id (List To Do lists gives it)", required: true }
+      - { name: filter, label: "Only tasks that match this filter, such as status ne 'completed'" }
+    query: { "$filter": "{{ input.filter }}" }
+    items: value.value
+    next: "value['@odata.nextLink']"
+    output:
+      id: text
+      title: text
+      status: text
+      importance: text
+      isReminderOn: boolean
+      body: record
+      categories: list
+      dueDateTime: record
+      reminderDateTime: record
+      completedDateTime: record
+      createdDateTime: text
+      lastModifiedDateTime: text
+  get_task:
+    label: Get a To Do task
+    description: One task of a Microsoft To Do list.
+    method: GET
+    path: "/me/todo/lists/{{ input.list_id }}/tasks/{{ input.task_id }}"
+    inputs:
+      - { name: list_id, label: "The list's id", required: true }
+      - { name: task_id, label: "The task's id", required: true }
+    output:
+      id: text
+      title: text
+      status: text
+      importance: text
+      isReminderOn: boolean
+      body: record
+      categories: list
+      dueDateTime: record
+      reminderDateTime: record
+      completedDateTime: record
+      createdDateTime: text
+      lastModifiedDateTime: text
+  add_task:
+    label: Add a To Do task
+    description: Adds a task to a Microsoft To Do list, with notes, a due date and an importance if given.
+    write: true
+    method: POST
+    path: "/me/todo/lists/{{ input.list_id }}/tasks"
+    inputs:
+      - { name: list_id, label: "The list's id (List To Do lists gives it)", required: true }
+      - { name: title, label: "What is to be done", required: true }
+      - { name: notes, label: Notes }
+      - { name: due, label: "Due (such as 2026-12-01T17:00:00)" }
+      - { name: time_zone, label: "The due time's time zone (such as Eastern Standard Time; UTC by default)" }
+      - { name: importance, label: "Importance: low, normal or high" }
+      - { name: categories, label: "Categories, by name", kind: list }
+    send:
+      title: "{{ input.title }}"
+      body: "{{ !has(input.notes) || input.notes == null ? null : {'content': input.notes, 'contentType': 'text'} }}"
+      dueDateTime: >-
+        {{ !has(input.due) || input.due == null ? null : {'dateTime': input.due,
+        'timeZone': has(input.time_zone) && input.time_zone != null ? input.time_zone : 'UTC'} }}
+      importance: "{{ input.importance }}"
+      categories: "{{ input.categories }}"
+    output:
+      id: text
+      title: text
+      status: text
+      importance: text
+      isReminderOn: boolean
+      body: record
+      categories: list
+      dueDateTime: record
+      reminderDateTime: record
+      completedDateTime: record
+      createdDateTime: text
+      lastModifiedDateTime: text
+  update_task:
+    label: Change a To Do task
+    description: Changes a task's title, status, importance or due date; what is not given stays as it is.
+    write: true
+    method: PATCH
+    path: "/me/todo/lists/{{ input.list_id }}/tasks/{{ input.task_id }}"
+    inputs:
+      - { name: list_id, label: "The list's id", required: true }
+      - { name: task_id, label: "The task's id", required: true }
+      - { name: title, label: "What is to be done" }
+      - { name: status, label: "Status: notStarted, inProgress, completed, waitingOnOthers or deferred" }
+      - { name: importance, label: "Importance: low, normal or high" }
+      - { name: due, label: "Due (such as 2026-12-01T17:00:00)" }
+      - { name: time_zone, label: "The due time's time zone (such as Eastern Standard Time; UTC by default)" }
+      - { name: categories, label: "Categories, by name", kind: list }
+    send:
+      title: "{{ input.title }}"
+      status: "{{ input.status }}"
+      importance: "{{ input.importance }}"
+      dueDateTime: >-
+        {{ !has(input.due) || input.due == null ? null : {'dateTime': input.due,
+        'timeZone': has(input.time_zone) && input.time_zone != null ? input.time_zone : 'UTC'} }}
+      categories: "{{ input.categories }}"
+    output:
+      id: text
+      title: text
+      status: text
+      importance: text
+      isReminderOn: boolean
+      body: record
+      categories: list
+      dueDateTime: record
+      reminderDateTime: record
+      completedDateTime: record
+      createdDateTime: text
+      lastModifiedDateTime: text
+  complete_task:
+    label: Mark a To Do task done
+    description: Marks a task of a Microsoft To Do list completed.
+    write: true
+    method: PATCH
+    path: "/me/todo/lists/{{ input.list_id }}/tasks/{{ input.task_id }}"
+    inputs:
+      - { name: list_id, label: "The list's id", required: true }
+      - { name: task_id, label: "The task's id", required: true }
+    send: { status: completed }
+    output:
+      id: text
+      title: text
+      status: text
+      importance: text
+      isReminderOn: boolean
+      body: record
+      categories: list
+      dueDateTime: record
+      reminderDateTime: record
+      completedDateTime: record
+      createdDateTime: text
+      lastModifiedDateTime: text
+  delete_task:
+    label: Delete a To Do task
+    description: Removes a task from its Microsoft To Do list.
+    write: true
+    method: DELETE
+    path: "/me/todo/lists/{{ input.list_id }}/tasks/{{ input.task_id }}"
+    inputs:
+      - { name: list_id, label: "The list's id", required: true }
+      - { name: task_id, label: "The task's id", required: true }
+    result: "{'deleted': status == 204}"
+    output: { deleted: boolean }
+  # Microsoft Entra ID: the organisation's users, groups and licences (an admin sign-in, or the organisation's own app).
+  list_users:
+    label: List users
+    description: "The organisation's users, filtered or searched if asked; every page."
+    method: GET
+    path: /users
+    inputs:
+      - { name: filter, label: "A filter, such as startswith(displayName,'Ann') or accountEnabled eq false" }
+      - { name: search, label: "Or a search, such as displayName:ann or mail:ann@example.com" }
+      - { name: select, label: "Only these fields (with commas), such as id,displayName,mail,accountEnabled" }
+    query:
+      "$filter": "{{ input.filter }}"
+      "$search": "{{ '\"' + input.search + '\"' }}"
+      "$select": "{{ input.select }}"
+      # A search needs a count and eventual consistency.
+      "$count": "{{ has(input.search) && input.search != null ? 'true' : '' }}"
+      "$top": "999"
+    headers: { ConsistencyLevel: "{{ has(input.search) && input.search != null ? 'eventual' : '' }}" }
+    items: value.value
+    next: "value['@odata.nextLink']"
+    output:
+      id: text
+      displayName: text
+      givenName: text
+      surname: text
+      mail: text
+      userPrincipalName: text
+      jobTitle: text
+      department: text
+      officeLocation: text
+      mobilePhone: text
+      businessPhones: list
+      preferredLanguage: text
+      accountEnabled: boolean
+  get_user:
+    label: Look up a user
+    description: One user of the organisation, by id or sign-in name.
+    method: GET
+    path: "/users/{{ input.user }}"
+    inputs:
+      - { name: user, label: "The user: their id or sign-in name (such as ann@contoso.example)", required: true }
+      - { name: select, label: "Only these fields (with commas), such as id,displayName,accountEnabled,department" }
+    query: { "$select": "{{ input.select }}" }
+    output:
+      id: text
+      displayName: text
+      givenName: text
+      surname: text
+      mail: text
+      userPrincipalName: text
+      jobTitle: text
+      department: text
+      officeLocation: text
+      mobilePhone: text
+      businessPhones: list
+      preferredLanguage: text
+      accountEnabled: boolean
+  create_user:
+    label: Add a user
+    description: A new user in the organisation, with a first password to change at their first sign-in.
+    write: true
+    method: POST
+    path: /users
+    inputs:
+      - { name: display_name, label: "Name, as people see it", required: true }
+      - { name: user_principal_name, label: "Sign-in name, such as ann@contoso.example (a domain of the organisation)", required: true }
+      - { name: mail_nickname, label: "Mail alias, such as ann", required: true }
+      - { name: password, label: "First password", required: true }
+      - { name: change_password, label: "Must change it at first sign-in (true by default)", kind: boolean }
+      - { name: given_name, label: First name }
+      - { name: surname, label: Last name }
+      - { name: job_title, label: Job title }
+      - { name: department, label: Department }
+      - { name: usage_location, label: "Country, as two letters such as US (needed before a licence is given)" }
+      - { name: account_enabled, label: "Can sign in (true by default)", kind: boolean }
+    send:
+      accountEnabled: "{{ has(input.account_enabled) && input.account_enabled != null ? input.account_enabled : true }}"
+      displayName: "{{ input.display_name }}"
+      userPrincipalName: "{{ input.user_principal_name }}"
+      mailNickname: "{{ input.mail_nickname }}"
+      passwordProfile:
+        password: "{{ input.password }}"
+        forceChangePasswordNextSignIn: "{{ has(input.change_password) && input.change_password != null ? input.change_password : true }}"
+      givenName: "{{ input.given_name }}"
+      surname: "{{ input.surname }}"
+      jobTitle: "{{ input.job_title }}"
+      department: "{{ input.department }}"
+      usageLocation: "{{ input.usage_location }}"
+    output:
+      id: text
+      displayName: text
+      givenName: text
+      surname: text
+      mail: text
+      userPrincipalName: text
+      jobTitle: text
+      department: text
+      officeLocation: text
+      mobilePhone: text
+      businessPhones: list
+      preferredLanguage: text
+      accountEnabled: boolean
+  update_user:
+    label: Change a user
+    description: "Changes the fields given of a user (the others stay); can block or allow their sign-in."
+    write: true
+    method: PATCH
+    path: "/users/{{ input.user }}"
+    inputs:
+      - { name: user, label: "The user: their id or sign-in name", required: true }
+      - { name: account_enabled, label: "Can sign in (false blocks them)", kind: boolean }
+      - { name: display_name, label: Name }
+      - { name: given_name, label: First name }
+      - { name: surname, label: Last name }
+      - { name: job_title, label: Job title }
+      - { name: department, label: Department }
+      - { name: office_location, label: Office }
+      - { name: mobile_phone, label: Mobile phone }
+      - { name: usage_location, label: "Country, as two letters such as US" }
+    send:
+      accountEnabled: "{{ input.account_enabled }}"
+      displayName: "{{ input.display_name }}"
+      givenName: "{{ input.given_name }}"
+      surname: "{{ input.surname }}"
+      jobTitle: "{{ input.job_title }}"
+      department: "{{ input.department }}"
+      officeLocation: "{{ input.office_location }}"
+      mobilePhone: "{{ input.mobile_phone }}"
+      usageLocation: "{{ input.usage_location }}"
+    result: "{'changed': true}"
+    output: { changed: boolean }
+  delete_user:
+    label: Delete a user
+    description: Removes a user; the directory keeps them as deleted for 30 days, when they can be restored.
+    write: true
+    method: DELETE
+    path: "/users/{{ input.user }}"
+    inputs:
+      - { name: user, label: "The user: their id or sign-in name", required: true }
+    result: "{'deleted': true}"
+    output: { deleted: boolean }
+  sign_user_out:
+    label: Sign a user out everywhere
+    description: "Ends every session of a user's, so they must sign in again (when a device is lost or they leave)."
+    write: true
+    method: POST
+    path: "/users/{{ input.user }}/revokeSignInSessions"
+    body: none
+    inputs:
+      - { name: user, label: "The user: their id or sign-in name", required: true }
+    result: "{'signed_out': value.value}"
+    output: { signed_out: boolean }
+  list_user_groups:
+    label: "List a user's groups"
+    description: "The groups (and directory roles) a user is a direct member of; every page."
+    method: GET
+    path: "/users/{{ input.user }}/memberOf"
+    inputs:
+      - { name: user, label: "The user: their id or sign-in name", required: true }
+    items: value.value
+    next: "value['@odata.nextLink']"
+    output: { id: text, displayName: text, mail: text, mailEnabled: boolean, securityEnabled: boolean, groupTypes: list }
+  get_manager:
+    label: "Look up a user's manager"
+    description: "The person a user reports to."
+    method: GET
+    path: "/users/{{ input.user }}/manager"
+    inputs:
+      - { name: user, label: "The user: their id or sign-in name", required: true }
+    output:
+      id: text
+      displayName: text
+      givenName: text
+      surname: text
+      mail: text
+      userPrincipalName: text
+      jobTitle: text
+      department: text
+      officeLocation: text
+      mobilePhone: text
+      businessPhones: list
+      preferredLanguage: text
+      accountEnabled: boolean
+  set_manager:
+    label: "Set a user's manager"
+    description: "Makes another user the one this user reports to."
+    write: true
+    method: PUT
+    path: "/users/{{ input.user }}/manager/$ref"
+    inputs:
+      - { name: user, label: "The user: their id or sign-in name", required: true }
+      - { name: manager_id, label: "The manager (their id)", required: true }
+    send: { "@odata.id": "https://graph.microsoft.com/v1.0/users/{{ input.manager_id }}" }
+    result: "{'changed': true}"
+    output: { changed: boolean }
+  invite_guest:
+    label: Invite a guest
+    description: "Invites someone from outside the organisation as a guest user, by email if asked."
+    write: true
+    method: POST
+    path: /invitations
+    inputs:
+      - { name: email, label: "Their email", required: true }
+      - { name: redirect_url, label: "Where they land once they accept (such as https://myapps.microsoft.com)", required: true }
+      - { name: display_name, label: Their name }
+      - { name: send_email, label: "Send them the invitation email", kind: boolean }
+    send:
+      invitedUserEmailAddress: "{{ input.email }}"
+      inviteRedirectUrl: "{{ input.redirect_url }}"
+      invitedUserDisplayName: "{{ input.display_name }}"
+      sendInvitationMessage: "{{ input.send_email }}"
+    output: { id: text, inviteRedeemUrl: text, invitedUserDisplayName: text, invitedUserType: text, invitedUserEmailAddress: text, sendInvitationMessage: boolean, status: text, invitedUser: record }
+  list_licenses:
+    label: "List the organisation's licences"
+    description: "The licences (subscriptions) the organisation has, each with how many are in use."
+    method: GET
+    path: /subscribedSkus
+    items: value.value
+    output: { id: text, skuId: text, skuPartNumber: text, appliesTo: text, capabilityStatus: text, consumedUnits: number, prepaidUnits: record, servicePlans: list }
+  assign_licenses:
+    label: Give or take away licences
+    description: "Gives a user licences and takes others away, by their sku ids (List the organisation's licences gives them)."
+    write: true
+    method: POST
+    path: "/users/{{ input.user }}/assignLicense"
+    inputs:
+      - { name: user, label: "The user: their id or sign-in name", required: true }
+      - { name: add, label: "Licences to give (their sku ids)", kind: list }
+      - { name: remove, label: "Licences to take away (their sku ids)", kind: list }
+    send:
+      addLicenses: "{{ has(input.add) && input.add != null ? input.add.map(s, {'skuId': s, 'disabledPlans': []}) : [] }}"
+      removeLicenses: "{{ has(input.remove) && input.remove != null ? input.remove : [] }}"
+    output: { id: text, displayName: text, userPrincipalName: text, assignedLicenses: list }
+  list_groups:
+    label: List groups
+    description: "The organisation's groups (Microsoft 365 and security groups), filtered or searched if asked; every page."
+    method: GET
+    path: /groups
+    inputs:
+      - { name: filter, label: "A filter, such as startswith(displayName,'Sales') or groupTypes/any(c:c eq 'Unified')" }
+      - { name: search, label: "Or a search, such as displayName:sales" }
+      - { name: select, label: "Only these fields (with commas)" }
+    query:
+      "$filter": "{{ input.filter }}"
+      "$search": "{{ '\"' + input.search + '\"' }}"
+      "$select": "{{ input.select }}"
+      "$count": "{{ has(input.search) && input.search != null ? 'true' : '' }}"
+      "$top": "999"
+    headers: { ConsistencyLevel: "{{ has(input.search) && input.search != null ? 'eventual' : '' }}" }
+    items: value.value
+    next: "value['@odata.nextLink']"
+    output:
+      id: text
+      displayName: text
+      description: text
+      mail: text
+      mailEnabled: boolean
+      mailNickname: text
+      securityEnabled: boolean
+      groupTypes: list
+      visibility: text
+      createdDateTime: text
+  get_group:
+    label: Look up a group
+    description: One group.
+    method: GET
+    path: "/groups/{{ input.group_id }}"
+    inputs:
+      - { name: group_id, label: "The group's id", required: true }
+    output:
+      id: text
+      displayName: text
+      description: text
+      mail: text
+      mailEnabled: boolean
+      mailNickname: text
+      securityEnabled: boolean
+      groupTypes: list
+      visibility: text
+      createdDateTime: text
+  create_group:
+    label: Create a group
+    description: "A new group: a Microsoft 365 group (a shared mailbox, calendar and files) or a security group (for access)."
+    write: true
+    method: POST
+    path: /groups
+    inputs:
+      - { name: display_name, label: Name, required: true }
+      - { name: mail_nickname, label: "Mail alias, such as sales-team", required: true }
+      - { name: kind, label: "microsoft365 (the default) or security" }
+      - { name: description, label: Description }
+      - { name: visibility, label: "Public or Private (a Microsoft 365 group)" }
+    send:
+      displayName: "{{ input.display_name }}"
+      mailNickname: "{{ input.mail_nickname }}"
+      description: "{{ input.description }}"
+      groupTypes: "{{ has(input.kind) && input.kind == 'security' ? [] : ['Unified'] }}"
+      mailEnabled: "{{ !(has(input.kind) && input.kind == 'security') }}"
+      securityEnabled: "{{ has(input.kind) && input.kind == 'security' }}"
+      visibility: "{{ input.visibility }}"
+    output:
+      id: text
+      displayName: text
+      description: text
+      mail: text
+      mailEnabled: boolean
+      mailNickname: text
+      securityEnabled: boolean
+      groupTypes: list
+      visibility: text
+      createdDateTime: text
+  update_group:
+    label: Change a group
+    description: "Changes a group's name, description, mail alias or visibility; the rest stay."
+    write: true
+    method: PATCH
+    path: "/groups/{{ input.group_id }}"
+    inputs:
+      - { name: group_id, label: "The group's id", required: true }
+      - { name: display_name, label: Name }
+      - { name: description, label: Description }
+      - { name: mail_nickname, label: Mail alias }
+      - { name: visibility, label: "Public or Private" }
+    send:
+      displayName: "{{ input.display_name }}"
+      description: "{{ input.description }}"
+      mailNickname: "{{ input.mail_nickname }}"
+      visibility: "{{ input.visibility }}"
+    result: "{'changed': true}"
+    output: { changed: boolean }
+  delete_group:
+    label: Delete a group
+    description: Removes a group (a Microsoft 365 group can be restored for 30 days).
+    write: true
+    method: DELETE
+    path: "/groups/{{ input.group_id }}"
+    inputs:
+      - { name: group_id, label: "The group's id", required: true }
+    result: "{'deleted': true}"
+    output: { deleted: boolean }
+  list_group_members:
+    label: "List a group's members"
+    description: "The direct members of a group (users, groups, devices); every page."
+    method: GET
+    path: "/groups/{{ input.group_id }}/members"
+    inputs:
+      - { name: group_id, label: "The group's id", required: true }
+    query: { "$top": "999" }
+    items: value.value
+    next: "value['@odata.nextLink']"
+    output: { id: text, displayName: text, mail: text, userPrincipalName: text, jobTitle: text }
+  add_group_member:
+    label: Add a member to a group
+    description: Adds a user (or a group, device or contact) to a group.
+    write: true
+    method: POST
+    path: "/groups/{{ input.group_id }}/members/$ref"
+    inputs:
+      - { name: group_id, label: "The group's id", required: true }
+      - { name: member_id, label: "The member's id (a user's, say)", required: true }
+    send: { "@odata.id": "https://graph.microsoft.com/v1.0/directoryObjects/{{ input.member_id }}" }
+    result: "{'added': true}"
+    output: { added: boolean }
+  remove_group_member:
+    label: Remove a member from a group
+    description: Takes a member out of a group.
+    write: true
+    method: DELETE
+    path: "/groups/{{ input.group_id }}/members/{{ input.member_id }}/$ref"
+    inputs:
+      - { name: group_id, label: "The group's id", required: true }
+      - { name: member_id, label: "The member's id", required: true }
+    result: "{'removed': true}"
+    output: { removed: boolean }
+triggers:
+  new_email:
+    label: A new email
+    description: Each email that arrives in the inbox, the newest asked for every few minutes.
+    poll:
+      method: GET
+      path: /me/mailFolders/inbox/messages
+      query:
+        "$orderby": receivedDateTime desc
+        "$top": "50"
+        "$select": "id,subject,from,toRecipients,receivedDateTime,bodyPreview,hasAttachments,webLink"
+      items: value.value
+      next: "value['@odata.nextLink']"
+      newest_first: true
+      id: item.id
+  new_list_item:
+    label: A new item in a SharePoint list
+    description: Each item added to a SharePoint list, asked for every few minutes.
+    inputs:
+      - *site_id
+      - *list_id
+    poll:
+      method: GET
+      path: "/sites/{{ input.site_id }}/lists/{{ input.list_id }}/items"
+      query: { expand: fields }
+      items: value.value
+      next: "value['@odata.nextLink']"
+      id: item.id
+      every: 5m
+  changed_list_item:
+    label: An item added or changed in a SharePoint list
+    description: Each item of a SharePoint list that is added or changed, asked for every few minutes.
+    inputs:
+      - *site_id
+      - *list_id
+    poll:
+      method: GET
+      path: "/sites/{{ input.site_id }}/lists/{{ input.list_id }}/items"
+      query: { expand: fields }
+      items: value.value
+      next: "value['@odata.nextLink']"
+      id: item.id
+      version: item.lastModifiedDateTime
+      every: 5m
+  new_library_file:
+    label: A new file in a SharePoint library
+    description: Each file put in a folder of a site's document library (or at its top), asked for every few minutes.
+    inputs:
+      - *site_id
+      - { name: folder, label: "The folder's path, such as Invoices (the top when empty)" }
+    poll:
+      method: GET
+      path: "/sites/{{ input.site_id }}/drive/root{{ input.folder != null && input.folder.trim() != '' ? ':/' + input.folder.trim() + ':' : '' }}/children"
+      items: "value.value.filter(i, has(i.file))"
+      next: "value['@odata.nextLink']"
+      id: item.id
+      every: 5m
+  new_task:
+    label: A new To Do task
+    description: Each task added to a Microsoft To Do list, asked for every few minutes.
+    inputs:
+      - { name: list_id, label: "The list's id (List To Do lists gives it)", required: true }
+    poll:
+      action: list_tasks
+      input: { list_id: "{{ input.list_id }}" }
+      id: item.id
+      every: 5m

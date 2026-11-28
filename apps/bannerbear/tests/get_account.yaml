@@ -1,0 +1,9 @@
+description: The workspace's plan and the credits left
+action: get_account
+credential: { api_key: bb_ak_v5_test }
+exchanges:
+  - sent: { method: GET, url: "https://api.bannerbear.com/v5/account", headers: { authorization: Bearer bb_ak_v5_test } }
+    answer:
+      status: 200
+      body: { uid: ws_1, workspace: Example Shop, plan: Automate, quota: { max: 1000, current: 120, remaining: 880 }, ai_quota: { max: 100, current: 2.5, remaining: 97.5 }, api_key: { name: workflows, scopes: [] } }
+result: { uid: ws_1, workspace: Example Shop, plan: Automate, quota: { max: 1000, current: 120, remaining: 880 }, ai_quota: { max: 100, current: 2.5, remaining: 97.5 }, api_key: { name: workflows, scopes: [] } }

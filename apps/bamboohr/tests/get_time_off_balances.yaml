@@ -1,0 +1,35 @@
+description: An employee's balances on a date
+action: get_time_off_balances
+credential:
+  company_domain: acme
+  api_key: test-key
+input:
+  employee_id: '101'
+  end: '2026-12-31'
+exchanges:
+- sent:
+    method: GET
+    url: https://acme.bamboohr.com/api/v1/employees/101/time_off/calculator
+    query:
+      end: '2026-12-31'
+    headers:
+      authorization: Basic dGVzdC1rZXk6eA==
+      accept: application/json
+  answer:
+    status: 200
+    body:
+    - timeOffType: '78'
+      name: Vacation
+      units: days
+      balance: '6.50'
+      end: '2026-12-31'
+      policyType: accruing
+      usedYearToDate: '8.00'
+result:
+- timeOffType: '78'
+  name: Vacation
+  units: days
+  balance: '6.50'
+  end: '2026-12-31'
+  policyType: accruing
+  usedYearToDate: '8.00'

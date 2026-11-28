@@ -1,0 +1,8 @@
+description: An address taken off the bounce list
+action: delete_bounce
+credential: { token: SG.test-key }
+input: { email: ann@example.com }
+exchanges:
+  - sent: { method: DELETE, url: https://api.sendgrid.com/v3/suppression/bounces/ann@example.com }
+    answer: { status: 204 }
+result: { removed: true }

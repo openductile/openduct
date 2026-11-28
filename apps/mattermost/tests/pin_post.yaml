@@ -1,0 +1,11 @@
+description: A post pinned
+action: pin_post
+credential: { server_url: "https://chat.example.com", token: testmmtoken0000000000000000 }
+input: { post_id: p1aaaaaaaaaaaaaaaaaaaaaaaa }
+exchanges:
+  - sent:
+      method: POST
+      url: https://chat.example.com/api/v4/posts/p1aaaaaaaaaaaaaaaaaaaaaaaa/pin
+      headers: { authorization: Bearer testmmtoken0000000000000000 }
+    answer: { body: { status: OK } }
+result: { status: OK }

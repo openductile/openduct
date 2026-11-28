@@ -1,0 +1,24 @@
+name: New email from a supplier, posted to Slack
+description: >-
+  Every few minutes, asks Gmail for mail that matches a search - a supplier's address, a subject - and posts who it is
+  from and what it is about to a Slack channel. The first time, it only notes what is already there: only mail that
+  comes after it is turned on is posted, each email once.
+category: Productivity
+trigger:
+  gmail: { when: new_email, credential: mail, q: "in:inbox from:orders@example.com", every: 5m }
+# What a test runs on: an email as this trigger gives it.
+sample:
+  id: 18c2f0a1b2c3d4e5
+  thread_id: 18c2f0a1b2c3d4e5
+  from: Orders <orders@example.com>
+  to: ann@example.com
+  subject: Your order A-1001 has shipped
+  date: "Fri, 27 Nov 2026 09:30:00 +0000"
+  snippet: Your order is on its way and should arrive on Tuesday.
+  labels: [INBOX, UNREAD]
+steps:
+  - name: post
+    slack:
+      credential: team-slack
+      channel: "#orders"
+      text: "New mail from {{ value.from }}: {{ value.subject }} - {{ value.snippet }}"

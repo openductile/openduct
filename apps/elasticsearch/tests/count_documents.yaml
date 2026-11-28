@@ -1,0 +1,24 @@
+description: How many orders are paid
+action: count_documents
+credential: {url: 'https://search.example.com:9200', api_key: VnVhQ2ZHY0JDZGJrUW0tZTVhT3g6dWkybHAyYXhUTm1zeWFrdzl0dk5udw==}
+input:
+  index: orders
+  query:
+    term: {status: paid}
+exchanges:
+- sent:
+    method: POST
+    url: https://search.example.com:9200/orders/_count
+    query: {}
+    headers: {authorization: ApiKey VnVhQ2ZHY0JDZGJrUW0tZTVhT3g6dWkybHAyYXhUTm1zeWFrdzl0dk5udw==}
+    body:
+      query:
+        term: {status: paid}
+  answer:
+    status: 200
+    body:
+      count: 2
+      _shards: {total: 1, successful: 1, skipped: 0, failed: 0}
+result:
+  count: 2
+  _shards: {total: 1, successful: 1, skipped: 0, failed: 0}

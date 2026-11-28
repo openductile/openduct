@@ -1,0 +1,12 @@
+action: create_record
+credential: { access_token: 1000.test.token }
+input: { module: Leads, record: { Last_Name: Lee, First_Name: Ann, Email: ann@example.com, Company: Example Ltd } }
+exchanges:
+  - sent:
+      method: POST
+      url: https://www.zohoapis.com/crm/v8/Leads
+      body: { data: [{ Last_Name: Lee, First_Name: Ann, Email: ann@example.com, Company: Example Ltd }] }
+    answer:
+      status: 201
+      body: { data: [{ code: SUCCESS, status: success, message: record added, details: { id: "1000000000000000101", Created_Time: "2026-11-27T09:00:00-05:00", Modified_Time: "2026-11-27T09:00:00-05:00", Created_By: { name: Sam Owner, id: "1000000000000000001" }, Modified_By: { name: Sam Owner, id: "1000000000000000001" } } }] }
+result: { id: "1000000000000000101", Created_Time: "2026-11-27T09:00:00-05:00", Modified_Time: "2026-11-27T09:00:00-05:00", Created_By: { name: Sam Owner, id: "1000000000000000001" }, Modified_By: { name: Sam Owner, id: "1000000000000000001" } }

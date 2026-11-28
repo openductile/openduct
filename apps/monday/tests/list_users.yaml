@@ -1,0 +1,28 @@
+description: A person found by their email address
+action: list_users
+credential:
+  token: monday-test-token
+input:
+  emails: ann@example.com
+exchanges:
+- sent:
+    body:
+      query: 'query ($emails: [String]) { users(emails: $emails, limit: 1000) { id name email enabled is_guest } }'
+      variables:
+        emails:
+        - ann@example.com
+  answer:
+    body:
+      data:
+        users:
+        - id: '55500001'
+          name: Ann Example
+          email: ann@example.com
+          enabled: true
+          is_guest: false
+result:
+- id: '55500001'
+  name: Ann Example
+  email: ann@example.com
+  enabled: true
+  is_guest: false

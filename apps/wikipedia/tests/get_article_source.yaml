@@ -1,0 +1,8 @@
+description: An article's wikitext
+action: get_article_source
+credential: { contact: ops@example.com }
+input: { title: Solar_System }
+exchanges:
+  - sent: { method: GET, url: https://en.wikipedia.org/w/rest.php/v1/page/Solar_System }
+    answer: { body: { id: 26903, key: Solar_System, title: Solar System, content_model: wikitext, source: "The '''Solar System''' is the [[gravity|gravitationally]] bound system" } }
+result: { id: 26903, key: Solar_System, title: Solar System, content_model: wikitext, source: "The '''Solar System''' is the [[gravity|gravitationally]] bound system" }

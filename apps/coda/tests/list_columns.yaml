@@ -1,0 +1,67 @@
+# Made by `openduct app from-openapi`: List a table's columns.
+description: "List a table's columns, made from the API description's schemas"
+action: list_columns
+credential: { token: test-token }
+input: { doc_id: doc_1, table_id_or_name: example }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://docs.superhuman.com/apis/v1/docs/doc_1/tables/example/columns"
+      query: { limit: "100" }
+      headers: { authorization: "Bearer test-token" }
+    answer:
+      status: 200
+      body:
+        items:
+          - id: c-tuVwxYz
+            type: column
+            href: "https://example.com/1"
+            name: Completed
+            display: true
+            calculated: true
+            formula: example
+            defaultValue: Test
+            format: { type: text, isArray: true, label: example, disableIf: example, action: example }
+        href: "https://example.com/1"
+        nextPageToken: token_2
+        nextPageLink: "https://example.com/1"
+  - sent:
+      method: GET
+      url: "https://docs.superhuman.com/apis/v1/docs/doc_1/tables/example/columns"
+      query: { limit: "100", pageToken: token_2 }
+      headers: { authorization: "Bearer test-token" }
+    answer:
+      status: 200
+      body:
+        items:
+          - id: id_2
+            type: column
+            href: "https://example.com/1"
+            name: Completed
+            display: true
+            calculated: true
+            formula: example
+            defaultValue: Test
+            format: { type: text, isArray: true, label: example, disableIf: example, action: example }
+        href: "https://example.com/1"
+        nextPageToken: null
+        nextPageLink: "https://example.com/1"
+result:
+  - id: c-tuVwxYz
+    type: column
+    href: "https://example.com/1"
+    name: Completed
+    display: true
+    calculated: true
+    formula: example
+    defaultValue: Test
+    format: { type: text, isArray: true, label: example, disableIf: example, action: example }
+  - id: id_2
+    type: column
+    href: "https://example.com/1"
+    name: Completed
+    display: true
+    calculated: true
+    formula: example
+    defaultValue: Test
+    format: { type: text, isArray: true, label: example, disableIf: example, action: example }

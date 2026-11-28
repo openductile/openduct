@@ -1,0 +1,14 @@
+description: A contact added since the poll before runs, made plain; listing stops at the page with one seen
+trigger: new_contact
+credential: { access_token: ya29.test }
+seen: { items: [["people/c111", ""]] }
+exchanges:
+  - sent:
+      method: GET
+      url: https://people.googleapis.com/v1/people/me/connections
+      query: {"personFields": "names,emailAddresses,phoneNumbers,organizations,addresses,birthdays,biographies,urls,memberships,metadata", "sortOrder": "LAST_MODIFIED_DESCENDING", "pageSize": "100"}
+      headers: { authorization: Bearer ya29.test }
+    answer: { body: { connections: [{"resourceName": "people/c333", "etag": "%EgUBAi43PRoEAQIFByIO", "names": [{"displayName": "Cy Park", "givenName": "Cy", "familyName": "Park"}], "emailAddresses": [{"value": "cy@example.com"}], "phoneNumbers": [{"value": "+1 555 0101"}], "organizations": [{"name": "Contoso Example", "title": "Buyer"}]}, {"resourceName": "people/c111", "etag": "%EgUBAi43PRoEAQIFByIM", "names": [{"displayName": "Ann Lee", "givenName": "Ann", "familyName": "Lee"}], "emailAddresses": [{"value": "ann@example.com"}, {"value": "ann.lee@example.org"}], "phoneNumbers": [{"value": "+1 555 0100"}], "organizations": [{"name": "Northwind Example", "title": "Owner"}], "biographies": [{"value": "Met at the spring fair", "contentType": "TEXT_PLAIN"}], "memberships": [{"contactGroupMembership": {"contactGroupId": "myContacts", "contactGroupResourceName": "contactGroups/myContacts"}}]}], nextPageToken: more } }
+runs:
+  - {"resource_name": "people/c333", "etag": "%EgUBAi43PRoEAQIFByIO", "name": "Cy Park", "given_name": "Cy", "family_name": "Park", "email": "cy@example.com", "emails": ["cy@example.com"], "phone": "+1 555 0101", "phones": ["+1 555 0101"], "company": "Contoso Example", "job_title": "Buyer", "notes": "", "groups": [], "person": {"resourceName": "people/c333", "etag": "%EgUBAi43PRoEAQIFByIO", "names": [{"displayName": "Cy Park", "givenName": "Cy", "familyName": "Park"}], "emailAddresses": [{"value": "cy@example.com"}], "phoneNumbers": [{"value": "+1 555 0101"}], "organizations": [{"name": "Contoso Example", "title": "Buyer"}]}}
+ids: ["people/c333"]

@@ -1,0 +1,64 @@
+description: An alert raised with an observable
+action: create_alert
+credential:
+  url: https://thehive.example.com
+  api_key: test-key
+input:
+  title: Password reset email reported
+  description: A reported email asks for a password reset.
+  type: phishing
+  source: mail-gateway
+  source_ref: MG-4096
+  tags:
+  - phishing
+  observables:
+  - dataType: domain
+    data: login-reset.example
+exchanges:
+- sent:
+    method: POST
+    url: https://thehive.example.com/api/v1/alert
+    headers:
+      authorization: Bearer test-key
+    body:
+      title: Password reset email reported
+      description: A reported email asks for a password reset.
+      type: phishing
+      source: mail-gateway
+      sourceRef: MG-4096
+      tags:
+      - phishing
+      observables:
+      - dataType: domain
+        data: login-reset.example
+  answer:
+    status: 201
+    body: &id001
+      _id: ~4096
+      _type: Alert
+      _createdBy: soc-bot@example.com
+      _createdAt: 1795161600000
+      _updatedAt: 1795161600000
+      type: phishing
+      source: mail-gateway
+      sourceRef: MG-4096
+      externalLink: null
+      title: Password reset email reported
+      description: A reported email asks for a password reset.
+      severity: 2
+      severityLabel: MEDIUM
+      date: 1795161600000
+      tags:
+      - phishing
+      tlp: 2
+      tlpLabel: AMBER
+      pap: 2
+      papLabel: AMBER
+      follow: true
+      customFields: []
+      observableCount: 1
+      status: New
+      stage: New
+      assignee: null
+      summary: null
+result: *id001

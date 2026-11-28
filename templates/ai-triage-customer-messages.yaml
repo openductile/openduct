@@ -1,0 +1,64 @@
+name: Triage customer messages with AI
+description: >-
+  When a customer message comes in over a webhook ({"from", "subject", "text"}), have a model read how the customer
+  feels and sort the message - a refund, a bug report, a sales question, or other. An unhappy customer is told to your
+  team's Slack channel at once; a refund has its order number and amount pulled out and is kept in the refunds topic;
+  a bug report goes to the bugs topic; a sales question to the leads topic; anything else to support.other.
+category: AI
+trigger:
+  webhook: {}
+# What a test runs on: an event as this trigger gives it.
+sample:
+  from: jo@example.com
+  subject: Charged twice
+  text: 'Order A-1042 was charged twice (2 x 49.90). Please refund one of them - this is the second time it happened.'
+steps:
+  - name: mood
+    sentiment:
+      credential: model
+      text: "{{ value.subject }}. {{ value.text }}"
+      labels:
+        - positive
+        - neutral
+        - name: negative
+          description: Unhappy, angry, disappointed, or about to leave
+          steps:
+            - name: tell
+              slack:
+                credential: team
+                channel: "#support"
+                text: "Unhappy customer {{ value.from }}: {{ value.subject }}"
+  - name: sort
+    classify:
+      credential: model
+      text: "{{ value.subject }}. {{ value.text }}"
+      categories:
+        - name: refund
+          description: Asks for money back, or says they were charged wrongly
+          steps:
+            - name: order
+              extract:
+                credential: model
+                text: "{{ value.text }}"
+                fields:
+                  - { name: order_id, type: string, description: "the order's number, as A-1042" }
+                  - { name: amount, type: number, description: the amount to refund }
+                  - { name: reason, type: string, description: "why, in a few words" }
+            - name: keep_refund
+              topic:
+                name: refunds
+                key: "{{ value.from }}"
+                value:
+                  from: "{{ value.from }}"
+                  order: "{{ steps.order.json }}"
+                  feeling: "{{ steps.mood.label }}"
+        - name: bug
+          description: Something in the product does not work
+          steps:
+            - topic: { name: bugs, value: { from: "{{ value.from }}", text: "{{ value.text }}" } }
+        - name: sales
+          description: Asks about prices, plans or buying more
+          steps:
+            - topic: { name: leads, value: { from: "{{ value.from }}", text: "{{ value.text }}" } }
+      default:
+        - topic: { name: support.other, value: { from: "{{ value.from }}", text: "{{ value.text }}" } }

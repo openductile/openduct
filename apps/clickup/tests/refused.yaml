@@ -1,0 +1,7 @@
+description: "A token the person has taken back: the step fails in ClickUp's words, with its code"
+action: list_workspaces
+credential: { api_key: pk_1_TEST }
+exchanges:
+  - sent: { method: GET, url: "https://api.clickup.com/api/v2/team" }
+    answer: { status: 401, body: { err: Token not found, ECODE: OAUTH_019 } }
+error: "ClickUp answered 401: Token not found (OAUTH_019)"

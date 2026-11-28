@@ -1,0 +1,12 @@
+description: Upcoming meetings over two pages
+action: list_meetings
+credential: { access_token: zoom-test-token }
+input: { which: upcoming }
+exchanges:
+  - sent: { method: GET, url: https://api.zoom.us/v2/users/me/meetings, query: { type: upcoming, page_size: "300" } }
+    answer: { body: { page_size: 300, total_records: 2, next_page_token: npt-test-2, meetings: [{ id: 85700000001, topic: Monthly supplier call, start_time: "2026-12-01T20:00:00Z", duration: 45, type: 2 }] } }
+  - sent: { url: https://api.zoom.us/v2/users/me/meetings, query: { type: upcoming, page_size: "300", next_page_token: npt-test-2 } }
+    answer: { body: { page_size: 300, total_records: 2, next_page_token: "", meetings: [{ id: 85700000002, topic: Team catch-up, start_time: "2026-12-02T15:00:00Z", duration: 30, type: 2 }] } }
+result:
+  - { id: 85700000001, topic: Monthly supplier call, start_time: "2026-12-01T20:00:00Z", duration: 45, type: 2 }
+  - { id: 85700000002, topic: Team catch-up, start_time: "2026-12-02T15:00:00Z", duration: 30, type: 2 }

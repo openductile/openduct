@@ -1,0 +1,8 @@
+description: A delivery of another topic to this workflow's address is answered, and runs nothing
+trigger: order_paid
+credential: { shop: mystore, access_token: shpat_1, webhook_secret: shpss_test_app_secret }
+delivery:
+  headers: { x-shopify-hmac-sha256: "oNAbkUspWR86fI7fTo2UYKgxsAvzPTLwkCgp678HtBg=", x-shopify-topic: orders/create, x-shopify-webhook-id: w6 }
+  body: '{"id":820982911946154508,"email":"ann@example.com","total_price":"42.00","line_items":[{"title":"Tote","quantity":1}]}'
+  at: 1700000000
+passed: true

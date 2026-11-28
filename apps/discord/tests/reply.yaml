@@ -1,0 +1,12 @@
+description: A reply to a message, as Discord shows replies
+action: reply
+sign_in: discord_bot
+credential: { bot_token: test-bot-token }
+input: { channel_id: "910000000000000001", message_id: "950000000000000002", text: "On its way" }
+exchanges:
+  - sent:
+      method: POST
+      url: https://discord.com/api/v10/channels/910000000000000001/messages
+      body: { content: "On its way", message_reference: { message_id: "950000000000000002" } }
+    answer: { body: { id: "950000000000000003", channel_id: "910000000000000001", content: "On its way", message_reference: { message_id: "950000000000000002" } } }
+result: { id: "950000000000000003", channel_id: "910000000000000001", content: "On its way", message_reference: { message_id: "950000000000000002" } }

@@ -1,0 +1,116 @@
+description: 'Tasks since a time over two pages: the time in milliseconds, pages by the last ID'
+action: list_tasks
+credential:
+  api_key: test-key
+input:
+  from: '2026-11-20T08:00:00Z'
+  state: 0,1
+exchanges:
+- sent:
+    method: GET
+    url: https://onfleet.com/api/v2/tasks/all
+    query:
+      from: '1795161600000'
+      state: 0,1
+    headers:
+      authorization: Basic dGVzdC1rZXk6
+  answer:
+    status: 200
+    body:
+      lastId: kc8SS1tzuZ~jqjlebKGrUmpe
+      tasks:
+      - &id003
+        id: 11z1BbsQUZFHD1XAd~emDDeK
+        timeCreated: 1795161600000
+        timeLastModified: 1795161600278
+        organization: yAM*fDkztrT3gUcz9mNDgNOL
+        shortId: 31aac0a5
+        trackingURL: https://onf.lt/31aac0a5
+        worker: null
+        merchant: yAM*fDkztrT3gUcz9mNDgNOL
+        executor: yAM*fDkztrT3gUcz9mNDgNOL
+        creator: EJmsbJgHiRLPjNVE7GEIPs7*
+        dependencies: []
+        state: 0
+        completeAfter: null
+        completeBefore: null
+        pickupTask: false
+        notes: 2 boxes of mugs
+        completionDetails:
+          events: []
+          time: null
+        feedback: []
+        metadata: []
+        overrides: {}
+        container:
+          type: ORGANIZATION
+          organization: yAM*fDkztrT3gUcz9mNDgNOL
+        recipients:
+        - &id001
+          id: xX87G1gSkeLvGXlHn2tn0~iB
+          organization: yAM*fDkztrT3gUcz9mNDgNOL
+          timeCreated: 1795161600000
+          timeLastModified: 1795161600000
+          name: Pat Sample
+          phone: '+14155550100'
+          notes: Ring twice
+          skipSMSNotifications: false
+          metadata: []
+        destination: &id002
+          id: pfT5L1JclTdhvRnP9GQzMFuL
+          timeCreated: 1795161600000
+          timeLastModified: 1795161600000
+          location:
+          - -122.4128901
+          - 37.787933
+          address:
+            apartment: ''
+            state: California
+            postalCode: '94109'
+            country: United States
+            city: San Francisco
+            street: Sample Street
+            number: '100'
+          notes: Green door
+          metadata: []
+- sent:
+    query:
+      from: '1795161600000'
+      state: 0,1
+      lastId: kc8SS1tzuZ~jqjlebKGrUmpe
+  answer:
+    status: 200
+    body:
+      tasks:
+      - &id004
+        id: kc8SS1tzuZ~jqjlebKGrUmpe
+        timeCreated: 1795161600000
+        timeLastModified: 1795161600278
+        organization: yAM*fDkztrT3gUcz9mNDgNOL
+        shortId: 8f983639
+        trackingURL: https://onf.lt/8f983639
+        worker: null
+        merchant: yAM*fDkztrT3gUcz9mNDgNOL
+        executor: yAM*fDkztrT3gUcz9mNDgNOL
+        creator: EJmsbJgHiRLPjNVE7GEIPs7*
+        dependencies: []
+        state: 0
+        completeAfter: null
+        completeBefore: null
+        pickupTask: false
+        notes: 1 box of plates
+        completionDetails:
+          events: []
+          time: null
+        feedback: []
+        metadata: []
+        overrides: {}
+        container:
+          type: ORGANIZATION
+          organization: yAM*fDkztrT3gUcz9mNDgNOL
+        recipients:
+        - *id001
+        destination: *id002
+result:
+- *id003
+- *id004

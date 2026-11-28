@@ -1,0 +1,18 @@
+description: Turning the workflow on adds its address to Stripe's webhook endpoints, and keeps the secret Stripe gives
+trigger: event
+register: true
+workflow: wf1
+address: https://studio.example/hooks/h1
+credential: { secret_key: sk_test_1 }
+input: { events: "checkout.session.completed, invoice.paid" }
+exchanges:
+  - sent:
+      method: POST
+      url: https://api.stripe.com/v1/webhook_endpoints
+      headers: { authorization: Bearer sk_test_1 }
+      body:
+        url: https://studio.example/hooks/h1
+        "enabled_events[]": [checkout.session.completed, invoice.paid]
+        description: OpenDuct workflow wf1
+    answer: { body: { id: we_1, object: webhook_endpoint, secret: whsec_new, url: https://studio.example/hooks/h1 } }
+kept: { webhook_secret: whsec_new, webhook_id: we_1 }

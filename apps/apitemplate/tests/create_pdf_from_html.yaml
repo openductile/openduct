@@ -1,0 +1,19 @@
+description: A PDF made from HTML on A4 paper
+action: create_pdf_from_html
+credential: { api_key: at_test_key_1 }
+input:
+  body: "<h1>Receipt</h1><p>Thank you, {{name}}</p>"
+  css: "h1 { color: #333 }"
+  data: { name: Ann }
+  settings: { paper_size: A4, orientation: "1" }
+exchanges:
+  - sent:
+      method: POST
+      url: "https://rest.apitemplate.io/v2/create-pdf-from-html"
+      body:
+        body: "<h1>Receipt</h1><p>Thank you, {{name}}</p>"
+        css: "h1 { color: #333 }"
+        data: { name: Ann }
+        settings: { paper_size: A4, orientation: "1" }
+    answer: { status: 200, body: { status: success, download_url: "https://files.example.com/receipt.pdf", total_pages: 1, transaction_ref: t-html-1 } }
+result: { status: success, download_url: "https://files.example.com/receipt.pdf", total_pages: 1, transaction_ref: t-html-1 }

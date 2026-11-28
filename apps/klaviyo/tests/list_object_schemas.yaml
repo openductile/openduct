@@ -1,0 +1,31 @@
+# Made by `openduct app from-openapi`: Get Object Schema Relationships.
+description: "Get Object Schema Relationships, made from the API description's schemas"
+action: list_object_schemas
+credential: { api_key: test-key }
+input: { id: "01K61DKJ7EKJ0ES9VE456XF5JG" }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://a.klaviyo.com/api/object-schemas/01K61DKJ7EKJ0ES9VE456XF5JG/relationships/object-schemas"
+      query: {}
+      headers: { authorization: test-key, revision: "2026-10-15" }
+    answer:
+      status: 200
+      body:
+        data: [{ type: object-schema, id: "01JXKYCN9A5M3QPVR8T2WE4BLD:::subscription" }]
+        links:
+          self: "https://example.com/1"
+          prev: "https://example.com/1"
+          next: "https://a.klaviyo.com/api/object-schemas/01K61DKJ7EKJ0ES9VE456XF5JG/relationships/object-schemas?page=2"
+        meta: { agent_hints: { next_steps: [example] } }
+  - sent:
+      url: "https://a.klaviyo.com/api/object-schemas/01K61DKJ7EKJ0ES9VE456XF5JG/relationships/object-schemas?page=2"
+    answer:
+      status: 200
+      body:
+        data: [{ type: object-schema, id: id_2 }]
+        links: { self: "https://example.com/1", prev: "https://example.com/1", next: null }
+        meta: { agent_hints: { next_steps: [example] } }
+result:
+  - { type: object-schema, id: "01JXKYCN9A5M3QPVR8T2WE4BLD:::subscription" }
+  - { type: object-schema, id: id_2 }

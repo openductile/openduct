@@ -1,0 +1,45 @@
+description: A draft to a list
+action: create_campaign_draft
+credential:
+  api_key: test-key
+  secret_key: test-secret
+input:
+  title: December news
+  subject: Our December news
+  sender_email: news@example.com
+  sender_name: Sample Shop
+  list_id: 55
+  locale: en_US
+exchanges:
+- sent:
+    method: POST
+    url: https://api.mailjet.com/v3/REST/campaigndraft
+    headers:
+      authorization: Basic dGVzdC1rZXk6dGVzdC1zZWNyZXQ=
+    body:
+      Title: December news
+      Subject: Our December news
+      SenderEmail: news@example.com
+      SenderName: Sample Shop
+      ContactsListID: 55
+      Locale: en_US
+  answer:
+    status: 201
+    body:
+      Count: 1
+      Data:
+      - &id001
+        ID: 7001
+        Title: December news
+        Subject: Our December news
+        SenderName: Sample Shop
+        SenderEmail: news@example.com
+        ContactsListID: 55
+        Locale: en_US
+        Status: 0
+        CampaignID: 0
+        CreatedAt: '2026-11-20T10:00:00Z'
+        ModifiedAt: '2026-11-20T10:00:00Z'
+        DeliveredAt: ''
+      Total: 1
+result: *id001

@@ -1,0 +1,31 @@
+description: A draft's email
+action: set_campaign_draft_email
+credential:
+  api_key: test-key
+  secret_key: test-secret
+input:
+  draft_id: '7001'
+  html: <p>Hello [[data:firstname:"there"]]</p>
+  text: Hello
+exchanges:
+- sent:
+    method: POST
+    url: https://api.mailjet.com/v3/REST/campaigndraft/7001/detailcontent
+    headers:
+      authorization: Basic dGVzdC1rZXk6dGVzdC1zZWNyZXQ=
+    body:
+      Html-part: <p>Hello [[data:firstname:"there"]]</p>
+      Text-part: Hello
+  answer:
+    status: 201
+    body:
+      Count: 1
+      Data:
+      - Html-part: <p>Hello [[data:firstname:"there"]]</p>
+        Text-part: Hello
+        Headers: {}
+      Total: 1
+result:
+  Html-part: <p>Hello [[data:firstname:"there"]]</p>
+  Text-part: Hello
+  Headers: {}

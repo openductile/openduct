@@ -1,0 +1,11 @@
+description: A photo by its address, with a caption
+action: send_photo
+credential: { bot_token: "123:abc" }
+input: { chat_id: "42", photo: "https://shop.example/items/tea.jpg", caption: "Tea, 4.50" }
+exchanges:
+  - sent:
+      method: POST
+      url: https://api.telegram.org/bot123:abc/sendPhoto
+      body: { chat_id: "42", photo: "https://shop.example/items/tea.jpg", caption: "Tea, 4.50" }
+    answer: { body: { ok: true, result: { message_id: 9, chat: { id: 42 }, photo: [{ file_id: AgAD1, width: 90, height: 90 }], caption: "Tea, 4.50" } } }
+result: { message_id: 9, chat: { id: 42 }, photo: [{ file_id: AgAD1, width: 90, height: 90 }], caption: "Tea, 4.50" }

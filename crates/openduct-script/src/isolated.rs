@@ -136,6 +136,8 @@ impl Isolated {
             None => Ok(Answer {
                 result: answer.get("result").cloned().unwrap_or(Json::Null),
                 logs,
+                // data tables
+                state: answer.get("state").cloned().filter(|s| !s.is_null()),
             }),
         }
     }

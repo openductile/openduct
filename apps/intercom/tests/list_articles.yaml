@@ -1,0 +1,86 @@
+# Made by `openduct app from-openapi`: List all articles.
+description: "List all articles, made from the API description's schemas"
+action: list_articles
+credential: { token: test-token }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://api.intercom.io/articles"
+      query: { per_page: "100" }
+      headers: { authorization: "Bearer test-token" }
+    answer:
+      status: 200
+      body:
+        type: list
+        pages:
+          type: pages
+          page: 1
+          next: "https://api.intercom.io/articles?page=2"
+          prev: "https://example.com/1"
+          per_page: 50
+          total_pages: 1
+        total_count: 1
+        data:
+          - type: article
+            id: "6871119"
+            workspace_id: hfi1bx4l
+            content_id: "6871120"
+            title: example
+            description: example
+            body: example
+            body_markdown: example
+            author_id: "5017691"
+            state: published
+            created_at: 1672928359
+            updated_at: 1672928610
+  - sent: { url: "https://api.intercom.io/articles?page=2" }
+    answer:
+      status: 200
+      body:
+        type: list
+        pages:
+          type: pages
+          page: 1
+          next: null
+          prev: "https://example.com/1"
+          per_page: 50
+          total_pages: 1
+        total_count: 1
+        data:
+          - type: article
+            id: id_2
+            workspace_id: hfi1bx4l
+            content_id: "6871120"
+            title: example
+            description: example
+            body: example
+            body_markdown: example
+            author_id: "5017691"
+            state: published
+            created_at: 1672928359
+            updated_at: 1672928610
+result:
+  - type: article
+    id: "6871119"
+    workspace_id: hfi1bx4l
+    content_id: "6871120"
+    title: example
+    description: example
+    body: example
+    body_markdown: example
+    author_id: "5017691"
+    state: published
+    created_at: 1672928359
+    updated_at: 1672928610
+  - type: article
+    id: id_2
+    workspace_id: hfi1bx4l
+    content_id: "6871120"
+    title: example
+    description: example
+    body: example
+    body_markdown: example
+    author_id: "5017691"
+    state: published
+    created_at: 1672928359
+    updated_at: 1672928610

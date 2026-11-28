@@ -1,0 +1,10 @@
+action: delete_post
+credential: { access_token: AQX_test, person_id: 782bbtaQ }
+input: { post_id: "urn:li:share:6844785523593134080" }
+exchanges:
+  - sent:
+      method: DELETE
+      url: https://api.linkedin.com/rest/posts/urn%3Ali%3Ashare%3A6844785523593134080
+      headers: { x-restli-method: DELETE }
+    answer: { status: 204, body: "" }
+result: { deleted: true }

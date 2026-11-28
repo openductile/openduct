@@ -1,0 +1,24 @@
+description: An issue opened, its description written as paragraphs of Jira's document format
+action: open_issue
+credential: { site: examplecorp, email: ann@example.com, api_token: ATATT_test }
+input: { project: SUP, summary: Printer on floor 2 is jammed, description: "It jams on every second page.\n\nTried a new tray.", priority: High }
+exchanges:
+  - sent:
+      method: POST
+      url: https://examplecorp.atlassian.net/rest/api/3/issue
+      headers: { authorization: "Basic YW5uQGV4YW1wbGUuY29tOkFUQVRUX3Rlc3Q=" }
+      body:
+        fields:
+          project: { key: SUP }
+          summary: Printer on floor 2 is jammed
+          issuetype: { name: Task }
+          description:
+            type: doc
+            version: 1
+            content:
+              - { type: paragraph, content: [{ type: text, text: It jams on every second page. }] }
+              - { type: paragraph, content: [] }
+              - { type: paragraph, content: [{ type: text, text: Tried a new tray. }] }
+          priority: { name: High }
+    answer: { status: 201, body: { id: "10000", key: SUP-13, self: "https://examplecorp.atlassian.net/rest/api/3/issue/10000" } }
+result: { id: "10000", key: SUP-13, self: "https://examplecorp.atlassian.net/rest/api/3/issue/10000" }

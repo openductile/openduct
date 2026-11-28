@@ -1,0 +1,12 @@
+description: The same in another language's Wikipedia, with a Wikimedia token for a higher rate
+action: search_articles
+credential: { contact: ops@example.com, access_token: test-wikimedia-token }
+input: { q: système solaire, language: fr }
+exchanges:
+  - sent:
+      method: GET
+      url: https://fr.wikipedia.org/w/rest.php/v1/search/page
+      query: { q: système solaire }
+      headers: { authorization: Bearer test-wikimedia-token }
+    answer: { body: { pages: [{ id: 1123, key: Système_solaire, title: Système solaire, excerpt: "...", description: null, thumbnail: null }] } }
+result: [{ id: 1123, key: Système_solaire, title: Système solaire, excerpt: "...", description: null, thumbnail: null }]

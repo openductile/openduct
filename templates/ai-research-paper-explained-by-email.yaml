@@ -1,0 +1,76 @@
+name: A research paper, explained in plain words by e-mail
+description: >-
+  Give a form an arXiv id or a DOI and who the explanation is for: the paper's title, authors, abstract and citation
+  count come from Semantic Scholar's free API, a model explains it for that reader - what was asked, what was found,
+  why it matters, and what it does not show - and the explanation is e-mailed from your Gmail with the paper's link.
+  For product teams, analysts and founders who need to know what a paper says before the meeting. Needs:
+  semantic_scholar (a free API key, sent as x-api-key), model, gmail.
+category: AI
+trigger:
+  form:
+    title: Explain a paper
+    fields:
+      - { name: paper, label: "The arXiv id or the DOI", type: text, required: true, max_length: 100, placeholder: "2406.01234 or 10.1145/3580305.3599256" }
+      - { name: reader, label: Explain it for, type: dropdown, required: true, options: [A busy executive, A product manager, An engineer] }
+      - { name: email, label: Send it to, type: email, required: true }
+    thanks: Thank you - the explanation is on its way.
+# What a test runs on: an answer as the form gives it.
+sample:
+  paper: "2406.01234"
+  reader: A product manager
+  email: lena.fischer@example.com
+steps:
+  - name: id
+    set:
+      key: "value.paper.trim().startsWith('10.') ? 'DOI:' + value.paper.trim() : 'arXiv:' + value.paper.trim().replace('arXiv:', '')"
+  - name: paper
+    http:
+      url: "https://api.semanticscholar.org/graph/v1/paper/{{ steps.id.key }}"
+      credential: semantic_scholar
+      query: { fields: "title,abstract,authors,year,venue,citationCount,tldr,url" }
+      fail_on_status: false
+      sample:
+        title: Small Language Models Can Route Support Tickets as Well as Large Ones
+        year: 2026
+        venue: Workshop on Applied NLP
+        citationCount: 14
+        url: https://www.semanticscholar.org/paper/example
+        authors: [{ name: A. Researcher }, { name: B. Scientist }]
+        abstract: >-
+          We compare small and large language models on routing 40,000 real support tickets to 12 queues. A 1B
+          parameter model fine-tuned on 5,000 labelled tickets matches a frontier model's accuracy (91% against 92%)
+          at a hundredth of the cost, but falls behind on tickets in languages it saw little of.
+        tldr: { text: "A small fine-tuned model routes support tickets nearly as well as a large one, far cheaper." }
+    retry: { attempts: 3, wait: 15s }
+  - name: found
+    if:
+      when: steps.paper.status != 200
+      then:
+        - name: not_found
+          gmail:
+            action: send_email
+            credential: gmail
+            to: "{{ value.email }}"
+            subject: "We could not find the paper {{ value.paper }}"
+            text: "Semantic Scholar does not know {{ value.paper }}. Check the arXiv id (as 2406.01234) or the DOI (as 10.1145/...)."
+        - stop: {}
+  - name: explain
+    ai:
+      credential: model
+      system: >-
+        You explain research papers to {{ value.reader }}. Use the abstract only, plain words, under 250 words, in
+        four short parts: the question, what they found (with the key numbers), why it matters for this reader, and
+        what it does not show. Never claim more than the abstract says.
+      prompt: >-
+        {{ steps.paper.body.title }} ({{ steps.paper.body.year }}, {{ steps.paper.body.venue }}), by
+        {{ steps.paper.body.authors.map(a, a.name).join(', ') }}. Cited {{ steps.paper.body.citationCount }} times.
+        Abstract: {{ steps.paper.body.abstract }}
+      max_tokens: 600
+  - name: send
+    gmail:
+      action: send_email
+      credential: gmail
+      to: "{{ value.email }}"
+      subject: "Explained: {{ steps.paper.body.title }}"
+      text: "{{ steps.explain.text }}\n\nThe paper: {{ steps.paper.body.url }}"
+    retry: { attempts: 3, wait: 15s }

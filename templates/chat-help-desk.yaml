@@ -1,0 +1,51 @@
+name: A help desk chat for your site
+description: >-
+  A chat on a page of its own, or on your site with one script tag: each question is answered by a model that knows
+  the conversation so far and what your shop wants said, the answer shown as it is written. Questions it cannot
+  answer are sent to your team's support topic.
+category: AI
+trigger:
+  chat:
+    texts:
+      title: Help desk
+      welcome: Hi! Ask me about orders, shipping or returns.
+      placeholder: Your question
+    # The sites that may show the chat (add yours), beside its own page.
+    origins: []
+    history: 10
+    # The answer is shown as the model writes it; the respond step's text replaces it when the run is done.
+    stream: answer
+    limits: { message: 2000, per_session: 20, per_address: 60 }
+# What a test runs on: a message as this trigger gives it.
+sample:
+  message: Do you ship to Canada, and how long does it take?
+  session: 8f14e45fceea167a5a36dedd4bea2543
+  history:
+    - role: user
+      content: Hi, I ordered a tote last week.
+    - role: assistant
+      content: Thanks! How can I help with your order?
+  person:
+    name: Ada
+steps:
+  - name: answer
+    ai:
+      credential: model
+      system: >-
+        You answer customers of a small shop, kindly and in at most four sentences. Shipping: 2-4 days at home, 5-9
+        days abroad, Canada included. Returns: free within 30 days. If you cannot answer from this, say that the team
+        will write back, and end your answer with [team].
+      messages: "{{ value.history }}"
+      prompt: "{{ value.message }}"
+      max_tokens: 400
+  - name: tell_the_team
+    if:
+      when: steps.answer.text.endsWith("[team]")
+      then:
+        - topic:
+            name: support.questions
+            key: "{{ value.session }}"
+            value: { question: "{{ value.message }}", person: "{{ value.person }}", session: "{{ value.session }}" }
+  - name: reply
+    respond:
+      body: { text: "{{ steps.answer.text.replace('[team]', '').trim() }}" }

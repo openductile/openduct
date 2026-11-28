@@ -1,0 +1,101 @@
+name: Job applications with a CV, read and matched to the role
+description: >-
+  A public application form for one role: the candidate's CV (a PDF) is read, a model notes their current title,
+  years of experience and skills, and the CV is compared by meaning with the role's description (embeddings), giving a
+  match from 0 to 100 that helps sort the pile - a person still reads every one. Each applicant is a row in your
+  Applicants sheet, and gets an e-mail from Gmail saying their application is in. Needs: model (ai, with an embedding
+  model), sheets (google_sheets), mail (gmail).
+category: HR
+trigger:
+  form:
+    title: "Apply: Warehouse shift lead"
+    description: Night shifts, a team of eight to ten. Send your CV as a PDF.
+    fields:
+      - { name: full_name, label: Your name, type: text, required: true, max_length: 120 }
+      - { name: email, label: Your e-mail, type: email, required: true }
+      - { name: cv, label: "Your CV (PDF)", type: file, accept: .pdf, max_size: 2MB, required: true }
+      - { name: why, label: "Why this role?", type: long_text, max_length: 3000 }
+    thanks: Thank you - your application is in, and we write to you within two weeks.
+# What a test runs on: an answer as the form gives it, with a short made-up CV.
+sample:
+  full_name: Jordan Rivera
+  email: jordan.rivera@example.com
+  why: I like making a busy shift run calmly.
+  cv:
+    name: jordan-rivera-cv.pdf
+    type: application/pdf
+    size: 894
+    base64: JVBERi0xLjQKMSAwIG9iago8PCAvVHlwZSAvQ2F0YWxvZyAvUGFnZXMgMiAwIFIgPj4KZW5kb2JqCjIgMCBvYmoKPDwgL1R5cGUgL1BhZ2VzIC9LaWRzIFszIDAgUl0gL0NvdW50IDEgPj4KZW5kb2JqCjMgMCBvYmoKPDwgL1R5cGUgL1BhZ2UgL1BhcmVudCAyIDAgUiAvTWVkaWFCb3ggWzAgMCA1OTUgODQyXSAvUmVzb3VyY2VzIDw8IC9Gb250IDw8IC9GMSA1IDAgUiA+PiA+PiAvQ29udGVudHMgNCAwIFIgPj4KZW5kb2JqCjQgMCBvYmoKPDwgL0xlbmd0aCAzNDkgPj4Kc3RyZWFtCkJUCi9GMSAxMSBUZgo1MCA3ODAgVGQKMTQgVEwKKEpvcmRhbiBSaXZlcmEgLSBXYXJlaG91c2Ugc2hpZnQgbGVhZCkgVGoKVCogKFNpeCB5ZWFycyBpbiB3YXJlaG91c2Ugb3BlcmF0aW9ucywgdGhlIGxhc3QgdGhyZWUgbGVhZGluZyBhIG5pZ2h0IHNoaWZ0IG9mIG5pbmUuKSBUagpUKiAoRm9ya2xpZnQgYW5kIHJlYWNoLXRydWNrIGxpY2VuY2VzLiBTdG9jayBjb3VudHMgaW4gYSB3YXJlaG91c2Ugc3lzdGVtLCB3ZWVrbHkgY3ljbGUgY291bnRzLikgVGoKVCogKEN1dCBwaWNraW5nIGVycm9ycyBieSBhIHRoaXJkIHdpdGggYSBuZXcgbGFiZWxsaW5nIHJvdXRpbmUuIEZpcnN0LWFpZCB0cmFpbmVkLikgVGoKRVQKZW5kc3RyZWFtCmVuZG9iago1IDAgb2JqCjw8IC9UeXBlIC9Gb250IC9TdWJ0eXBlIC9UeXBlMSAvQmFzZUZvbnQgL0hlbHZldGljYSA+PgplbmRvYmoKeHJlZgowIDYKMDAwMDAwMDAwMCA2NTUzNSBmIAowMDAwMDAwMDA5IDAwMDAwIG4gCjAwMDAwMDAwNTggMDAwMDAgbiAKMDAwMDAwMDExNSAwMDAwMCBuIAowMDAwMDAwMjQxIDAwMDAwIG4gCjAwMDAwMDA2NDEgMDAwMDAgbiAKdHJhaWxlcgo8PCAvU2l6ZSA2IC9Sb290IDEgMCBSID4+CnN0YXJ0eHJlZgo3MTEKJSVFT0YK
+steps:
+  - name: cv_file
+    convert:
+      format: base64
+      base64: value.cv.base64
+      name: "{{ value.cv.name }}"
+  - name: cv
+    extract_file: { file: steps.cv_file, format: pdf }
+  - name: unreadable
+    if:
+      when: steps.cv.text.trim() == ''
+      then:
+        - stop: { error: "the CV of {{ value.full_name }} holds no text (a scan?): read it by hand" }
+  # The role, as it is advertised: change it for yours.
+  - name: role
+    set:
+      text: >-
+        'Warehouse shift lead: leads a night shift of eight to ten people; plans picking and put-away; forklift
+        licence; stock counts in a warehouse system; safety and first aid; trains new starters.'
+  - name: profile
+    extract:
+      credential: model
+      text: "{{ steps.cv.text }}"
+      instructions: >-
+        Take only what the CV says about work. Never guess or note age, gender, origin, health or family.
+      fields:
+        - { name: current_title, type: string, description: "their latest job title" }
+        - { name: years, type: integer, description: years of relevant work experience }
+        - { name: skills, type: list, description: "skills and licences, a few words each" }
+  - name: vectors
+    embed:
+      credential: model
+      input: ["{{ steps.cv.text }}", "{{ steps.role.text }}"]
+  - name: match
+    javascript: |
+      // How close the CV is to the role by meaning: the cosine of their two vectors, as 0 to 100.
+      const [a, b] = (steps.vectors && steps.vectors.embeddings) || [];
+      if (!Array.isArray(a) || !Array.isArray(b) || a.length !== b.length || a.length === 0) {
+        return { score: null };
+      }
+      let dot = 0, na = 0, nb = 0;
+      for (let i = 0; i < a.length; i++) {
+        dot += a[i] * b[i];
+        na += a[i] * a[i];
+        nb += b[i] * b[i];
+      }
+      const cosine = dot / (Math.sqrt(na) * Math.sqrt(nb) || 1);
+      // Texts on the same subject sit well above zero: 0.2 and below is "unrelated", 0.8 and above "very close".
+      const score = Math.round(Math.max(0, Math.min(1, (cosine - 0.2) / 0.6)) * 100);
+      return { score, cosine: Math.round(cosine * 1000) / 1000 };
+  - name: log
+    google_sheets:
+      action: add_row
+      credential: sheets
+      spreadsheet_id: your-spreadsheet-id
+      sheet: Applicants
+      values:
+        - "{{ value.full_name }}"
+        - "{{ value.email }}"
+        - "{{ steps.profile.json.current_title }}"
+        - "{{ steps.profile.json.years }}"
+        - "{{ steps.profile.json.skills == null ? '' : steps.profile.json.skills.join(', ') }}"
+        - "{{ steps.match.score }}"
+        - "{{ value.why }}"
+    retry: { attempts: 3, wait: 30s }
+  - name: received
+    gmail:
+      action: send_email
+      credential: mail
+      to: "{{ value.email }}"
+      subject: Your application for Warehouse shift lead
+      text: "Hello {{ value.full_name }},\n\nThank you for applying. Your application is in, and a person on our team reads it: we write to you within two weeks.\n\nThe hiring team"
+    retry: { attempts: 3, wait: 10s }

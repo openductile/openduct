@@ -1,0 +1,6 @@
+action: me
+credential: { api_key: ur_test_1 }
+exchanges:
+  - sent: { method: GET, url: https://api.uptimerobot.com/v3/user/me }
+    answer: { body: { email: ann@example.com, fullName: Ann Lee, monitorsCount: 4, monitorLimit: 50 } }
+result: { email: ann@example.com, fullName: Ann Lee, monitorsCount: 4, monitorLimit: 50 }

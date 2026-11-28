@@ -1,0 +1,12 @@
+description: "Google refuses a language it does not know, in its words"
+action: translate_text
+credential: {"api_key": "AIza-test"}
+input: {"text": "Hello", "target": "xx"}
+exchanges:
+  - sent:
+      method: POST
+      url: "https://translation.googleapis.com/language/translate/v2"
+      query: {"key": "AIza-test"}
+      body: {"q": ["Hello"], "target": "xx", "format": "text"}
+    answer: {"status": 400, "body": {"error": {"code": 400, "message": "Invalid Value", "errors": [{"message": "Invalid Value", "domain": "global", "reason": "invalid"}]}}}
+error: "Invalid Value"

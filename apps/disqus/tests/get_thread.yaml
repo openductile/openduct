@@ -1,0 +1,28 @@
+description: One thread
+action: get_thread
+credential: {api_key: pubkey-test-1, api_secret: secret-test-1, access_token: token-test-1}
+input: {thread: '7001'}
+exchanges:
+- sent:
+    method: GET
+    url: https://disqus.com/api/3.0/threads/details.json
+    query: {api_key: pubkey-test-1, api_secret: secret-test-1, access_token: token-test-1, thread: '7001'}
+  answer:
+    status: 200
+    body:
+      code: 0
+      response: &id001
+        id: '7001'
+        forum: shop-example
+        title: How to care for your boots
+        link: https://shop.example/guides/boots
+        identifiers: [guide-boots]
+        author: '101'
+        createdAt: '2026-11-20T09:00:00'
+        isClosed: false
+        isDeleted: false
+        posts: 12
+        likes: 3
+        dislikes: 0
+        message: ''
+result: *id001

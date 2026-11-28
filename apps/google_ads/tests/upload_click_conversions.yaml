@@ -1,0 +1,25 @@
+description: A sale from the shop sent as an offline conversion, by the click's gclid
+action: upload_click_conversions
+credential: { access_token: ya29.test }
+input:
+  customer_id: "1234567890"
+  conversions:
+    - { gclid: Cj0KCQiAexample, conversionAction: customers/1234567890/conversionActions/42, conversionDateTime: "2026-11-26 14:05:00+00:00", conversionValue: 89.5, currencyCode: USD, orderId: A-1042 }
+  developer_token: devtok-test
+exchanges:
+  - sent:
+      method: POST
+      url: "https://googleads.googleapis.com/v26/customers/1234567890:uploadClickConversions"
+      headers: { authorization: Bearer ya29.test, developer-token: devtok-test }
+      body:
+        conversions:
+          - { gclid: Cj0KCQiAexample, conversionAction: customers/1234567890/conversionActions/42, conversionDateTime: "2026-11-26 14:05:00+00:00", conversionValue: 89.5, currencyCode: USD, orderId: A-1042 }
+        partialFailure: true
+    answer:
+      status: 200
+      body:
+        results: [{ gclid: Cj0KCQiAexample, conversionAction: customers/1234567890/conversionActions/42, conversionDateTime: "2026-11-26 14:05:00+00:00" }]
+        jobId: "8812345"
+result:
+  results: [{ gclid: Cj0KCQiAexample, conversionAction: customers/1234567890/conversionActions/42, conversionDateTime: "2026-11-26 14:05:00+00:00" }]
+  jobId: "8812345"

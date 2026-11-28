@@ -1,0 +1,27 @@
+description: A contact tag made
+action: create_tag
+credential:
+  account: shopexample
+  api_key: test-key
+input:
+  name: Wholesale
+exchanges:
+- sent:
+    method: POST
+    url: https://shopexample.api-us1.com/api/3/tags
+    headers:
+      api-token: test-key
+    body:
+      tag:
+        tag: Wholesale
+        tagType: contact
+  answer:
+    status: 201
+    body:
+      tag: &id001
+        id: '21'
+        tag: Wholesale
+        tagType: contact
+        description: ''
+        cdate: '2026-11-27T10:12:00-06:00'
+result: *id001

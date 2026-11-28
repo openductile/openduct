@@ -1,0 +1,12 @@
+description: "A lead; the fields not given are left out"
+action: create_lead
+credential: { access_token: "00D000000000001!AQ.test", instance: examplecorp.my.salesforce.com }
+input: { last_name: Lee, company: Example Co, first_name: Ann, email: ann.lee@example.com, source: Web }
+exchanges:
+  - sent:
+      method: POST
+      url: https://examplecorp.my.salesforce.com/services/data/v67.0/sobjects/Lead/
+      headers: { authorization: Bearer 00D000000000001!AQ.test }
+      body: { LastName: Lee, Company: Example Co, FirstName: Ann, Email: ann.lee@example.com, LeadSource: Web }
+    answer: { status: 201, body: { id: 00Q5e000001AbcDEAZ, success: true, errors: [] } }
+result: { id: 00Q5e000001AbcDEAZ, success: true, errors: [] }

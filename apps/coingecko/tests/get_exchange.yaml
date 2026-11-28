@@ -1,0 +1,7 @@
+action: get_exchange
+credential: { api_key: CG-test1 }
+input: { id: gdax }
+exchanges:
+  - sent: { method: GET, url: https://api.coingecko.com/api/v3/exchanges/gdax }
+    answer: { body: { name: Coinbase Exchange, year_established: 2012, country: United States, trust_score: 10, trade_volume_24h_btc: 13692.5 } }
+result: { name: Coinbase Exchange, year_established: 2012, country: United States, trust_score: 10, trade_volume_24h_btc: 13692.5 }

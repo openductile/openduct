@@ -1,0 +1,99 @@
+# Copyright 2026 Ductile AI, Inc
+# SPDX-License-Identifier: Apache-2.0
+# Lingvanex: written by hand from Lingvanex's Translator API documentation, https://docs.lingvanex.com/ (the pages
+# Translate Text, Getting the List of Languages and Detect Languages, read 2026-11-27).
+app: lingvanex
+name: Lingvanex
+category: translation
+description: "Text and web pages translated into other languages, and the language of a text found, with Lingvanex."
+docs: https://docs.lingvanex.com/
+hosts: [api-b2b.backenster.com, api-gl.lingvanex.com]
+base_url: https://api-b2b.backenster.com/b1/api/v3
+sign_in:
+  - id: lingvanex
+    label: An API key
+    fields:
+      - { name: api_key, label: "The API key (from the Lingvanex dashboard)", secret: true }
+    headers: { Authorization: "{{ credential.api_key }}" }
+# Lingvanex answers {err, result}: an error is in err, even with a 200.
+error: >-
+  has(value.err) && value.err != null && string(value.err) != '' ? string(value.err)
+  : (status >= 400 ? (has(value.message) ? value.message : (has(value.error) ? string(value.error) : null)) : null)
+actions:
+  translate_text:
+    label: Translate a text
+    description: "A text (or HTML, its tags kept) put into another language; the language it is in is found if not given."
+    method: POST
+    path: /translate
+    inputs:
+      - { name: text, label: The text, required: true }
+      - { name: to, label: "Into: a language and country code, such as de_DE, es_ES or en_GB", required: true }
+      - { name: from, label: "From: its language, such as en_GB (found if not given)" }
+      - { name: html, label: "It is HTML: translate the text and keep the tags", kind: boolean }
+    send:
+      platform: api
+      from: "{{ input.from }}"
+      to: "{{ input.to }}"
+      data: "{{ input.text }}"
+      translateMode: "{{ has(input.html) && input.html == true ? 'html' : null }}"
+    result: "{'text': value.result}"
+    output: { text: text }
+  translate_texts:
+    label: Translate several texts
+    description: "Several texts put into another language at once, in the same order."
+    method: POST
+    path: /translate
+    inputs:
+      - { name: texts, label: The texts, required: true, kind: list }
+      - { name: to, label: "Into: a language and country code, such as de_DE", required: true }
+      - { name: from, label: "From: their language, such as en_GB (found if not given)" }
+    send:
+      platform: api
+      from: "{{ input.from }}"
+      to: "{{ input.to }}"
+      data: "{{ input.texts }}"
+    result: "value.result.map(r, {'text': r})"
+    output: { text: text }
+  transliterate:
+    label: Translate a text, with its transliteration
+    description: "A text put into another language, with both the text and its translation transliterated as well."
+    method: POST
+    path: /translate
+    inputs:
+      - { name: text, label: The text, required: true }
+      - { name: to, label: "Into: a language and country code, such as ru_RU", required: true }
+      - { name: from, label: "From: its language, such as en_GB (found if not given)" }
+    send:
+      platform: api
+      from: "{{ input.from }}"
+      to: "{{ input.to }}"
+      data: "{{ input.text }}"
+      enableTransliteration: true
+    result: >-
+      {'text': value.result,
+       'source_transliteration': has(value.sourceTransliteration) ? value.sourceTransliteration : null,
+       'target_transliteration': has(value.targetTransliteration) ? value.targetTransliteration : null}
+    output: { text: text, source_transliteration: text, target_transliteration: text }
+  list_languages:
+    label: List languages
+    description: "The languages Lingvanex translates, with their codes and names (in English, or the language given)."
+    method: GET
+    path: /getLanguages
+    inputs:
+      - { name: names_in, label: "Names in this language, such as es_ES (English by default)" }
+    query: { platform: api, code: "{{ input.names_in }}" }
+    items: value.result
+    output: { full_code: text, code_alpha_1: text, englishName: text, codeName: text, rtl: text, modes: list }
+  detect_language:
+    label: Find the language of a text
+    description: "The language a text is written in, as a short code such as en or es."
+    method: POST
+    by: { lingvanex: { url: https://api-gl.lingvanex.com/language/translate/v2/detect } }
+    inputs:
+      - { name: text, label: The text, required: true }
+    send: { q: "{{ input.text }}" }
+    # Lingvanex's examples show both a detections list and a lang field.
+    result: >-
+      has(value.data) ? {'language': value.data.detections[0][0].language}
+      : {'language': has(value.result) && has(value.result.lang) ? value.result.lang : null}
+    output: { language: text }

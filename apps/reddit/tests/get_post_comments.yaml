@@ -1,0 +1,13 @@
+description: A post and its comments, the comments taken out of Reddit's two listings
+action: get_post_comments
+credential: { access_token: test-reddit-token }
+input: { post_id: 1h2ab3c, sort: top }
+exchanges:
+  - sent: { method: GET, url: https://oauth.reddit.com/comments/1h2ab3c, query: { sort: top } }
+    answer:
+      body:
+        - { kind: Listing, data: { after: null, before: null, children: [{ kind: t3, data: { id: 1h2ab3c, name: t3_1h2ab3c, title: How do you price custom orders?, author: example_shop, subreddit: smallbusiness, selftext: "", url: "https://www.reddit.com/r/smallbusiness/comments/1h2ab3c/", permalink: /r/smallbusiness/comments/1h2ab3c/, created_utc: 1764237600, score: 12, num_comments: 3, over_18: false } }] } }
+        - { kind: Listing, data: { after: null, children: [{ kind: t1, data: { id: m1x2y3z, name: t1_m1x2y3z, author: example_maker, body: By the hour., replies: "" } }, { kind: more, data: { count: 2, children: [m1x2y40] } }] } }
+result:
+  post: { id: 1h2ab3c, name: t3_1h2ab3c, title: How do you price custom orders?, author: example_shop, subreddit: smallbusiness, selftext: "", url: "https://www.reddit.com/r/smallbusiness/comments/1h2ab3c/", permalink: /r/smallbusiness/comments/1h2ab3c/, created_utc: 1764237600, score: 12, num_comments: 3, over_18: false }
+  comments: [{ id: m1x2y3z, name: t1_m1x2y3z, author: example_maker, body: By the hour., replies: "" }]

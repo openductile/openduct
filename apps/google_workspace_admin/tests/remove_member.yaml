@@ -1,0 +1,7 @@
+action: remove_member
+credential: { access_token: ya29.test }
+input: { group: sales@example.com, member: dan@example.com }
+exchanges:
+  - sent: { method: DELETE, url: https://admin.googleapis.com/admin/directory/v1/groups/sales@example.com/members/dan@example.com }
+    answer: { status: 204 }
+result: { removed: true }

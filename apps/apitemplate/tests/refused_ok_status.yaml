@@ -1,0 +1,6 @@
+description: An answer of 200 that says status error fails the step too
+action: get_account
+credential: { api_key: at_test_key_1 }
+exchanges:
+  - answer: { status: 200, body: { status: error, message: "Invalid API key" } }
+error: "Invalid API key"

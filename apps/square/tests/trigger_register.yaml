@@ -1,0 +1,12 @@
+description: Turning the workflow on subscribes the address, and keeps the signature key Square gives
+trigger: payment
+register: true
+workflow: wf1
+address: https://studio.example/hooks/h1
+credential: { access_token: sq_1 }
+exchanges:
+  - sent:
+      method: POST
+      url: https://connect.squareup.com/v2/webhooks/subscriptions
+    answer: { body: { subscription: { id: wbhk_1, signature_key: key_from_square, notification_url: "https://studio.example/hooks/h1" } } }
+kept: { webhook_secret: key_from_square, webhook_id: wbhk_1 }

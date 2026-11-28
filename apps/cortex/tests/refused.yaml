@@ -1,0 +1,6 @@
+description: "Cortex refuses a key it does not know: the step fails in its words"
+action: list_analyzers
+credential: { base_url: "https://cortex.example.com:9001", api_key: wrong-key }
+exchanges:
+  - answer: { status: 401, body: { type: AuthenticationError, message: Authentication failure } }
+error: "Cortex answered 401: Authentication failure"

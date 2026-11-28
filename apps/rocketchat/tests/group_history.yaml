@@ -1,0 +1,7 @@
+action: group_history
+credential: { workspace: acme, user_id: uAbC123, token: rc_test_1 }
+input: { room_id: gMgmt1, oldest: "2026-11-27T00:00:00Z" }
+exchanges:
+  - sent: { method: GET, url: https://acme.rocket.chat/api/v1/groups.history, query: { roomId: gMgmt1, oldest: "2026-11-27T00:00:00Z", count: "100" } }
+    answer: { body: { messages: [{ _id: mSg020, rid: gMgmt1, msg: Budget agreed }], success: true } }
+result: [{ _id: mSg020, rid: gMgmt1, msg: Budget agreed }]

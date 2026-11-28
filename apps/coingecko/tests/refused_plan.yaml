@@ -1,0 +1,7 @@
+description: An answer saying the plan does not include it
+action: get_coin_chart
+credential: { api_key: CG-test1 }
+input: { id: bitcoin, vs_currency: usd, days: "7", interval: hourly }
+exchanges:
+  - answer: { status: 401, body: { error: { status: { error_code: 10005, error_message: "This request is limited to paid plan subscribers" } } } }
+error: "CoinGecko answered 401"

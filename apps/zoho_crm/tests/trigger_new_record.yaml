@@ -1,0 +1,20 @@
+description: A lead added since the last poll is read in full and starts a run
+trigger: new_record
+credential: { access_token: 1000.test.token }
+input: { module: Leads }
+seen: { cursor: null, items: [["1000000000000000100", ""]] }
+exchanges:
+  - sent:
+      method: GET
+      url: https://www.zohoapis.com/crm/v8/Leads
+      query: { fields: Created_Time, sort_by: Created_Time, sort_order: desc, per_page: "200" }
+    answer:
+      body:
+        data:
+          - { id: "1000000000000000101", Created_Time: "2026-11-27T09:00:00-05:00" }
+          - { id: "1000000000000000100", Created_Time: "2026-11-26T09:00:00-05:00" }
+        info: { page: 1, more_records: true }
+  - sent: { method: GET, url: https://www.zohoapis.com/crm/v8/Leads/1000000000000000101 }
+    answer: { body: { data: [{ id: "1000000000000000101", Last_Name: Lee, First_Name: Ann, Email: ann@example.com, Company: Example Ltd, Lead_Source: Web, Created_Time: "2026-11-27T09:00:00-05:00", Modified_Time: "2026-11-27T09:00:00-05:00" }] } }
+runs:
+  - { id: "1000000000000000101", Last_Name: Lee, First_Name: Ann, Email: ann@example.com, Company: Example Ltd, Lead_Source: Web, Created_Time: "2026-11-27T09:00:00-05:00", Modified_Time: "2026-11-27T09:00:00-05:00" }

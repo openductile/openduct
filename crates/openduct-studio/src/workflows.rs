@@ -21,7 +21,10 @@ pub(crate) async fn route(state: &State, call: &Call) -> Option<Answer> {
     let segments: Vec<&str> = call.path.trim_matches('/').split('/').collect();
     Some(match (&call.method, segments.as_slice()) {
         (&Method::POST, ["hooks", hook, ..]) => crate::hooks::deliver(state, call, hook).await,
+        (&Method::GET, ["hooks", hook, ..]) => crate::app_hooks::confirm(state, call, hook).await, // G3 app triggers
         (&Method::POST, ["api", "check"]) => check(state, call).await,
+        // cron-schedules
+        (&Method::POST, ["api", "schedule"]) => crate::schedules::next(state, call).await,
         (&Method::GET, ["api", "workflows"]) => list(state, call).await,
         (&Method::POST, ["api", "workflows"]) => create(state, call).await,
         (&Method::GET, ["api", "workflows", id]) => get(state, call, id).await,
@@ -39,6 +42,7 @@ pub(crate) async fn route(state: &State, call: &Call) -> Option<Answer> {
             crate::history::run_failed(state, call, id).await
         }
         (&Method::GET, ["api", "triggers"]) => crate::manager::triggers(state, call).await,
+        (&Method::POST, ["api", "workflows", id, "chat"]) => crate::chat::try_it(state, call, id).await, // chat trigger (G8)
         _ => return None,
     })
 }
@@ -47,17 +51,30 @@ pub(crate) fn trigger_name(trigger: &Trigger) -> &'static str {
     match trigger {
         Trigger::Webhook { .. } => "webhook",
         Trigger::Every(_) => "schedule",
+        Trigger::Calendar(_) => "schedule", // cron-schedules
         Trigger::Topic { .. } => "topic",
         Trigger::Manual => "manual",
         Trigger::Failed { .. } => "failed",
+        Trigger::Chat(_) => "chat", // chat trigger (G8)
+        // forms-and-resume
+        Trigger::Form(_) => "form",
+        Trigger::App(_) => "app", // G3 app triggers
+        // sql databases
+        Trigger::Rows(_) => "database",
+        // storage
+        Trigger::Storage(w) => w.kind(),
+        Trigger::Feed(_) => "feed",       // web
+        Trigger::Mailbox(_) => "mailbox", // messaging
     }
 }
 
-/// The definition a request sends, checked; the answer saying what is wrong if it is not a workflow.
-fn checked(definition: Option<&Value>, id: &str) -> Result<Workflow, Answer> {
+/// The definition a request sends, checked (with the workspace's custom apps in reach); the answer saying what is
+/// wrong if it is not a workflow.
+fn checked(workspace: &str, definition: Option<&Value>, id: &str) -> Result<Workflow, Answer> {
     let definition =
         definition.ok_or_else(|| problem(StatusCode::UNPROCESSABLE_ENTITY, "definition: the workflow"))?;
-    Workflow::from_json(definition, Some(id)).map_err(|e| problem(StatusCode::UNPROCESSABLE_ENTITY, &e))
+    crate::custom_apps::workflow(workspace, definition, Some(id)) // app generator
+        .map_err(|e| problem(StatusCode::UNPROCESSABLE_ENTITY, &e))
 }
 
 /// The workflow `id` of the asker's workspace; a 404 for any other.
@@ -113,10 +130,11 @@ pub(crate) async fn definition_of(state: &State, workflow: &WorkflowRecord) -> V
 }
 
 async fn check(state: &State, call: &Call) -> Answer {
-    if let Err(answer) = access(state, call, Role::Editor).await {
-        return answer;
-    }
-    match checked(call.body.get("definition"), "check") {
+    let workspace = match access(state, call, Role::Editor).await {
+        Ok(a) => a.workspace.id,
+        Err(answer) => return answer,
+    };
+    match checked(&workspace, call.body.get("definition"), "check") {
         Ok(w) => json(
             StatusCode::OK,
             &json!({ "ok": true, "trigger": trigger_name(&w.trigger), "steps": w.steps.len() }),
@@ -137,8 +155,8 @@ async fn list(state: &State, call: &Call) -> Answer {
             continue;
         }
         let definition = definition_of(state, &w).await;
-        let trigger =
-            Workflow::from_json(&definition, Some(&w.id)).map_or("unknown", |f| trigger_name(&f.trigger));
+        let trigger = crate::custom_apps::workflow(&w.workspace, &definition, Some(&w.id))
+            .map_or("unknown", |f| trigger_name(&f.trigger));
         out.push(json!({
             "id": w.id, "name": w.name, "active": w.active, "trigger": trigger, "version": w.version, "updated": w.updated,
         }));
@@ -149,11 +167,17 @@ async fn list(state: &State, call: &Call) -> Answer {
 /// A workflow as the API shows it: its record, the newest definition, and its webhook's address when it has one.
 async fn shown(state: &State, w: &WorkflowRecord) -> Value {
     let definition = definition_of(state, w).await;
-    let webhook = Workflow::from_json(&definition, Some(&w.id))
-        .is_ok_and(|f| matches!(f.trigger, Trigger::Webhook { .. }));
+    let webhook = crate::custom_apps::workflow(&w.workspace, &definition, Some(&w.id)).is_ok_and(|f| {
+        matches!(f.trigger, Trigger::Webhook { .. }) || crate::app_hooks::takes_deliveries(&f.trigger)
+    }); // G3 app triggers
+    // forms-and-resume: a form trigger's page.
+    let form = crate::custom_apps::workflow(&w.workspace, &definition, Some(&w.id))
+        .is_ok_and(|f| matches!(f.trigger, Trigger::Form(_)));
     json!({
         "id": w.id, "name": w.name, "active": w.active, "version": w.version, "definition": definition,
         "hook": webhook.then(|| format!("/hooks/{}", w.hook)),
+        "chat": crate::chat::address(&definition, w), // chat trigger (G8)
+        "form": form.then(|| format!("/forms/{}", w.hook)),
         "created": w.created, "updated": w.updated,
     })
 }
@@ -163,8 +187,11 @@ async fn create(state: &State, call: &Call) -> Answer {
         Ok(a) => a,
         Err(answer) => return answer,
     };
+    if let Err(answer) = crate::cicd::studio_edit(state, &access).await {
+        return answer; // developer CI/CD: a workspace that takes changes only by push or promotion
+    }
     let id = new_id();
-    let workflow = match checked(call.body.get("definition"), &id) {
+    let workflow = match checked(&access.workspace.id, call.body.get("definition"), &id) {
         Ok(w) => w,
         Err(answer) => return answer,
     };
@@ -228,11 +255,14 @@ async fn update(state: &State, call: &Call, id: &str) -> Answer {
         Ok(a) => a,
         Err(answer) => return answer,
     };
+    if let Err(answer) = crate::cicd::studio_edit(state, &access).await {
+        return answer; // developer CI/CD
+    }
     let mut record = match workflow_in(state, &access, id).await {
         Ok(w) => w,
         Err(answer) => return answer,
     };
-    let workflow = match checked(call.body.get("definition"), id) {
+    let workflow = match checked(&access.workspace.id, call.body.get("definition"), id) {
         Ok(w) => w,
         Err(answer) => return answer,
     };
@@ -283,10 +313,15 @@ async fn delete(state: &State, call: &Call, id: &str) -> Answer {
         Ok(a) => a,
         Err(answer) => return answer,
     };
+    if let Err(answer) = crate::cicd::studio_edit(state, &access).await {
+        return answer; // developer CI/CD
+    }
     let mut record = match workflow_in(state, &access, id).await {
         Ok(w) => w,
         Err(answer) => return answer,
     };
+    // G3 app triggers: a workflow deleted takes its address away from the app, as one turned off does.
+    let _ = crate::app_hooks::turned(state, call, &record, false).await;
     record.active = false;
     record.deleted = Some(now());
     if let Err(e) = state.model.workflows.put(id, &record).await {
@@ -311,7 +346,8 @@ async fn versions(state: &State, call: &Call, id: &str) -> Answer {
             continue;
         }
         let definition = state.model.definition(&access.workspace.id, &v.hash).await;
-        out.push(json!({ "number": v.number, "hash": v.hash, "created": v.created, "by": v.by, "definition": definition }));
+        let source = crate::cicd::source_of(state, id, v.number).await; // developer CI/CD: push, promotion, Git
+        out.push(json!({ "number": v.number, "hash": v.hash, "created": v.created, "by": v.by, "definition": definition, "source": source }));
     }
     out.reverse();
     json(StatusCode::OK, &json!({ "versions": out }))
@@ -327,7 +363,12 @@ async fn activate(state: &State, call: &Call, id: &str) -> Answer {
         Err(answer) => return answer,
     };
     let active = call.body.get("active").and_then(Value::as_bool).unwrap_or(true);
-    if active && let Err(answer) = checked(Some(&definition_of(state, &record).await), id) {
+    if active && let Err(answer) = checked(&record.workspace, Some(&definition_of(state, &record).await), id)
+    {
+        return answer;
+    }
+    // G3 app triggers: the address registered with the app as the workflow is turned on, taken away as it is off.
+    if let Err(answer) = crate::app_hooks::turned(state, call, &record, active).await {
         return answer;
     }
     record.active = active;
@@ -349,7 +390,7 @@ async fn test(state: &State, call: &Call, id: &str) -> Answer {
         Some(d) => d.clone(),
         None => definition_of(state, &record).await,
     };
-    let workflow = match checked(Some(&definition), id) {
+    let workflow = match checked(&record.workspace, Some(&definition), id) {
         Ok(w) => w,
         Err(answer) => return answer,
     };
@@ -363,6 +404,7 @@ async fn test(state: &State, call: &Call, id: &str) -> Answer {
         files: Some(state.files_for(&access.workspace.id)),
         scripts: Some(state.scripts_for()),
         workflows: Some(state.workflows_for(&access.workspace.id)),
+        tables: Some(state.tables_for(&access.workspace.id)), // data tables
     };
     let ran = openduct_flow::run(&workflow, &event, &test).await;
     json(StatusCode::OK, &json!({ "run": ran.to_json() }))
@@ -383,7 +425,7 @@ async fn preview(state: &State, call: &Call, id: &str) -> Answer {
         Some(d) => d.clone(),
         None => definition_of(state, &record).await,
     };
-    let workflow = match checked(Some(&definition), id) {
+    let workflow = match checked(&record.workspace, Some(&definition), id) {
         Ok(w) => w,
         Err(answer) => return answer,
     };

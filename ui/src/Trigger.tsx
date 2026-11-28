@@ -3,25 +3,45 @@
 
 // What starts a workflow, in its own window: the five kinds as tiles with their symbols, then each one's few
 // settings - a webhook's address and token, each copied with one click, and a ready `curl` to try it; a schedule's
-// interval with the usual ones a click away; a topic and where to read it from; another workflow whose failures
-// start this one.
+// interval or set times (./Schedule.tsx); a topic and where to read it from; another workflow whose failures start
+// this one.
 
 import { useState } from "react";
 import type { Definition, WorkflowRecord } from "./api";
 import { Icon } from "./flow/Icon";
+import { Schedule } from "./Schedule"; // cron-schedules
 import { WorkflowPicker } from "./StepsMore";
+import { ToolOffer } from "./ToolOffer"; // MCP
+import { ChatTrigger } from "./ChatTrigger"; // chat trigger (G8)
 
-export type TriggerKind = "webhook" | "schedule" | "topic" | "manual" | "failed";
+// forms-and-resume
+import { FormTriggerSettings } from "./FormBuilder";
+
+import { AppTrigger, newAppTrigger } from "./TriggerApps"; // G3 app triggers
+import { DATABASE_TRIGGERS, DatabaseTrigger, newDatabaseTrigger } from "./StepsDatabases"; // sql databases
+import { StorageTrigger } from "./StepsStorage"; // storage
+import { FeedTrigger } from "./StepsWeb"; // web
+import { MailboxTrigger } from "./StepsMailbox"; // messaging
+
+export type TriggerKind = "webhook" | "schedule" | "topic" | "manual" | "failed" | "chat" | "form" | "app" | "database" | "storage" | "redis" | "feed" | "mailbox"; // chat trigger (G8), forms-and-resume, G3 app triggers, sql databases, storage, web
+
 
 const KINDS: { kind: TriggerKind; label: string; hint: string }[] = [
   { kind: "webhook", label: "Webhook", hint: "Another system calls its address" },
-  { kind: "schedule", label: "Schedule", hint: "Every so often" },
+  { kind: "schedule", label: "Schedule", hint: "Every so often, or at set times" },
   { kind: "topic", label: "Topic", hint: "Each message of a topic" },
   { kind: "manual", label: "By hand", hint: "Someone presses Run" },
   { kind: "failed", label: "When one fails", hint: "Another workflow's failed runs" },
+  { kind: "chat", label: "Chat", hint: "Someone writes in its chat" }, // chat trigger (G8)
+  // forms-and-resume
+  { kind: "form", label: "Form", hint: "Someone fills in a form" },
+  { kind: "app", label: "An app", hint: "Something new in an app: an email, a row, an order" }, // G3 app triggers
+  { kind: "database", label: "A database", hint: "A new or changed row of a table" }, // sql databases
+  { kind: "storage", label: "New files", hint: "A new file in a folder: on an SFTP or FTP server, in S3, Azure, Google Cloud, Dropbox, Box, OneDrive or Google Drive, or here" }, // storage, storage places
+  { kind: "redis", label: "Redis", hint: "A message published on a Redis channel" }, // storage
+  { kind: "feed", label: "A feed", hint: "A new item in an RSS, Atom or JSON feed: a blog's post, a site's news" }, // web
+  { kind: "mailbox", label: "New email", hint: "A new message in a folder of any mailbox (IMAP)" }, // messaging
 ];
-
-const EVERY = ["1m", "5m", "15m", "1h", "6h", "1d"];
 
 export function triggerOf(trigger: unknown): { kind: TriggerKind; settings: Record<string, unknown> } {
   if (typeof trigger === "string") return { kind: trigger as TriggerKind, settings: {} };
@@ -82,9 +102,18 @@ export function Copy(props: { text: string; label: string }) {
 }
 
 export function TriggerSettings(props: { definition: Definition; record: WorkflowRecord; onChange: (d: Definition) => void }) {
-  const { kind, settings } = triggerOf(props.definition.trigger);
+  const { kind: written, settings } = triggerOf(props.definition.trigger);
+  // G3 app triggers: a trigger named after an app is that app's own.
+  const kind: TriggerKind = DATABASE_TRIGGERS.includes(written) ? "database" : KINDS.some((k) => k.kind === written && k.kind !== "app") ? written : "app"; // sql databases
   const set = (k: TriggerKind, s: Record<string, unknown>) => props.onChange({ ...props.definition, trigger: { [k]: s } });
-  const choose = (k: TriggerKind) => k !== kind && set(k, k === "schedule" ? { every: "1h" } : {});
+  const choose = (k: TriggerKind) =>
+    k !== kind &&
+    // forms-and-resume: a form starts with one field. G3 app triggers: an app's trigger starts from its first.
+    (k === "app"
+      ? props.onChange({ ...props.definition, trigger: newAppTrigger() })
+      : k === "database" // sql databases
+      ? props.onChange({ ...props.definition, trigger: newDatabaseTrigger() })
+      : set(k, k === "schedule" ? { every: "1h" } : k === "form" ? { title: "Contact us", fields: [{ name: "email", label: "E-mail", type: "email", required: true }] } : k === "storage" ? { credential: "", folder: "in", every: "5m" } : {}));
   return (
     <div className="trigger-settings">
       <div className="tg-kinds" role="radiogroup" aria-label="What starts it">
@@ -106,24 +135,8 @@ export function TriggerSettings(props: { definition: Definition; record: Workflo
           onToken={(t) => set("webhook", t ? { token: t } : {})}
         />
       )}
-      {kind === "schedule" && (
-        <div className="tg-section">
-          <label className="tg-field">
-            <span className="tg-name">Every</span>
-            <input className="code" value={String(settings.every ?? "")} placeholder="15m" onChange={(e) => set("schedule", { every: e.target.value })} />
-          </label>
-          <div className="tg-chips" role="group" aria-label="Usual intervals">
-            {EVERY.map((e) => (
-              <button key={e} type="button" className={settings.every === e ? "here" : ""} onClick={() => set("schedule", { every: e })}>
-                {e}
-              </button>
-            ))}
-          </div>
-          <p className="tg-note">
-            <Symbol d={SYMBOLS.info} /> Counted from midnight UTC: every 15m runs at :00, :15, :30 and :45. 30s, 15m, 1h and 1d are all written so.
-          </p>
-        </div>
-      )}
+      {/* cron-schedules: every so often, or at set times in a time zone */}
+      {kind === "schedule" && <Schedule settings={settings} onChange={(s) => set("schedule", s)} />}
       {kind === "topic" && (
         <div className="tg-section">
           <label className="tg-field">
@@ -152,11 +165,15 @@ export function TriggerSettings(props: { definition: Definition; record: Workflo
           </div>
         </div>
       )}
+      {/* forms-and-resume */}
+      {kind === "form" && <FormTriggerSettings settings={settings} address={props.record.form} onChange={(s) => set("form", s)} />}
       {kind === "manual" && (
         <p className="tg-note">
           <Symbol d={SYMBOLS.info} /> Turn it on, then press Run for real under the try bar's more menu - or call <code>POST /api/workflows/{props.record.id}/run</code>.
         </p>
       )}
+      {kind === "app" && <AppTrigger app={written} settings={settings} record={props.record} onChange={(t) => props.onChange({ ...props.definition, trigger: t })} />}
+      {kind === "database" && <DatabaseTrigger kind={written} settings={settings} onChange={(t) => props.onChange({ ...props.definition, trigger: t })} />} {/* sql databases */}
       {kind === "failed" && (
         <div className="tg-section">
           <WorkflowPicker label="Workflow" value={String(settings.workflow ?? "")} except={props.record.id} onChange={(v) => set("failed", { workflow: v })} />
@@ -166,7 +183,14 @@ export function TriggerSettings(props: { definition: Definition; record: Workflo
           </p>
         </div>
       )}
+      {/* storage */}
+      {(kind === "storage" || kind === "redis") && <StorageTrigger kind={kind} settings={settings} onChange={(s) => set(kind, s)} />}
+      {kind === "feed" && <FeedTrigger settings={settings} onChange={(s) => set("feed", s)} />} {/* web */}
+      {/* messaging */}
+      {kind === "mailbox" && <MailboxTrigger settings={settings} onChange={(s) => set("mailbox", s)} />}
+      {kind === "chat" && <ChatTrigger definition={props.definition} record={props.record} settings={settings} onChange={(s) => set("chat", s)} />}
       <RunsAtOnce definition={props.definition} onChange={props.onChange} />
+      <ToolOffer definition={props.definition} onChange={props.onChange} /> {/* MCP */}
     </div>
   );
 }

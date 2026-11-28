@@ -1,0 +1,99 @@
+# Made by `openduct app from-openapi`: List user feedback.
+description: "List user feedback, made from the API description's schemas"
+action: list_user_feedback
+credential: { token: test-token }
+input: { organization_id_or_slug: example, project_id_or_slug: example }
+exchanges:
+  - sent:
+      method: GET
+      url: "https://us.sentry.io/api/0/projects/example/example/user-feedback/"
+      query: {}
+      headers: { authorization: "Bearer test-token" }
+    answer:
+      status: 200
+      body:
+        - id: id_1
+          eventID: event_1
+          name: example
+          email: "ann@example.com"
+          comments: example
+          dateCreated: "2026-01-15T09:30:00Z"
+          user:
+            id: id_1
+            username: example
+            email: "ann@example.com"
+            name: example
+            ipAddress: example
+            avatarUrl: example
+          event: { id: id_1, eventID: event_1 }
+          issue:
+            isUnhandled: true
+            count: example
+            userCount: 1
+            firstSeen: "2026-01-15T09:30:00Z"
+            lastSeen: "2026-01-15T09:30:00Z"
+            derivedData:
+              blocker: example
+              progress: example
+              status: example
+              viewCount: 1
+              hasOpenFixPr: true
+              isAssigned: true
+              hasRootCause: true
+              lastCompletedAutofixStep: example
+              lastProgressedAt: "2026-01-15T09:30:00Z"
+              impact:
+                score: 1
+                level: super_low
+                description: example
+                citations: [null]
+                sourceEventId: source_event_1
+            id: id_1
+            shareId: share_1
+            shortId: short_1
+            title: example
+            culprit: example
+            permalink: "https://example.com/1"
+result:
+  - id: id_1
+    eventID: event_1
+    name: example
+    email: "ann@example.com"
+    comments: example
+    dateCreated: "2026-01-15T09:30:00Z"
+    user:
+      id: id_1
+      username: example
+      email: "ann@example.com"
+      name: example
+      ipAddress: example
+      avatarUrl: example
+    event: { id: id_1, eventID: event_1 }
+    issue:
+      isUnhandled: true
+      count: example
+      userCount: 1
+      firstSeen: "2026-01-15T09:30:00Z"
+      lastSeen: "2026-01-15T09:30:00Z"
+      derivedData:
+        blocker: example
+        progress: example
+        status: example
+        viewCount: 1
+        hasOpenFixPr: true
+        isAssigned: true
+        hasRootCause: true
+        lastCompletedAutofixStep: example
+        lastProgressedAt: "2026-01-15T09:30:00Z"
+        impact:
+          score: 1
+          level: super_low
+          description: example
+          citations: [null]
+          sourceEventId: source_event_1
+      id: id_1
+      shareId: share_1
+      shortId: short_1
+      title: example
+      culprit: example
+      permalink: "https://example.com/1"

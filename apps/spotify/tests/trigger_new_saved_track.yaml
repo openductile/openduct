@@ -1,0 +1,14 @@
+description: A song liked since the last poll starts a run; those seen before do not
+trigger: new_saved_track
+credential: { access_token: BQ-test-token }
+seen: { cursor: null, items: [["0TestTrack000000000001@2026-11-26T18:00:00Z", ""]] }
+exchanges:
+  - sent: { method: GET, url: https://api.spotify.com/v1/me/tracks, query: { limit: "50" } }
+    answer:
+      body:
+        items:
+          - { added_at: "2026-11-27T08:00:00Z", track: { id: 0TestTrack000000000002, name: Second Song, uri: "spotify:track:0TestTrack000000000002", duration_ms: 185000 } }
+          - { added_at: "2026-11-26T18:00:00Z", track: { id: 0TestTrack000000000001, name: Example Song, uri: "spotify:track:0TestTrack000000000001", duration_ms: 201000, explicit: false, popularity: 41, artists: [{ id: 0TestArtist00000000001, name: Example Band }], album: { id: 0TestAlbum000000000001, name: Example Album } } }
+        next: null
+runs:
+  - { added_at: "2026-11-27T08:00:00Z", track: { id: 0TestTrack000000000002, name: Second Song, uri: "spotify:track:0TestTrack000000000002", duration_ms: 185000 } }

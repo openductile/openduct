@@ -1,0 +1,7 @@
+action: delete_record
+credential: { access_token: 1000.test.token }
+input: { module: Leads, id: "1000000000000000102" }
+exchanges:
+  - sent: { method: DELETE, url: https://www.zohoapis.com/crm/v8/Leads/1000000000000000102 }
+    answer: { body: { data: [{ code: SUCCESS, status: success, message: record deleted, details: { id: "1000000000000000102" } }] } }
+result: { id: "1000000000000000102" }

@@ -42,6 +42,16 @@ fn result(record: &openduct_flow::RunRecord, step: &str) -> Json {
     serde_json::from_str(&found.result.to_json()).unwrap()
 }
 
+/// What a test run's step would have sent: beside its sample answer (an app's recorded example), or as its result.
+// test runs
+fn sent(record: &openduct_flow::RunRecord, step: &str) -> Json {
+    let found = record.steps.iter().find(|s| s.name == step).unwrap();
+    match &found.test {
+        Some(said) => serde_json::from_str::<Json>(&said.to_json()).unwrap()["request"].clone(),
+        None => result(record, step)["request"].clone(),
+    }
+}
+
 const ORDERS: &str = r#"
 name: Big orders to the team
 trigger:
@@ -103,7 +113,9 @@ fn a_workflow_is_read_checked_and_named() {
     );
     assert!(wrong("name: x\ntrigger: { schedule: { every: soon } }\n").contains("schedule.every"));
     assert!(wrong("name: x\nsteps:\n  - http: { url: 'https://x/{{ value.id' }\n").contains("no }}"));
-    assert!(wrong("name: x\nsteps:\n  - wait: 2h\n").contains("at most 1h"));
+    // forms-and-resume: a wait of more than an hour is kept on the log; of more than 90 days, refused.
+    assert!(Workflow::parse("name: x\nsteps:\n  - wait: 2h\n").is_ok());
+    assert!(wrong("name: x\nsteps:\n  - wait: 100d\n").contains("at most 90d"));
     assert!(wrong("name: x\nfrom: y\n").contains("\"from\" is not a workflow setting"));
 }
 
@@ -409,14 +421,14 @@ fn a_test_run_shows_what_each_app_would_be_sent_with_its_secrets_hidden() {
     );
     let record = go(&w, &event(r#"{"id": "A-1"}"#), &test);
     assert_eq!(record.outcome, Outcome::Done, "{:?}", record.outcome);
-    let tg = result(&record, "tg")["request"].clone();
+    let tg = sent(&record, "tg"); // test runs: beside Telegram's recorded example
     assert_eq!(tg["url"], "https://api.telegram.org/bot•••/sendMessage");
     assert_eq!(
         tg["body"]["content"],
         serde_json::json!({ "chat_id": "42", "text": "Order A-1" })
     );
     assert_eq!(
-        result(&record, "sl")["request"]["headers"]["authorization"],
+        sent(&record, "sl")["headers"]["authorization"], // test runs
         "Bearer •••"
     );
     let ai = result(&record, "think")["request"].clone();
@@ -430,7 +442,7 @@ fn a_test_run_shows_what_each_app_would_be_sent_with_its_secrets_hidden() {
         "•••"
     );
     // A Google Chat space's webhook: its address is the secret; the message is its text.
-    let gc = result(&record, "gc")["request"].clone();
+    let gc = sent(&record, "gc"); // test runs
     assert_eq!(gc["url"], "•••");
     assert_eq!(gc["body"]["content"], serde_json::json!({ "text": "Order A-1" }));
     let unknown =

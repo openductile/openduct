@@ -1,0 +1,70 @@
+name: Local business leads from Google Maps into a sheet
+description: >-
+  Run it by hand with what you sell to and where - "dentist" in "Austin, TX": an Apify scraper gathers the places
+  Google Maps lists, a script tidies them (one phone format, the website's domain, a fit score from rating and
+  reviews) and leaves out the ones already in your Leads sheet, and each new one is added as a row. The run spends
+  your Apify credit, at most 5 US dollars. Needs: an Apify API token (apify) and Google Sheets (sheets).
+category: Sales
+trigger: manual
+# What a test runs on: the input a run by hand is given.
+sample:
+  search: dentist
+  location: Austin, TX
+  max_places: 40
+steps:
+  - name: places
+    apify:
+      action: run_and_get_items
+      credential: apify
+      actor: compass/crawler-google-places
+      input:
+        searchStringsArray: ["{{ value.search }}"]
+        locationQuery: "{{ value.location }}"
+        maxCrawledPlacesPerSearch: "{{ value.max_places }}"
+        language: en
+      max_total_charge_usd: 5
+    retry: { attempts: 2, wait: 60s }
+  # The sheet's first column holds each lead's key, so a place is added once, however often you run it.
+  - name: known
+    google_sheets:
+      action: read_rows
+      credential: sheets
+      spreadsheet_id: your-sheet-id
+      range: Leads!A:A
+    retry: { attempts: 3, wait: 30s }
+  - name: tidy
+    javascript: |
+      // The keys already in the sheet (its first column, under the header).
+      const known = new Set((steps.known || []).slice(1).map(r => String(r[0] || "").trim()).filter(k => k));
+      const seen = new Set();
+      const rows = [];
+      let skipped = 0;
+      for (const p of steps.places || []) {
+        const key = String(p.placeId || p.url || p.title || "").trim();
+        if (!key || known.has(key) || seen.has(key)) { skipped++; continue; }
+        seen.add(key);
+        // Phone: digits only, with a + when it had one.
+        const phone = p.phone ? (String(p.phone).trim().startsWith("+") ? "+" : "") + String(p.phone).replace(/\D/g, "") : "";
+        // Website: just its domain, without www.
+        let domain = "";
+        try { domain = p.website ? new URL(p.website).hostname.replace(/^www\./, "") : ""; } catch (e) { domain = ""; }
+        // Fit: a good rating counts, and so do enough reviews to trust it (0 to 100).
+        const rating = Number(p.totalScore || 0), reviews = Number(p.reviewsCount || 0);
+        const fit = Math.round(Math.min(rating / 5, 1) * 60 + Math.min(reviews / 200, 1) * 40);
+        rows.push([key, p.title || "", p.categoryName || value.search, phone, domain, p.address || "", rating, reviews, fit, value.location, "new"]);
+      }
+      rows.sort((a, b) => b[8] - a[8]);
+      return { rows, added: rows.length, skipped };
+  - where: steps.tidy.added > 0
+  - name: add
+    for_each:
+      items: steps.tidy.rows
+      steps:
+        - name: row
+          google_sheets:
+            action: add_row
+            credential: sheets
+            spreadsheet_id: your-sheet-id
+            sheet: Leads
+            values: "{{ item }}"
+          retry: { attempts: 3, wait: 30s }

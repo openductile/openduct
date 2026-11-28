@@ -1,0 +1,9 @@
+description: The front page's story ids, in their order (top by default)
+action: list_story_ids
+credential: {}
+exchanges:
+  - sent:
+      method: GET
+      url: "https://hacker-news.firebaseio.com/v0/topstories.json"
+    answer: { status: 200, body: [46100001, 46099950, 46099800] }
+result: [46100001, 46099950, 46099800]

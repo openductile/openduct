@@ -1,0 +1,88 @@
+name: A time-off helper for your staff
+description: >-
+  For small HR teams answering the same questions every week: your intranet or staff chat bot sends each question to
+  this workflow's address with who is asking ({"email", "message", "session"}), and an AI agent answers it - how many
+  days off the person has left (from a leave_balances data table, only their own row), which days are public holidays
+  where they work (from the Nager.Date public holiday API), and how many working days a planned break takes. It
+  explains, and never books anything. Needs: an AI credential called model, and a data table leave_balances (email,
+  name, country, days_left, carried_over).
+category: HR
+trigger:
+  # Left empty here: each workflow made from the template is given a token of its own, for your intranet to send.
+  webhook: { token: "" }
+# What a test runs on: an event as this trigger gives it.
+sample:
+  email: noor@example.com
+  message: "If I take 22 to 31 December off, how many days does that use, and how many will I have left?"
+  session: staff-noor-2026-11-27
+steps:
+  - where: has(value.email) && has(value.message) && value.message.trim() != ''
+  - name: today
+    datetime: {}
+  - name: helper
+    agent:
+      credential: model
+      instructions: >-
+        You help the staff of a small company with time off, kindly and in at most five sentences. Use the tools:
+        the person's balance, the public holidays of their country, and the working days between two days (public
+        holidays left out). Today is {{ steps.today.weekday }} {{ steps.today.date }}.
+        You cannot book or approve time off: say it is asked for in the usual way. If the balance cannot be found,
+        say HR will check it. Policy: a full-time year has 25 days; up to 5 unused days carry over to March 31.
+      input: "{{ value.message }}"
+      tools:
+        - name: my_balance
+          description: The asking person's days off left this year, the days carried over, and the country they work in.
+          table:
+            name: leave_balances
+            action: get
+            # Only the person who asks: the address comes from your intranet, not from the model.
+            where: { email: "{{ value.email.trim().lowerAscii() }}" }
+            limit: 1
+        - name: public_holidays
+          description: The public holidays of a country in a year, each with its day and name.
+          parameters:
+            type: object
+            properties:
+              year: { type: integer, minimum: 2000, maximum: 2100 }
+              country: { type: string, description: "The country's two-letter code, as DE or US" }
+            required: [year, country]
+          http:
+            method: GET
+            url: "https://date.nager.at/api/v3/PublicHolidays/{{ args.year }}/{{ args.country.upperAscii() }}"
+            timeout: 15s
+        - name: working_days
+          description: >-
+            How many working days (Monday to Friday) there are from one day to another, both counted, leaving out the
+            public holidays given.
+          parameters:
+            type: object
+            properties:
+              from: { type: string, description: "The first day, as 2026-12-22" }
+              to: { type: string, description: "The last day, as 2026-12-31" }
+              holidays: { type: array, items: { type: string }, description: "Public holidays to leave out, as 2026-12-25" }
+            required: [from, to]
+          javascript: |
+            // Counts Monday to Friday from `from` to `to`, both included, leaving out the holidays given.
+            const day = s => new Date(String(s).slice(0, 10) + "T00:00:00Z");
+            const from = day(args.from), to = day(args.to);
+            if (isNaN(from) || isNaN(to) || to < from) return { error: "give two days, the first not after the last" };
+            const off = new Set((args.holidays || []).map(h => String(h).slice(0, 10)));
+            let days = 0;
+            const left_out = [];
+            for (const d = new Date(from); d <= to; d.setUTCDate(d.getUTCDate() + 1)) {
+              const iso = d.toISOString().slice(0, 10);
+              if (d.getUTCDay() === 0 || d.getUTCDay() === 6) continue;
+              if (off.has(iso)) { left_out.push(iso); continue; }
+              days++;
+            }
+            return { working_days: days, holidays_left_out: left_out };
+      allow: [my_balance, public_holidays, working_days]
+      memory:
+        key: "{{ value.session }}"
+        window: 8
+      max_turns: 8
+      max_tool_calls: 6
+  - name: reply
+    respond:
+      status: 200
+      body: { answer: "{{ steps.helper.text }}" }
